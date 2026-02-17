@@ -11,6 +11,7 @@ from app.api.routes.achievements import router as achievements_router
 from app.api.routes.analytics import router as analytics_router
 from app.api.routes.audit import router as audit_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.axion import router as axion_router
 from app.api.routes.children import router as children_router
 from app.api.routes.export import router as export_router
 from app.api.routes.features import router as features_router
@@ -61,6 +62,7 @@ app.include_router(achievements_router)
 app.include_router(analytics_router)
 app.include_router(audit_router)
 app.include_router(auth_router)
+app.include_router(axion_router)
 app.include_router(children_router)
 app.include_router(export_router)
 app.include_router(features_router)

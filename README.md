@@ -270,6 +270,7 @@ Quando excede, a API retorna `429` com:
 - Jobs exemplo:
   - `weekly.summary.generate` (gera resumo semanal e persiste evento `weekly.summary.generated`)
   - `purge.deleted_data` (stub de purge por retencao)
+  - `axion.mood.refresh.daily` (atualiza `axion_profile.mood_state` diariamente para todos os perfis)
 
 ## Feature Flags
 

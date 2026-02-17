@@ -6,6 +6,7 @@ from datetime import date
 from typing import Any
 
 from app.core.logging import setup_json_logging
+from app.jobs.axion_daily_refresh import refresh_axion_profiles_daily
 from app.db.session import SessionLocal
 from app.jobs.purge_deleted_data import purge_deleted_data
 from app.jobs.weekly_summary import generate_weekly_summaries
@@ -40,9 +41,20 @@ def _handle_purge_deleted_data(_payload: dict[str, Any]) -> dict[str, Any]:
         db.close()
 
 
+def _handle_axion_daily_refresh(_payload: dict[str, Any]) -> dict[str, Any]:
+    db = SessionLocal()
+    try:
+        result = refresh_axion_profiles_daily(db)
+        db.commit()
+        return result
+    finally:
+        db.close()
+
+
 JOB_HANDLERS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "weekly.summary.generate": _handle_weekly_summary,
     "purge.deleted_data": _handle_purge_deleted_data,
+    "axion.mood.refresh.daily": _handle_axion_daily_refresh,
 }
 
 

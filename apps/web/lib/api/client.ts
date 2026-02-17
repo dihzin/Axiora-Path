@@ -211,6 +211,18 @@ export type MoodOut = {
   mood: MoodType;
 };
 
+export type AxionStateResponse = {
+  stage: number;
+  mood_state: string;
+  personality_traits: string[];
+};
+
+export type CoachResponse = {
+  reply: string;
+  suggested_actions: string[];
+  tone: string;
+};
+
 export async function login(email: string, password: string): Promise<AuthTokens> {
   return apiRequest<AuthTokens>("/auth/login", {
     method: "POST",
@@ -384,6 +396,23 @@ export async function updateChildTheme(childId: number, theme: ThemeName): Promi
 export async function getAchievements(childId: number): Promise<AchievementListResponse> {
   return apiRequest<AchievementListResponse>(`/achievements?child_id=${childId}`, {
     method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAxionState(childId: number): Promise<AxionStateResponse> {
+  return apiRequest<AxionStateResponse>(`/axion/state?child_id=${childId}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function useAiCoach(childId: number, mode: "CHILD" | "PARENT", message?: string): Promise<CoachResponse> {
+  return apiRequest<CoachResponse>("/ai/coach", {
+    method: "POST",
+    body: { child_id: childId, mode, message: message ?? null },
     requireAuth: true,
     includeTenant: true,
   });

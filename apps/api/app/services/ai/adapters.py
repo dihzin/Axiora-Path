@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.models import EventLog, MoodType, Recommendation
+from app.services.ai.personality import PersonalityProfile
 
 
 @dataclass(slots=True)
@@ -16,6 +17,7 @@ class CoachContext:
     freeze_used_today: bool
     weekly_completion_rate: float
     active_saving_goals_count: int
+    personality: PersonalityProfile
 
 
 @dataclass(slots=True)
@@ -33,6 +35,39 @@ class CoachAdapter:
 class RuleBasedCoachAdapter(CoachAdapter):
     SEVERITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
 
+    def _vocab(self, context: CoachContext) -> dict[str, str]:
+        style = context.personality.vocabulary_style
+        if style == "reflective":
+            return {
+                "rhythm": "cadencia",
+                "focus": "foco",
+                "progress": "progresso",
+                "priority": "prioridade",
+                "nudge": "orientacao",
+            }
+        if style == "playful":
+            return {
+                "rhythm": "ritmo",
+                "focus": "missao",
+                "progress": "evolucao",
+                "priority": "chefao",
+                "nudge": "empurraozinho",
+            }
+        return {
+            "rhythm": "ritmo",
+            "focus": "foco",
+            "progress": "progresso",
+            "priority": "prioridade",
+            "nudge": "nudge",
+        }
+
+    def _compose_reply(self, parts: list[str], sentence_style: str) -> str:
+        if sentence_style == "short":
+            return " ".join(item.strip() for item in parts if item.strip())
+        if sentence_style == "long":
+            return " ".join(f"{item.strip()}." for item in parts if item.strip())
+        return " ".join(item.strip() for item in parts if item.strip())
+
     def generate(self, context: CoachContext) -> CoachResult:
         approved = sum(1 for item in context.events if item.type == "routine.approved")
         rejected = sum(1 for item in context.events if item.type == "routine.rejected")
@@ -43,13 +78,14 @@ class RuleBasedCoachAdapter(CoachAdapter):
             key=lambda item: (self.SEVERITY_ORDER.get(item.severity, 99), item.created_at, item.id),
         )
 
-        tone = "playful" if context.mode == "CHILD" else "supportive"
+        tone = context.personality.tone_for_mode(context.mode)
+        vocab = self._vocab(context)
 
         reply_parts: list[str] = []
         if context.mode == "CHILD":
-            reply_parts.append("Vamos manter o ritmo hoje.")
+            reply_parts.append(f"Vamos manter o {vocab['rhythm']} hoje")
         else:
-            reply_parts.append("Aqui vai um resumo objetivo para apoiar a rotina.")
+            reply_parts.append("Aqui vai um resumo objetivo para apoiar a rotina")
 
         mood_messages = {
             MoodType.HAPPY: "Humor de hoje: feliz. Energia otima para manter a rotina.",
@@ -81,21 +117,21 @@ class RuleBasedCoachAdapter(CoachAdapter):
 
         if sorted_recs:
             top = sorted_recs[0]
-            reply_parts.append(f"Prioridade atual: {top.title}.")
+            reply_parts.append(f"{vocab['priority'].capitalize()} atual: {top.title}.")
 
         if context.message:
             reply_parts.append(f"Mensagem recebida: {context.message.strip()[:120]}")
 
         actions: list[str] = []
         if context.weekly_completion_rate < 50:
-            actions.append("Nudge: concluir ao menos 1 tarefa agora para subir a taxa semanal.")
+            actions.append(f"{vocab['nudge'].capitalize()}: concluir ao menos 1 tarefa agora para subir a taxa semanal.")
         elif context.weekly_completion_rate < 80:
-            actions.append("Nudge: manter 2 tarefas aprovadas hoje para encostar no alvo de 80%.")
+            actions.append(f"{vocab['nudge'].capitalize()}: manter 2 tarefas aprovadas hoje para encostar no alvo de 80%.")
 
         if context.last_mood in {MoodType.SAD, MoodType.ANGRY, MoodType.TIRED}:
             actions.append("Escolher a tarefa mais curta e finalizar em 10 minutos.")
         elif context.last_mood == MoodType.HAPPY:
-            actions.append("Aproveitar o bom humor para tentar uma tarefa de maior peso.")
+            actions.append(f"Aproveitar o bom humor para tentar uma tarefa de maior {vocab['progress']}.")
 
         if context.streak_current in {7, 14, 30}:
             actions.append("Celebrar o marco de streak e manter a mesma rotina amanha.")
@@ -122,7 +158,7 @@ class RuleBasedCoachAdapter(CoachAdapter):
             deduped_actions.append(action)
 
         return CoachResult(
-            reply=" ".join(reply_parts),
+            reply=self._compose_reply(reply_parts, context.personality.sentence_style),
             suggested_actions=deduped_actions[:5],
             tone=tone,
         )

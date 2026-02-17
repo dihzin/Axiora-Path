@@ -378,6 +378,16 @@ class DailyMood(Base):
     )
 
 
+class AxionProfile(Base):
+    __tablename__ = "axion_profile"
+
+    child_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id"), primary_key=True)
+    stage: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    mood_state: Mapped[str] = mapped_column(String(64), nullable=False, server_default="NEUTRAL")
+    personality_seed: Mapped[str] = mapped_column(String(128), nullable=False)
+    last_interaction_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 DEFAULT_FAMILY_TASKS: list[dict[str, str | int | TaskDifficulty]] = [
     {"title": "Arrumar a cama", "difficulty": TaskDifficulty.EASY, "weight": 5},
     {"title": "Escovar os dentes", "difficulty": TaskDifficulty.EASY, "weight": 5},

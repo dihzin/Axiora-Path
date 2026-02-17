@@ -236,3 +236,122 @@ body {
   right: 42%;
   animation-delay: 140ms;
 }
+
+@keyframes axion-float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes axion-glow-pulse {
+  0% {
+    opacity: 0.3;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.3;
+    transform: scale(0.96);
+  }
+}
+
+.axion-float {
+  animation: axion-float 2.8s ease-in-out infinite;
+}
+
+.axion-stage-1 {
+  width: 8.5rem;
+}
+
+.axion-stage-2 {
+  width: 9.2rem;
+}
+
+.axion-stage-3 {
+  width: 10rem;
+}
+
+.axion-glow {
+  animation: axion-glow-pulse 2.6s ease-in-out infinite;
+  filter: blur(10px);
+}
+
+.axion-glow-neutral {
+  background: radial-gradient(circle, rgba(148, 163, 184, 0.32) 0%, rgba(148, 163, 184, 0) 70%);
+}
+
+.axion-glow-proud {
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.38) 0%, rgba(59, 130, 246, 0) 72%);
+}
+
+.axion-glow-excited {
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.42) 0%, rgba(16, 185, 129, 0) 72%);
+}
+
+.axion-glow-celebrating {
+  background: radial-gradient(circle, rgba(250, 204, 21, 0.5) 0%, rgba(250, 204, 21, 0) 75%);
+}
+
+.axion-glow-concerned {
+  background: radial-gradient(circle, rgba(248, 113, 113, 0.4) 0%, rgba(248, 113, 113, 0) 72%);
+}
+
+@keyframes axion-celebrate-pulse {
+  0% {
+    transform: scale(1);
+    filter: saturate(1);
+  }
+  30% {
+    transform: scale(1.08);
+    filter: saturate(1.15);
+  }
+  65% {
+    transform: scale(1.03);
+    filter: saturate(1.08);
+  }
+  100% {
+    transform: scale(1);
+    filter: saturate(1);
+  }
+}
+
+.axion-celebrate {
+  animation: axion-celebrate-pulse 2.2s ease-out;
+}
+
+@keyframes axion-dialogue-in {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.axion-dialogue-enter {
+  animation: axion-dialogue-in 220ms ease-out;
+}
+
+.axion-speech-bubble::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  bottom: -8px;
+  width: 14px;
+  height: 14px;
+  background: rgb(var(--card));
+  border-left: 1px solid rgb(var(--border));
+  border-bottom: 1px solid rgb(var(--border));
+  transform: rotate(-45deg);
+}

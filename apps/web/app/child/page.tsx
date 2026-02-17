@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Flame, Home, Lock, Snowflake, Sparkles, Star, X } from "lucide-react";
 
+import { AxionCharacter } from "@/components/axion-character";
+import { AxionDialogue } from "@/components/axion-dialogue";
 import { AvatarEvolution } from "@/components/avatar-evolution";
 import { LevelUpOverlay } from "@/components/level-up-overlay";
 import { useTheme } from "@/components/theme-provider";
@@ -14,6 +16,7 @@ import { WeeklyBossMeter } from "@/components/weekly-boss-meter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   getMe,
+  getAxionState,
   getGoals,
   getLevels,
   getMood,
@@ -25,11 +28,13 @@ import {
   markRoutine,
   postMood,
   updateChildTheme,
+  useAiCoach,
   type GoalOut,
   type LevelResponse,
   type MoodType,
   type RoutineWeekLog,
   type StreakResponse,
+  type AxionStateResponse,
   type ThemeName,
   type WeeklyMetricsResponse,
   type WalletSummaryResponse,
@@ -66,6 +71,22 @@ type ChildTask = {
   is_active: boolean;
 };
 
+type AxionCelebrationType = "streak_7" | "streak_30" | "level_up" | "goal_completed";
+
+const AXION_CELEBRATION_PHRASES: Record<AxionCelebrationType, string> = {
+  streak_7: "Sete dias seguidos! Axion esta em modo lenda!",
+  streak_30: "Trinta dias! Axion desbloqueou energia maxima!",
+  level_up: "Level up! Axion evoluiu junto com voce!",
+  goal_completed: "Meta concluida! Axion esta comemorando essa conquista!",
+};
+
+const AXION_CELEBRATION_BADGES: Record<AxionCelebrationType, string> = {
+  streak_7: "Streak 7",
+  streak_30: "Streak 30",
+  level_up: "Level Up",
+  goal_completed: "Meta Concluida",
+};
+
 export default function ChildPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
@@ -87,9 +108,15 @@ export default function ChildPage() {
   const [showDailyWelcome, setShowDailyWelcome] = useState(false);
   const [markingTaskIds, setMarkingTaskIds] = useState<number[]>([]);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [axionState, setAxionState] = useState<AxionStateResponse | null>(null);
+  const [axionDialogue, setAxionDialogue] = useState<{ message: string; visible: boolean }>({ message: "", visible: false });
+  const [axionCelebration, setAxionCelebration] = useState<AxionCelebrationType | null>(null);
   const lastKnownLevelRef = useRef<number | null>(null);
   const lastKnownStreakRef = useRef<number | null>(null);
   const toastTimerRef = useRef<number | null>(null);
+  const goalNearShownRef = useRef(false);
+  const celebrationTimerRef = useRef<number | null>(null);
+  const previousGoalRef = useRef<{ id: number; isLocked: boolean } | null>(null);
   const todayIso = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
@@ -109,6 +136,11 @@ export default function ChildPage() {
       .then((data) => setTasks(data.filter((task) => task.is_active)))
       .catch(() => {
         setTasks([]);
+      });
+    getAxionState(parsedChildId)
+      .then((data) => setAxionState(data))
+      .catch(() => {
+        setAxionState(null);
       });
     getMe()
       .then((data) => {
@@ -194,11 +226,20 @@ export default function ChildPage() {
   }, [childId]);
 
   useEffect(() => {
-    if (childId === null || streak === null || !soundEnabled) return;
+    if (childId === null || streak === null) return;
     const previous = lastKnownStreakRef.current;
     const current = streak.current;
-    if (previous !== null && current > previous && (current === 7 || current === 14 || current === 21)) {
-      playSound("streak_milestone", { childId, theme });
+    if (previous !== null && current > previous && (current === 7 || current === 14 || current === 21 || current === 30)) {
+      if (soundEnabled) {
+        playSound("streak_milestone", { childId, theme });
+      }
+      if (current === 7) {
+        triggerAxionCelebration("streak_7");
+      } else if (current === 30) {
+        triggerAxionCelebration("streak_30");
+      } else {
+        void fetchCoachDialogue("streak_milestone");
+      }
     }
     lastKnownStreakRef.current = current;
   }, [childId, soundEnabled, streak?.current, theme]);
@@ -207,6 +248,11 @@ export default function ChildPage() {
     if (childId === null || levelUpOverlayLevel === null || !soundEnabled) return;
     playSound("level_up", { childId, theme });
   }, [childId, levelUpOverlayLevel, soundEnabled, theme]);
+
+  useEffect(() => {
+    if (childId === null || levelUpOverlayLevel === null) return;
+    triggerAxionCelebration("level_up");
+  }, [childId, levelUpOverlayLevel]);
 
   useEffect(() => {
     if (!level) return;
@@ -222,6 +268,9 @@ export default function ChildPage() {
       if (toastTimerRef.current !== null) {
         window.clearTimeout(toastTimerRef.current);
       }
+      if (celebrationTimerRef.current !== null) {
+        window.clearTimeout(celebrationTimerRef.current);
+      }
     };
   }, []);
 
@@ -235,6 +284,33 @@ export default function ChildPage() {
     }, 1800);
   };
 
+  const showAxionDialogue = (message: string) => {
+    const trimmed = message.trim();
+    if (!trimmed) return;
+    setAxionDialogue({ message: trimmed, visible: true });
+  };
+
+  const triggerAxionCelebration = (type: AxionCelebrationType) => {
+    setAxionCelebration(type);
+    showAxionDialogue(AXION_CELEBRATION_PHRASES[type]);
+    if (celebrationTimerRef.current !== null) {
+      window.clearTimeout(celebrationTimerRef.current);
+    }
+    celebrationTimerRef.current = window.setTimeout(() => {
+      setAxionCelebration(null);
+    }, 2400);
+  };
+
+  const fetchCoachDialogue = async (reason: "first_login" | "streak_milestone" | "level_up" | "goal_near") => {
+    if (childId === null) return;
+    try {
+      const response = await useAiCoach(childId, "CHILD", `context:${reason}`);
+      showAxionDialogue(response.reply);
+    } catch {
+      // no-op in MVP if coach request fails
+    }
+  };
+
   const currentSave = walletSummary?.pot_balances_cents.SAVE ?? 0;
   const activeGoal = goals[0] ?? null;
   const nextGoal = activeGoal?.target_cents ?? null;
@@ -242,6 +318,51 @@ export default function ChildPage() {
   const goalLocked = activeGoal?.is_locked ?? false;
   const streakCount = streak?.current ?? 0;
   const flameClassName = getFlameIntensityClass(streakCount);
+
+  useEffect(() => {
+    if (childId === null || !showDailyWelcome) return;
+    const dailyKey = `axiora_axion_dialogue_first_login_${childId}_${todayIso}`;
+    if (localStorage.getItem(dailyKey) === "1") return;
+    localStorage.setItem(dailyKey, "1");
+    void fetchCoachDialogue("first_login");
+  }, [childId, showDailyWelcome, todayIso]);
+
+  useEffect(() => {
+    if (childId === null) return;
+    const nearCompletion = savePercent >= 80 && savePercent < 100;
+    if (nearCompletion && !goalNearShownRef.current) {
+      goalNearShownRef.current = true;
+      void fetchCoachDialogue("goal_near");
+      return;
+    }
+    if (!nearCompletion) {
+      goalNearShownRef.current = false;
+    }
+  }, [childId, savePercent]);
+
+  useEffect(() => {
+    if (!activeGoal) {
+      previousGoalRef.current = null;
+      return;
+    }
+
+    const previous = previousGoalRef.current;
+    if (previous === null) {
+      previousGoalRef.current = { id: activeGoal.id, isLocked: activeGoal.is_locked };
+      return;
+    }
+
+    if (previous.id !== activeGoal.id) {
+      previousGoalRef.current = { id: activeGoal.id, isLocked: activeGoal.is_locked };
+      return;
+    }
+
+    if (previous.isLocked && !activeGoal.is_locked) {
+      triggerAxionCelebration("goal_completed");
+    }
+
+    previousGoalRef.current = { id: activeGoal.id, isLocked: activeGoal.is_locked };
+  }, [activeGoal?.id, activeGoal?.is_locked]);
 
   const onSelectMood = async (mood: MoodType) => {
     if (childId === null) return;
@@ -370,6 +491,32 @@ export default function ChildPage() {
             Modo pais
           </button>
         </div>
+        <Card className="relative">
+          <CardHeader>
+            <CardTitle className="text-base">Axion</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {axionCelebration ? (
+              <div className="celebrate-badge-pop absolute right-3 top-3 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                {AXION_CELEBRATION_BADGES[axionCelebration]}
+              </div>
+            ) : null}
+            <AxionCharacter
+              stage={axionState?.stage ?? 1}
+              moodState={axionState?.mood_state ?? "NEUTRAL"}
+              celebrating={axionCelebration !== null}
+            />
+            <AxionDialogue
+              message={axionDialogue.message}
+              visible={axionDialogue.visible}
+              onDismiss={() => setAxionDialogue((prev) => ({ ...prev, visible: false }))}
+            />
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Stage {axionState?.stage ?? 1}</span>
+              <span>{axionState?.mood_state ?? "NEUTRAL"}</span>
+            </div>
+          </CardContent>
+        </Card>
         <section className="space-y-3">
           {showDailyWelcome ? (
             <Card>
