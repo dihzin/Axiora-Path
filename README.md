@@ -59,12 +59,17 @@ Web (`apps/web/.env.local`):
 
 ```powershell
 cd "c:\DEV\Axiora Path"
+$env:Path += ";C:\Program Files\Docker\Docker\resources\bin"
 docker compose -f infra/docker/docker-compose.yml up -d
+docker compose -f infra/docker/docker-compose.yml ps
 ```
 
-Opcional para conferir:
+Se precisar resetar banco/volumes locais:
 
 ```powershell
+cd "c:\DEV\Axiora Path"
+docker compose -f infra/docker/docker-compose.yml down -v
+docker compose -f infra/docker/docker-compose.yml up -d
 docker compose -f infra/docker/docker-compose.yml ps
 ```
 
@@ -96,6 +101,11 @@ Acessos locais:
 
 - Web: `http://localhost:3000`
 - API docs: `http://localhost:8000/docs`
+
+Parar servicos:
+
+- API/Web: `Ctrl + C` no terminal correspondente.
+- Infra: `docker compose -f infra/docker/docker-compose.yml down`
 
 ## Comandos de Desenvolvimento
 

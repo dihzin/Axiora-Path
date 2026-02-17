@@ -9,6 +9,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "0005_daily_mood"
@@ -17,7 +18,15 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-mood_type_enum = sa.Enum("HAPPY", "OK", "SAD", "ANGRY", "TIRED", name="mood_type")
+mood_type_enum = postgresql.ENUM(
+    "HAPPY",
+    "OK",
+    "SAD",
+    "ANGRY",
+    "TIRED",
+    name="mood_type",
+    create_type=False,
+)
 
 
 def upgrade() -> None:
@@ -35,4 +44,3 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_table("daily_mood")
     mood_type_enum.drop(op.get_bind(), checkfirst=True)
-

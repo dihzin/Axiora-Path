@@ -18,19 +18,27 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-tenant_type_enum = sa.Enum("FAMILY", "SCHOOL", name="tenant_type")
-membership_role_enum = sa.Enum("PARENT", "TEACHER", "CHILD", name="membership_role")
-task_difficulty_enum = sa.Enum("EASY", "MEDIUM", "HARD", "LEGENDARY", name="task_difficulty")
-task_log_status_enum = sa.Enum("PENDING", "APPROVED", "REJECTED", name="task_log_status")
-ledger_transaction_type_enum = sa.Enum(
+tenant_type_enum = postgresql.ENUM("FAMILY", "SCHOOL", name="tenant_type", create_type=False)
+membership_role_enum = postgresql.ENUM("PARENT", "TEACHER", "CHILD", name="membership_role", create_type=False)
+task_difficulty_enum = postgresql.ENUM(
+    "EASY",
+    "MEDIUM",
+    "HARD",
+    "LEGENDARY",
+    name="task_difficulty",
+    create_type=False,
+)
+task_log_status_enum = postgresql.ENUM("PENDING", "APPROVED", "REJECTED", name="task_log_status", create_type=False)
+ledger_transaction_type_enum = postgresql.ENUM(
     "EARN",
     "SPEND",
     "ADJUST",
     "ALLOWANCE",
     "LOAN",
     name="ledger_transaction_type",
+    create_type=False,
 )
-pot_type_enum = sa.Enum("SPEND", "SAVE", "DONATE", name="pot_type")
+pot_type_enum = postgresql.ENUM("SPEND", "SAVE", "DONATE", name="pot_type", create_type=False)
 
 
 def upgrade() -> None:
@@ -238,4 +246,3 @@ def downgrade() -> None:
     task_difficulty_enum.drop(op.get_bind(), checkfirst=True)
     membership_role_enum.drop(op.get_bind(), checkfirst=True)
     tenant_type_enum.drop(op.get_bind(), checkfirst=True)
-
