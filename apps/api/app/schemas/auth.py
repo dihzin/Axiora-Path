@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 class SignupRequest(BaseModel):
     email: str
     name: str
-    password: str = Field(min_length=8)
+    password: str = Field(min_length=10)
     tenant_name: str
     tenant_slug: str
 
@@ -19,7 +19,7 @@ class LoginRequest(BaseModel):
 
 
 class RefreshRequest(BaseModel):
-    refresh_token: str
+    refresh_token: str | None = None
 
 
 class AuthTokens(BaseModel):

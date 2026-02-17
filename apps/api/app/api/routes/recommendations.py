@@ -24,6 +24,7 @@ def list_recommendations(
         select(ChildProfile).where(
             ChildProfile.id == child_id,
             ChildProfile.tenant_id == tenant.id,
+            ChildProfile.deleted_at.is_(None),
         ),
     )
     if child is None:
@@ -64,6 +65,7 @@ def dismiss_recommendation(
         .where(
             Recommendation.id == recommendation_id,
             ChildProfile.tenant_id == tenant.id,
+            ChildProfile.deleted_at.is_(None),
         ),
     )
     if recommendation is None:

@@ -32,6 +32,7 @@ def get_weekly_trend(
         select(ChildProfile).where(
             ChildProfile.id == child_id,
             ChildProfile.tenant_id == tenant.id,
+            ChildProfile.deleted_at.is_(None),
         ),
     )
     if child is None:

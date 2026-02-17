@@ -26,6 +26,7 @@ def upsert_mood(
         select(ChildProfile).where(
             ChildProfile.id == payload.child_id,
             ChildProfile.tenant_id == tenant.id,
+            ChildProfile.deleted_at.is_(None),
         ),
     )
     if child is None:
@@ -66,6 +67,7 @@ def list_mood(
         select(ChildProfile).where(
             ChildProfile.id == child_id,
             ChildProfile.tenant_id == tenant.id,
+            ChildProfile.deleted_at.is_(None),
         ),
     )
     if child is None:
@@ -77,4 +79,3 @@ def list_mood(
         .order_by(DailyMood.date.desc()),
     ).all()
     return [MoodOut(child_id=row.child_id, date=row.date, mood=row.mood.value) for row in rows]
-

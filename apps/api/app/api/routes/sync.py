@@ -40,6 +40,7 @@ def _process_routine_mark(
         select(ChildProfile).where(
             ChildProfile.id == raw_child_id,
             ChildProfile.tenant_id == tenant.id,
+            ChildProfile.deleted_at.is_(None),
         ),
     )
     if child is None:
@@ -50,6 +51,7 @@ def _process_routine_mark(
             Task.id == raw_task_id,
             Task.tenant_id == tenant.id,
             Task.is_active.is_(True),
+            Task.deleted_at.is_(None),
         ),
     )
     if task is None:
@@ -105,6 +107,7 @@ def _process_coach_use(
         select(ChildProfile).where(
             ChildProfile.id == raw_child_id,
             ChildProfile.tenant_id == tenant.id,
+            ChildProfile.deleted_at.is_(None),
         ),
     )
     if child is None:

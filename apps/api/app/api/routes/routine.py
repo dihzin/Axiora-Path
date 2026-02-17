@@ -53,6 +53,7 @@ def get_streak(
         select(ChildProfile).where(
             ChildProfile.id == child_id,
             ChildProfile.tenant_id == tenant.id,
+            ChildProfile.deleted_at.is_(None),
         ),
     )
     if child is None:
@@ -88,6 +89,7 @@ def get_weekly_metrics(
         select(ChildProfile).where(
             ChildProfile.id == child_id,
             ChildProfile.tenant_id == tenant.id,
+            ChildProfile.deleted_at.is_(None),
         ),
     )
     if child is None:
@@ -136,6 +138,7 @@ def get_levels(
         select(ChildProfile).where(
             ChildProfile.id == child_id,
             ChildProfile.tenant_id == tenant.id,
+            ChildProfile.deleted_at.is_(None),
         ),
     )
     if child is None:
@@ -165,7 +168,7 @@ def list_tasks(
     _: Annotated[Membership, Depends(require_role(["PARENT", "TEACHER"]))],
 ) -> list[TaskOut]:
     tasks = db.scalars(
-        select(Task).where(Task.tenant_id == tenant.id).order_by(Task.id.asc()),
+        select(Task).where(Task.tenant_id == tenant.id, Task.deleted_at.is_(None)).order_by(Task.id.asc()),
     ).all()
     return [
         TaskOut(
@@ -228,7 +231,9 @@ def update_task(
     user: Annotated[User, Depends(get_current_user)],
     _: Annotated[Membership, Depends(require_role(["PARENT", "TEACHER"]))],
 ) -> TaskOut:
-    task = db.scalar(select(Task).where(Task.id == task_id, Task.tenant_id == tenant.id))
+    task = db.scalar(
+        select(Task).where(Task.id == task_id, Task.tenant_id == tenant.id, Task.deleted_at.is_(None)),
+    )
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
@@ -265,11 +270,14 @@ def delete_task(
     user: Annotated[User, Depends(get_current_user)],
     _: Annotated[Membership, Depends(require_role(["PARENT", "TEACHER"]))],
 ) -> TaskOut:
-    task = db.scalar(select(Task).where(Task.id == task_id, Task.tenant_id == tenant.id))
+    task = db.scalar(
+        select(Task).where(Task.id == task_id, Task.tenant_id == tenant.id, Task.deleted_at.is_(None)),
+    )
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
     task.is_active = False
+    task.deleted_at = datetime.now(UTC)
     events.emit(
         type="task.deleted",
         tenant_id=tenant.id,
@@ -303,6 +311,7 @@ def get_routine_week(
         select(ChildProfile).where(
             ChildProfile.id == child_id,
             ChildProfile.tenant_id == tenant.id,
+            ChildProfile.deleted_at.is_(None),
         ),
     )
     if child is None:
@@ -368,6 +377,7 @@ def mark_routine(
         select(ChildProfile).where(
             ChildProfile.id == payload.child_id,
             ChildProfile.tenant_id == tenant.id,
+            ChildProfile.deleted_at.is_(None),
         ),
     )
     if child is None:
@@ -378,6 +388,7 @@ def mark_routine(
             Task.id == payload.task_id,
             Task.tenant_id == tenant.id,
             Task.is_active.is_(True),
+            Task.deleted_at.is_(None),
         ),
     )
     if task is None:
@@ -441,7 +452,9 @@ def decide_routine(
     if log.status != TaskLogStatus.PENDING:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Routine log already decided")
 
-    task = db.scalar(select(Task).where(Task.id == log.task_id, Task.tenant_id == tenant.id))
+    task = db.scalar(
+        select(Task).where(Task.id == log.task_id, Task.tenant_id == tenant.id, Task.deleted_at.is_(None)),
+    )
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
@@ -458,6 +471,7 @@ def decide_routine(
             select(ChildProfile).where(
                 ChildProfile.id == log.child_id,
                 ChildProfile.tenant_id == tenant.id,
+                ChildProfile.deleted_at.is_(None),
             ),
         )
         if child is None:

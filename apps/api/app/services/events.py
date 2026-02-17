@@ -7,6 +7,7 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
+    AuditLog,
     ChildProfile,
     EventLog,
     Recommendation,
@@ -38,10 +39,94 @@ class EventService:
         )
         self.db.add(event)
         self.db.flush()
+        self._emit_audit_from_event(event)
 
         self.streak_handler(event)
         self.adaptive_rules_handler(event)
         return event
+
+    def _persist_audit(
+        self,
+        *,
+        tenant_id: int,
+        actor_user_id: int,
+        action: str,
+        entity_type: str,
+        entity_id: int,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        self.db.add(
+            AuditLog(
+                tenant_id=tenant_id,
+                actor_user_id=actor_user_id,
+                action=action,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                metadata_json=metadata or {},
+            ),
+        )
+
+    def _emit_audit_from_event(self, event: EventLog) -> None:
+        if event.actor_user_id is None:
+            return
+
+        def _as_positive_int(value: Any) -> int | None:
+            if isinstance(value, int) and value > 0:
+                return value
+            if isinstance(value, str) and value.isdigit():
+                parsed = int(value)
+                return parsed if parsed > 0 else None
+            return None
+
+        action: str | None = None
+        entity_type: str | None = None
+        entity_id: int | None = None
+        metadata = event.payload
+
+        if event.type == "task.created":
+            action = "task.create"
+            entity_type = "task"
+            entity_id = _as_positive_int(event.payload.get("task_id"))
+        elif event.type == "task.updated":
+            action = "task.update"
+            entity_type = "task"
+            entity_id = _as_positive_int(event.payload.get("task_id"))
+        elif event.type == "task.deleted":
+            action = "task.delete"
+            entity_type = "task"
+            entity_id = _as_positive_int(event.payload.get("task_id"))
+        elif event.type == "routine.approved":
+            action = "task.approve"
+            entity_type = "task_log"
+            entity_id = _as_positive_int(event.payload.get("log_id"))
+        elif event.type == "routine.rejected":
+            action = "task.reject"
+            entity_type = "task_log"
+            entity_id = _as_positive_int(event.payload.get("log_id"))
+        elif event.type == "wallet.allowance.ran":
+            action = "wallet.adjust"
+            entity_type = "ledger_transaction"
+            entity_id = _as_positive_int(event.payload.get("transaction_id"))
+        elif event.type == "goal.created":
+            action = "goal.create"
+            entity_type = "saving_goal"
+            entity_id = _as_positive_int(event.payload.get("goal_id"))
+        elif event.type == "pin.changed":
+            action = "pin.change"
+            entity_type = "tenant"
+            entity_id = event.tenant_id
+
+        if action is None or entity_type is None or entity_id is None:
+            return
+
+        self._persist_audit(
+            tenant_id=event.tenant_id,
+            actor_user_id=event.actor_user_id,
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            metadata=metadata,
+        )
 
     def _persist_event(
         self,
@@ -120,6 +205,7 @@ class EventService:
             select(ChildProfile).where(
                 ChildProfile.id == event.child_id,
                 ChildProfile.tenant_id == event.tenant_id,
+                ChildProfile.deleted_at.is_(None),
             ),
         )
         if child is None:

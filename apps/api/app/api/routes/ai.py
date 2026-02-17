@@ -11,6 +11,7 @@ from app.models import ChildProfile, DailyMood, EventLog, Membership, Recommenda
 from app.schemas.ai import CoachRequest, CoachResponse
 from app.services.ai.adapters import CoachContext
 from app.services.ai.factory import get_coach_adapter
+from app.services.features import is_feature_enabled
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -28,6 +29,7 @@ def ai_coach(
         select(ChildProfile).where(
             ChildProfile.id == payload.child_id,
             ChildProfile.tenant_id == tenant.id,
+            ChildProfile.deleted_at.is_(None),
         ),
     )
     if child is None:
@@ -81,6 +83,7 @@ def ai_coach(
         ),
     ).all()
 
+    ai_coach_v2_enabled = is_feature_enabled("ai_coach_v2", db, tenant_id=tenant.id)
     adapter = get_coach_adapter("rule_based")
     result = adapter.generate(
         CoachContext(
@@ -101,7 +104,11 @@ def ai_coach(
         tenant_id=tenant.id,
         actor_user_id=user.id,
         child_id=payload.child_id,
-        payload={"mode": payload.mode, "has_message": payload.message is not None},
+        payload={
+            "mode": payload.mode,
+            "has_message": payload.message is not None,
+            "ai_coach_v2_enabled": ai_coach_v2_enabled,
+        },
     )
     db.commit()
 

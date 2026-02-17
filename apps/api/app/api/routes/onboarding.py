@@ -64,6 +64,12 @@ def complete_onboarding(
             },
         },
     )
+    events.emit(
+        type="pin.changed",
+        tenant_id=tenant.id,
+        actor_user_id=user.id,
+        child_id=None,
+        payload={"source": "onboarding.complete", "pin_length": len(payload.parent_pin)},
+    )
     db.commit()
     return OnboardingCompleteResponse(onboarding_completed=True)
-

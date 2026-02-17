@@ -37,6 +37,7 @@ def _get_child_and_wallet(db: DBSession, tenant_id: int, child_id: int) -> tuple
         select(ChildProfile).where(
             ChildProfile.id == child_id,
             ChildProfile.tenant_id == tenant_id,
+            ChildProfile.deleted_at.is_(None),
         ),
     )
     if child is None:
