@@ -6,7 +6,7 @@ const DB_NAME = "axiora_offline";
 const STORE_NAME = "offline_queue";
 const DB_VERSION = 1;
 
-export type OfflineQueueType = "routine.mark" | "coach.use";
+export type OfflineQueueType = "routine.mark" | "coach.use" | "daily_mission.complete";
 
 export type OfflineQueueItem = {
   id: string;
@@ -68,6 +68,10 @@ export function enqueueRoutineMark(payload: { child_id: number; task_id: number;
 
 export function enqueueCoachUse(payload: { child_id: number; mode: "CHILD" | "PARENT"; message?: string }): Promise<string> {
   return enqueueOfflineItem("coach.use", payload);
+}
+
+export function enqueueDailyMissionComplete(payload: { mission_id: string }): Promise<string> {
+  return enqueueOfflineItem("daily_mission.complete", payload);
 }
 
 export async function listOfflineItems(): Promise<OfflineQueueItem[]> {

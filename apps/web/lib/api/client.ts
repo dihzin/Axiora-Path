@@ -223,6 +223,25 @@ export type CoachResponse = {
   tone: string;
 };
 
+export type DailyMissionResponse = {
+  id: string;
+  date: string;
+  title: string;
+  description: string;
+  rarity: "normal" | "special" | "epic";
+  xp_reward: number;
+  coin_reward: number;
+  status: "pending" | "completed";
+};
+
+export type DailyMissionCompleteResponse = {
+  success: boolean;
+  xp_gained: number;
+  coins_gained: number;
+  new_level: number;
+  streak: number;
+};
+
 export async function login(email: string, password: string): Promise<AuthTokens> {
   return apiRequest<AuthTokens>("/auth/login", {
     method: "POST",
@@ -413,6 +432,22 @@ export async function useAiCoach(childId: number, mode: "CHILD" | "PARENT", mess
   return apiRequest<CoachResponse>("/ai/coach", {
     method: "POST",
     body: { child_id: childId, mode, message: message ?? null },
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getDailyMission(childId: number): Promise<DailyMissionResponse> {
+  return apiRequest<DailyMissionResponse>(`/children/${childId}/daily-mission`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function completeDailyMission(missionId: string): Promise<DailyMissionCompleteResponse> {
+  return apiRequest<DailyMissionCompleteResponse>(`/daily-mission/${missionId}/complete`, {
+    method: "POST",
     requireAuth: true,
     includeTenant: true,
   });

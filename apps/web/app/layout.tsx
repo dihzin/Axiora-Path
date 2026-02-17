@@ -31,7 +31,7 @@ type RootLayoutProps = {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-background text-foreground">
+      <body suppressHydrationWarning className="min-h-screen bg-background text-foreground">
         <ThemeProvider>
           <PwaRegister />
           <OfflineSyncBootstrap />

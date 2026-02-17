@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import logging
 import random
-from datetime import date
+from datetime import UTC, date, datetime
 
+from fastapi import HTTPException, status
 from sqlalchemy import desc, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -12,11 +14,24 @@ from app.models import (
     DailyMission,
     DailyMissionRarity,
     DailyMissionStatus,
+    EventLog,
+    LedgerTransaction,
+    LedgerTransactionType,
+    PotAllocation,
     SavingGoal,
     Streak,
+    Tenant,
     TaskLog,
     TaskLogStatus,
+    User,
+    Wallet,
 )
+from app.services.avatar import compute_avatar_stage
+from app.services.events import EventService
+from app.services.goals import sync_locked_goals_for_child
+from app.services.wallet import split_amount_by_pots
+
+logger = logging.getLogger("axiora.api.daily_mission")
 
 
 def _resolve_rarity(streak_current: int) -> DailyMissionRarity:
@@ -100,6 +115,16 @@ def generate_daily_mission(db: Session, child: ChildProfile) -> DailyMission:
     title, description = _build_mission_content(db, child)
     rarity = _resolve_rarity(streak_current)
     xp_reward, coin_reward = _resolve_rewards(rarity)
+    logger.info(
+        "daily_mission_rarity",
+        extra={
+            "tenant_id": child.tenant_id,
+            "child_id": child.id,
+            "mission_rarity": rarity.value,
+            "xp_reward": xp_reward,
+            "coin_reward": coin_reward,
+        },
+    )
 
     mission = DailyMission(
         child_id=child.id,
@@ -126,4 +151,188 @@ def generate_daily_mission(db: Session, child: ChildProfile) -> DailyMission:
             return existing_after_conflict
         raise
     db.refresh(mission)
+    logger.info(
+        "daily_mission_generated",
+        extra={
+            "tenant_id": child.tenant_id,
+            "child_id": child.id,
+            "mission_id": mission.id,
+            "mission_rarity": mission.rarity.value,
+            "xp_reward": mission.xp_reward,
+            "coin_reward": mission.coin_reward,
+        },
+    )
     return mission
+
+
+def _update_streak_for_completion(
+    db: Session,
+    *,
+    tenant_id: int,
+    actor_user_id: int,
+    child_id: int,
+    mission_date: date,
+) -> int:
+    streak = db.get(Streak, child_id)
+    if streak is None:
+        streak = Streak(
+            child_id=child_id,
+            current=1,
+            last_date=mission_date,
+            freeze_used_today=False,
+            freeze_tokens=1,
+        )
+        db.add(streak)
+        return 1
+
+    if streak.last_date is None:
+        streak.current = 1
+        streak.last_date = mission_date
+        streak.freeze_used_today = False
+        return streak.current
+
+    gap = (mission_date - streak.last_date).days
+    if gap < 0 or gap == 0:
+        return streak.current
+    if gap == 1:
+        streak.current += 1
+        streak.freeze_used_today = False
+        streak.last_date = mission_date
+        return streak.current
+
+    if streak.freeze_tokens > 0:
+        streak.freeze_tokens -= 1
+        streak.freeze_used_today = True
+        streak.last_date = mission_date
+        db.add(
+            EventLog(
+                tenant_id=tenant_id,
+                actor_user_id=actor_user_id,
+                child_id=child_id,
+                type="streak.freeze.used",
+                payload={"mark_date": str(mission_date), "remaining_freeze_tokens": streak.freeze_tokens},
+            ),
+        )
+        return streak.current
+
+    streak.current = 1
+    streak.freeze_used_today = False
+    streak.last_date = mission_date
+    return streak.current
+
+
+def complete_daily_mission_by_id(
+    *,
+    db: Session,
+    events: EventService,
+    tenant: Tenant,
+    user: User,
+    mission_id: str,
+) -> tuple[DailyMission, int, int]:
+    with db.begin():
+        mission = db.scalar(select(DailyMission).where(DailyMission.id == mission_id))
+        if mission is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Daily mission not found")
+
+        child = db.scalar(
+            select(ChildProfile).where(
+                ChildProfile.id == mission.child_id,
+                ChildProfile.tenant_id == tenant.id,
+                ChildProfile.deleted_at.is_(None),
+            ),
+        )
+        if child is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
+
+        if mission.status != DailyMissionStatus.PENDING:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Daily mission already completed")
+
+        wallet = db.scalar(
+            select(Wallet).where(
+                Wallet.tenant_id == tenant.id,
+                Wallet.child_id == child.id,
+            ),
+        )
+        if wallet is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wallet not found")
+
+        allocations = db.scalars(
+            select(PotAllocation).where(
+                PotAllocation.tenant_id == tenant.id,
+                PotAllocation.wallet_id == wallet.id,
+            ),
+        ).all()
+        allocation_map = {allocation.pot: allocation.percent for allocation in allocations}
+        pot_split = split_amount_by_pots(mission.coin_reward, allocation_map)
+
+        mission.status = DailyMissionStatus.COMPLETED
+        mission.completed_at = datetime.now(UTC)
+
+        child.xp_total += mission.xp_reward
+        child.avatar_stage = compute_avatar_stage(child.xp_total)
+
+        tx = LedgerTransaction(
+            tenant_id=tenant.id,
+            wallet_id=wallet.id,
+            type=LedgerTransactionType.EARN,
+            amount_cents=mission.coin_reward,
+            metadata_json={
+                "source": "daily_mission.complete",
+                "mission_id": mission.id,
+                "child_id": child.id,
+                "pot_split": pot_split,
+            },
+        )
+        db.add(tx)
+        db.flush()
+
+        streak_current = _update_streak_for_completion(
+            db,
+            tenant_id=tenant.id,
+            actor_user_id=user.id,
+            child_id=child.id,
+            mission_date=mission.date,
+        )
+        unlocked_goal_ids = sync_locked_goals_for_child(db, tenant_id=tenant.id, child_id=child.id)
+
+        events.emit(
+            type="daily_mission.completed",
+            tenant_id=tenant.id,
+            actor_user_id=user.id,
+            child_id=child.id,
+            payload={
+                "mission_id": mission.id,
+                "xp_gained": mission.xp_reward,
+                "coins_gained": mission.coin_reward,
+                "ledger_transaction_id": tx.id,
+                "streak": streak_current,
+                "unlocked_goal_ids": unlocked_goal_ids,
+            },
+        )
+        events.emit(
+            type="mission_completed",
+            tenant_id=tenant.id,
+            actor_user_id=user.id,
+            child_id=child.id,
+            payload={
+                "mission_id": mission.id,
+                "rarity": mission.rarity.value,
+                "xp_gained": mission.xp_reward,
+                "coins_gained": mission.coin_reward,
+            },
+        )
+
+    logger.info(
+        "daily_mission_completed",
+        extra={
+            "tenant_id": tenant.id,
+            "user_id": user.id,
+            "child_id": mission.child_id,
+            "mission_id": mission.id,
+            "mission_rarity": mission.rarity.value,
+            "xp_reward": mission.xp_reward,
+            "coin_reward": mission.coin_reward,
+        },
+    )
+
+    return mission, mission.xp_reward, streak_current

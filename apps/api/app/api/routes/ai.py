@@ -116,9 +116,10 @@ def ai_coach(
     if axion_profile is None:
         axion_profile = ensure_axion_profile(db, child_id=payload.child_id)
 
+    daily_missions_enabled = is_feature_enabled("feature_daily_missions", db, tenant_id=tenant.id)
     first_login_context = (payload.message or "").strip() == "context:first_login"
     mission_intro: str | None = None
-    if first_login_context:
+    if first_login_context and daily_missions_enabled:
         mission = generate_daily_mission(db, child)
         if mission.status == DailyMissionStatus.PENDING:
             mission_intro = MISSION_RARITY_INTRO[mission.rarity]

@@ -7,8 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
 from app.api.deps import DBSession, EventSvc, get_current_tenant, get_current_user, require_role
-from app.models import ChildProfile, Membership, Task, TaskLog, TaskLogStatus, Tenant, User
+from app.models import ChildProfile, DailyMission, Membership, Task, TaskLog, TaskLogStatus, Tenant, User
 from app.schemas.sync import SyncBatchFailedItem, SyncBatchItem, SyncBatchRequest, SyncBatchResponse
+from app.services.daily_mission_service import complete_daily_mission_by_id
 
 router = APIRouter(prefix="/sync", tags=["sync"])
 
@@ -122,6 +123,45 @@ def _process_coach_use(
     )
 
 
+def _process_daily_mission_complete(
+    item: SyncBatchItem,
+    tenant: Tenant,
+    user: User,
+    db: DBSession,
+    events: EventSvc,
+) -> None:
+    raw_mission_id = item.payload.get("mission_id")
+    if not isinstance(raw_mission_id, str) or not raw_mission_id.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid daily_mission.complete payload")
+
+    mission = db.scalar(select(DailyMission).where(DailyMission.id == raw_mission_id))
+    if mission is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Daily mission not found")
+
+    child = db.scalar(
+        select(ChildProfile).where(
+            ChildProfile.id == mission.child_id,
+            ChildProfile.tenant_id == tenant.id,
+            ChildProfile.deleted_at.is_(None),
+        ),
+    )
+    if child is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
+
+    try:
+        complete_daily_mission_by_id(
+            db=db,
+            events=events,
+            tenant=tenant,
+            user=user,
+            mission_id=raw_mission_id,
+        )
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_409_CONFLICT:
+            return
+        raise
+
+
 @router.post("/batch", response_model=SyncBatchResponse)
 def sync_batch(
     payload: SyncBatchRequest,
@@ -140,6 +180,8 @@ def sync_batch(
                 _process_routine_mark(item, tenant, user, db, events)
             elif item.type == "coach.use":
                 _process_coach_use(item, tenant, user, db, events)
+            elif item.type == "daily_mission.complete":
+                _process_daily_mission_complete(item, tenant, user, db, events)
             else:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unsupported type {item.type}")
             db.commit()

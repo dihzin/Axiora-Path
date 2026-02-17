@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 class SyncBatchItem(BaseModel):
     id: str
-    type: Literal["routine.mark", "coach.use"]
+    type: Literal["routine.mark", "coach.use", "daily_mission.complete"]
     payload: dict[str, Any]
     createdAt: datetime
 
@@ -26,4 +26,3 @@ class SyncBatchFailedItem(BaseModel):
 class SyncBatchResponse(BaseModel):
     processed: int
     failed: list[SyncBatchFailedItem]
-

@@ -15,6 +15,8 @@ import { RecommendationsPanel } from "@/components/recommendations-panel";
 import { WeeklyBossMeter } from "@/components/weekly-boss-meter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  completeDailyMission,
+  getDailyMission,
   getMe,
   getAxionState,
   getGoals,
@@ -29,6 +31,7 @@ import {
   postMood,
   updateChildTheme,
   useAiCoach,
+  type DailyMissionResponse,
   type GoalOut,
   type LevelResponse,
   type MoodType,
@@ -39,6 +42,7 @@ import {
   type WeeklyMetricsResponse,
   type WalletSummaryResponse,
 } from "@/lib/api/client";
+import { enqueueDailyMissionComplete } from "@/lib/offline-queue";
 import { getSoundEnabled as getChildSoundEnabled, playSound, setSoundEnabled as setChildSoundEnabled } from "@/lib/sound-manager";
 import { THEME_LIST } from "@/lib/theme";
 
@@ -106,6 +110,8 @@ export default function ChildPage() {
   const [avatarStage, setAvatarStage] = useState(1);
   const [taskView, setTaskView] = useState<"list" | "journey">("list");
   const [showDailyWelcome, setShowDailyWelcome] = useState(false);
+  const [dailyMission, setDailyMission] = useState<DailyMissionResponse | null>(null);
+  const [missionCompleting, setMissionCompleting] = useState(false);
   const [markingTaskIds, setMarkingTaskIds] = useState<number[]>([]);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [axionState, setAxionState] = useState<AxionStateResponse | null>(null);
@@ -198,6 +204,11 @@ export default function ChildPage() {
       })
       .catch(() => {
         setTodayMood(null);
+      });
+    getDailyMission(parsedChildId)
+      .then((data) => setDailyMission(data))
+      .catch(() => {
+        setDailyMission(null);
       });
   }, []);
 
@@ -450,6 +461,44 @@ export default function ChildPage() {
     }
   };
 
+  const onCompleteDailyMission = async () => {
+    if (!dailyMission || missionCompleting) return;
+    if (dailyMission.status === "completed") return;
+
+    setMissionCompleting(true);
+    if (!navigator.onLine) {
+      await enqueueDailyMissionComplete({ mission_id: dailyMission.id });
+      setDailyMission((prev) => (prev ? { ...prev, status: "completed" } : prev));
+      showToast("Missao concluida offline. Vai sincronizar ao reconectar.", "success");
+      setMissionCompleting(false);
+      return;
+    }
+
+    try {
+      await completeDailyMission(dailyMission.id);
+      setDailyMission((prev) => (prev ? { ...prev, status: "completed" } : prev));
+      showToast("Missao concluida!", "success");
+      if (childId !== null) {
+        void getLevels(childId).then((data) => {
+          lastKnownLevelRef.current = data.level;
+          setLevel(data);
+          setAvatarStage(data.avatar_stage);
+        });
+        void getStreak(childId).then((data) => {
+          lastKnownStreakRef.current = data.current;
+          setStreak(data);
+        });
+        void getWalletSummary(childId).then((data) => setWalletSummary(data));
+      }
+    } catch {
+      await enqueueDailyMissionComplete({ mission_id: dailyMission.id });
+      setDailyMission((prev) => (prev ? { ...prev, status: "completed" } : prev));
+      showToast("Sem conexao. Missao enfileirada para sincronizar.", "success");
+    } finally {
+      setMissionCompleting(false);
+    }
+  };
+
   const statusBadgeClass = (status: RoutineWeekLog["status"]) => {
     if (status === "APPROVED") return "bg-emerald-100 text-emerald-700";
     if (status === "REJECTED") return "bg-red-100 text-red-700";
@@ -557,6 +606,31 @@ export default function ChildPage() {
                     ))}
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          ) : null}
+          {dailyMission ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Missao diaria</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <p className="font-semibold">{dailyMission.title}</p>
+                <p className="text-muted-foreground">{dailyMission.description}</p>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="capitalize">Raridade: {dailyMission.rarity}</span>
+                  <span>
+                    +{dailyMission.xp_reward} XP / +{dailyMission.coin_reward} moedas
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  disabled={missionCompleting || dailyMission.status === "completed"}
+                  className="w-full rounded-md border border-border px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => void onCompleteDailyMission()}
+                >
+                  {missionCompleting ? "Processando..." : dailyMission.status === "completed" ? "Concluida" : "Concluir missao"}
+                </button>
               </CardContent>
             </Card>
           ) : null}

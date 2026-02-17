@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models import FeatureFlag
 
-DEFAULT_FEATURE_NAMES: tuple[str, ...] = ("ai_coach_v2", "gamification_v2")
+DEFAULT_FEATURE_NAMES: tuple[str, ...] = ("ai_coach_v2", "gamification_v2", "feature_daily_missions")
 
 
 def is_feature_enabled(name: str, db: Session, *, tenant_id: int | None = None) -> bool:

@@ -36,8 +36,12 @@ def test_sync_batch_processes_in_order_and_reports_failures(monkeypatch: Any) ->
         if item.id == "2":
             raise ValueError("forced error")
 
+    def fake_process_daily_mission_complete(*_args: Any, **_kwargs: Any) -> None:
+        call_order.append("daily_mission.complete")
+
     monkeypatch.setattr(sync_module, "_process_routine_mark", fake_process_routine_mark)
     monkeypatch.setattr(sync_module, "_process_coach_use", fake_process_coach_use)
+    monkeypatch.setattr(sync_module, "_process_daily_mission_complete", fake_process_daily_mission_complete)
 
     payload = SyncBatchRequest(
         items=[
@@ -55,6 +59,12 @@ def test_sync_batch_processes_in_order_and_reports_failures(monkeypatch: Any) ->
             },
             {
                 "id": "3",
+                "type": "daily_mission.complete",
+                "payload": {"mission_id": "test-mission-id"},
+                "createdAt": datetime.now(UTC),
+            },
+            {
+                "id": "4",
                 "type": "routine.mark",
                 "payload": {"child_id": 1, "task_id": 3, "date": "2026-02-17"},
                 "createdAt": datetime.now(UTC),
@@ -76,10 +86,9 @@ def test_sync_batch_processes_in_order_and_reports_failures(monkeypatch: Any) ->
         _=MembershipRole.PARENT,  # type: ignore[arg-type]
     )
 
-    assert call_order == ["routine.mark", "coach.use", "routine.mark"]
-    assert result.processed == 2
+    assert call_order == ["routine.mark", "coach.use", "daily_mission.complete", "routine.mark"]
+    assert result.processed == 3
     assert len(result.failed) == 1
     assert result.failed[0].id == "2"
-    assert db.commit_count == 2
+    assert db.commit_count == 3
     assert db.rollback_count == 1
-
