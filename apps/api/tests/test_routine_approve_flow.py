@@ -5,6 +5,7 @@ from typing import Any
 
 from app.api.routes.routine import decide_routine
 from app.models import (
+    ChildProfile,
     LedgerTransaction,
     MembershipRole,
     PotAllocation,
@@ -66,6 +67,7 @@ def test_decide_approve_creates_earn_transaction() -> None:
         status=TaskLogStatus.PENDING,
         created_at=datetime.now(UTC),
     )
+    log.id = 1
     task = Task(
         tenant_id=1,
         title="Test",
@@ -77,12 +79,14 @@ def test_decide_approve_creates_earn_transaction() -> None:
     task.id = 20
     wallet = Wallet(tenant_id=1, child_id=10, currency_code="BRL")
     wallet.id = 30
+    child = ChildProfile(tenant_id=1, display_name="Child", avatar_key=None, birth_year=None, xp_total=0)
+    child.id = 10
     allocations = [
         PotAllocation(tenant_id=1, wallet_id=30, pot=PotType.SPEND, percent=50),
         PotAllocation(tenant_id=1, wallet_id=30, pot=PotType.SAVE, percent=30),
         PotAllocation(tenant_id=1, wallet_id=30, pot=PotType.DONATE, percent=20),
     ]
-    db = _FakeDB(scalar_values=[log, task, wallet], scalars_values=[allocations])
+    db = _FakeDB(scalar_values=[log, task, child, wallet], scalars_values=[allocations])
     events = _FakeEvents()
     tenant = Tenant(type=TenantType.FAMILY, name="Family", slug="family")
     tenant.id = 1
@@ -107,4 +111,3 @@ def test_decide_approve_creates_earn_transaction() -> None:
     assert result.status == "APPROVED"
     assert db.committed is True
     assert events.calls[0]["type"] == "routine.approved"
-
