@@ -31,7 +31,7 @@ export function AvatarEvolution({ stage }: AvatarEvolutionProps) {
           </>
         ) : null}
       </svg>
-      <p className="mt-2 text-center text-xs font-medium text-muted-foreground">Avatar Stage {safeStage}</p>
+      <p className="mt-2 text-center text-sm font-medium text-muted-foreground">Avatar Stage {safeStage}</p>
     </div>
   );
 }

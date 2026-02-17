@@ -14,10 +14,10 @@ export const THEME_LIST: ThemeName[] = ["default", "space", "jungle", "ocean", "
 
 export const THEMES: Record<ThemeName, ThemeDefinition> = {
   default: {
-    primary: "15 23 42",
-    secondary: "241 245 249",
-    accent: "37 99 235",
-    backgroundGradient: "linear-gradient(160deg, #f8fafc 0%, #e2e8f0 100%)",
+    primary: "24 43 95",
+    secondary: "230 223 250",
+    accent: "248 196 66",
+    backgroundGradient: "linear-gradient(160deg, #f8efe1 0%, #ebe9ff 55%, #e2ecff 100%)",
   },
   space: {
     primary: "30 27 75",

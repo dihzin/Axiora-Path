@@ -6,9 +6,21 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { acceptLegal, completeOnboarding, getTasks } from "@/lib/api/client";
+import { acceptLegal, completeOnboarding, getApiErrorMessage, getTasks } from "@/lib/api/client";
 
 const TOTAL_STEPS = 6;
+const ONBOARDING_DRAFT_KEY = "axiora_onboarding_draft";
+
+type OnboardingDraft = {
+  step: number;
+  childName: string;
+  splitSpend: number;
+  splitSave: number;
+  splitDonate: number;
+  allowance: string;
+  legalAccepted: boolean;
+  parentPin: string;
+};
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -38,6 +50,60 @@ export default function OnboardingPage() {
   }, [step]);
 
   const splitTotal = useMemo(() => splitSpend + splitSave + splitDonate, [splitDonate, splitSave, splitSpend]);
+
+  useEffect(() => {
+    const raw = localStorage.getItem(ONBOARDING_DRAFT_KEY);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as Partial<OnboardingDraft>;
+      if (typeof parsed.step === "number" && parsed.step >= 1 && parsed.step <= TOTAL_STEPS) setStep(parsed.step);
+      if (typeof parsed.childName === "string") setChildName(parsed.childName);
+      if (typeof parsed.splitSpend === "number") setSplitSpend(parsed.splitSpend);
+      if (typeof parsed.splitSave === "number") setSplitSave(parsed.splitSave);
+      if (typeof parsed.splitDonate === "number") setSplitDonate(parsed.splitDonate);
+      if (typeof parsed.allowance === "string") setAllowance(parsed.allowance);
+      if (typeof parsed.legalAccepted === "boolean") setLegalAccepted(parsed.legalAccepted);
+      if (typeof parsed.parentPin === "string") setParentPin(parsed.parentPin);
+    } catch {
+      localStorage.removeItem(ONBOARDING_DRAFT_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    const draft: OnboardingDraft = {
+      step,
+      childName,
+      splitSpend,
+      splitSave,
+      splitDonate,
+      allowance,
+      legalAccepted,
+      parentPin,
+    };
+    localStorage.setItem(ONBOARDING_DRAFT_KEY, JSON.stringify(draft));
+  }, [allowance, childName, legalAccepted, parentPin, splitDonate, splitSave, splitSpend, step]);
+
+  const canAdvance = (currentStep: number): boolean => {
+    if (currentStep === 1) return childName.trim().length > 0;
+    if (currentStep === 2) return splitTotal === 100;
+    if (currentStep === 4) {
+      const monthlyAllowance = Number(allowance);
+      return Number.isFinite(monthlyAllowance) && monthlyAllowance >= 0;
+    }
+    if (currentStep === 5) return legalAccepted;
+    return true;
+  };
+
+  const getStepError = (currentStep: number): string | null => {
+    if (currentStep === 1 && childName.trim().length === 0) return "Informe o nome da crianca.";
+    if (currentStep === 2 && splitTotal !== 100) return "A divisao precisa somar 100.";
+    if (currentStep === 4) {
+      const monthlyAllowance = Number(allowance);
+      if (!Number.isFinite(monthlyAllowance) || monthlyAllowance < 0) return "Allowance invalido.";
+    }
+    if (currentStep === 5 && !legalAccepted) return "Voce precisa aceitar os Termos e a Privacidade para continuar.";
+    return null;
+  };
 
   const onFinish = async () => {
     setError(null);
@@ -72,11 +138,11 @@ export default function OnboardingPage() {
         monthly_allowance_cents: monthlyAllowance,
         parent_pin: parentPin,
       });
-      localStorage.setItem("axiora_parent_pin", parentPin);
       sessionStorage.setItem("axiora_parent_pin_ok", "1");
+      localStorage.removeItem(ONBOARDING_DRAFT_KEY);
       router.push("/parent");
-    } catch {
-      setError("Nao foi possivel concluir onboarding.");
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Nao foi possivel concluir onboarding."));
     } finally {
       setLoading(false);
     }
@@ -166,8 +232,13 @@ export default function OnboardingPage() {
             {step < TOTAL_STEPS ? (
               <Button
                 type="button"
-                disabled={loading || (step === 5 && !legalAccepted)}
+                disabled={loading || !canAdvance(step)}
                 onClick={() => {
+                  const stepError = getStepError(step);
+                  if (stepError) {
+                    setError(stepError);
+                    return;
+                  }
                   setError(null);
                   setStep((s) => s + 1);
                 }}

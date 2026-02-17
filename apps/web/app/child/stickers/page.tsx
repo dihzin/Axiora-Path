@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 
+import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAchievements, type AchievementItem } from "@/lib/api/client";
 
@@ -46,7 +47,7 @@ export default function StickerGalleryPage() {
   }, []);
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md py-5">
+    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md py-5 pb-24">
       <div className="mb-3">
         <Link className="inline-flex items-center gap-1 text-sm text-muted-foreground" href="/child">
           <ArrowLeft className="h-4 w-4" />
@@ -81,6 +82,7 @@ export default function StickerGalleryPage() {
           </div>
         </CardContent>
       </Card>
+      <ChildBottomNav />
     </main>
   );
 }

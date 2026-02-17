@@ -6,12 +6,14 @@ import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { getMe } from "@/lib/api/client";
+import { getApiErrorMessage, getMe } from "@/lib/api/client";
 import { getTenantSlug, setTenantSlug } from "@/lib/api/session";
 
 export default function SelectTenantPage() {
   const router = useRouter();
   const [slug, setSlug] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const current = getTenantSlug();
@@ -20,6 +22,9 @@ export default function SelectTenantPage() {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    setError(null);
+    setLoading(true);
+    const previousSlug = getTenantSlug();
     setTenantSlug(slug);
     try {
       const me = await getMe();
@@ -28,8 +33,13 @@ export default function SelectTenantPage() {
         return;
       }
       router.push("/select-child");
-    } catch {
-      router.push("/select-child");
+    } catch (err) {
+      if (previousSlug) {
+        setTenantSlug(previousSlug);
+      }
+      setError(getApiErrorMessage(err, "Nao foi possivel validar tenant. Confira login e credenciais."));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -42,9 +52,10 @@ export default function SelectTenantPage() {
         </CardHeader>
         <CardContent>
           <form className="space-y-3" onSubmit={onSubmit}>
-            <Input placeholder="ex: familia-silva" value={slug} onChange={(e) => setSlug(e.target.value)} required />
-            <Button className="w-full" type="submit">
-              Continuar
+            <Input placeholder="ex: familia-silva" value={slug} onChange={(e) => setSlug(e.target.value)} required disabled={loading} />
+            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            <Button className="w-full" type="submit" disabled={loading}>
+              {loading ? "Validando..." : "Continuar"}
             </Button>
           </form>
         </CardContent>

@@ -1,13 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Flame, Home, Lock, Snowflake, Sparkles, Star, X } from "lucide-react";
+import { CheckCircle2, Coins, Flame, Lock, Snowflake, Sparkles, X } from "lucide-react";
 
+import { ActionFeedback, type ActionFeedbackState } from "@/components/action-feedback";
 import { AxionCharacter } from "@/components/axion-character";
 import { AxionDialogue } from "@/components/axion-dialogue";
 import { AvatarEvolution } from "@/components/avatar-evolution";
+import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { LevelUpOverlay } from "@/components/level-up-overlay";
 import { useTheme } from "@/components/theme-provider";
 import { PiggyJar } from "@/components/piggy-jar";
@@ -15,8 +16,10 @@ import { RecommendationsPanel } from "@/components/recommendations-panel";
 import { WeeklyBossMeter } from "@/components/weekly-boss-meter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  ApiError,
   completeDailyMission,
   getDailyMission,
+  getApiErrorMessage,
   getMe,
   getAxionState,
   getGoals,
@@ -45,6 +48,7 @@ import {
 import { enqueueDailyMissionComplete } from "@/lib/offline-queue";
 import { getSoundEnabled as getChildSoundEnabled, playSound, setSoundEnabled as setChildSoundEnabled } from "@/lib/sound-manager";
 import { THEME_LIST } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 const MOOD_OPTIONS: Array<{ mood: MoodType; emoji: string; label: string }> = [
   { mood: "HAPPY", emoji: "😀", label: "Happy" },
@@ -65,6 +69,12 @@ function getFlameIntensityClass(streakCount: number): string {
   if (streakCount >= 8) return "flame-strong";
   if (streakCount >= 4) return "flame-medium";
   return "flame-small";
+}
+
+function moodToAxionMoodState(mood: MoodType): string {
+  if (mood === "HAPPY") return "CELEBRATING";
+  if (mood === "SAD" || mood === "ANGRY") return "CONCERNED";
+  return "NEUTRAL";
 }
 
 type ChildTask = {
@@ -95,6 +105,7 @@ export default function ChildPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [childId, setChildId] = useState<number | null>(null);
+  const [isSchoolTenant, setIsSchoolTenant] = useState(false);
   const [tasks, setTasks] = useState<ChildTask[]>([]);
   const [streak, setStreak] = useState<StreakResponse | null>(null);
   const [walletSummary, setWalletSummary] = useState<WalletSummaryResponse | null>(null);
@@ -103,8 +114,13 @@ export default function ChildPage() {
   const [weeklyMetrics, setWeeklyMetrics] = useState<WeeklyMetricsResponse | null>(null);
   const [routineLogs, setRoutineLogs] = useState<RoutineWeekLog[]>([]);
   const [todayMood, setTodayMood] = useState<MoodType | null>(null);
+  const [moodError, setMoodError] = useState<string | null>(null);
   const [xpBarPercent, setXpBarPercent] = useState(0);
   const [themeSaving, setThemeSaving] = useState(false);
+  const [themeFeedback, setThemeFeedback] = useState<ActionFeedbackState>("idle");
+  const [moodFeedback, setMoodFeedback] = useState<ActionFeedbackState>("idle");
+  const [missionFeedback, setMissionFeedback] = useState<ActionFeedbackState>("idle");
+  const [taskFeedback, setTaskFeedback] = useState<Record<number, ActionFeedbackState>>({});
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [levelUpOverlayLevel, setLevelUpOverlayLevel] = useState<number | null>(null);
   const [avatarStage, setAvatarStage] = useState(1);
@@ -120,6 +136,10 @@ export default function ChildPage() {
   const lastKnownLevelRef = useRef<number | null>(null);
   const lastKnownStreakRef = useRef<number | null>(null);
   const toastTimerRef = useRef<number | null>(null);
+  const moodFeedbackTimerRef = useRef<number | null>(null);
+  const themeFeedbackTimerRef = useRef<number | null>(null);
+  const missionFeedbackTimerRef = useRef<number | null>(null);
+  const taskFeedbackTimerRef = useRef<Record<number, number>>({});
   const goalNearShownRef = useRef(false);
   const celebrationTimerRef = useRef<number | null>(null);
   const previousGoalRef = useRef<{ id: number; isLocked: boolean } | null>(null);
@@ -150,7 +170,20 @@ export default function ChildPage() {
       });
     getMe()
       .then((data) => {
+        setIsSchoolTenant(data.membership.tenant_type === "SCHOOL");
         const child = data.child_profiles.find((item) => item.id === parsedChildId);
+        if (!child) {
+          if (data.child_profiles.length === 0) {
+            router.push("/select-child");
+            return;
+          }
+          const fallbackChild = data.child_profiles[0];
+          localStorage.setItem("axiora_child_id", String(fallbackChild.id));
+          setChildId(fallbackChild.id);
+          setTheme(fallbackChild.theme);
+          setAvatarStage(fallbackChild.avatar_stage);
+          return;
+        }
         if (child) {
           setTheme(child.theme);
           setAvatarStage(child.avatar_stage);
@@ -312,6 +345,32 @@ export default function ChildPage() {
     }, 2400);
   };
 
+  const setTransientFeedback = (
+    setState: (value: ActionFeedbackState) => void,
+    timerRef: { current: number | null },
+    state: Exclude<ActionFeedbackState, "loading">,
+  ) => {
+    setState(state);
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+    }
+    timerRef.current = window.setTimeout(() => {
+      setState("idle");
+    }, 650);
+  };
+
+  const setTaskFeedbackState = (taskId: number, state: ActionFeedbackState) => {
+    setTaskFeedback((prev) => ({ ...prev, [taskId]: state }));
+    if (state === "loading") return;
+    const activeTimer = taskFeedbackTimerRef.current[taskId];
+    if (activeTimer !== undefined) {
+      window.clearTimeout(activeTimer);
+    }
+    taskFeedbackTimerRef.current[taskId] = window.setTimeout(() => {
+      setTaskFeedback((prev) => ({ ...prev, [taskId]: "idle" }));
+    }, 650);
+  };
+
   const fetchCoachDialogue = async (reason: "first_login" | "streak_milestone" | "level_up" | "goal_near") => {
     if (childId === null) return;
     try {
@@ -375,27 +434,40 @@ export default function ChildPage() {
     previousGoalRef.current = { id: activeGoal.id, isLocked: activeGoal.is_locked };
   }, [activeGoal?.id, activeGoal?.is_locked]);
 
-  const onSelectMood = async (mood: MoodType) => {
-    if (childId === null) return;
-    setTodayMood(mood);
+  const onSelectMood = async (mood: MoodType): Promise<boolean> => {
+    if (childId === null) return false;
+
+    setMoodError(null);
+    setMoodFeedback("loading");
     try {
       await postMood(childId, mood);
+      setTodayMood(mood);
+      setAxionState((prev) =>
+        prev
+          ? { ...prev, mood_state: moodToAxionMoodState(mood) }
+          : { stage: 1, mood_state: moodToAxionMoodState(mood), personality_traits: [] },
+      );
+      setTransientFeedback(setMoodFeedback, moodFeedbackTimerRef, "success");
       showToast("Humor atualizado", "success");
+      return true;
     } catch {
-      showToast("Falha ao salvar humor", "error");
+      setMoodError("Nao foi possivel salvar humor agora.");
+      setTransientFeedback(setMoodFeedback, moodFeedbackTimerRef, "error");
+      return false;
     }
   };
 
   const onSelectTheme = async (nextTheme: ThemeName) => {
     if (childId === null || themeSaving || nextTheme === theme) return;
-    const previousTheme = theme;
-    setTheme(nextTheme);
     setThemeSaving(true);
+    setThemeFeedback("loading");
     try {
       await updateChildTheme(childId, nextTheme);
+      setTheme(nextTheme);
+      setTransientFeedback(setThemeFeedback, themeFeedbackTimerRef, "success");
       showToast("Tema atualizado", "success");
     } catch {
-      setTheme(previousTheme);
+      setTransientFeedback(setThemeFeedback, themeFeedbackTimerRef, "error");
       showToast("Falha ao atualizar tema", "error");
     } finally {
       setThemeSaving(false);
@@ -426,8 +498,10 @@ export default function ChildPage() {
   };
 
   const onQuickMood = async (mood: MoodType) => {
-    await onSelectMood(mood);
-    dismissDailyWelcome();
+    const success = await onSelectMood(mood);
+    if (success) {
+      dismissDailyWelcome();
+    }
   };
 
   const onMarkTask = async (taskId: number) => {
@@ -448,13 +522,16 @@ export default function ChildPage() {
     };
 
     setMarkingTaskIds((prev) => [...prev, taskId]);
+    setTaskFeedbackState(taskId, "loading");
     setRoutineLogs((prev) => [optimisticLog, ...prev]);
     try {
       const created = await markRoutine(childId, taskId, todayIso);
       setRoutineLogs((prev) => prev.map((log) => (log.id === optimisticId ? created : log)));
+      setTaskFeedbackState(taskId, "success");
       showToast("Tarefa marcada", "success");
     } catch {
       setRoutineLogs((prev) => prev.filter((log) => log.id !== optimisticId));
+      setTaskFeedbackState(taskId, "error");
       showToast("Falha ao marcar tarefa", "error");
     } finally {
       setMarkingTaskIds((prev) => prev.filter((id) => id !== taskId));
@@ -466,9 +543,11 @@ export default function ChildPage() {
     if (dailyMission.status === "completed") return;
 
     setMissionCompleting(true);
+    setMissionFeedback("loading");
     if (!navigator.onLine) {
       await enqueueDailyMissionComplete({ mission_id: dailyMission.id });
       setDailyMission((prev) => (prev ? { ...prev, status: "completed" } : prev));
+      setTransientFeedback(setMissionFeedback, missionFeedbackTimerRef, "success");
       showToast("Missao concluida offline. Vai sincronizar ao reconectar.", "success");
       setMissionCompleting(false);
       return;
@@ -477,6 +556,7 @@ export default function ChildPage() {
     try {
       await completeDailyMission(dailyMission.id);
       setDailyMission((prev) => (prev ? { ...prev, status: "completed" } : prev));
+      setTransientFeedback(setMissionFeedback, missionFeedbackTimerRef, "success");
       showToast("Missao concluida!", "success");
       if (childId !== null) {
         void getLevels(childId).then((data) => {
@@ -490,10 +570,16 @@ export default function ChildPage() {
         });
         void getWalletSummary(childId).then((data) => setWalletSummary(data));
       }
-    } catch {
-      await enqueueDailyMissionComplete({ mission_id: dailyMission.id });
-      setDailyMission((prev) => (prev ? { ...prev, status: "completed" } : prev));
-      showToast("Sem conexao. Missao enfileirada para sincronizar.", "success");
+    } catch (err) {
+      if (!(err instanceof ApiError)) {
+        await enqueueDailyMissionComplete({ mission_id: dailyMission.id });
+        setDailyMission((prev) => (prev ? { ...prev, status: "completed" } : prev));
+        setTransientFeedback(setMissionFeedback, missionFeedbackTimerRef, "success");
+        showToast("Sem conexao. Missao enfileirada para sincronizar.", "success");
+      } else {
+        setTransientFeedback(setMissionFeedback, missionFeedbackTimerRef, "error");
+        showToast(getApiErrorMessage(err, "Nao foi possivel concluir missao."), "error");
+      }
     } finally {
       setMissionCompleting(false);
     }
@@ -524,49 +610,125 @@ export default function ChildPage() {
     return "border-border bg-background";
   };
 
+  const missionRarityBadgeClass = (rarity: DailyMissionResponse["rarity"]) => {
+    if (rarity === "epic") return "border-fuchsia-200 bg-fuchsia-100 text-fuchsia-700";
+    if (rarity === "special") return "border-sky-200 bg-sky-100 text-sky-700";
+    return "border-slate-200 bg-slate-100 text-slate-700";
+  };
+
+  const missionCardClass = (status: DailyMissionResponse["status"]) => {
+    if (status === "completed") {
+      return "border-emerald-300 bg-gradient-to-b from-emerald-50 to-emerald-100/60";
+    }
+    return "border-primary/30 bg-gradient-to-b from-card to-primary/5 shadow-sm";
+  };
+
   return (
     <>
       {levelUpOverlayLevel !== null ? (
         <LevelUpOverlay level={levelUpOverlayLevel} onDismiss={() => setLevelUpOverlayLevel(null)} />
       ) : null}
-      <main className="safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md flex-col pb-24 pt-5">
+      <main
+        className={cn(
+          "safe-px safe-pb mx-auto flex min-h-screen w-full flex-col pb-24 pt-3",
+          isSchoolTenant ? "max-w-2xl" : "max-w-md",
+        )}
+      >
         <div className="mb-2 flex justify-end">
           <button
             type="button"
-            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground transition hover:bg-muted"
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-sm text-muted-foreground transition hover:bg-muted"
             onClick={() => router.push("/parent-pin")}
           >
             <Lock className="h-3.5 w-3.5" />
             Modo pais
           </button>
         </div>
-        <Card className="relative">
-          <CardHeader>
-            <CardTitle className="text-base">Axion</CardTitle>
+        {dailyMission ? (
+          <Card className={cn("mb-2", missionCardClass(dailyMission.status))}>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-base font-bold tracking-tight">Missao do Dia</CardTitle>
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wide ${missionRarityBadgeClass(
+                    dailyMission.rarity,
+                  )}`}
+                >
+                  {dailyMission.rarity}
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2.5 text-sm">
+              <p className="text-sm font-semibold text-foreground">{dailyMission.title}</p>
+              <p className="text-xs leading-relaxed text-muted-foreground">{dailyMission.description}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-1.5 rounded-md border border-border bg-background/70 px-2 py-1.5 text-xs font-semibold">
+                  <Sparkles className="h-3.5 w-3.5 text-sky-500" />
+                  +{dailyMission.xp_reward} XP
+                </div>
+                <div className="flex items-center gap-1.5 rounded-md border border-border bg-background/70 px-2 py-1.5 text-xs font-semibold">
+                  <Coins className="h-3.5 w-3.5 text-amber-500" />
+                  +{dailyMission.coin_reward} moedas
+                </div>
+              </div>
+              {dailyMission.status === "completed" ? (
+                <div className="flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-100 px-3 py-2 text-xs font-semibold text-emerald-700">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Missao concluida
+                </div>
+              ) : null}
+              <ActionFeedback
+                type="button"
+                state={missionCompleting ? "loading" : missionFeedback}
+                loadingLabel="Processando..."
+                disabled={missionCompleting || dailyMission.status === "completed"}
+                className="w-full rounded-md bg-primary px-3 py-2.5 text-xs font-bold text-primary-foreground shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => void onCompleteDailyMission()}
+              >
+                {dailyMission.status === "completed" ? "Concluida" : "Completar Missao"}
+              </ActionFeedback>
+            </CardContent>
+          </Card>
+        ) : null}
+        <Card
+          className={cn(
+            "relative overflow-hidden border-primary/20 shadow-md",
+            isSchoolTenant ? "bg-card" : "axion-card-idle bg-gradient-to-b from-card to-primary/5",
+          )}
+        >
+          <div className="pointer-events-none absolute -left-10 top-8 h-24 w-24 rounded-full bg-primary/10 blur-2xl" />
+          <div className="pointer-events-none absolute -right-8 top-12 h-20 w-20 rounded-full bg-accent/20 blur-2xl" />
+          <CardHeader className="pb-2 text-center">
+            <CardTitle className="text-xl font-bold tracking-tight">Axion</CardTitle>
+            <p className="text-sm text-muted-foreground">Seu parceiro de missao</p>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+          <CardContent className="space-y-3 text-sm text-center">
             {axionCelebration ? (
-              <div className="celebrate-badge-pop absolute right-3 top-3 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+              <div className="celebrate-badge-pop absolute right-3 top-3 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
                 {AXION_CELEBRATION_BADGES[axionCelebration]}
               </div>
             ) : null}
-            <AxionCharacter
-              stage={axionState?.stage ?? 1}
-              moodState={axionState?.mood_state ?? "NEUTRAL"}
-              celebrating={axionCelebration !== null}
-            />
+            <div className="mx-auto flex w-full max-w-[14rem] justify-center">
+              <AxionCharacter
+                stage={axionState?.stage ?? 1}
+                moodState={axionState?.mood_state ?? "NEUTRAL"}
+                celebrating={axionCelebration !== null}
+                reducedMotion={isSchoolTenant}
+              />
+            </div>
             <AxionDialogue
               message={axionDialogue.message}
               visible={axionDialogue.visible}
               onDismiss={() => setAxionDialogue((prev) => ({ ...prev, visible: false }))}
+              reducedMotion={isSchoolTenant}
             />
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Stage {axionState?.stage ?? 1}</span>
-              <span>{axionState?.mood_state ?? "NEUTRAL"}</span>
+            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <span className="rounded-full border border-border bg-background/70 px-2 py-1">Stage {axionState?.stage ?? 1}</span>
+              <span className="rounded-full border border-border bg-background/70 px-2 py-1">{axionState?.mood_state ?? "NEUTRAL"}</span>
             </div>
           </CardContent>
         </Card>
-        <section className="space-y-3">
+        <section className={cn("space-y-2.5", isSchoolTenant && "grid gap-3 lg:grid-cols-[1.15fr_1fr] lg:items-start lg:space-y-0")}>
           {showDailyWelcome ? (
             <Card>
               <CardHeader>
@@ -592,126 +754,108 @@ export default function ChildPage() {
                   <p className="mb-2 text-xs text-muted-foreground">Quick mood</p>
                   <div className="flex items-center gap-2">
                     {MOOD_OPTIONS.map((option) => (
-                      <button
+                      <ActionFeedback
                         key={`quick-${option.mood}`}
                         type="button"
                         title={option.label}
+                        state={todayMood === option.mood ? moodFeedback : "idle"}
                         className={`rounded-full border px-2 py-1 text-lg transition ${
                           todayMood === option.mood ? "border-primary bg-primary/10" : "border-border bg-background"
                         }`}
                         onClick={() => void onQuickMood(option.mood)}
                       >
                         {option.emoji}
-                      </button>
+                      </ActionFeedback>
                     ))}
                   </div>
+                  {moodError ? <p className="mt-2 text-sm text-red-600">{moodError}</p> : null}
                 </div>
               </CardContent>
             </Card>
           ) : null}
-          {dailyMission ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Missao diaria</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <p className="font-semibold">{dailyMission.title}</p>
-                <p className="text-muted-foreground">{dailyMission.description}</p>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span className="capitalize">Raridade: {dailyMission.rarity}</span>
-                  <span>
-                    +{dailyMission.xp_reward} XP / +{dailyMission.coin_reward} moedas
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  disabled={missionCompleting || dailyMission.status === "completed"}
-                  className="w-full rounded-md border border-border px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60"
-                  onClick={() => void onCompleteDailyMission()}
-                >
-                  {missionCompleting ? "Processando..." : dailyMission.status === "completed" ? "Concluida" : "Concluir missao"}
+          <Card className="border-border/80">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-base font-semibold">Painel do dia</CardTitle>
+                <button type="button" className="text-xs text-muted-foreground underline" onClick={onToggleSound}>
+                  Sound: {soundEnabled ? "on" : "off"}
                 </button>
-              </CardContent>
-            </Card>
-          ) : null}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Como voc est hoje?</CardTitle>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
+              <div>
+                <p className="mb-2 text-xs font-semibold text-foreground">Como voc est hoje?</p>
               <div className="flex items-center gap-2">
                 {MOOD_OPTIONS.map((option) => (
-                  <button
+                  <ActionFeedback
                     key={option.mood}
                     type="button"
                     title={option.label}
+                    state={todayMood === option.mood ? moodFeedback : "idle"}
                     className={`rounded-full border px-2 py-1 text-xl transition ${
                       todayMood === option.mood ? "border-primary bg-primary/10" : "border-border bg-background"
                     }`}
                     onClick={() => void onSelectMood(option.mood)}
                   >
                     {option.emoji}
-                  </button>
+                  </ActionFeedback>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Area da crianca</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>MVP mobile com navegao inferior. Conteudo funcional sera ligado aos endpoints na proxima etapa.</p>
-              <button type="button" className="text-xs text-muted-foreground underline" onClick={onToggleSound}>
-                Sound: {soundEnabled ? "on" : "off"}
-              </button>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Tema</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-3 gap-2 text-xs">
-              {THEME_LIST.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  disabled={themeSaving}
-                  className={`rounded-md border px-2 py-2 capitalize transition ${
-                    theme === item ? "border-primary bg-primary/10 text-foreground" : "border-border bg-background text-muted-foreground"
-                  }`}
-                  onClick={() => void onSelectTheme(item)}
-                >
-                  {item}
-                </button>
-              ))}
-            </CardContent>
-          </Card>
-          <PiggyJar currentSaveAmountCents={currentSave} nextGoalAmountCents={nextGoal} savePercent={savePercent} isLocked={goalLocked} />
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Avatar</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <AvatarEvolution stage={avatarStage} />
-            </CardContent>
-          </Card>
-          <WeeklyBossMeter completionRate={weeklyMetrics?.completion_rate ?? 0} />
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">XP</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex items-center justify-between">
-                <span>Nvel {level?.level ?? 1}</span>
-                <span className="text-muted-foreground">{xpBarPercent.toFixed(0)}%</span>
+              {moodError ? <p className="mt-2 text-sm text-red-600">{moodError}</p> : null}
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full bg-primary transition-[width] duration-700 ease-out"
-                  style={{ width: `${xpBarPercent}%` }}
+              <div>
+                <p className="mb-2 text-xs font-semibold text-foreground">Tema</p>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  {THEME_LIST.map((item) => (
+                    <ActionFeedback
+                      key={item}
+                      type="button"
+                      state={theme === item ? themeFeedback : "idle"}
+                      disabled={themeSaving}
+                      className={`rounded-md border px-2 py-2 capitalize transition ${
+                        theme === item ? "border-primary bg-primary/10 text-foreground" : "border-border bg-background text-muted-foreground"
+                      }`}
+                      onClick={() => void onSelectTheme(item)}
+                    >
+                      {item}
+                    </ActionFeedback>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-border/80">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">Progresso</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <PiggyJar
+                  currentSaveAmountCents={currentSave}
+                  nextGoalAmountCents={nextGoal}
+                  savePercent={savePercent}
+                  isLocked={goalLocked}
                 />
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <p className="mb-2 text-xs font-semibold text-foreground">Avatar</p>
+                  <AvatarEvolution stage={avatarStage} />
+                </div>
               </div>
+              <div className="rounded-xl border border-border bg-card p-4">
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="font-medium text-foreground">XP</span>
+                  <span className="text-muted-foreground">
+                    Nvel {level?.level ?? 1} • {xpBarPercent.toFixed(0)}%
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full bg-primary transition-[width] duration-700 ease-out"
+                    style={{ width: `${xpBarPercent}%` }}
+                  />
+                </div>
+              </div>
+              <WeeklyBossMeter completionRate={weeklyMetrics?.completion_rate ?? 0} />
             </CardContent>
           </Card>
           <Card>
@@ -738,7 +882,7 @@ export default function ChildPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Flame className={`flame-flicker ${flameClassName} text-orange-500`} />
+                <Flame className={`${isSchoolTenant ? "" : "flame-flicker"} ${flameClassName} text-orange-500`} />
                 <span>Streak: {streakCount} dias</span>
                 {streak?.freeze_used_today ? <Snowflake className="h-3.5 w-3.5 text-sky-500" /> : null}
               </div>
@@ -757,22 +901,24 @@ export default function ChildPage() {
                       >
                         <div className="min-w-0">
                           <p className="truncate text-xs font-medium text-foreground">{task.title}</p>
-                          <p className="text-[10px] text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             {task.difficulty} • peso {task.weight}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
                           {status ? (
-                            <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${statusBadgeClass(status)}`}>{status}</span>
+                            <span className={`rounded px-2 py-0.5 text-xs font-semibold ${statusBadgeClass(status)}`}>{status}</span>
                           ) : null}
-                          <button
+                          <ActionFeedback
                             type="button"
+                            state={taskFeedback[task.id] ?? "idle"}
+                            loadingLabel="Marcando..."
                             disabled={isProcessing || isMarked}
-                            className="rounded-md border border-border px-2 py-1 text-[10px] font-semibold text-foreground disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]"
+                            className="rounded-md border border-border px-2 py-1 text-xs font-semibold text-foreground disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]"
                             onClick={() => void onMarkTask(task.id)}
                           >
-                            {isProcessing ? "Marcando..." : isMarked ? "Marcada" : "Marcar"}
-                          </button>
+                            {isMarked ? "Marcada" : "Marcar"}
+                          </ActionFeedback>
                         </div>
                       </div>
                     );
@@ -786,7 +932,7 @@ export default function ChildPage() {
                   {routineLogs.map((log) => (
                     <div key={log.id} className="flex items-center justify-between rounded-md border border-border px-2 py-1">
                       <span className="text-xs">Task #{log.task_id}</span>
-                      <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${statusBadgeClass(log.status)}`}>{log.status}</span>
+                      <span className={`rounded px-2 py-0.5 text-xs font-semibold ${statusBadgeClass(log.status)}`}>{log.status}</span>
                     </div>
                   ))}
                 </div>
@@ -797,7 +943,7 @@ export default function ChildPage() {
                       <div key={log.id} className="flex items-center gap-3">
                         <div className="flex flex-col items-center gap-1">
                           <span className={`h-5 w-5 rounded-full border-2 ${checkpointClass(log.status)}`} />
-                          <span className="text-[10px] text-muted-foreground">#{log.task_id}</span>
+                          <span className="text-xs text-muted-foreground">#{log.task_id}</span>
                         </div>
                         {index < routineLogs.length - 1 ? <span className="h-0.5 w-8 bg-border" /> : null}
                       </div>
@@ -810,22 +956,7 @@ export default function ChildPage() {
           {childId !== null ? <RecommendationsPanel childId={childId} /> : null}
         </section>
 
-        <nav className="safe-px safe-pb fixed inset-x-0 bottom-0 border-t border-border bg-background/95 py-2 backdrop-blur">
-          <div className="mx-auto grid w-full max-w-md grid-cols-3 gap-1">
-            <Link className="flex flex-col items-center gap-1 rounded-md py-2 text-xs font-medium text-primary" href="/child">
-              <Home className="h-4 w-4" />
-              Inicio
-            </Link>
-            <Link className="flex flex-col items-center gap-1 rounded-md py-2 text-xs text-muted-foreground" href="/child/stickers">
-              <Star className="h-4 w-4" />
-              Stickers
-            </Link>
-            <Link className="flex flex-col items-center gap-1 rounded-md py-2 text-xs text-muted-foreground" href="/child">
-              <Sparkles className="h-4 w-4" />
-              Coach
-            </Link>
-          </div>
-        </nav>
+        <ChildBottomNav />
         {toast ? (
           <div className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4">
             <div

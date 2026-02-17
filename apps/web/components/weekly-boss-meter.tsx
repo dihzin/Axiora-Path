@@ -18,7 +18,7 @@ export function WeeklyBossMeter({ completionRate }: WeeklyBossMeterProps) {
         <div className="h-full bg-primary transition-[width] duration-700 ease-out" style={{ width: `${percent}%` }} />
       </div>
       {bossDefeated ? (
-        <span className="mt-3 inline-flex rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">
+        <span className="mt-3 inline-flex rounded-full bg-emerald-100 px-2 py-1 text-sm font-medium text-emerald-700">
           Boss Defeated
         </span>
       ) : null}

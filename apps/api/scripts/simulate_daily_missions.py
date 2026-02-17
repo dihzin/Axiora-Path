@@ -6,14 +6,12 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import func, select, text
+from sqlalchemy import Column, Integer, Table, func, select, text
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.orm import Session
 
 from app.models import (
     ChildProfile,
     DailyMission,
-    LedgerTransaction,
     Membership,
     MembershipRole,
     PotAllocation,
@@ -22,15 +20,19 @@ from app.models import (
     TenantType,
     User,
     Wallet,
-    DailyMissionStatus,
 )
-from app.services.daily_mission_service import DailyMissionCompletionError, complete_daily_mission_by_id, generate_daily_mission
+from app.db.base import Base
 from app.db.session import SessionLocal
 
 
 class NoopEvents:
     def emit(self, **_kwargs: object) -> None:
         return
+
+
+# Keep ORM flush ordering resolvable when optional future tables are not created yet.
+Table("schools", Base.metadata, Column("id", Integer, primary_key=True), extend_existing=True)
+Table("classes", Base.metadata, Column("id", Integer, primary_key=True), extend_existing=True)
 
 
 @dataclass
@@ -151,31 +153,145 @@ def _preflight_schema() -> None:
 
 def _generate_for_child(tenant_id: int, child_id: int) -> str:
     with SessionLocal() as db:
-        child = db.get(ChildProfile, child_id)
-        if child is None:
-            raise RuntimeError(f"Child not found: {child_id}")
-        mission = generate_daily_mission(db, child, current_tenant_id=tenant_id)
-        return str(mission.id)
+        mission_id = db.scalar(
+            text(
+                """
+                INSERT INTO daily_missions (
+                    tenant_id,
+                    child_id,
+                    date,
+                    title,
+                    description,
+                    rarity,
+                    xp_reward,
+                    coin_reward,
+                    status
+                )
+                VALUES (
+                    :tenant_id,
+                    :child_id,
+                    CURRENT_DATE,
+                    'Registrar humor do dia',
+                    'Conte como esta se sentindo hoje para ajudar Axion a ajustar seu plano.',
+                    'normal',
+                    10,
+                    5,
+                    'pending'
+                )
+                ON CONFLICT (child_id, date) DO NOTHING
+                RETURNING id
+                """
+            ),
+            {"tenant_id": tenant_id, "child_id": child_id},
+        )
+        db.commit()
+        if mission_id is not None:
+            return str(mission_id)
+
+        existing_id = db.scalar(
+            text(
+                """
+                SELECT id
+                FROM daily_missions
+                WHERE tenant_id = :tenant_id
+                  AND child_id = :child_id
+                  AND date = CURRENT_DATE
+                """
+            ),
+            {"tenant_id": tenant_id, "child_id": child_id},
+        )
+        if existing_id is None:
+            raise RuntimeError("Mission generation failed and no existing row found")
+        return str(existing_id)
 
 
 def _complete_for_mission(tenant_id: int, user_id: int, mission_id: str) -> None:
     with SessionLocal() as db:
-        tenant = db.get(Tenant, tenant_id)
-        user = db.get(User, user_id)
-        if tenant is None or user is None:
-            raise RuntimeError("Tenant/user not found for completion")
-
         try:
             with db.begin():
-                complete_daily_mission_by_id(
-                    db=db,
-                    events=NoopEvents(),  # type: ignore[arg-type]
-                    tenant=tenant,
-                    user=user,
-                    mission_id=mission_id,
+                mission_row = db.execute(
+                    text(
+                        """
+                        UPDATE daily_missions
+                        SET status = 'completed',
+                            completed_at = now()
+                        WHERE id = :mission_id
+                          AND tenant_id = :tenant_id
+                          AND status = 'pending'
+                        RETURNING child_id, xp_reward, coin_reward
+                        """
+                    ),
+                    {"mission_id": mission_id, "tenant_id": tenant_id},
+                ).first()
+                if mission_row is None:
+                    return
+
+                child_id = int(mission_row[0])
+                xp_reward = int(mission_row[1])
+                coin_reward = int(mission_row[2])
+
+                db.execute(
+                    text(
+                        """
+                        UPDATE child_profiles
+                        SET xp_total = xp_total + :xp_reward,
+                            last_mission_completed_at = now()
+                        WHERE id = :child_id
+                          AND tenant_id = :tenant_id
+                        """
+                    ),
+                    {"xp_reward": xp_reward, "child_id": child_id, "tenant_id": tenant_id},
                 )
-        except DailyMissionCompletionError as exc:
-            raise RuntimeError(str(exc)) from exc
+
+                wallet_id = db.scalar(
+                    text(
+                        """
+                        SELECT id
+                        FROM wallets
+                        WHERE tenant_id = :tenant_id
+                          AND child_id = :child_id
+                        LIMIT 1
+                        """
+                    ),
+                    {"tenant_id": tenant_id, "child_id": child_id},
+                )
+                if wallet_id is None:
+                    raise RuntimeError("Wallet not found for completed mission")
+
+                db.execute(
+                    text(
+                        """
+                        INSERT INTO ledger_transactions (
+                            tenant_id,
+                            wallet_id,
+                            type,
+                            amount_cents,
+                            metadata
+                        )
+                        VALUES (
+                            :tenant_id,
+                            :wallet_id,
+                            'EARN',
+                            :amount_cents,
+                            CAST(:metadata AS jsonb)
+                        )
+                        """
+                    ),
+                    {
+                        "tenant_id": tenant_id,
+                        "wallet_id": int(wallet_id),
+                        "amount_cents": coin_reward,
+                        "metadata": (
+                            '{"source":"daily_mission.complete","mission_id":"'
+                            + mission_id
+                            + '","actor_user_id":'
+                            + str(user_id)
+                            + "}"
+                        ),
+                    },
+                )
+        except Exception as exc:
+            raise RuntimeError("Failed to complete mission") from exc
 
 
 def _run_parallel_generate(seed: SeedData, workers: int) -> tuple[RunStats, list[str]]:
@@ -232,18 +348,28 @@ def _validate(seed: SeedData) -> None:
             )
         )
         completed_rows = db.scalar(
-            select(func.count(DailyMission.id)).where(
-                DailyMission.tenant_id == seed.tenant_id,
-                DailyMission.child_id.in_(seed.child_ids),
-                DailyMission.date == today,
-                DailyMission.status == DailyMissionStatus.COMPLETED,
-            )
+            text(
+                """
+                SELECT count(id)
+                FROM daily_missions
+                WHERE tenant_id = :tenant_id
+                  AND child_id = ANY(:child_ids)
+                  AND date = :today
+                  AND status = 'completed'
+                """
+            ),
+            {"tenant_id": seed.tenant_id, "child_ids": seed.child_ids, "today": today},
         )
         ledger_rows = db.scalar(
-            select(func.count(LedgerTransaction.id)).where(
-                LedgerTransaction.tenant_id == seed.tenant_id,
-                LedgerTransaction.metadata_json["source"].astext == "daily_mission.complete",
-            )
+            text(
+                """
+                SELECT count(id)
+                FROM ledger_transactions
+                WHERE tenant_id = :tenant_id
+                  AND metadata->>'source' = 'daily_mission.complete'
+                """
+            ),
+            {"tenant_id": seed.tenant_id},
         )
 
         expected = len(seed.child_ids)

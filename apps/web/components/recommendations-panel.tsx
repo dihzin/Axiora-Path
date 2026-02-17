@@ -20,6 +20,8 @@ function severityClass(severity: string): string {
 export function RecommendationsPanel({ childId }: RecommendationsPanelProps) {
   const [items, setItems] = useState<RecommendationOut[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dismissError, setDismissError] = useState<string | null>(null);
+  const [dismissingId, setDismissingId] = useState<number | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -36,8 +38,16 @@ export function RecommendationsPanel({ childId }: RecommendationsPanelProps) {
   }, [childId]);
 
   const onDismiss = async (id: number) => {
-    await dismissRecommendation(id);
-    setItems((current) => current.filter((item) => item.id !== id));
+    setDismissError(null);
+    setDismissingId(id);
+    try {
+      await dismissRecommendation(id);
+      setItems((current) => current.filter((item) => item.id !== id));
+    } catch {
+      setDismissError("Nao foi possivel dispensar recomendacao.");
+    } finally {
+      setDismissingId(null);
+    }
   };
 
   return (
@@ -47,6 +57,7 @@ export function RecommendationsPanel({ childId }: RecommendationsPanelProps) {
       </CardHeader>
       <CardContent className="space-y-2">
         {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : null}
+        {dismissError ? <p className="text-sm text-red-600">{dismissError}</p> : null}
         {!loading && items.length === 0 ? <p className="text-sm text-muted-foreground">Sem recomendaes ativas.</p> : null}
         {items.map((item) => (
           <div key={item.id} className="rounded-lg border border-border p-3">
@@ -57,8 +68,8 @@ export function RecommendationsPanel({ childId }: RecommendationsPanelProps) {
               </span>
             </div>
             <p className="text-xs text-muted-foreground">{item.body}</p>
-            <Button className="mt-3" size="sm" variant="outline" onClick={() => void onDismiss(item.id)}>
-              Dismiss
+            <Button className="mt-3" size="sm" variant="outline" onClick={() => void onDismiss(item.id)} disabled={dismissingId === item.id}>
+              {dismissingId === item.id ? "..." : "Dismiss"}
             </Button>
           </div>
         ))}
@@ -66,4 +77,3 @@ export function RecommendationsPanel({ childId }: RecommendationsPanelProps) {
     </Card>
   );
 }
-

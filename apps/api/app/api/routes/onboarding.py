@@ -6,8 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
 from app.api.deps import DBSession, EventSvc, get_current_tenant, get_current_user, require_role
+from app.core.security import hash_password, verify_password
 from app.models import ChildProfile, Membership, PotAllocation, PotType, Tenant, User, Wallet
-from app.schemas.onboarding import OnboardingCompleteRequest, OnboardingCompleteResponse
+from app.schemas.onboarding import (
+    OnboardingCompleteRequest,
+    OnboardingCompleteResponse,
+    ParentPinVerifyRequest,
+    ParentPinVerifyResponse,
+)
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
@@ -50,6 +56,7 @@ def complete_onboarding(
 
     tenant.onboarding_completed = True
     tenant.monthly_allowance_cents = payload.monthly_allowance_cents
+    tenant.parent_pin_hash = hash_password(payload.parent_pin)
 
     events.emit(
         type="onboarding.completed",
@@ -74,3 +81,16 @@ def complete_onboarding(
     )
     db.commit()
     return OnboardingCompleteResponse(onboarding_completed=True)
+
+
+@router.post("/verify-pin", response_model=ParentPinVerifyResponse)
+def verify_parent_pin(
+    payload: ParentPinVerifyRequest,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    _: Annotated[Membership, Depends(require_role(["PARENT", "TEACHER"]))],
+) -> ParentPinVerifyResponse:
+    if not tenant.parent_pin_hash:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Parent PIN not configured")
+    if not verify_password(payload.pin, tenant.parent_pin_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="PIN invalido")
+    return ParentPinVerifyResponse(verified=True)

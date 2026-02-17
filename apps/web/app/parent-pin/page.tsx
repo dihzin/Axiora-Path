@@ -6,24 +6,31 @@ import { FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-
-const PARENT_PIN = process.env.NEXT_PUBLIC_PARENT_PIN ?? "1234";
+import { getApiErrorMessage, verifyParentPin } from "@/lib/api/client";
 
 export default function ParentPinPage() {
   const router = useRouter();
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const onSubmit = (event: FormEvent) => {
+  const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    const savedPin = localStorage.getItem("axiora_parent_pin");
-    const expectedPin = savedPin ?? PARENT_PIN;
-    if (pin !== expectedPin) {
-      setError("PIN invalido.");
-      return;
+    setError(null);
+    setLoading(true);
+    try {
+      const result = await verifyParentPin(pin);
+      if (!result.verified) {
+        setError("PIN invalido.");
+        return;
+      }
+      sessionStorage.setItem("axiora_parent_pin_ok", "1");
+      router.push("/parent");
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Nao foi possivel validar PIN agora."));
+    } finally {
+      setLoading(false);
     }
-    sessionStorage.setItem("axiora_parent_pin_ok", "1");
-    router.push("/parent");
   };
 
   return (
@@ -41,11 +48,12 @@ export default function ParentPinPage() {
               type="password"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
+              disabled={loading}
               required
             />
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
-            <Button className="w-full" type="submit">
-              Continuar
+            <Button className="w-full" type="submit" disabled={loading}>
+              {loading ? "Validando..." : "Continuar"}
             </Button>
           </form>
         </CardContent>

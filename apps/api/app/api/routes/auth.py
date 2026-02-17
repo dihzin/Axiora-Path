@@ -271,6 +271,7 @@ def me(
             role=membership.role.value,
             tenant_id=tenant.id,
             tenant_slug=tenant.slug,
+            tenant_type=tenant.type.value,
             onboarding_completed=tenant.onboarding_completed,
         ),
         child_profiles=[

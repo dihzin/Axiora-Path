@@ -19,3 +19,10 @@ class OnboardingCompleteRequest(BaseModel):
 class OnboardingCompleteResponse(BaseModel):
     onboarding_completed: bool
 
+
+class ParentPinVerifyRequest(BaseModel):
+    pin: str = Field(min_length=4, max_length=12)
+
+
+class ParentPinVerifyResponse(BaseModel):
+    verified: bool

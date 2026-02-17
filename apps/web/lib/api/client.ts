@@ -12,7 +12,7 @@ type RequestOptions = {
   includeTenant?: boolean;
 };
 
-class ApiError extends Error {
+export class ApiError extends Error {
   status: number;
   payload: unknown;
 
@@ -22,6 +22,22 @@ class ApiError extends Error {
     this.status = status;
     this.payload = payload;
   }
+}
+
+type ApiErrorPayload = {
+  code?: string;
+  message?: string;
+  details?: unknown;
+};
+
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) {
+    const payload = error.payload as ApiErrorPayload | null;
+    if (payload && typeof payload.message === "string" && payload.message.trim().length > 0) {
+      return payload.message;
+    }
+  }
+  return fallback;
 }
 
 async function parseJsonSafe(response: Response): Promise<unknown> {
@@ -103,7 +119,7 @@ export type AuthTokens = {
 
 export type AuthMeResponse = {
   user: { id: number; email: string; name: string };
-  membership: { role: string; tenant_id: number; tenant_slug: string; onboarding_completed: boolean };
+  membership: { role: string; tenant_id: number; tenant_slug: string; tenant_type: "FAMILY" | "SCHOOL"; onboarding_completed: boolean };
   child_profiles: Array<{ id: number; display_name: string; avatar_key: string | null; birth_year: number | null; theme: ThemeName; avatar_stage: number }>;
 };
 
@@ -272,6 +288,15 @@ export async function completeOnboarding(payload: {
   return apiRequest<{ onboarding_completed: boolean }>("/onboarding/complete", {
     method: "POST",
     body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function verifyParentPin(pin: string): Promise<{ verified: boolean }> {
+  return apiRequest<{ verified: boolean }>("/onboarding/verify-pin", {
+    method: "POST",
+    body: { pin },
     requireAuth: true,
     includeTenant: true,
   });

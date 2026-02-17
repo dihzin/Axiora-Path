@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   decideRoutine,
+  getMe,
   getRoutineWeek,
   getWalletSummary,
   getWeeklyTrend,
@@ -42,6 +43,7 @@ export default function ParentPage() {
   const [celebrationBadgeVisible, setCelebrationBadgeVisible] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [approveError, setApproveError] = useState<string | null>(null);
+  const [allowedChildIds, setAllowedChildIds] = useState<number[]>([]);
 
   useEffect(() => {
     const ok = sessionStorage.getItem("axiora_parent_pin_ok");
@@ -82,12 +84,26 @@ export default function ParentPage() {
 
   useEffect(() => {
     if (!allowed) return;
-    const rawChildId = localStorage.getItem("axiora_child_id");
-    if (!rawChildId) return;
-    const parsed = Number(rawChildId);
-    if (!Number.isFinite(parsed)) return;
-    setChildId(parsed);
-    void loadData(parsed);
+    const loadContext = async () => {
+      try {
+        const me = await getMe();
+        const ids = me.child_profiles.map((item) => item.id);
+        setAllowedChildIds(ids);
+        if (ids.length === 0) {
+          router.replace("/select-child");
+          return;
+        }
+        const rawChildId = localStorage.getItem("axiora_child_id");
+        const parsed = Number(rawChildId);
+        const valid = Number.isFinite(parsed) && ids.includes(parsed) ? parsed : ids[0];
+        localStorage.setItem("axiora_child_id", String(valid));
+        setChildId(valid);
+        await loadData(valid);
+      } catch {
+        router.replace("/select-child");
+      }
+    };
+    void loadContext();
   }, [allowed]);
 
   const playApproveFeedback = () => {
@@ -147,6 +163,10 @@ export default function ParentPage() {
 
   const onGoChildMode = () => {
     if (childId === null) {
+      router.push("/select-child");
+      return;
+    }
+    if (!allowedChildIds.includes(childId)) {
       router.push("/select-child");
       return;
     }

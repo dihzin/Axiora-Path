@@ -39,6 +39,7 @@ class MembershipOut(BaseModel):
     role: str
     tenant_id: int
     tenant_slug: str
+    tenant_type: str
     onboarding_completed: bool
 
 

@@ -6,13 +6,14 @@ type AxionDialogueProps = {
   message: string;
   visible: boolean;
   onDismiss: () => void;
+  reducedMotion?: boolean;
 };
 
-export function AxionDialogue({ message, visible, onDismiss }: AxionDialogueProps) {
+export function AxionDialogue({ message, visible, onDismiss, reducedMotion = false }: AxionDialogueProps) {
   if (!visible || !message) return null;
 
   return (
-    <div className="axion-dialogue-enter axion-speech-bubble relative rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
+    <div className={`${reducedMotion ? "" : "axion-dialogue-enter"} axion-speech-bubble relative rounded-xl border border-border bg-card/95 px-3 py-2 shadow-sm`}>
       <button
         type="button"
         aria-label="Fechar mensagem"
@@ -21,7 +22,7 @@ export function AxionDialogue({ message, visible, onDismiss }: AxionDialogueProp
       >
         <X className="h-3.5 w-3.5" />
       </button>
-      <p className="pr-6 text-xs leading-relaxed text-foreground">{message}</p>
+      <p className="pr-6 text-sm leading-relaxed text-foreground">{message}</p>
     </div>
   );
 }

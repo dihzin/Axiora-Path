@@ -36,11 +36,11 @@ export function PiggyJar({ currentSaveAmountCents, nextGoalAmountCents, savePerc
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-end justify-between">
         <div>
-          <p className="text-xs text-muted-foreground">Pote SAVE</p>
+          <p className="text-sm text-muted-foreground">Pote SAVE</p>
           <p className="text-lg font-semibold">{formatBRL(currentSaveAmountCents)}</p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-muted-foreground">Prxima meta</p>
+          <p className="text-sm text-muted-foreground">Prxima meta</p>
           <p className="text-sm font-medium">
             {nextGoalAmountCents !== null ? formatBRL(nextGoalAmountCents) : "Sem meta"}
           </p>

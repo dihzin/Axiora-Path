@@ -30,6 +30,11 @@ export default function SelectChildPage() {
   }, []);
 
   const chooseChild = (child: ChildProfile) => {
+    const allowed = children.some((item) => item.id === child.id);
+    if (!allowed) {
+      setError("Perfil invalido para este usuario.");
+      return;
+    }
     localStorage.setItem("axiora_child_id", String(child.id));
     setTheme(child.theme);
     router.push("/child");

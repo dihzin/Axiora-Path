@@ -4,6 +4,7 @@ type AxionCharacterProps = {
   stage: number;
   moodState: string;
   celebrating?: boolean;
+  reducedMotion?: boolean;
 };
 
 function normalizeMood(moodState: string): string {
@@ -39,14 +40,16 @@ function scaleClassByStage(stage: number): string {
   return "axion-stage-1";
 }
 
-export function AxionCharacter({ stage, moodState, celebrating = false }: AxionCharacterProps) {
+export function AxionCharacter({ stage, moodState, celebrating = false, reducedMotion = false }: AxionCharacterProps) {
   const eye = eyePathByMood(moodState);
   return (
-    <div className={`axion-float relative mx-auto ${scaleClassByStage(stage)} ${celebrating ? "axion-celebrate" : ""}`}>
-      <div className={`axion-glow ${glowClassByMood(moodState)} absolute inset-0 rounded-full`} />
+    <div
+      className={`relative mx-auto ${scaleClassByStage(stage)} ${reducedMotion ? "" : "axion-float"} ${celebrating && !reducedMotion ? "axion-celebrate" : ""}`}
+    >
+      <div className={`${reducedMotion ? "axion-glow-static" : "axion-glow"} ${glowClassByMood(moodState)} absolute inset-0 rounded-full`} />
       <svg
         aria-label="Axion character"
-        className="relative h-32 w-32"
+        className="relative h-36 w-36"
         viewBox="0 0 96 96"
         role="img"
       >
