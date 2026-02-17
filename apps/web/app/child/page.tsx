@@ -30,7 +30,7 @@ import {
   markRoutine,
   postMood,
   updateChildTheme,
-  useAiCoach,
+  useAiCoach as requestAiCoach,
   type DailyMissionResponse,
   type GoalOut,
   type LevelResponse,
@@ -315,7 +315,7 @@ export default function ChildPage() {
   const fetchCoachDialogue = async (reason: "first_login" | "streak_milestone" | "level_up" | "goal_near") => {
     if (childId === null) return;
     try {
-      const response = await useAiCoach(childId, "CHILD", `context:${reason}`);
+      const response = await requestAiCoach(childId, "CHILD", `context:${reason}`);
       showAxionDialogue(response.reply);
     } catch {
       // no-op in MVP if coach request fails
