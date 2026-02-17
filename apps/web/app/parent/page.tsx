@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Baby } from "lucide-react";
 
 import { ConfettiBurst } from "@/components/confetti-burst";
 import { Button } from "@/components/ui/button";
@@ -145,6 +145,15 @@ export default function ParentPage() {
     return null;
   }
 
+  const onGoChildMode = () => {
+    if (childId === null) {
+      router.push("/select-child");
+      return;
+    }
+    localStorage.setItem("axiora_child_id", String(childId));
+    router.push("/child");
+  };
+
   return (
     <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md py-5">
       <ConfettiBurst trigger={confettiTick} />
@@ -153,7 +162,13 @@ export default function ParentPage() {
           +1 Missao Aprovada!
         </div>
       ) : null}
-      <h1 className="mb-3 text-lg font-semibold">Area dos pais</h1>
+      <header className="mb-3 flex items-center justify-between gap-2">
+        <h1 className="text-lg font-semibold">Area dos pais</h1>
+        <Button type="button" size="sm" variant="outline" onClick={onGoChildMode}>
+          <Baby className="mr-1 h-4 w-4" />
+          Ver modo crianca
+        </Button>
+      </header>
 
       <section className="space-y-3">
         <Card>

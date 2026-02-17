@@ -6,7 +6,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { completeOnboarding, getTasks } from "@/lib/api/client";
+import { acceptLegal, completeOnboarding, getTasks } from "@/lib/api/client";
+
+const TOTAL_STEPS = 6;
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -17,6 +19,7 @@ export default function OnboardingPage() {
   const [splitDonate, setSplitDonate] = useState(20);
   const [tasks, setTasks] = useState<Array<{ id: number; title: string; difficulty: string; weight: number }>>([]);
   const [allowance, setAllowance] = useState("10000");
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const [parentPin, setParentPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +50,10 @@ export default function OnboardingPage() {
       setError("Allowance invalido.");
       return;
     }
+    if (!legalAccepted) {
+      setError("Voce precisa aceitar os Termos e a Privacidade para continuar.");
+      return;
+    }
     if (parentPin.length < 4) {
       setError("PIN precisa ter ao menos 4 digitos.");
       return;
@@ -54,6 +61,7 @@ export default function OnboardingPage() {
 
     setLoading(true);
     try {
+      await acceptLegal("v1");
       await completeOnboarding({
         child_name: childName,
         reward_split: {
@@ -78,7 +86,7 @@ export default function OnboardingPage() {
     <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md py-5">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Onboarding {step}/5</CardTitle>
+          <CardTitle className="text-base">Onboarding {step}/{TOTAL_STEPS}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           {step === 1 ? (
@@ -122,8 +130,29 @@ export default function OnboardingPage() {
           ) : null}
 
           {step === 5 ? (
+            <div className="space-y-3">
+              <p>Step 5: Terms and Privacy</p>
+              <div className="space-y-2 rounded-md border border-border p-3 text-xs text-muted-foreground">
+                <p>
+                  Ao continuar, voce confirma que leu e aceita os Termos de Uso e a Politica de Privacidade do tenant.
+                </p>
+                <p>Resumo: uso educacional familiar, tratamento de dados de rotina e retencao conforme politica vigente.</p>
+              </div>
+              <label className="flex items-start gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={legalAccepted}
+                  onChange={(e) => setLegalAccepted(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-border"
+                />
+                <span>Li e aceito os Termos e a Politica de Privacidade.</span>
+              </label>
+            </div>
+          ) : null}
+
+          {step === 6 ? (
             <div className="space-y-2">
-              <p>Step 5: Set Parent PIN</p>
+              <p>Step 6: Set Parent PIN</p>
               <Input type="password" inputMode="numeric" value={parentPin} onChange={(e) => setParentPin(e.target.value)} />
             </div>
           ) : null}
@@ -134,8 +163,15 @@ export default function OnboardingPage() {
             <Button type="button" variant="outline" disabled={step === 1 || loading} onClick={() => setStep((s) => s - 1)}>
               Back
             </Button>
-            {step < 5 ? (
-              <Button type="button" disabled={loading} onClick={() => setStep((s) => s + 1)}>
+            {step < TOTAL_STEPS ? (
+              <Button
+                type="button"
+                disabled={loading || (step === 5 && !legalAccepted)}
+                onClick={() => {
+                  setError(null);
+                  setStep((s) => s + 1);
+                }}
+              >
                 Next
               </Button>
             ) : (
@@ -149,4 +185,3 @@ export default function OnboardingPage() {
     </main>
   );
 }
-

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Flame, Home, Snowflake, Sparkles, Star, X } from "lucide-react";
+import { Flame, Home, Lock, Snowflake, Sparkles, Star, X } from "lucide-react";
 
 import { AvatarEvolution } from "@/components/avatar-evolution";
 import { LevelUpOverlay } from "@/components/level-up-overlay";
@@ -18,8 +19,10 @@ import {
   getMood,
   getRoutineWeek,
   getStreak,
+  getTasks,
   getWeeklyMetrics,
   getWalletSummary,
+  markRoutine,
   postMood,
   updateChildTheme,
   type GoalOut,
@@ -55,9 +58,19 @@ function getFlameIntensityClass(streakCount: number): string {
   return "flame-small";
 }
 
+type ChildTask = {
+  id: number;
+  title: string;
+  difficulty: string;
+  weight: number;
+  is_active: boolean;
+};
+
 export default function ChildPage() {
+  const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [childId, setChildId] = useState<number | null>(null);
+  const [tasks, setTasks] = useState<ChildTask[]>([]);
   const [streak, setStreak] = useState<StreakResponse | null>(null);
   const [walletSummary, setWalletSummary] = useState<WalletSummaryResponse | null>(null);
   const [goals, setGoals] = useState<GoalOut[]>([]);
@@ -72,8 +85,12 @@ export default function ChildPage() {
   const [avatarStage, setAvatarStage] = useState(1);
   const [taskView, setTaskView] = useState<"list" | "journey">("list");
   const [showDailyWelcome, setShowDailyWelcome] = useState(false);
+  const [markingTaskIds, setMarkingTaskIds] = useState<number[]>([]);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const lastKnownLevelRef = useRef<number | null>(null);
   const lastKnownStreakRef = useRef<number | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
     const rawChildId = localStorage.getItem("axiora_child_id");
@@ -86,9 +103,13 @@ export default function ChildPage() {
     if (savedTaskView === "journey" || savedTaskView === "list") {
       setTaskView(savedTaskView);
     }
-    const todayIso = new Date().toISOString().slice(0, 10);
     const welcomeKey = `axiora_daily_welcome_${parsedChildId}_${todayIso}`;
     setShowDailyWelcome(localStorage.getItem(welcomeKey) !== "1");
+    getTasks()
+      .then((data) => setTasks(data.filter((task) => task.is_active)))
+      .catch(() => {
+        setTasks([]);
+      });
     getMe()
       .then((data) => {
         const child = data.child_profiles.find((item) => item.id === parsedChildId);
@@ -196,6 +217,24 @@ export default function ChildPage() {
     return () => window.clearTimeout(timer);
   }, [level?.xp_total, level?.level_progress_percent]);
 
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current !== null) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+    }, 1800);
+  };
+
   const currentSave = walletSummary?.pot_balances_cents.SAVE ?? 0;
   const activeGoal = goals[0] ?? null;
   const nextGoal = activeGoal?.target_cents ?? null;
@@ -209,8 +248,9 @@ export default function ChildPage() {
     setTodayMood(mood);
     try {
       await postMood(childId, mood);
+      showToast("Humor atualizado", "success");
     } catch {
-      // keep UI simple in MVP
+      showToast("Falha ao salvar humor", "error");
     }
   };
 
@@ -221,8 +261,10 @@ export default function ChildPage() {
     setThemeSaving(true);
     try {
       await updateChildTheme(childId, nextTheme);
+      showToast("Tema atualizado", "success");
     } catch {
       setTheme(previousTheme);
+      showToast("Falha ao atualizar tema", "error");
     } finally {
       setThemeSaving(false);
     }
@@ -233,6 +275,7 @@ export default function ChildPage() {
     setSoundEnabled((prev) => {
       const next = !prev;
       setChildSoundEnabled(childId, next);
+      showToast(`Som ${next ? "ativado" : "desativado"}`, "success");
       return next;
     });
   };
@@ -240,6 +283,7 @@ export default function ChildPage() {
   const onToggleTaskView = (next: "list" | "journey") => {
     setTaskView(next);
     localStorage.setItem("axiora_task_view", next);
+    showToast(next === "list" ? "Modo lista ativo" : "Modo jornada ativo", "success");
   };
 
   const dismissDailyWelcome = () => {
@@ -254,6 +298,37 @@ export default function ChildPage() {
     dismissDailyWelcome();
   };
 
+  const onMarkTask = async (taskId: number) => {
+    if (childId === null || markingTaskIds.includes(taskId)) return;
+    if (routineLogs.some((log) => log.task_id === taskId && log.date === todayIso)) return;
+
+    const optimisticId = -Date.now() - taskId;
+    const optimisticLog: RoutineWeekLog = {
+      id: optimisticId,
+      child_id: childId,
+      task_id: taskId,
+      date: todayIso,
+      status: "PENDING",
+      created_at: new Date().toISOString(),
+      decided_at: null,
+      decided_by_user_id: null,
+      parent_comment: null,
+    };
+
+    setMarkingTaskIds((prev) => [...prev, taskId]);
+    setRoutineLogs((prev) => [optimisticLog, ...prev]);
+    try {
+      const created = await markRoutine(childId, taskId, todayIso);
+      setRoutineLogs((prev) => prev.map((log) => (log.id === optimisticId ? created : log)));
+      showToast("Tarefa marcada", "success");
+    } catch {
+      setRoutineLogs((prev) => prev.filter((log) => log.id !== optimisticId));
+      showToast("Falha ao marcar tarefa", "error");
+    } finally {
+      setMarkingTaskIds((prev) => prev.filter((id) => id !== taskId));
+    }
+  };
+
   const statusBadgeClass = (status: RoutineWeekLog["status"]) => {
     if (status === "APPROVED") return "bg-emerald-100 text-emerald-700";
     if (status === "REJECTED") return "bg-red-100 text-red-700";
@@ -266,12 +341,35 @@ export default function ChildPage() {
     return "border-amber-500 bg-amber-500";
   };
 
+  const taskStatusById = routineLogs.reduce<Record<number, RoutineWeekLog["status"]>>((acc, log) => {
+    if (log.date !== todayIso) return acc;
+    acc[log.task_id] = log.status;
+    return acc;
+  }, {});
+
+  const taskRowClass = (status: RoutineWeekLog["status"] | undefined) => {
+    if (status === "APPROVED") return "border-emerald-300 bg-emerald-50";
+    if (status === "REJECTED") return "border-red-300 bg-red-50";
+    if (status === "PENDING") return "border-amber-300 bg-amber-50";
+    return "border-border bg-background";
+  };
+
   return (
     <>
       {levelUpOverlayLevel !== null ? (
         <LevelUpOverlay level={levelUpOverlayLevel} onDismiss={() => setLevelUpOverlayLevel(null)} />
       ) : null}
       <main className="safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md flex-col pb-24 pt-5">
+        <div className="mb-2 flex justify-end">
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground transition hover:bg-muted"
+            onClick={() => router.push("/parent-pin")}
+          >
+            <Lock className="h-3.5 w-3.5" />
+            Modo pais
+          </button>
+        </div>
         <section className="space-y-3">
           {showDailyWelcome ? (
             <Card>
@@ -423,6 +521,43 @@ export default function ChildPage() {
                 <span>Streak: {streakCount} dias</span>
                 {streak?.freeze_used_today ? <Snowflake className="h-3.5 w-3.5 text-sky-500" /> : null}
               </div>
+              <div className="space-y-2">
+                {tasks.length === 0 ? (
+                  <p>Nenhuma tarefa ativa para hoje.</p>
+                ) : (
+                  tasks.map((task) => {
+                    const status = taskStatusById[task.id];
+                    const isProcessing = markingTaskIds.includes(task.id);
+                    const isMarked = status !== undefined;
+                    return (
+                      <div
+                        key={task.id}
+                        className={`flex items-center justify-between gap-2 rounded-md border px-2 py-2 transition ${taskRowClass(status)}`}
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-medium text-foreground">{task.title}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {task.difficulty} • peso {task.weight}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {status ? (
+                            <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${statusBadgeClass(status)}`}>{status}</span>
+                          ) : null}
+                          <button
+                            type="button"
+                            disabled={isProcessing || isMarked}
+                            className="rounded-md border border-border px-2 py-1 text-[10px] font-semibold text-foreground disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]"
+                            onClick={() => void onMarkTask(task.id)}
+                          >
+                            {isProcessing ? "Marcando..." : isMarked ? "Marcada" : "Marcar"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
               {routineLogs.length === 0 ? (
                 <p>Sem checkpoints da semana ainda.</p>
               ) : taskView === "list" ? (
@@ -470,6 +605,17 @@ export default function ChildPage() {
             </Link>
           </div>
         </nav>
+        {toast ? (
+          <div className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4">
+            <div
+              className={`rounded-md px-3 py-2 text-xs font-semibold text-white shadow ${
+                toast.type === "success" ? "bg-emerald-600" : "bg-red-600"
+              }`}
+            >
+              {toast.message}
+            </div>
+          </div>
+        ) : null}
       </main>
     </>
   );

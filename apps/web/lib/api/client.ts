@@ -246,6 +246,25 @@ export async function completeOnboarding(payload: {
   });
 }
 
+export async function acceptLegal(dataRetentionPolicyVersion = "v1"): Promise<{
+  accepted: boolean;
+  accepted_terms_at: string;
+  accepted_privacy_at: string;
+  data_retention_policy_version: string;
+}> {
+  return apiRequest<{
+    accepted: boolean;
+    accepted_terms_at: string;
+    accepted_privacy_at: string;
+    data_retention_policy_version: string;
+  }>("/legal/accept", {
+    method: "POST",
+    body: { data_retention_policy_version: dataRetentionPolicyVersion },
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
 export async function getStreak(childId: number): Promise<StreakResponse> {
   return apiRequest<StreakResponse>(`/streak?child_id=${childId}`, {
     method: "GET",
@@ -306,6 +325,15 @@ export async function decideRoutine(logId: number, decision: "APPROVE" | "REJECT
   return apiRequest<RoutineWeekLog>("/routine/decide", {
     method: "POST",
     body: { log_id: logId, decision, parent_comment: parentComment ?? null },
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function markRoutine(childId: number, taskId: number, isoDate: string): Promise<RoutineWeekLog> {
+  return apiRequest<RoutineWeekLog>("/routine/mark", {
+    method: "POST",
+    body: { child_id: childId, task_id: taskId, date: isoDate },
     requireAuth: true,
     includeTenant: true,
   });
