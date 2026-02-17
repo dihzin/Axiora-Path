@@ -30,6 +30,7 @@ def complete_onboarding(
         display_name=payload.child_name,
         avatar_key=None,
         birth_year=None,
+        avatar_stage=1,
         xp_total=0,
     )
     db.add(child)

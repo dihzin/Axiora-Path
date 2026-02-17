@@ -3,8 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import type { ThemeName } from "@/lib/api/client";
 import { getMe } from "@/lib/api/client";
 
 type ChildProfile = {
@@ -12,10 +14,12 @@ type ChildProfile = {
   display_name: string;
   avatar_key: string | null;
   birth_year: number | null;
+  theme: ThemeName;
 };
 
 export default function SelectChildPage() {
   const router = useRouter();
+  const { setTheme } = useTheme();
   const [children, setChildren] = useState<ChildProfile[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,8 +29,9 @@ export default function SelectChildPage() {
       .catch(() => setError("Nao foi possivel carregar perfis. Faca login novamente."));
   }, []);
 
-  const chooseChild = (childId: number) => {
-    localStorage.setItem("axiora_child_id", String(childId));
+  const chooseChild = (child: ChildProfile) => {
+    localStorage.setItem("axiora_child_id", String(child.id));
+    setTheme(child.theme);
     router.push("/child");
   };
 
@@ -44,9 +49,12 @@ export default function SelectChildPage() {
               key={child.id}
               type="button"
               className="w-full rounded-md border border-border px-3 py-3 text-left text-sm"
-              onClick={() => chooseChild(child.id)}
+              onClick={() => chooseChild(child)}
             >
-              {child.display_name}
+              <div className="flex items-center justify-between">
+                <span>{child.display_name}</span>
+                <span className="text-xs text-muted-foreground">{child.theme}</span>
+              </div>
             </button>
           ))}
           <Button className="w-full" variant="secondary" onClick={() => router.push("/parent-pin")}>

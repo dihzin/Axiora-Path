@@ -7,9 +7,11 @@ from redis.asyncio import Redis
 
 from app import models  # noqa: F401
 from app.api.routes.ai import router as ai_router
+from app.api.routes.achievements import router as achievements_router
 from app.api.routes.analytics import router as analytics_router
 from app.api.routes.audit import router as audit_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.children import router as children_router
 from app.api.routes.export import router as export_router
 from app.api.routes.features import router as features_router
 from app.api.routes.legal import router as legal_router
@@ -55,9 +57,11 @@ app.add_middleware(PrivacyConsentMiddleware)
 app.add_middleware(CSRFMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(ai_router)
+app.include_router(achievements_router)
 app.include_router(analytics_router)
 app.include_router(audit_router)
 app.include_router(auth_router)
+app.include_router(children_router)
 app.include_router(export_router)
 app.include_router(features_router)
 app.include_router(legal_router)

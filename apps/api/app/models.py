@@ -134,6 +134,8 @@ class ChildProfile(Base):
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
     avatar_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
     birth_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    theme: Mapped[str] = mapped_column(String(32), nullable=False, server_default="default")
+    avatar_stage: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
     xp_total: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -312,6 +314,30 @@ class FeatureFlag(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     enabled_globally: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     tenant_id: Mapped[int | None] = mapped_column(ForeignKey("tenants.id"), nullable=True)
+
+
+class Achievement(Base):
+    __tablename__ = "achievements"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    slug: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    icon_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    condition_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    condition_value: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class ChildAchievement(Base):
+    __tablename__ = "child_achievements"
+
+    child_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id"), primary_key=True)
+    achievement_id: Mapped[int] = mapped_column(ForeignKey("achievements.id"), primary_key=True)
+    unlocked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
 
 
 class Streak(Base):

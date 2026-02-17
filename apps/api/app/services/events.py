@@ -8,14 +8,19 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     AuditLog,
+    Achievement,
+    ChildAchievement,
     ChildProfile,
     EventLog,
+    LedgerTransaction,
     Recommendation,
     SavingGoal,
     Streak,
     TaskLog,
     TaskLogStatus,
+    Wallet,
 )
+from app.services.wallet import extract_pot_split, signed_amount_cents
 
 
 class EventService:
@@ -43,6 +48,7 @@ class EventService:
 
         self.streak_handler(event)
         self.adaptive_rules_handler(event)
+        self.achievement_handler(event)
         return event
 
     def _persist_audit(
@@ -214,6 +220,117 @@ class EventService:
         self._rule_two_days_without_marks(child_id=child.id, tenant_id=child.tenant_id)
         self._rule_many_rejections_same_task(child_id=child.id, tenant_id=child.tenant_id)
         self._rule_active_goal_low_activity(child_id=child.id, tenant_id=child.tenant_id)
+
+    def achievement_handler(self, event: EventLog) -> None:
+        if event.child_id is None:
+            return
+
+        child = self.db.scalar(
+            select(ChildProfile).where(
+                ChildProfile.id == event.child_id,
+                ChildProfile.tenant_id == event.tenant_id,
+                ChildProfile.deleted_at.is_(None),
+            ),
+        )
+        if child is None:
+            return
+
+        self._unlock_if(
+            child_id=child.id,
+            slug="streak_7_days",
+            condition_met=self._is_streak_threshold_reached(child.id, threshold=7),
+        )
+        self._unlock_if(
+            child_id=child.id,
+            slug="approvals_10",
+            condition_met=self._is_approval_threshold_reached(child.id, child.tenant_id, threshold=10),
+        )
+        self._unlock_if(
+            child_id=child.id,
+            slug="first_goal_reached",
+            condition_met=self._is_first_goal_reached(child.id, child.tenant_id),
+        )
+
+    def _unlock_if(self, *, child_id: int, slug: str, condition_met: bool) -> None:
+        if not condition_met:
+            return
+
+        achievement = self.db.scalar(select(Achievement).where(Achievement.slug == slug))
+        if achievement is None:
+            return
+
+        existing = self.db.scalar(
+            select(ChildAchievement).where(
+                ChildAchievement.child_id == child_id,
+                ChildAchievement.achievement_id == achievement.id,
+            ),
+        )
+        if existing is not None:
+            return
+
+        self.db.add(
+            ChildAchievement(
+                child_id=child_id,
+                achievement_id=achievement.id,
+            ),
+        )
+
+    def _is_streak_threshold_reached(self, child_id: int, *, threshold: int) -> bool:
+        streak = self.db.get(Streak, child_id)
+        if streak is None:
+            return False
+        return streak.current >= threshold
+
+    def _is_approval_threshold_reached(self, child_id: int, tenant_id: int, *, threshold: int) -> bool:
+        approved_count = self.db.scalar(
+            select(func.count(TaskLog.id)).where(
+                TaskLog.child_id == child_id,
+                TaskLog.tenant_id == tenant_id,
+                TaskLog.status == TaskLogStatus.APPROVED,
+            ),
+        )
+        return int(approved_count or 0) >= threshold
+
+    def _is_first_goal_reached(self, child_id: int, tenant_id: int) -> bool:
+        first_goal = self.db.scalar(
+            select(SavingGoal)
+            .where(
+                SavingGoal.child_id == child_id,
+                SavingGoal.tenant_id == tenant_id,
+            )
+            .order_by(SavingGoal.created_at.asc(), SavingGoal.id.asc()),
+        )
+        if first_goal is None:
+            return False
+
+        wallet = self.db.scalar(
+            select(Wallet).where(
+                Wallet.child_id == child_id,
+                Wallet.tenant_id == tenant_id,
+            ),
+        )
+        if wallet is None:
+            return False
+
+        transactions = self.db.scalars(
+            select(LedgerTransaction)
+            .where(
+                LedgerTransaction.tenant_id == tenant_id,
+                LedgerTransaction.wallet_id == wallet.id,
+            )
+            .order_by(LedgerTransaction.created_at.asc(), LedgerTransaction.id.asc()),
+        ).all()
+
+        saved_total = 0
+        for tx in transactions:
+            signed = signed_amount_cents(tx.type, tx.amount_cents)
+            split = extract_pot_split(tx.metadata_json)
+            save_amount = split.get("SAVE", 0)
+            if save_amount == 0:
+                continue
+            saved_total += save_amount if signed >= 0 else -save_amount
+
+        return saved_total >= first_goal.target_cents
 
     def _create_recommendation_if_missing(
         self,

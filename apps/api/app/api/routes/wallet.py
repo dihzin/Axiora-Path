@@ -27,6 +27,7 @@ from app.schemas.wallet import (
     LedgerTransactionOut,
     WalletSummaryResponse,
 )
+from app.services.goals import sync_locked_goals_for_child
 from app.services.wallet import extract_pot_split, signed_amount_cents, split_amount_by_pots
 
 router = APIRouter(tags=["wallet"])
@@ -128,13 +129,18 @@ def wallet_allowance_run(
     )
     db.add(tx)
     db.flush()
+    unlocked_goal_ids = sync_locked_goals_for_child(db, tenant_id=tenant.id, child_id=payload.child_id)
 
     events.emit(
         type="wallet.allowance.ran",
         tenant_id=tenant.id,
         actor_user_id=user.id,
         child_id=payload.child_id,
-        payload={"transaction_id": tx.id, "amount_cents": payload.amount_cents},
+        payload={
+            "transaction_id": tx.id,
+            "amount_cents": payload.amount_cents,
+            "unlocked_goal_ids": unlocked_goal_ids,
+        },
     )
     db.commit()
 

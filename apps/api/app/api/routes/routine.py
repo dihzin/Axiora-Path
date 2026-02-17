@@ -35,6 +35,8 @@ from app.schemas.routine import (
     TaskUpdateRequest,
 )
 from app.schemas.levels import LevelResponse
+from app.services.avatar import compute_avatar_stage
+from app.services.goals import sync_locked_goals_for_child
 from app.services.rewards import REWARD_BASE_TABLE, calculate_reward_cents
 from app.services.wallet import split_amount_by_pots
 
@@ -145,6 +147,10 @@ def get_levels(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
 
     xp_total = child.xp_total
+    expected_stage = compute_avatar_stage(xp_total)
+    if child.avatar_stage != expected_stage:
+        child.avatar_stage = expected_stage
+        db.commit()
     level = math.floor(math.sqrt(xp_total / 100)) + 1
     xp_current_level_start = 100 * ((level - 1) ** 2)
     xp_next_level_target = 100 * (level**2)
@@ -154,6 +160,7 @@ def get_levels(
     return LevelResponse(
         child_id=child_id,
         xp_total=xp_total,
+        avatar_stage=child.avatar_stage,
         level=level,
         level_progress_percent=max(0.0, min(100.0, level_progress_percent)),
         xp_current_level_start=xp_current_level_start,
@@ -463,6 +470,7 @@ def decide_routine(
     log.parent_comment = payload.parent_comment
 
     decision_type = "routine.rejected"
+    event_payload: dict[str, object] = {"log_id": log.id, "decision": payload.decision}
     if payload.decision == "APPROVE":
         log.status = TaskLogStatus.APPROVED
         decision_type = "routine.approved"
@@ -516,6 +524,10 @@ def decide_routine(
             ),
         )
         child.xp_total += task.weight * XP_PER_WEIGHT
+        child.avatar_stage = compute_avatar_stage(child.xp_total)
+        unlocked_goal_ids = sync_locked_goals_for_child(db, tenant_id=tenant.id, child_id=log.child_id)
+        if unlocked_goal_ids:
+            event_payload["unlocked_goal_ids"] = unlocked_goal_ids
     else:
         log.status = TaskLogStatus.REJECTED
 
@@ -524,7 +536,7 @@ def decide_routine(
         tenant_id=tenant.id,
         actor_user_id=user.id,
         child_id=log.child_id,
-        payload={"log_id": log.id, "decision": payload.decision},
+        payload=event_payload,
     )
     db.commit()
     return TaskLogOut(

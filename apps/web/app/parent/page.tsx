@@ -12,10 +12,13 @@ import {
   getRoutineWeek,
   getWalletSummary,
   getWeeklyTrend,
+  type ThemeName,
   type RoutineWeekLog,
   type WalletSummaryResponse,
   type WeeklyTrendResponse,
 } from "@/lib/api/client";
+import { getSoundEnabled as getChildSoundEnabled, playSound, setSoundEnabled as setChildSoundEnabled } from "@/lib/sound-manager";
+import { isThemeName, THEME_STORAGE_KEY } from "@/lib/theme";
 
 function TrendIndicator({ value }: { value: number }) {
   const up = value >= 0;
@@ -36,6 +39,7 @@ export default function ParentPage() {
   const [trend, setTrend] = useState<WeeklyTrendResponse | null>(null);
   const [approvingLogId, setApprovingLogId] = useState<number | null>(null);
   const [confettiTick, setConfettiTick] = useState(0);
+  const [celebrationBadgeVisible, setCelebrationBadgeVisible] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [approveError, setApproveError] = useState<string | null>(null);
 
@@ -49,8 +53,11 @@ export default function ParentPage() {
   }, [router]);
 
   useEffect(() => {
-    const saved = localStorage.getItem("axiora_sound_enabled");
-    setSoundEnabled(saved === "1");
+    const rawChildId = localStorage.getItem("axiora_child_id");
+    if (!rawChildId) return;
+    const parsed = Number(rawChildId);
+    if (!Number.isFinite(parsed)) return;
+    setSoundEnabled(getChildSoundEnabled(parsed));
   }, []);
 
   const loadData = async (value: number) => {
@@ -87,23 +94,10 @@ export default function ParentPage() {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate(18);
     }
-    if (!soundEnabled) return;
-    try {
-      if (!window.AudioContext) return;
-      const ctx = new window.AudioContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "triangle";
-      osc.frequency.value = 860;
-      gain.gain.value = 0.03;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.08);
-      window.setTimeout(() => void ctx.close(), 140);
-    } catch {
-      // no-op
-    }
+    if (childId === null || !soundEnabled) return;
+    const rawTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    const theme: ThemeName = rawTheme && isThemeName(rawTheme) ? rawTheme : "default";
+    playSound("task_approved", { childId, theme });
   };
 
   const onApprove = async (logId: number) => {
@@ -114,6 +108,8 @@ export default function ParentPage() {
     setApprovingLogId(logId);
     await decideRoutine(logId, "APPROVE");
     setConfettiTick((x) => x + 1);
+    setCelebrationBadgeVisible(true);
+    window.setTimeout(() => setCelebrationBadgeVisible(false), 900);
     playApproveFeedback();
     // Refresh secondary cards in background only, keeping pending list optimistic.
     void getWalletSummary(childId)
@@ -137,9 +133,10 @@ export default function ParentPage() {
   };
 
   const onToggleSound = () => {
+    if (childId === null) return;
     setSoundEnabled((prev) => {
       const next = !prev;
-      localStorage.setItem("axiora_sound_enabled", next ? "1" : "0");
+      setChildSoundEnabled(childId, next);
       return next;
     });
   };
@@ -151,6 +148,11 @@ export default function ParentPage() {
   return (
     <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md py-5">
       <ConfettiBurst trigger={confettiTick} />
+      {celebrationBadgeVisible ? (
+        <div className="celebrate-badge-pop fixed left-1/2 top-4 z-[70] -translate-x-1/2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 shadow-sm">
+          +1 Missao Aprovada!
+        </div>
+      ) : null}
       <h1 className="mb-3 text-lg font-semibold">Area dos pais</h1>
 
       <section className="space-y-3">

@@ -279,6 +279,8 @@ def me(
                 display_name=child.display_name,
                 avatar_key=child.avatar_key,
                 birth_year=child.birth_year,
+                theme=child.theme,
+                avatar_stage=child.avatar_stage,
             )
             for child in children
         ],

@@ -3,6 +3,7 @@
 import { getAccessToken, getRefreshToken, getTenantSlug, setAccessToken, setRefreshToken } from "@/lib/api/session";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export type ThemeName = "default" | "space" | "jungle" | "ocean" | "soccer" | "capybara" | "dinos" | "princess" | "heroes";
 
 type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "DELETE";
@@ -103,7 +104,7 @@ export type AuthTokens = {
 export type AuthMeResponse = {
   user: { id: number; email: string; name: string };
   membership: { role: string; tenant_id: number; tenant_slug: string; onboarding_completed: boolean };
-  child_profiles: Array<{ id: number; display_name: string; avatar_key: string | null; birth_year: number | null }>;
+  child_profiles: Array<{ id: number; display_name: string; avatar_key: string | null; birth_year: number | null; theme: ThemeName; avatar_stage: number }>;
 };
 
 export type StreakResponse = {
@@ -139,6 +140,7 @@ export type GoalOut = {
 export type LevelResponse = {
   child_id: number;
   xp_total: number;
+  avatar_stage: number;
   level: number;
   level_progress_percent: number;
   xp_current_level_start: number;
@@ -166,6 +168,21 @@ export type RecommendationOut = {
   severity: string;
   created_at: string;
   dismissed_at: string | null;
+};
+
+export type AchievementItem = {
+  id: number;
+  slug: string;
+  title: string;
+  description: string;
+  icon_key: string;
+  unlocked: boolean;
+  unlocked_at: string | null;
+};
+
+export type AchievementListResponse = {
+  child_id: number;
+  achievements: AchievementItem[];
 };
 
 export type RoutineWeekLog = {
@@ -322,6 +339,23 @@ export async function getRecommendations(childId: number): Promise<Recommendatio
 export async function dismissRecommendation(recommendationId: number): Promise<{ message: string }> {
   return apiRequest<{ message: string }>(`/recommendations/${recommendationId}/dismiss`, {
     method: "POST",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function updateChildTheme(childId: number, theme: ThemeName): Promise<{ child_id: number; theme: ThemeName }> {
+  return apiRequest<{ child_id: number; theme: ThemeName }>(`/children/${childId}/theme`, {
+    method: "PUT",
+    body: { theme },
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAchievements(childId: number): Promise<AchievementListResponse> {
+  return apiRequest<AchievementListResponse>(`/achievements?child_id=${childId}`, {
+    method: "GET",
     requireAuth: true,
     includeTenant: true,
   });

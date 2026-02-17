@@ -47,6 +47,8 @@ class ChildProfileOut(BaseModel):
     display_name: str
     avatar_key: str | None
     birth_year: int | None
+    theme: str
+    avatar_stage: int
 
 
 class MeResponse(BaseModel):

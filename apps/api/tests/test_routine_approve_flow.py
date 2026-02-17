@@ -86,7 +86,10 @@ def test_decide_approve_creates_earn_transaction() -> None:
         PotAllocation(tenant_id=1, wallet_id=30, pot=PotType.SAVE, percent=30),
         PotAllocation(tenant_id=1, wallet_id=30, pot=PotType.DONATE, percent=20),
     ]
-    db = _FakeDB(scalar_values=[log, task, child, wallet], scalars_values=[allocations])
+    db = _FakeDB(
+        scalar_values=[log, task, child, wallet, wallet],
+        scalars_values=[allocations, [], []],
+    )
     events = _FakeEvents()
     tenant = Tenant(type=TenantType.FAMILY, name="Family", slug="family")
     tenant.id = 1
