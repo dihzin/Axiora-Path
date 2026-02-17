@@ -26,6 +26,7 @@ from app.api.routes.wallet import router as wallet_router
 from app.core.config import settings
 from app.core.csrf import CSRFMiddleware
 from app.core.exceptions import register_exception_handlers
+from app.core.feature_gate import DailyMissionsFeatureMiddleware
 from app.core.logging import setup_json_logging
 from app.core.privacy import PrivacyConsentMiddleware
 from app.core.rate_limit import RateLimitMiddleware
@@ -56,6 +57,7 @@ app.add_middleware(
 )
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(PrivacyConsentMiddleware)
+app.add_middleware(DailyMissionsFeatureMiddleware)
 app.add_middleware(CSRFMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(ai_router)

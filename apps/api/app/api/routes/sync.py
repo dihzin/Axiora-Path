@@ -9,7 +9,7 @@ from sqlalchemy import select
 from app.api.deps import DBSession, EventSvc, get_current_tenant, get_current_user, require_role
 from app.models import ChildProfile, DailyMission, Membership, Task, TaskLog, TaskLogStatus, Tenant, User
 from app.schemas.sync import SyncBatchFailedItem, SyncBatchItem, SyncBatchRequest, SyncBatchResponse
-from app.services.daily_mission_service import complete_daily_mission_by_id
+from app.services.daily_mission_service import DailyMissionCompletionError, complete_daily_mission_by_id
 
 router = APIRouter(prefix="/sync", tags=["sync"])
 
@@ -160,6 +160,8 @@ def _process_daily_mission_complete(
         if exc.status_code == status.HTTP_409_CONFLICT:
             return
         raise
+    except DailyMissionCompletionError as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
 @router.post("/batch", response_model=SyncBatchResponse)

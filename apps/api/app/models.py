@@ -82,6 +82,12 @@ class DailyMissionStatus(str, Enum):
     COMPLETED = "completed"
 
 
+class DailyMissionSourceType(str, Enum):
+    SYSTEM = "system"
+    TEACHER = "teacher"
+    PARENT = "parent"
+
+
 class Tenant(Base):
     __tablename__ = "tenants"
 
@@ -149,6 +155,7 @@ class ChildProfile(Base):
     theme: Mapped[str] = mapped_column(String(32), nullable=False, server_default="default")
     avatar_stage: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
     xp_total: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    last_mission_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
@@ -403,6 +410,7 @@ class AxionProfile(Base):
 class DailyMission(Base):
     __tablename__ = "daily_missions"
     __table_args__ = (
+        Index("ix_daily_missions_tenant_id", "tenant_id"),
         Index("ix_daily_missions_child_id", "child_id"),
         Index("ix_daily_missions_date", "date"),
         Index("ix_daily_missions_child_id_date", "child_id", "date"),
@@ -415,10 +423,19 @@ class DailyMission(Base):
         nullable=False,
         server_default=text("gen_random_uuid()"),
     )
+    tenant_id: Mapped[int | None] = mapped_column(ForeignKey("tenants.id"), nullable=True)
     child_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id"), nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
+    source_type: Mapped[DailyMissionSourceType] = mapped_column(
+        SqlEnum(DailyMissionSourceType, name="daily_mission_source_type"),
+        nullable=False,
+        server_default=text("'system'"),
+    )
+    source_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), nullable=True)
+    school_id: Mapped[int | None] = mapped_column(ForeignKey("schools.id"), nullable=True)
+    class_id: Mapped[int | None] = mapped_column(ForeignKey("classes.id"), nullable=True)
     rarity: Mapped[DailyMissionRarity] = mapped_column(
         SqlEnum(DailyMissionRarity, name="daily_mission_rarity"),
         nullable=False,
@@ -436,6 +453,29 @@ class DailyMission(Base):
         nullable=False,
         server_default=func.now(),
     )
+
+
+class MissionTemplate(Base):
+    __tablename__ = "mission_templates"
+    __table_args__ = (
+        Index("ix_mission_templates_tenant_id", "tenant_id"),
+        Index("ix_mission_templates_school_id", "school_id"),
+        Index("ix_mission_templates_class_id", "class_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    school_id: Mapped[int | None] = mapped_column(ForeignKey("schools.id"), nullable=True)
+    class_id: Mapped[int | None] = mapped_column(ForeignKey("classes.id"), nullable=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    rarity: Mapped[DailyMissionRarity] = mapped_column(
+        SqlEnum(DailyMissionRarity, name="daily_mission_rarity"),
+        nullable=False,
+    )
+    base_xp: Mapped[int] = mapped_column(Integer, nullable=False)
+    base_coin: Mapped[int] = mapped_column(Integer, nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
 
 
 DEFAULT_FAMILY_TASKS: list[dict[str, str | int | TaskDifficulty]] = [

@@ -17,7 +17,7 @@ from app.models import (
     User,
 )
 from app.schemas.daily_missions import DailyMissionCompleteResponse, DailyMissionHistoryItem, DailyMissionResponse
-from app.services.daily_mission_service import complete_daily_mission_by_id, generate_daily_mission
+from app.services.daily_mission_service import DailyMissionCompletionError, complete_daily_mission_by_id, generate_daily_mission
 from app.services.features import is_feature_enabled
 
 router = APIRouter(tags=["daily-missions"])
@@ -26,7 +26,7 @@ logger = logging.getLogger("axiora.api.daily_mission")
 
 def _ensure_daily_missions_enabled(db: DBSession, tenant_id: int) -> None:
     if not is_feature_enabled("feature_daily_missions", db, tenant_id=tenant_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Feature is disabled for this tenant")
 
 
 @router.get("/children/{child_id}/daily-mission", response_model=DailyMissionResponse)
@@ -49,7 +49,7 @@ def get_or_generate_daily_mission(
     if child is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
 
-    mission = generate_daily_mission(db, child)
+    mission = generate_daily_mission(db, child, current_tenant_id=tenant.id)
     return DailyMissionResponse(
         id=str(mission.id),
         date=mission.date,
@@ -123,13 +123,18 @@ def complete_daily_mission(
 ) -> DailyMissionCompleteResponse:
     _ensure_daily_missions_enabled(db, tenant.id)
 
-    mission, xp_gained, streak_current = complete_daily_mission_by_id(
-        db=db,
-        events=events,
-        tenant=tenant,
-        user=user,
-        mission_id=mission_id,
-    )
+    try:
+        with db.begin():
+            mission, xp_gained, coins_gained, streak_current = complete_daily_mission_by_id(
+                db=db,
+                events=events,
+                tenant=tenant,
+                user=user,
+                mission_id=mission_id,
+            )
+    except DailyMissionCompletionError as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
     child = db.scalar(
         select(ChildProfile).where(
             ChildProfile.id == mission.child_id,
@@ -143,7 +148,7 @@ def complete_daily_mission(
     return DailyMissionCompleteResponse(
         success=True,
         xp_gained=xp_gained,
-        coins_gained=mission.coin_reward,
+        coins_gained=coins_gained,
         new_level=new_level,
         streak=streak_current,
     )

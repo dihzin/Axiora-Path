@@ -20,10 +20,12 @@ class JsonFormatter(logging.Formatter):
         }
 
         optional_fields = (
+            "event_type",
             "request_id",
             "tenant_id",
             "user_id",
             "child_id",
+            "school_id",
             "mission_id",
             "mission_rarity",
             "xp_reward",

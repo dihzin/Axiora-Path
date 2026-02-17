@@ -5,7 +5,7 @@ import random
 from datetime import UTC, date, datetime
 
 from fastapi import HTTPException, status
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -32,6 +32,10 @@ from app.services.goals import sync_locked_goals_for_child
 from app.services.wallet import split_amount_by_pots
 
 logger = logging.getLogger("axiora.api.daily_mission")
+
+
+class DailyMissionCompletionError(Exception):
+    pass
 
 
 def _resolve_rarity(streak_current: int) -> DailyMissionRarity:
@@ -98,12 +102,14 @@ def _build_mission_content(db: Session, child: ChildProfile) -> tuple[str, str]:
     )
 
 
-def generate_daily_mission(db: Session, child: ChildProfile) -> DailyMission:
-    today = date.today()
+def generate_daily_mission(db: Session, child: ChildProfile, current_tenant_id: int) -> DailyMission:
+    assert child.tenant_id == current_tenant_id
+
     existing = db.scalar(
         select(DailyMission).where(
+            DailyMission.tenant_id == current_tenant_id,
             DailyMission.child_id == child.id,
-            DailyMission.date == today,
+            DailyMission.date == func.current_date(),
         ),
     )
     if existing is not None:
@@ -127,8 +133,9 @@ def generate_daily_mission(db: Session, child: ChildProfile) -> DailyMission:
     )
 
     mission = DailyMission(
+        tenant_id=current_tenant_id,
         child_id=child.id,
-        date=today,
+        date=date.today(),
         title=title,
         description=description,
         rarity=rarity,
@@ -143,8 +150,9 @@ def generate_daily_mission(db: Session, child: ChildProfile) -> DailyMission:
         db.rollback()
         existing_after_conflict = db.scalar(
             select(DailyMission).where(
+                DailyMission.tenant_id == current_tenant_id,
                 DailyMission.child_id == child.id,
-                DailyMission.date == today,
+                DailyMission.date == func.current_date(),
             ),
         )
         if existing_after_conflict is not None:
@@ -228,8 +236,8 @@ def complete_daily_mission_by_id(
     tenant: Tenant,
     user: User,
     mission_id: str,
-) -> tuple[DailyMission, int, int]:
-    with db.begin():
+) -> tuple[DailyMission, int, int, int]:
+    try:
         mission = db.scalar(select(DailyMission).where(DailyMission.id == mission_id))
         if mission is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Daily mission not found")
@@ -244,8 +252,11 @@ def complete_daily_mission_by_id(
         if child is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
 
-        if mission.status != DailyMissionStatus.PENDING:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Daily mission already completed")
+        # Idempotency guard: never re-apply reward for already completed mission.
+        if mission.status == DailyMissionStatus.COMPLETED:
+            streak = db.get(Streak, child.id)
+            streak_current = streak.current if streak is not None else 0
+            return mission, 0, 0, streak_current
 
         wallet = db.scalar(
             select(Wallet).where(
@@ -270,6 +281,7 @@ def complete_daily_mission_by_id(
 
         child.xp_total += mission.xp_reward
         child.avatar_stage = compute_avatar_stage(child.xp_total)
+        child.last_mission_completed_at = mission.completed_at
 
         tx = LedgerTransaction(
             tenant_id=tenant.id,
@@ -321,6 +333,10 @@ def complete_daily_mission_by_id(
                 "coins_gained": mission.coin_reward,
             },
         )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise DailyMissionCompletionError("Failed to complete daily mission") from exc
 
     logger.info(
         "daily_mission_completed",
@@ -334,5 +350,17 @@ def complete_daily_mission_by_id(
             "coin_reward": mission.coin_reward,
         },
     )
+    logger.info(
+        "mission_completed",
+        extra={
+            "event_type": "mission_completed",
+            "tenant_id": tenant.id,
+            "child_id": mission.child_id,
+            "school_id": mission.school_id,
+            "mission_rarity": mission.rarity.value,
+            "xp_reward": mission.xp_reward,
+            "coin_reward": mission.coin_reward,
+        },
+    )
 
-    return mission, mission.xp_reward, streak_current
+    return mission, mission.xp_reward, mission.coin_reward, streak_current

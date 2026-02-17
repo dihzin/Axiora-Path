@@ -155,8 +155,8 @@ def test_generate_daily_mission_is_unique_per_day(monkeypatch: Any) -> None:
     child.id = 10
     db = _FakeMissionGenerationDB(streak=None)
 
-    first = generate_daily_mission(db, child)
-    second = generate_daily_mission(db, child)
+    first = generate_daily_mission(db, child, current_tenant_id=1)
+    second = generate_daily_mission(db, child, current_tenant_id=1)
 
     assert first is second
     assert first.child_id == child.id
@@ -208,7 +208,7 @@ def test_complete_daily_mission_updates_child_xp(monkeypatch: Any) -> None:
     user = User(email="parent@test.com", name="Parent", password_hash="x")
     user.id = 2
 
-    completed_mission, xp_gained, streak_current = complete_daily_mission_by_id(
+    completed_mission, xp_gained, coins_gained, streak_current = complete_daily_mission_by_id(
         db=db,  # type: ignore[arg-type]
         events=events,  # type: ignore[arg-type]
         tenant=tenant,
@@ -219,9 +219,52 @@ def test_complete_daily_mission_updates_child_xp(monkeypatch: Any) -> None:
     assert completed_mission.status == DailyMissionStatus.COMPLETED
     assert completed_mission.completed_at is not None
     assert xp_gained == 18
+    assert coins_gained == 9
     assert child.xp_total == 38
     assert streak_current == 1
     assert [item["type"] for item in events.calls] == ["daily_mission.completed", "mission_completed"]
+
+
+def test_complete_daily_mission_is_idempotent_when_already_completed() -> None:
+    mission = DailyMission(
+        id=str(uuid4()),
+        child_id=10,
+        date=date.today(),
+        title="Mission",
+        description="Desc",
+        rarity=DailyMissionRarity.NORMAL,
+        xp_reward=18,
+        coin_reward=9,
+        status=DailyMissionStatus.COMPLETED,
+        completed_at=datetime.now(UTC),
+        created_at=datetime.now(UTC),
+    )
+    child = ChildProfile(tenant_id=1, display_name="Child", avatar_key=None, birth_year=None, xp_total=38)
+    child.id = 10
+    wallet = Wallet(tenant_id=1, child_id=10, currency_code="BRL")
+    wallet.id = 30
+    db = _FakeMissionCompleteDB(mission=mission, child=child, wallet=wallet, allocations=[])
+    db._streak = Streak(child_id=10, current=4, last_date=date.today(), freeze_used_today=False, freeze_tokens=1)
+    events = _FakeEvents()
+    tenant = Tenant(type=TenantType.FAMILY, name="Family", slug="family")
+    tenant.id = 1
+    user = User(email="parent@test.com", name="Parent", password_hash="x")
+    user.id = 2
+
+    completed_mission, xp_gained, coins_gained, streak_current = complete_daily_mission_by_id(
+        db=db,  # type: ignore[arg-type]
+        events=events,  # type: ignore[arg-type]
+        tenant=tenant,
+        user=user,
+        mission_id=mission.id,
+    )
+
+    assert completed_mission.status == DailyMissionStatus.COMPLETED
+    assert xp_gained == 0
+    assert coins_gained == 0
+    assert streak_current == 4
+    assert child.xp_total == 38
+    assert events.calls == []
 
 
 def test_daily_mission_model_has_unique_constraint_for_child_date() -> None:

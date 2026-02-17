@@ -120,7 +120,7 @@ def ai_coach(
     first_login_context = (payload.message or "").strip() == "context:first_login"
     mission_intro: str | None = None
     if first_login_context and daily_missions_enabled:
-        mission = generate_daily_mission(db, child)
+        mission = generate_daily_mission(db, child, current_tenant_id=tenant.id)
         if mission.status == DailyMissionStatus.PENDING:
             mission_intro = MISSION_RARITY_INTRO[mission.rarity]
 
