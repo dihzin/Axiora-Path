@@ -27,7 +27,7 @@ export function ActionFeedback({
       aria-busy={state === "loading"}
       disabled={disabled || state === "loading"}
       className={cn(
-        "inline-flex items-center justify-center gap-2 transition will-change-transform",
+        "inline-flex items-center justify-center gap-2 transition will-change-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2",
         state === "success" && "action-feedback-success",
         state === "error" && "action-feedback-error",
         className,

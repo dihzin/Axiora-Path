@@ -9,13 +9,13 @@ export function WeeklyBossMeter({ completionRate }: WeeklyBossMeterProps) {
   const bossDefeated = percent >= 80;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="rounded-xl border border-border bg-card p-5 shadow-sm md:p-6">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">Weekly Boss Meter</p>
-        <p className="text-sm text-muted-foreground">{percent.toFixed(0)}%</p>
+        <p className="text-sm font-medium text-muted-foreground">{percent.toFixed(0)}%</p>
       </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
-        <div className="h-full bg-primary transition-[width] duration-700 ease-out" style={{ width: `${percent}%` }} />
+      <div className="mt-2 h-3 overflow-hidden rounded-full bg-muted">
+        <div className="h-full rounded-full bg-secondary transition-[width] duration-700 ease-out" style={{ width: `${percent}%` }} />
       </div>
       {bossDefeated ? (
         <span className="mt-3 inline-flex rounded-xl bg-secondary/12 px-2 py-1 text-sm font-medium text-secondary">

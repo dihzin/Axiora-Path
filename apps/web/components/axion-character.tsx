@@ -49,18 +49,12 @@ export function AxionCharacter({ stage, moodState, celebrating = false, reducedM
       <div className={`${reducedMotion ? "axion-glow-static" : "axion-glow"} ${glowClassByMood(moodState)} absolute inset-0 rounded-full`} />
       <svg
         aria-label="Axion character"
-        className="relative h-36 w-36"
+        className="relative h-44 w-44"
         viewBox="0 0 96 96"
         role="img"
       >
-        <defs>
-          <linearGradient id="axion-body" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#D6A756" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="#1E2A38" stopOpacity="0.8" />
-          </linearGradient>
-        </defs>
-        <circle cx="48" cy="48" r="32" fill="url(#axion-body)" />
-        <circle cx="48" cy="48" r="30" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.5" />
+        <circle cx="48" cy="48" r="32" fill="#1E2A38" />
+        <circle cx="48" cy="48" r="30" fill="none" stroke="rgba(214, 167, 86, 0.28)" strokeWidth="1.5" />
 
         {stage >= 2 ? <circle cx="48" cy="18" r="4" fill="rgba(255,255,255,0.8)" /> : null}
         {stage >= 3 ? <circle cx="66" cy="28" r="3" fill="rgba(255,255,255,0.7)" /> : null}

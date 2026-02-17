@@ -630,11 +630,11 @@ export default function ChildPage() {
       ) : null}
       <main
         className={cn(
-          "safe-px safe-pb mx-auto flex min-h-screen w-full flex-col p-4 pb-24 pt-3 md:p-6 md:pb-24",
+          "safe-px safe-pb mx-auto flex min-h-screen w-full flex-col p-4 pb-24 pt-5 md:p-6 md:pb-24",
           isSchoolTenant ? "max-w-2xl" : "max-w-md",
         )}
       >
-        <div className="mb-2 flex justify-end">
+        <div className="mb-3 flex justify-end">
           <button
             type="button"
             aria-label="Abrir modo pais"
@@ -646,8 +646,8 @@ export default function ChildPage() {
           </button>
         </div>
         {dailyMission ? (
-          <Card className={cn("mb-2", missionCardClass(dailyMission.status))}>
-            <CardHeader className="pb-2">
+          <Card className={cn("mb-4", missionCardClass(dailyMission.status), "bg-card")}>
+            <CardHeader className="p-5 pb-2 md:p-6 md:pb-2">
               <div className="flex items-center justify-between gap-2">
                 <CardTitle className="text-base font-bold tracking-tight">Missao do Dia</CardTitle>
                 <span
@@ -659,15 +659,15 @@ export default function ChildPage() {
                 </span>
               </div>
             </CardHeader>
-            <CardContent className="space-y-2.5 text-sm">
+            <CardContent className="space-y-2.5 p-5 pt-0 text-sm md:p-6 md:pt-0">
               <p className="text-sm font-semibold text-foreground">{dailyMission.title}</p>
               <p className="text-xs leading-relaxed text-muted-foreground">{dailyMission.description}</p>
               <div className="grid grid-cols-2 gap-2">
-                <div className="flex items-center gap-1.5 rounded-md border border-border bg-background/70 px-2 py-1.5 text-xs font-semibold">
+                <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2 py-1.5 text-xs font-semibold">
                   <Sparkles className="h-3.5 w-3.5 text-secondary" />
                   +{dailyMission.xp_reward} XP
                 </div>
-                <div className="flex items-center gap-1.5 rounded-md border border-border bg-background/70 px-2 py-1.5 text-xs font-semibold">
+                <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2 py-1.5 text-xs font-semibold">
                   <Coins className="h-3.5 w-3.5 text-accent" />
                   +{dailyMission.coin_reward} moedas
                 </div>
@@ -693,29 +693,29 @@ export default function ChildPage() {
         ) : null}
         <Card
           className={cn(
-            "relative overflow-hidden border-border shadow-sm",
-            isSchoolTenant ? "bg-card" : "axion-card-idle bg-card",
+            "relative mb-6 overflow-hidden border-border shadow-md",
+            isSchoolTenant ? "bg-muted" : "axion-card-idle bg-muted",
           )}
         >
-          <div className="pointer-events-none absolute -left-10 top-8 h-24 w-24 rounded-full bg-muted/70 blur-2xl" />
-          <div className="pointer-events-none absolute -right-8 top-12 h-20 w-20 rounded-full bg-muted/60 blur-2xl" />
-          <CardHeader className="pb-2 text-center">
-            <CardTitle className="text-xl font-bold tracking-tight">Axion</CardTitle>
-            <p className="text-sm text-muted-foreground">Seu parceiro de missao</p>
+          <CardHeader className="p-5 pb-2 text-center md:p-6 md:pb-2">
+            <CardTitle className="text-2xl font-extrabold tracking-tight">Axion</CardTitle>
+            <p className="text-sm text-secondary">Seu parceiro de missao</p>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm text-center">
+          <CardContent className="space-y-3 p-5 pt-0 text-sm text-center md:p-6 md:pt-0">
             {axionCelebration ? (
               <div className="celebrate-badge-pop absolute right-3 top-3 rounded-xl border border-secondary/35 bg-secondary/10 px-2 py-0.5 text-xs font-semibold text-secondary">
                 {AXION_CELEBRATION_BADGES[axionCelebration]}
               </div>
             ) : null}
-            <div className="mx-auto flex w-full max-w-[14rem] justify-center">
-              <AxionCharacter
-                stage={axionState?.stage ?? 1}
-                moodState={axionState?.mood_state ?? "NEUTRAL"}
-                celebrating={axionCelebration !== null}
-                reducedMotion={isSchoolTenant}
-              />
+            <div className="mx-auto flex w-full max-w-[18rem] justify-center">
+              <div className="rounded-full border border-accent/20 bg-[radial-gradient(circle_at_50%_35%,rgba(30,42,56,0.12),rgba(30,42,56,0.02)_70%)] p-3 shadow-md">
+                <AxionCharacter
+                  stage={axionState?.stage ?? 1}
+                  moodState={axionState?.mood_state ?? "NEUTRAL"}
+                  celebrating={axionCelebration !== null}
+                  reducedMotion={isSchoolTenant}
+                />
+              </div>
             </div>
             <AxionDialogue
               message={axionDialogue.message}
@@ -729,10 +729,10 @@ export default function ChildPage() {
             </div>
           </CardContent>
         </Card>
-        <section className={cn("space-y-2.5", isSchoolTenant && "grid gap-3 lg:grid-cols-[1.15fr_1fr] lg:items-start lg:space-y-0")}>
+        <section className={cn("space-y-4", isSchoolTenant && "grid gap-4 lg:grid-cols-[1.15fr_1fr] lg:items-start lg:space-y-0")}>
           {showDailyWelcome ? (
-            <Card>
-              <CardHeader>
+            <Card className="bg-card">
+              <CardHeader className="p-5 md:p-6">
                 <div className="flex items-center justify-between gap-3">
                   <CardTitle className="text-base">Ready for today&apos;s mission?</CardTitle>
                   <button
@@ -745,7 +745,7 @@ export default function ChildPage() {
                   </button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm">
+              <CardContent className="space-y-3 p-5 pt-0 text-sm md:p-6 md:pt-0">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Streak</span>
                   <span className="font-semibold">{streakCount} dias</span>
@@ -766,8 +766,10 @@ export default function ChildPage() {
                         title={option.label}
                         state={todayMood === option.mood ? moodFeedback : "idle"}
                         aria-label={`Selecionar humor ${option.label}`}
-                        className={`rounded-xl border px-2 py-1 text-lg transition ${
-                          todayMood === option.mood ? "border-primary bg-primary/10" : "border-border bg-background"
+                        className={`rounded-xl border px-2 py-1 text-xl transition-transform hover:scale-105 ${
+                          todayMood === option.mood
+                            ? "border-primary bg-primary/10 ring-2 ring-primary/25"
+                            : "border-border bg-background"
                         }`}
                         onClick={() => void onQuickMood(option.mood)}
                       >
@@ -780,8 +782,8 @@ export default function ChildPage() {
               </CardContent>
             </Card>
           ) : null}
-          <Card className="border-border/80">
-            <CardHeader className="pb-2">
+          <Card className="border-border/80 bg-muted">
+            <CardHeader className="p-5 pb-2 md:p-6 md:pb-2">
               <div className="flex items-center justify-between gap-2">
                 <CardTitle className="text-base font-semibold">Painel do dia</CardTitle>
                 <button
@@ -794,7 +796,7 @@ export default function ChildPage() {
                 </button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-3 p-5 pt-0 md:p-6 md:pt-0">
               <div>
                 <p className="mb-2 text-xs font-semibold text-foreground">Como voc est hoje?</p>
               <div className="flex items-center gap-2">
@@ -805,8 +807,10 @@ export default function ChildPage() {
                     title={option.label}
                     state={todayMood === option.mood ? moodFeedback : "idle"}
                     aria-label={`Selecionar humor ${option.label}`}
-                    className={`rounded-xl border px-2 py-1 text-xl transition ${
-                      todayMood === option.mood ? "border-primary bg-primary/10" : "border-border bg-background"
+                    className={`rounded-xl border px-2 py-1 text-2xl transition-transform hover:scale-105 ${
+                      todayMood === option.mood
+                        ? "border-primary bg-primary/10 ring-2 ring-primary/25"
+                        : "border-border bg-background"
                     }`}
                     onClick={() => void onSelectMood(option.mood)}
                   >
@@ -826,7 +830,9 @@ export default function ChildPage() {
                       state={theme === item ? themeFeedback : "idle"}
                       disabled={themeSaving}
                       className={`rounded-xl border px-2 py-2 capitalize transition ${
-                        theme === item ? "border-primary bg-primary/10 text-foreground" : "border-border bg-background text-muted-foreground"
+                        theme === item
+                          ? "border-secondary bg-secondary/12 text-secondary ring-2 ring-secondary/20"
+                          : "border-secondary/40 bg-background text-muted-foreground hover:bg-secondary/10 hover:text-secondary"
                       }`}
                       onClick={() => void onSelectTheme(item)}
                     >
@@ -837,11 +843,11 @@ export default function ChildPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-border/80">
-            <CardHeader className="pb-2">
+          <Card className="border-border/80 bg-card">
+            <CardHeader className="p-5 pb-2 md:p-6 md:pb-2">
               <CardTitle className="text-base font-semibold">Progresso</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-3 p-5 pt-0 md:p-6 md:pt-0">
               <div className="grid gap-3 sm:grid-cols-2">
                 <PiggyJar
                   currentSaveAmountCents={currentSave}
@@ -849,21 +855,21 @@ export default function ChildPage() {
                   savePercent={savePercent}
                   isLocked={goalLocked}
                 />
-                <div className="rounded-xl border border-border bg-card p-4">
+                <div className="rounded-xl border border-border bg-card p-5 shadow-sm md:p-6">
                   <p className="mb-2 text-xs font-semibold text-foreground">Avatar</p>
                   <AvatarEvolution stage={avatarStage} />
                 </div>
               </div>
-              <div className="rounded-xl border border-border bg-card p-4">
+              <div className="rounded-xl border border-border bg-card p-5 shadow-sm md:p-6">
                 <div className="mb-2 flex items-center justify-between text-sm">
                   <span className="font-medium text-foreground">XP</span>
-                  <span className="text-muted-foreground">
+                  <span className="font-medium text-muted-foreground">
                     Nvel {level?.level ?? 1} • {xpBarPercent.toFixed(0)}%
                   </span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                <div className="h-3 overflow-hidden rounded-full bg-muted">
                   <div
-                    className="h-full bg-primary transition-[width] duration-700 ease-out"
+                    className="h-full rounded-full bg-accent transition-[width] duration-700 ease-out"
                     style={{ width: `${xpBarPercent}%` }}
                   />
                 </div>
@@ -871,11 +877,11 @@ export default function ChildPage() {
               <WeeklyBossMeter completionRate={weeklyMetrics?.completion_rate ?? 0} />
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
+          <Card className="bg-muted">
+            <CardHeader className="p-5 md:p-6">
               <CardTitle className="text-base">Lista de tarefas</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
+            <CardContent className="space-y-3 p-5 pt-0 text-sm text-muted-foreground md:p-6 md:pt-0">
               <div className="flex items-center justify-between">
                 <div className="inline-flex rounded-xl border border-border p-0.5 text-xs">
                   <button
@@ -896,12 +902,12 @@ export default function ChildPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Flame className={`${isSchoolTenant ? "" : "flame-flicker"} ${flameClassName} text-accent`} />
-                <span>Streak: {streakCount} dias</span>
+                <span className="font-medium text-accent-foreground">Streak: {streakCount} dias</span>
                 {streak?.freeze_used_today ? <Snowflake className="h-3.5 w-3.5 text-secondary" /> : null}
               </div>
               <div className="space-y-2">
                 {tasks.length === 0 ? (
-                  <p>Nenhuma tarefa ativa para hoje.</p>
+                  <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma tarefa ativa para hoje.</p>
                 ) : (
                   tasks.map((task) => {
                     const status = taskStatusById[task.id];
@@ -939,7 +945,7 @@ export default function ChildPage() {
                 )}
               </div>
               {routineLogs.length === 0 ? (
-                <p>Sem checkpoints da semana ainda.</p>
+                <p className="py-4 text-center text-sm text-muted-foreground">Sem checkpoints da semana ainda.</p>
               ) : taskView === "list" ? (
                 <div className="space-y-2">
                   {routineLogs.map((log) => (

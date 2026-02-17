@@ -29,7 +29,9 @@ function ChildBottomNavComponent() {
               }`}
               href={item.href}
             >
-              <Icon className="h-4 w-4" />
+              <span className={`inline-flex items-center justify-center rounded-full p-1 ${isActive ? "bg-primary/10" : ""}`}>
+                <Icon className="h-[18px] w-[18px]" />
+              </span>
               {item.label}
             </Link>
           );
