@@ -1,0 +1,353 @@
+from __future__ import annotations
+
+from datetime import date, datetime
+from enum import Enum
+from typing import Any
+
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    Enum as SqlEnum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    event,
+)
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
+
+from app.db.base import Base
+
+
+class TenantType(str, Enum):
+    FAMILY = "FAMILY"
+    SCHOOL = "SCHOOL"
+
+
+class MembershipRole(str, Enum):
+    PARENT = "PARENT"
+    TEACHER = "TEACHER"
+    CHILD = "CHILD"
+
+
+class TaskDifficulty(str, Enum):
+    EASY = "EASY"
+    MEDIUM = "MEDIUM"
+    HARD = "HARD"
+    LEGENDARY = "LEGENDARY"
+
+
+class TaskLogStatus(str, Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
+class LedgerTransactionType(str, Enum):
+    EARN = "EARN"
+    SPEND = "SPEND"
+    ADJUST = "ADJUST"
+    ALLOWANCE = "ALLOWANCE"
+    LOAN = "LOAN"
+
+
+class PotType(str, Enum):
+    SPEND = "SPEND"
+    SAVE = "SAVE"
+    DONATE = "DONATE"
+
+
+class Tenant(Base):
+    __tablename__ = "tenants"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    type: Mapped[TenantType] = mapped_column(
+        SqlEnum(TenantType, name="tenant_type"),
+        nullable=False,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    slug: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class Membership(Base):
+    __tablename__ = "memberships"
+    __table_args__ = (
+        Index("ix_memberships_tenant_id_created_at", "tenant_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    role: Mapped[MembershipRole] = mapped_column(
+        SqlEnum(MembershipRole, name="membership_role"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class ChildProfile(Base):
+    __tablename__ = "child_profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    avatar_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    birth_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    difficulty: Mapped[TaskDifficulty] = mapped_column(
+        SqlEnum(TaskDifficulty, name="task_difficulty"),
+        nullable=False,
+    )
+    weight: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_active: Mapped[bool] = mapped_column(nullable=False, server_default="true")
+
+
+class TaskLog(Base):
+    __tablename__ = "task_logs"
+    __table_args__ = (
+        Index("ix_task_logs_tenant_id_created_at", "tenant_id", "created_at"),
+        UniqueConstraint("child_id", "task_id", "date", name="uq_task_logs_child_id_task_id_date"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    child_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id"), nullable=False)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"), nullable=False)
+    date: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[TaskLogStatus] = mapped_column(
+        SqlEnum(TaskLogStatus, name="task_log_status"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    decided_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    parent_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class Wallet(Base):
+    __tablename__ = "wallets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    child_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id"), nullable=False)
+    currency_code: Mapped[str] = mapped_column(String(8), nullable=False, server_default="BRL")
+
+
+class LedgerTransaction(Base):
+    __tablename__ = "ledger_transactions"
+    __table_args__ = (
+        Index("ix_ledger_transactions_tenant_id_created_at", "tenant_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    wallet_id: Mapped[int] = mapped_column(ForeignKey("wallets.id"), nullable=False)
+    type: Mapped[LedgerTransactionType] = mapped_column(
+        SqlEnum(LedgerTransactionType, name="ledger_transaction_type"),
+        nullable=False,
+    )
+    amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(
+        "metadata",
+        JSONB,
+        nullable=False,
+        server_default="{}",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class PotAllocation(Base):
+    __tablename__ = "pot_allocations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    wallet_id: Mapped[int] = mapped_column(ForeignKey("wallets.id"), nullable=False)
+    pot: Mapped[PotType] = mapped_column(
+        SqlEnum(PotType, name="pot_type"),
+        nullable=False,
+    )
+    percent: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class SavingGoal(Base):
+    __tablename__ = "saving_goals"
+    __table_args__ = (
+        Index("ix_saving_goals_tenant_id_created_at", "tenant_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    child_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id"), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    target_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    is_locked: Mapped[bool] = mapped_column(nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class EventLog(Base):
+    __tablename__ = "event_log"
+    __table_args__ = (
+        Index("ix_event_log_tenant_id_created_at", "tenant_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    actor_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    child_id: Mapped[int | None] = mapped_column(ForeignKey("child_profiles.id"), nullable=True)
+    type: Mapped[str] = mapped_column(String(255), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class Streak(Base):
+    __tablename__ = "streaks"
+
+    child_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id"), primary_key=True)
+    current: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    last_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    freeze_used_today: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+
+
+class Recommendation(Base):
+    __tablename__ = "recommendations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    child_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id"), nullable=False)
+    type: Mapped[str] = mapped_column(String(100), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    severity: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    dismissed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+DEFAULT_FAMILY_TASKS: list[dict[str, str | int | TaskDifficulty]] = [
+    {"title": "Arrumar a cama", "difficulty": TaskDifficulty.EASY, "weight": 5},
+    {"title": "Escovar os dentes", "difficulty": TaskDifficulty.EASY, "weight": 5},
+    {"title": "Organizar os brinquedos", "difficulty": TaskDifficulty.EASY, "weight": 10},
+    {"title": "Fazer a licao de casa", "difficulty": TaskDifficulty.MEDIUM, "weight": 15},
+    {"title": "Ajudar na cozinha", "difficulty": TaskDifficulty.MEDIUM, "weight": 20},
+    {"title": "Ler por 30 minutos", "difficulty": TaskDifficulty.HARD, "weight": 30},
+    {"title": "Projeto especial da semana", "difficulty": TaskDifficulty.LEGENDARY, "weight": 50},
+]
+
+
+@event.listens_for(Tenant, "after_insert")
+def seed_default_family_data(_, connection, target: Tenant) -> None:
+    if target.type != TenantType.FAMILY:
+        return
+
+    child_id = connection.execute(
+        ChildProfile.__table__.insert()
+        .values(
+            tenant_id=target.id,
+            display_name="Child 1",
+            avatar_key=None,
+            birth_year=None,
+        )
+        .returning(ChildProfile.__table__.c.id),
+    ).scalar_one()
+
+    wallet_id = connection.execute(
+        Wallet.__table__.insert()
+        .values(
+            tenant_id=target.id,
+            child_id=child_id,
+            currency_code="BRL",
+        )
+        .returning(Wallet.__table__.c.id),
+    ).scalar_one()
+
+    connection.execute(
+        PotAllocation.__table__.insert(),
+        [
+            {
+                "tenant_id": target.id,
+                "wallet_id": wallet_id,
+                "pot": PotType.SPEND,
+                "percent": 50,
+            },
+            {
+                "tenant_id": target.id,
+                "wallet_id": wallet_id,
+                "pot": PotType.SAVE,
+                "percent": 30,
+            },
+            {
+                "tenant_id": target.id,
+                "wallet_id": wallet_id,
+                "pot": PotType.DONATE,
+                "percent": 20,
+            },
+        ],
+    )
+
+    task_rows = [
+        {
+            "tenant_id": target.id,
+            "title": task["title"],
+            "description": None,
+            "difficulty": task["difficulty"],
+            "weight": task["weight"],
+            "is_active": True,
+        }
+        for task in DEFAULT_FAMILY_TASKS
+    ]
+    connection.execute(Task.__table__.insert(), task_rows)
