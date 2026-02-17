@@ -1,5 +1,5 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ReactNode } from "react";
 
@@ -13,7 +13,6 @@ export const metadata: Metadata = {
   title: "axiora-path",
   description: "Axiora Path MVP",
   manifest: "/manifest.webmanifest",
-  themeColor: "#0f172a",
   icons: {
     icon: "/icons/icon-192.svg",
     apple: "/icons/icon-192.svg",
@@ -23,6 +22,10 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Axiora Path",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1E2A38",
 };
 
 type RootLayoutProps = {
