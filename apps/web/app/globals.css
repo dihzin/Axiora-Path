@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 255 255 255;
+  --foreground: 15 23 42;
+  --card: 255 255 255;
+  --card-foreground: 15 23 42;
+  --primary: 15 23 42;
+  --primary-foreground: 248 250 252;
+  --secondary: 241 245 249;
+  --secondary-foreground: 15 23 42;
+  --muted: 241 245 249;
+  --muted-foreground: 71 85 105;
+  --border: 226 232 240;
+  --input: 226 232 240;
+  --ring: 30 41 59;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+}
+
+.safe-px {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+.safe-pb {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
