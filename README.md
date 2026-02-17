@@ -16,11 +16,13 @@ Prerequisitos:
 - Python 3.12
 - Docker + Docker Compose
 
-Instalacao:
+Instalacao inicial (raiz do monorepo):
 
 ```bash
 npm install
 ```
+
+Backend (primeira vez):
 
 ```bash
 cd apps/api
@@ -51,7 +53,51 @@ Web (`apps/web/.env.local`):
 - `NEXT_PUBLIC_API_URL` (default esperado: `http://localhost:8000`)
 - `NEXT_PUBLIC_PARENT_PIN` (default no MVP: `1234`)
 
-## Run Commands
+## Execucao Local (3 Terminais)
+
+### Terminal 1 - Infra (Postgres + Redis)
+
+```powershell
+cd "c:\DEV\Axiora Path"
+docker compose -f infra/docker/docker-compose.yml up -d
+```
+
+Opcional para conferir:
+
+```powershell
+docker compose -f infra/docker/docker-compose.yml ps
+```
+
+### Terminal 2 - API (FastAPI)
+
+```powershell
+cd "c:\DEV\Axiora Path\apps\api"
+.venv\Scripts\Activate.ps1
+alembic upgrade head
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Health check:
+
+```powershell
+curl http://localhost:8000/health
+```
+
+### Terminal 3 - Web (Next.js)
+
+```powershell
+cd "c:\DEV\Axiora Path"
+npm install
+cd "c:\DEV\Axiora Path\apps\web"
+npm run dev
+```
+
+Acessos locais:
+
+- Web: `http://localhost:3000`
+- API docs: `http://localhost:8000/docs`
+
+## Comandos de Desenvolvimento
 
 Infra + API:
 
@@ -108,13 +154,14 @@ npm run build:web
 
 ## Smoke Test Checklist
 
-1. Subir infra e API com `make dev`.
-2. Rodar web com `npm run dev:web`.
-3. Login no web em `/login`.
-4. Confirmar fluxo `login -> select-tenant -> select-child -> child`.
-5. Acessar area dos pais e validar guard de PIN (`/parent-pin`).
-6. Criar/usar rotina e validar eventos no backend (`event_log`).
-7. Testar modo offline no web e validar sincronizacao via `POST /sync/batch` ao voltar online.
+1. Subir infra no Terminal 1.
+2. Subir API no Terminal 2.
+3. Subir web no Terminal 3.
+4. Login no web em `/login`.
+5. Confirmar fluxo `login -> select-tenant -> select-child -> child`.
+6. Acessar area dos pais e validar guard de PIN (`/parent-pin`).
+7. Criar/usar rotina e validar eventos no backend (`event_log`).
+8. Testar modo offline no web e validar sincronizacao via `POST /sync/batch` ao voltar online.
 
 ## Performance Notes
 
