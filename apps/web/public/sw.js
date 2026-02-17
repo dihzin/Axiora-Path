@@ -37,8 +37,9 @@ self.addEventListener("fetch", (event) => {
       caches.match(request).then((cached) => {
         const network = fetch(request)
           .then((response) => {
-            if (response && response.status === 200) {
-              caches.open(STATIC_CACHE).then((cache) => cache.put(request, response.clone()));
+            if (response && response.status === 200 && response.type === "basic") {
+              const cloned = response.clone();
+              caches.open(STATIC_CACHE).then((cache) => cache.put(request, cloned));
             }
             return response;
           })
@@ -48,4 +49,3 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
-

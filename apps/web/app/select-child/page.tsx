@@ -26,7 +26,7 @@ export default function SelectChildPage() {
   useEffect(() => {
     getMe()
       .then((data) => setChildren(data.child_profiles))
-      .catch(() => setError("Nao foi possivel carregar perfis. Faca login novamente."));
+      .catch(() => setError("Nao foi possível carregar perfis. Faca login novamente."));
   }, []);
 
   const chooseChild = (child: ChildProfile) => {

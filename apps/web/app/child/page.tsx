@@ -89,16 +89,16 @@ type AxionCelebrationType = "streak_7" | "streak_30" | "level_up" | "goal_comple
 
 const AXION_CELEBRATION_PHRASES: Record<AxionCelebrationType, string> = {
   streak_7: "Sete dias seguidos! Axion esta em modo lenda!",
-  streak_30: "Trinta dias! Axion desbloqueou energia maxima!",
-  level_up: "Level up! Axion evoluiu junto com voce!",
-  goal_completed: "Meta concluida! Axion esta comemorando essa conquista!",
+  streak_30: "Trinta dias! Axion desbloqueou energia máxima!",
+  level_up: "Level up! Axion evoluiu junto com você!",
+  goal_completed: "Meta concluída! Axion esta comemorando essa conquista!",
 };
 
 const AXION_CELEBRATION_BADGES: Record<AxionCelebrationType, string> = {
   streak_7: "Streak 7",
   streak_30: "Streak 30",
   level_up: "Level Up",
-  goal_completed: "Meta Concluida",
+  goal_completed: "Meta Concluída",
 };
 
 export default function ChildPage() {
@@ -127,6 +127,8 @@ export default function ChildPage() {
   const [taskView, setTaskView] = useState<"list" | "journey">("list");
   const [showDailyWelcome, setShowDailyWelcome] = useState(false);
   const [dailyMission, setDailyMission] = useState<DailyMissionResponse | null>(null);
+  const [missionLoadError, setMissionLoadError] = useState(false);
+  const [tasksLoadError, setTasksLoadError] = useState(false);
   const [missionCompleting, setMissionCompleting] = useState(false);
   const [markingTaskIds, setMarkingTaskIds] = useState<number[]>([]);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -147,9 +149,15 @@ export default function ChildPage() {
 
   useEffect(() => {
     const rawChildId = localStorage.getItem("axiora_child_id");
-    if (!rawChildId) return;
+    if (!rawChildId) {
+      router.push("/select-child");
+      return;
+    }
     const parsedChildId = Number(rawChildId);
-    if (!Number.isFinite(parsedChildId)) return;
+    if (!Number.isFinite(parsedChildId)) {
+      router.push("/select-child");
+      return;
+    }
     setChildId(parsedChildId);
     setSoundEnabled(getChildSoundEnabled(parsedChildId));
     const savedTaskView = localStorage.getItem("axiora_task_view");
@@ -159,9 +167,13 @@ export default function ChildPage() {
     const welcomeKey = `axiora_daily_welcome_${parsedChildId}_${todayIso}`;
     setShowDailyWelcome(localStorage.getItem(welcomeKey) !== "1");
     getTasks()
-      .then((data) => setTasks(data.filter((task) => task.is_active)))
+      .then((data) => {
+        setTasks(data.filter((task) => task.is_active));
+        setTasksLoadError(false);
+      })
       .catch(() => {
         setTasks([]);
+        setTasksLoadError(true);
       });
     getAxionState(parsedChildId)
       .then((data) => setAxionState(data))
@@ -239,11 +251,15 @@ export default function ChildPage() {
         setTodayMood(null);
       });
     getDailyMission(parsedChildId)
-      .then((data) => setDailyMission(data))
+      .then((data) => {
+        setDailyMission(data);
+        setMissionLoadError(false);
+      })
       .catch(() => {
         setDailyMission(null);
+        setMissionLoadError(true);
       });
-  }, []);
+  }, [router, setTheme, todayIso]);
 
   useEffect(() => {
     if (childId === null) return;
@@ -435,7 +451,11 @@ export default function ChildPage() {
   }, [activeGoal?.id, activeGoal?.is_locked]);
 
   const onSelectMood = async (mood: MoodType): Promise<boolean> => {
-    if (childId === null) return false;
+    if (childId === null) {
+      setMoodError("Selecione um perfil infantil para registrar humor.");
+      showToast("Selecione a crianca primeiro", "error");
+      return false;
+    }
 
     setMoodError(null);
     setMoodFeedback("loading");
@@ -451,7 +471,7 @@ export default function ChildPage() {
       showToast("Humor atualizado", "success");
       return true;
     } catch {
-      setMoodError("Nao foi possivel salvar humor agora.");
+      setMoodError("Nao foi possível salvar humor agora.");
       setTransientFeedback(setMoodFeedback, moodFeedbackTimerRef, "error");
       return false;
     }
@@ -548,7 +568,7 @@ export default function ChildPage() {
       await enqueueDailyMissionComplete({ mission_id: dailyMission.id });
       setDailyMission((prev) => (prev ? { ...prev, status: "completed" } : prev));
       setTransientFeedback(setMissionFeedback, missionFeedbackTimerRef, "success");
-      showToast("Missao concluida offline. Vai sincronizar ao reconectar.", "success");
+      showToast("Missão concluida offline. Vai sincronizar ao reconectar.", "success");
       setMissionCompleting(false);
       return;
     }
@@ -557,7 +577,7 @@ export default function ChildPage() {
       await completeDailyMission(dailyMission.id);
       setDailyMission((prev) => (prev ? { ...prev, status: "completed" } : prev));
       setTransientFeedback(setMissionFeedback, missionFeedbackTimerRef, "success");
-      showToast("Missao concluida!", "success");
+      showToast("Missão concluida!", "success");
       if (childId !== null) {
         void getLevels(childId).then((data) => {
           lastKnownLevelRef.current = data.level;
@@ -575,10 +595,10 @@ export default function ChildPage() {
         await enqueueDailyMissionComplete({ mission_id: dailyMission.id });
         setDailyMission((prev) => (prev ? { ...prev, status: "completed" } : prev));
         setTransientFeedback(setMissionFeedback, missionFeedbackTimerRef, "success");
-        showToast("Sem conexao. Missao enfileirada para sincronizar.", "success");
+        showToast("Sem conexao. Missão enfileirada para sincronizar.", "success");
       } else {
         setTransientFeedback(setMissionFeedback, missionFeedbackTimerRef, "error");
-        showToast(getApiErrorMessage(err, "Nao foi possivel concluir missao."), "error");
+        showToast(getApiErrorMessage(err, "Nao foi possível concluir Missão."), "error");
       }
     } finally {
       setMissionCompleting(false);
@@ -631,7 +651,7 @@ export default function ChildPage() {
       <main
         className={cn(
           "safe-px safe-pb mx-auto flex min-h-screen w-full flex-col p-4 pb-24 pt-5 md:p-6 md:pb-24",
-          isSchoolTenant ? "max-w-2xl" : "max-w-md",
+          isSchoolTenant ? "max-w-md md:max-w-3xl" : "max-w-md md:max-w-2xl",
         )}
       >
         <div className="mb-3 flex justify-end">
@@ -645,52 +665,63 @@ export default function ChildPage() {
             Modo pais
           </button>
         </div>
-        {dailyMission ? (
-          <Card className={cn("mb-4", missionCardClass(dailyMission.status), "bg-card")}>
+        <Card className={cn("mb-4 bg-card", dailyMission ? missionCardClass(dailyMission.status) : "border-border shadow-sm")}>
             <CardHeader className="p-5 pb-2 md:p-6 md:pb-2">
               <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-base font-bold tracking-tight">Missao do Dia</CardTitle>
-                <span
-                  className={`rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wide ${missionRarityBadgeClass(
-                    dailyMission.rarity,
-                  )}`}
-                >
-                  {dailyMission.rarity}
-                </span>
+                <CardTitle className="text-lg font-bold tracking-tight">Missão do Dia</CardTitle>
+                {dailyMission ? (
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-sm font-semibold uppercase tracking-wide ${missionRarityBadgeClass(
+                      dailyMission.rarity,
+                    )}`}
+                  >
+                    {dailyMission.rarity}
+                  </span>
+                ) : null}
               </div>
             </CardHeader>
             <CardContent className="space-y-2.5 p-5 pt-0 text-sm md:p-6 md:pt-0">
-              <p className="text-sm font-semibold text-foreground">{dailyMission.title}</p>
-              <p className="text-xs leading-relaxed text-muted-foreground">{dailyMission.description}</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2 py-1.5 text-xs font-semibold">
-                  <Sparkles className="h-3.5 w-3.5 text-secondary" />
-                  +{dailyMission.xp_reward} XP
+              {dailyMission ? (
+                <>
+                  <p className="text-sm font-semibold text-foreground">{dailyMission.title}</p>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{dailyMission.description}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2 py-1.5 text-sm font-semibold">
+                      <Sparkles className="h-3.5 w-3.5 text-secondary" />
+                      +{dailyMission.xp_reward} XP
+                    </div>
+                    <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2 py-1.5 text-sm font-semibold">
+                      <Coins className="h-3.5 w-3.5 text-accent" />
+                      +{dailyMission.coin_reward} moedas
+                    </div>
+                  </div>
+                  {dailyMission.status === "completed" ? (
+                    <div className="flex items-center justify-center gap-1 rounded-xl border border-secondary/35 bg-secondary/10 px-3 py-2 text-sm font-semibold text-secondary">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Missão concluida
+                    </div>
+                  ) : null}
+                  <ActionFeedback
+                    type="button"
+                    state={missionCompleting ? "loading" : missionFeedback}
+                    loadingLabel="Processando..."
+                    disabled={missionCompleting || dailyMission.status === "completed"}
+                    className="w-full rounded-xl bg-primary px-3 py-2.5 text-sm font-bold text-primary-foreground shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => void onCompleteDailyMission()}
+                  >
+                    {dailyMission.status === "completed" ? "Concluida" : "Completar Missão"}
+                  </ActionFeedback>
+                </>
+              ) : (
+                <div className="rounded-xl border border-border bg-muted px-3 py-4 text-center">
+                  <p className="text-sm font-medium text-foreground">Missão indisponível no momento</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {missionLoadError ? "Nao foi possível carregar a Missão de hoje." : "Missão ainda nao foi gerada para este perfil."}
+                  </p>
                 </div>
-                <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2 py-1.5 text-xs font-semibold">
-                  <Coins className="h-3.5 w-3.5 text-accent" />
-                  +{dailyMission.coin_reward} moedas
-                </div>
-              </div>
-              {dailyMission.status === "completed" ? (
-                <div className="flex items-center justify-center gap-1 rounded-xl border border-secondary/35 bg-secondary/10 px-3 py-2 text-xs font-semibold text-secondary">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Missao concluida
-                </div>
-              ) : null}
-              <ActionFeedback
-                type="button"
-                state={missionCompleting ? "loading" : missionFeedback}
-                loadingLabel="Processando..."
-                disabled={missionCompleting || dailyMission.status === "completed"}
-                className="w-full rounded-xl bg-primary px-3 py-2.5 text-xs font-bold text-primary-foreground shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={() => void onCompleteDailyMission()}
-              >
-                {dailyMission.status === "completed" ? "Concluida" : "Completar Missao"}
-              </ActionFeedback>
+              )}
             </CardContent>
           </Card>
-        ) : null}
         <Card
           className={cn(
             "relative mb-6 overflow-hidden border-border shadow-md",
@@ -699,11 +730,11 @@ export default function ChildPage() {
         >
           <CardHeader className="p-5 pb-2 text-center md:p-6 md:pb-2">
             <CardTitle className="text-2xl font-extrabold tracking-tight">Axion</CardTitle>
-            <p className="text-sm text-secondary">Seu parceiro de missao</p>
+            <p className="text-sm text-secondary">Seu parceiro de Missão</p>
           </CardHeader>
           <CardContent className="space-y-3 p-5 pt-0 text-sm text-center md:p-6 md:pt-0">
             {axionCelebration ? (
-              <div className="celebrate-badge-pop absolute right-3 top-3 rounded-xl border border-secondary/35 bg-secondary/10 px-2 py-0.5 text-xs font-semibold text-secondary">
+              <div className="celebrate-badge-pop absolute right-3 top-3 rounded-xl border border-secondary/35 bg-secondary/10 px-2 py-0.5 text-sm font-semibold text-secondary">
                 {AXION_CELEBRATION_BADGES[axionCelebration]}
               </div>
             ) : null}
@@ -723,7 +754,7 @@ export default function ChildPage() {
               onDismiss={() => setAxionDialogue((prev) => ({ ...prev, visible: false }))}
               reducedMotion={isSchoolTenant}
             />
-            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <span className="rounded-xl border border-border bg-background px-2 py-1">Stage {axionState?.stage ?? 1}</span>
               <span className="rounded-xl border border-border bg-background px-2 py-1">{axionState?.mood_state ?? "NEUTRAL"}</span>
             </div>
@@ -757,7 +788,7 @@ export default function ChildPage() {
                   </span>
                 </div>
                 <div>
-                  <p className="mb-2 text-xs text-muted-foreground">Quick mood</p>
+                  <p className="mb-2 text-sm text-muted-foreground">Quick mood</p>
                   <div className="flex items-center gap-2">
                     {MOOD_OPTIONS.map((option) => (
                       <ActionFeedback
@@ -785,11 +816,11 @@ export default function ChildPage() {
           <Card className="border-border/80 bg-muted">
             <CardHeader className="p-5 pb-2 md:p-6 md:pb-2">
               <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-base font-semibold">Painel do dia</CardTitle>
+                <CardTitle className="text-lg font-semibold">Painel do dia</CardTitle>
                 <button
                   type="button"
                   aria-label="Alternar som"
-                  className="text-xs text-muted-foreground underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+                  className="text-sm text-muted-foreground underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
                   onClick={onToggleSound}
                 >
                   Sound: {soundEnabled ? "on" : "off"}
@@ -798,7 +829,7 @@ export default function ChildPage() {
             </CardHeader>
             <CardContent className="space-y-3 p-5 pt-0 md:p-6 md:pt-0">
               <div>
-                <p className="mb-2 text-xs font-semibold text-foreground">Como voc est hoje?</p>
+                <p className="mb-2 text-sm font-semibold text-foreground">Como você está hoje?</p>
               <div className="flex items-center gap-2">
                 {MOOD_OPTIONS.map((option) => (
                   <ActionFeedback
@@ -821,8 +852,8 @@ export default function ChildPage() {
               {moodError ? <p className="mt-2 text-sm text-destructive">{moodError}</p> : null}
               </div>
               <div>
-                <p className="mb-2 text-xs font-semibold text-foreground">Tema</p>
-                <div className="grid grid-cols-3 gap-2 text-xs">
+                <p className="mb-2 text-sm font-semibold text-foreground">Tema</p>
+                <div className="grid grid-cols-3 gap-2 text-sm">
                   {THEME_LIST.map((item) => (
                     <ActionFeedback
                       key={item}
@@ -845,7 +876,7 @@ export default function ChildPage() {
           </Card>
           <Card className="border-border/80 bg-card">
             <CardHeader className="p-5 pb-2 md:p-6 md:pb-2">
-              <CardTitle className="text-base font-semibold">Progresso</CardTitle>
+              <CardTitle className="text-lg font-semibold">Progresso</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 p-5 pt-0 md:p-6 md:pt-0">
               <div className="grid gap-3 sm:grid-cols-2">
@@ -856,7 +887,7 @@ export default function ChildPage() {
                   isLocked={goalLocked}
                 />
                 <div className="rounded-xl border border-border bg-card p-5 shadow-sm md:p-6">
-                  <p className="mb-2 text-xs font-semibold text-foreground">Avatar</p>
+                  <p className="mb-2 text-sm font-semibold text-foreground">Avatar</p>
                   <AvatarEvolution stage={avatarStage} />
                 </div>
               </div>
@@ -879,11 +910,11 @@ export default function ChildPage() {
           </Card>
           <Card className="bg-muted">
             <CardHeader className="p-5 md:p-6">
-              <CardTitle className="text-base">Lista de tarefas</CardTitle>
+              <CardTitle className="text-lg">Lista de tarefas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 p-5 pt-0 text-sm text-muted-foreground md:p-6 md:pt-0">
               <div className="flex items-center justify-between">
-                <div className="inline-flex rounded-xl border border-border p-0.5 text-xs">
+                <div className="inline-flex rounded-xl border border-border p-0.5 text-sm">
                   <button
                     type="button"
                     className={`rounded-xl px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${taskView === "list" ? "bg-primary/10 text-foreground" : "text-muted-foreground"}`}
@@ -906,7 +937,9 @@ export default function ChildPage() {
                 {streak?.freeze_used_today ? <Snowflake className="h-3.5 w-3.5 text-secondary" /> : null}
               </div>
               <div className="space-y-2">
-                {tasks.length === 0 ? (
+                {tasksLoadError ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">Nao foi possível carregar tarefas agora.</p>
+                ) : tasks.length === 0 ? (
                   <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma tarefa ativa para hoje.</p>
                 ) : (
                   tasks.map((task) => {
@@ -919,21 +952,21 @@ export default function ChildPage() {
                         className={`flex items-center justify-between gap-2 rounded-xl border px-2 py-2 transition ${taskRowClass(status)}`}
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-xs font-medium text-foreground">{task.title}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="truncate text-sm font-medium text-foreground">{task.title}</p>
+                          <p className="text-sm text-muted-foreground">
                             {task.difficulty} • peso {task.weight}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
                           {status ? (
-                            <span className={`rounded-xl px-2 py-0.5 text-xs font-semibold ${statusBadgeClass(status)}`}>{status}</span>
+                            <span className={`rounded-xl px-2 py-0.5 text-sm font-semibold ${statusBadgeClass(status)}`}>{status}</span>
                           ) : null}
                           <ActionFeedback
                             type="button"
                             state={taskFeedback[task.id] ?? "idle"}
                             loadingLabel="Marcando..."
                             disabled={isProcessing || isMarked}
-                            className="rounded-xl border border-border px-2 py-1 text-xs font-semibold text-foreground disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]"
+                            className="rounded-xl border border-border px-2 py-1 text-sm font-semibold text-foreground disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]"
                             onClick={() => void onMarkTask(task.id)}
                           >
                             {isMarked ? "Marcada" : "Marcar"}
@@ -950,8 +983,8 @@ export default function ChildPage() {
                 <div className="space-y-2">
                   {routineLogs.map((log) => (
                     <div key={log.id} className="flex items-center justify-between rounded-xl border border-border px-2 py-1">
-                      <span className="text-xs">Task #{log.task_id}</span>
-                      <span className={`rounded-xl px-2 py-0.5 text-xs font-semibold ${statusBadgeClass(log.status)}`}>{log.status}</span>
+                      <span className="text-sm">Task #{log.task_id}</span>
+                      <span className={`rounded-xl px-2 py-0.5 text-sm font-semibold ${statusBadgeClass(log.status)}`}>{log.status}</span>
                     </div>
                   ))}
                 </div>

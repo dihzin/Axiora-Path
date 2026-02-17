@@ -34,15 +34,15 @@ from app.services.features import is_feature_enabled
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 MISSION_RARITY_INTRO = {
-    DailyMissionRarity.NORMAL: "Missao do dia pronta. Vamos com foco e constancia.",
-    DailyMissionRarity.SPECIAL: "Missao especial do dia liberada. Voce consegue, vamos nessa!",
-    DailyMissionRarity.EPIC: "Missao epica ativa. Hoje e dia de jogada de mestre!",
+    DailyMissionRarity.NORMAL: "Missão do dia pronta. Vamos com foco e constancia.",
+    DailyMissionRarity.SPECIAL: "Missão especial do dia liberada. Você consegue, vamos nessa!",
+    DailyMissionRarity.EPIC: "Missão epica ativa. Hoje e dia de jogada de mestre!",
 }
 
 MISSION_COMPLETED_REACTION = {
-    DailyMissionRarity.NORMAL: "Missao concluida. Bom ritmo, continue assim.",
-    DailyMissionRarity.SPECIAL: "Missao especial concluida. Excelente energia!",
-    DailyMissionRarity.EPIC: "Missao epica concluida. Axion em modo lenda!",
+    DailyMissionRarity.NORMAL: "Missão concluida. Bom ritmo, continue assim.",
+    DailyMissionRarity.SPECIAL: "Missão especial concluida. Excelente energia!",
+    DailyMissionRarity.EPIC: "Missão epica concluida. Axion em modo lenda!",
 }
 
 
@@ -132,9 +132,9 @@ def ai_coach(
             try:
                 mission_completed_reaction = MISSION_COMPLETED_REACTION[DailyMissionRarity(rarity_raw)]
             except ValueError:
-                mission_completed_reaction = "Missao concluida. Axion reconhece seu progresso."
+                mission_completed_reaction = "Missão concluida. Axion reconhece seu progresso."
         else:
-            mission_completed_reaction = "Missao concluida. Axion reconhece seu progresso."
+            mission_completed_reaction = "Missão concluida. Axion reconhece seu progresso."
 
     ai_coach_v2_enabled = is_feature_enabled("ai_coach_v2", db, tenant_id=tenant.id)
     adapter = get_coach_adapter("rule_based")

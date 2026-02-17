@@ -44,12 +44,12 @@ export function AxionCharacter({ stage, moodState, celebrating = false, reducedM
   const eye = eyePathByMood(moodState);
   return (
     <div
-      className={`relative mx-auto ${scaleClassByStage(stage)} ${reducedMotion ? "" : "axion-float"} ${celebrating && !reducedMotion ? "axion-celebrate" : ""}`}
+      className={`relative mx-auto flex items-center justify-center ${scaleClassByStage(stage)} ${reducedMotion ? "" : "axion-float"} ${celebrating && !reducedMotion ? "axion-celebrate" : ""}`}
     >
       <div className={`${reducedMotion ? "axion-glow-static" : "axion-glow"} ${glowClassByMood(moodState)} absolute inset-0 rounded-full`} />
       <svg
         aria-label="Axion character"
-        className="relative h-44 w-44"
+        className="relative h-full w-full"
         viewBox="0 0 96 96"
         role="img"
       >

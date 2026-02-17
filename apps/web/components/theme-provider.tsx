@@ -3,7 +3,7 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
 
 import type { ThemeName } from "@/lib/api/client";
-import { isThemeName, THEME_LIST, THEME_STORAGE_KEY } from "@/lib/theme";
+import { isThemeName, THEME_LIST, THEMES, THEME_STORAGE_KEY } from "@/lib/theme";
 
 type ThemeContextValue = {
   theme: ThemeName;
@@ -15,6 +15,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 function applyTheme(theme: ThemeName): void {
   const root = document.documentElement;
   const body = document.body;
+  const definition = THEMES[theme];
   const themeClassNames = THEME_LIST.map((name) => `theme-${name}`);
   const currentThemeClass = `theme-${theme}`;
 
@@ -23,6 +24,12 @@ function applyTheme(theme: ThemeName): void {
   root.classList.add(currentThemeClass);
   body.classList.add(currentThemeClass);
   root.dataset.theme = theme;
+  root.style.setProperty("--theme-primary-rgb", definition.primary);
+  root.style.setProperty("--theme-secondary-rgb", definition.secondary);
+  root.style.setProperty("--theme-accent-rgb", definition.accent);
+  root.style.setProperty("--app-bg-gradient", definition.backgroundGradient);
+  root.style.setProperty("--app-bg-color", "rgb(244 246 248)");
+  root.style.setProperty("--app-fg-color", "rgb(30 42 56)");
 }
 
 type ThemeProviderProps = {
@@ -30,11 +37,14 @@ type ThemeProviderProps = {
 };
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<ThemeName>(() => {
-    if (typeof window === "undefined") return "default";
+  const [theme, setThemeState] = useState<ThemeName>("default");
+
+  useEffect(() => {
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
-    return saved && isThemeName(saved) ? saved : "default";
-  });
+    if (saved && isThemeName(saved)) {
+      setThemeState(saved);
+    }
+  }, []);
 
   useEffect(() => {
     applyTheme(theme);

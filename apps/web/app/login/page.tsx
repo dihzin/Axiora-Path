@@ -32,7 +32,7 @@ export default function LoginPage() {
       setRefreshToken(tokens.refresh_token);
       router.push("/select-tenant");
     } catch {
-      setError("Nao foi possivel autenticar. Verifique tenant, email e senha.");
+      setError("Nao foi possível autenticar. Verifique tenant, email e senha.");
     } finally {
       setLoading(false);
     }

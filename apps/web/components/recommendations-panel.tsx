@@ -21,13 +21,18 @@ export function RecommendationsPanel({ childId }: RecommendationsPanelProps) {
   const [items, setItems] = useState<RecommendationOut[]>([]);
   const [loading, setLoading] = useState(true);
   const [dismissError, setDismissError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [dismissingId, setDismissingId] = useState<number | null>(null);
 
   const load = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await getRecommendations(childId);
       setItems(data.filter((item) => item.dismissed_at === null));
+    } catch {
+      setItems([]);
+      setLoadError("Nao foi possivel carregar recomendacoes agora.");
     } finally {
       setLoading(false);
     }
@@ -44,7 +49,7 @@ export function RecommendationsPanel({ childId }: RecommendationsPanelProps) {
       await dismissRecommendation(id);
       setItems((current) => current.filter((item) => item.id !== id));
     } catch {
-      setDismissError("Nao foi possivel dispensar recomendacao.");
+      setDismissError("Nao foi possível dispensar recomendacao.");
     } finally {
       setDismissingId(null);
     }
@@ -53,12 +58,13 @@ export function RecommendationsPanel({ childId }: RecommendationsPanelProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Recomendaes</CardTitle>
+        <CardTitle className="text-base">Recomendações</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
         {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : null}
+        {loadError ? <p className="text-sm text-muted-foreground">{loadError}</p> : null}
         {dismissError ? <p className="text-sm text-destructive">{dismissError}</p> : null}
-        {!loading && items.length === 0 ? <p className="text-sm text-muted-foreground">Sem recomendaes ativas.</p> : null}
+        {!loading && !loadError && items.length === 0 ? <p className="text-sm text-muted-foreground">Sem recomendações ativas.</p> : null}
         {items.map((item) => (
           <div key={item.id} className="rounded-xl border border-border p-3 shadow-sm">
             <div className="mb-2 flex items-center justify-between gap-2">

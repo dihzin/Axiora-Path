@@ -2,11 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --app-bg-color: rgb(244 246 248);
+  --app-fg-color: rgb(30 42 56);
+  --app-bg-gradient: linear-gradient(180deg, #f7f9fb 0%, #eef2f7 100%);
+  --theme-primary-rgb: 24 43 95;
+  --theme-secondary-rgb: 230 223 250;
+  --theme-accent-rgb: 248 196 66;
+}
+
 body {
-  @apply bg-background text-foreground antialiased;
+  @apply antialiased;
   font-family: var(--font-sans), Inter, ui-sans-serif, system-ui, sans-serif;
   line-height: 1.55;
   font-weight: 400;
+  color: var(--app-fg-color);
+  background-color: var(--app-bg-color);
+  background-image: var(--app-bg-gradient);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  transition:
+    background-color 240ms ease,
+    background-image 240ms ease;
 }
 
 h1 {
@@ -328,14 +345,17 @@ h2 {
 
 .axion-stage-1 {
   width: 8.5rem;
+  height: 8.5rem;
 }
 
 .axion-stage-2 {
   width: 9.2rem;
+  height: 9.2rem;
 }
 
 .axion-stage-3 {
   width: 10rem;
+  height: 10rem;
 }
 
 .axion-glow {

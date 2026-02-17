@@ -37,7 +37,7 @@ export default function SelectTenantPage() {
       if (previousSlug) {
         setTenantSlug(previousSlug);
       }
-      setError(getApiErrorMessage(err, "Nao foi possivel validar tenant. Confira login e credenciais."));
+      setError(getApiErrorMessage(err, "Nao foi possível validar tenant. Confira login e credenciais."));
     } finally {
       setLoading(false);
     }

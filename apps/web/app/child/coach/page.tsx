@@ -24,7 +24,7 @@ export default function ChildCoachPage() {
         setMessage(data.reply);
       })
       .catch(() => {
-        setMessage("Nao foi possivel carregar o coach agora.");
+        setMessage("Nao foi possível carregar o coach agora.");
       })
       .finally(() => {
         setLoading(false);

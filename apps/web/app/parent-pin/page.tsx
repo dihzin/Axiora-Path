@@ -27,7 +27,7 @@ export default function ParentPinPage() {
       sessionStorage.setItem("axiora_parent_pin_ok", "1");
       router.push("/parent");
     } catch (err) {
-      setError(getApiErrorMessage(err, "Nao foi possivel validar PIN agora."));
+      setError(getApiErrorMessage(err, "Nao foi possível validar PIN agora."));
     } finally {
       setLoading(false);
     }

@@ -179,7 +179,7 @@ export default function ParentPage() {
       <ConfettiBurst trigger={confettiTick} />
       {celebrationBadgeVisible ? (
         <div className="celebrate-badge-pop fixed left-1/2 top-4 z-[70] -translate-x-1/2 rounded-xl border border-secondary/35 bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary shadow-sm">
-          +1 Missao Aprovada!
+          +1 Missão Aprovada!
         </div>
       ) : null}
       <header className="mb-3 flex items-center justify-between gap-2">

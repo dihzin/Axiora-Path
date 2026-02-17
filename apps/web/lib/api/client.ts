@@ -53,14 +53,19 @@ async function refreshAccessToken(): Promise<string | null> {
   const tenantSlug = getTenantSlug();
   if (!refreshToken || !tenantSlug) return null;
 
-  const response = await fetch(`${API_URL}/auth/refresh`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Tenant-Slug": tenantSlug,
-    },
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Tenant-Slug": tenantSlug,
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+  } catch {
+    return null;
+  }
 
   if (!response.ok) return null;
   const data = (await response.json()) as { access_token: string; refresh_token: string };
@@ -87,12 +92,20 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     headers.Authorization = `Bearer ${accessToken}`;
   }
 
-  const makeRequest = async (): Promise<Response> =>
-    fetch(`${API_URL}${path}`, {
-      method,
-      headers,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-    });
+  const makeRequest = async (): Promise<Response> => {
+    try {
+      return await fetch(`${API_URL}${path}`, {
+        method,
+        headers,
+        body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      });
+    } catch {
+      throw new ApiError("Network error", 0, {
+        code: "NETWORK_ERROR",
+        message: "Nao foi possivel conectar ao servidor",
+      });
+    }
+  };
 
   let response = await makeRequest();
   if (response.status === 401 && options.requireAuth !== false) {

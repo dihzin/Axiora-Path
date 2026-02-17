@@ -48,7 +48,7 @@ class RuleBasedCoachAdapter(CoachAdapter):
         if style == "playful":
             return {
                 "rhythm": "ritmo",
-                "focus": "missao",
+                "focus": "Missão",
                 "progress": "evolucao",
                 "priority": "chefao",
                 "nudge": "empurraozinho",

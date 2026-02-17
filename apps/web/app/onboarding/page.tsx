@@ -101,7 +101,7 @@ export default function OnboardingPage() {
       const monthlyAllowance = Number(allowance);
       if (!Number.isFinite(monthlyAllowance) || monthlyAllowance < 0) return "Allowance invalido.";
     }
-    if (currentStep === 5 && !legalAccepted) return "Voce precisa aceitar os Termos e a Privacidade para continuar.";
+    if (currentStep === 5 && !legalAccepted) return "Você precisa aceitar os Termos e a Privacidade para continuar.";
     return null;
   };
 
@@ -117,7 +117,7 @@ export default function OnboardingPage() {
       return;
     }
     if (!legalAccepted) {
-      setError("Voce precisa aceitar os Termos e a Privacidade para continuar.");
+      setError("Você precisa aceitar os Termos e a Privacidade para continuar.");
       return;
     }
     if (parentPin.length < 4) {
@@ -142,7 +142,7 @@ export default function OnboardingPage() {
       localStorage.removeItem(ONBOARDING_DRAFT_KEY);
       router.push("/parent");
     } catch (err) {
-      setError(getApiErrorMessage(err, "Nao foi possivel concluir onboarding."));
+      setError(getApiErrorMessage(err, "Nao foi possível concluir onboarding."));
     } finally {
       setLoading(false);
     }
@@ -200,7 +200,7 @@ export default function OnboardingPage() {
               <p>Step 5: Terms and Privacy</p>
               <div className="space-y-2 rounded-md border border-border p-3 text-xs text-muted-foreground">
                 <p>
-                  Ao continuar, voce confirma que leu e aceita os Termos de Uso e a Politica de Privacidade do tenant.
+                  Ao continuar, você confirma que leu e aceita os Termos de Uso e a Politica de Privacidade do tenant.
                 </p>
                 <p>Resumo: uso educacional familiar, tratamento de dados de rotina e retencao conforme politica vigente.</p>
               </div>
