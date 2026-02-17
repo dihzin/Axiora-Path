@@ -62,6 +62,14 @@ class PotType(str, Enum):
     DONATE = "DONATE"
 
 
+class MoodType(str, Enum):
+    HAPPY = "HAPPY"
+    OK = "OK"
+    SAD = "SAD"
+    ANGRY = "ANGRY"
+    TIRED = "TIRED"
+
+
 class Tenant(Base):
     __tablename__ = "tenants"
 
@@ -72,6 +80,8 @@ class Tenant(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    onboarding_completed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    monthly_allowance_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -121,6 +131,7 @@ class ChildProfile(Base):
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
     avatar_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
     birth_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    xp_total: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
 
 
 class Task(Base):
@@ -259,6 +270,7 @@ class Streak(Base):
     current: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     last_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     freeze_used_today: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    freeze_tokens: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
 
 
 class Recommendation(Base):
@@ -276,6 +288,17 @@ class Recommendation(Base):
         server_default=func.now(),
     )
     dismissed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class DailyMood(Base):
+    __tablename__ = "daily_mood"
+
+    child_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id"), primary_key=True)
+    date: Mapped[date] = mapped_column(Date, primary_key=True)
+    mood: Mapped[MoodType] = mapped_column(
+        SqlEnum(MoodType, name="mood_type"),
+        nullable=False,
+    )
 
 
 DEFAULT_FAMILY_TASKS: list[dict[str, str | int | TaskDifficulty]] = [

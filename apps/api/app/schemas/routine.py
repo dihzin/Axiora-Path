@@ -59,3 +59,17 @@ class RoutineWeekResponse(BaseModel):
     end_date: date
     logs: list[TaskLogOut]
 
+
+class StreakResponse(BaseModel):
+    child_id: int
+    current: int
+    freeze_tokens: int
+    freeze_used_today: bool
+    last_date: date | None
+
+
+class WeeklyMetricsResponse(BaseModel):
+    completion_rate: float
+    approved_count: int
+    pending_count: int
+    rejected_count: int

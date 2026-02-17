@@ -37,3 +37,32 @@ body {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
+@keyframes flame-flicker {
+  0% {
+    transform: scale(1) translateY(0);
+    opacity: 0.95;
+  }
+  50% {
+    transform: scale(1.06) translateY(-1px);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 0.95;
+  }
+}
+
+.flame-flicker {
+  animation: flame-flicker 1.6s ease-in-out infinite;
+}
+
+@keyframes confetti-burst {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) rotate(var(--rot));
+    opacity: 0;
+  }
+}

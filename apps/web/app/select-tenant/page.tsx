@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { getMe } from "@/lib/api/client";
 import { getTenantSlug, setTenantSlug } from "@/lib/api/session";
 
 export default function SelectTenantPage() {
@@ -17,10 +18,19 @@ export default function SelectTenantPage() {
     if (current) setSlug(current);
   }, []);
 
-  const onSubmit = (event: FormEvent) => {
+  const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setTenantSlug(slug);
-    router.push("/select-child");
+    try {
+      const me = await getMe();
+      if (!me.membership.onboarding_completed) {
+        router.push("/onboarding");
+        return;
+      }
+      router.push("/select-child");
+    } catch {
+      router.push("/select-child");
+    }
   };
 
   return (

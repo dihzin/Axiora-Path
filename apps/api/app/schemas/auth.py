@@ -39,6 +39,7 @@ class MembershipOut(BaseModel):
     role: str
     tenant_id: int
     tenant_slug: str
+    onboarding_completed: bool
 
 
 class ChildProfileOut(BaseModel):
@@ -56,4 +57,3 @@ class MeResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
-

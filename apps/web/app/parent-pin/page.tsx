@@ -16,7 +16,9 @@ export default function ParentPinPage() {
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (pin !== PARENT_PIN) {
+    const savedPin = localStorage.getItem("axiora_parent_pin");
+    const expectedPin = savedPin ?? PARENT_PIN;
+    if (pin !== expectedPin) {
       setError("PIN invalido.");
       return;
     }
@@ -51,4 +53,3 @@ export default function ParentPinPage() {
     </main>
   );
 }
-

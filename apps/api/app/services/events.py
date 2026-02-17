@@ -43,6 +43,25 @@ class EventService:
         self.adaptive_rules_handler(event)
         return event
 
+    def _persist_event(
+        self,
+        *,
+        type: str,
+        tenant_id: int,
+        actor_user_id: int | None,
+        child_id: int | None,
+        payload: dict[str, Any],
+    ) -> None:
+        self.db.add(
+            EventLog(
+                tenant_id=tenant_id,
+                actor_user_id=actor_user_id,
+                child_id=child_id,
+                type=type,
+                payload=payload,
+            ),
+        )
+
     def streak_handler(self, event: EventLog) -> None:
         if event.type != "routine.marked" or event.child_id is None:
             return
@@ -60,6 +79,7 @@ class EventService:
                 current=1,
                 last_date=mark_date,
                 freeze_used_today=False,
+                freeze_tokens=1,
             )
             self.db.add(streak)
             return
@@ -75,10 +95,22 @@ class EventService:
             return
         if gap == 1:
             streak.current += 1
+            streak.freeze_used_today = False
         else:
-            streak.current = 1
+            if streak.freeze_tokens > 0:
+                streak.freeze_tokens -= 1
+                streak.freeze_used_today = True
+                self._persist_event(
+                    type="streak.freeze.used",
+                    tenant_id=event.tenant_id,
+                    actor_user_id=event.actor_user_id,
+                    child_id=event.child_id,
+                    payload={"mark_date": str(mark_date), "remaining_freeze_tokens": streak.freeze_tokens},
+                )
+            else:
+                streak.current = 1
+                streak.freeze_used_today = False
         streak.last_date = mark_date
-        streak.freeze_used_today = False
 
     def adaptive_rules_handler(self, event: EventLog) -> None:
         if event.child_id is None:
@@ -198,4 +230,3 @@ class EventService:
                 body="Existe meta de economia ativa e pouca atividade recente. Sugira uma tarefa bonus.",
                 severity="MEDIUM",
             )
-

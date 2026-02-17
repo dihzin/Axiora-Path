@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1170 2532">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1170" height="2532" fill="url(#bg)"/>
+  <circle cx="585" cy="1200" r="210" fill="#22c55e"/>
+  <path d="M470 1228c42-22 78-78 121-169 13 58 38 112 72 169 27-19 54-28 82-28-20 67-78 123-160 123-45 0-84-16-115-41z" fill="#fff"/>
+  <text x="585" y="1530" text-anchor="middle" fill="#fff" font-family="Arial, sans-serif" font-size="72">Axiora Path</text>
+</svg>
+

@@ -88,3 +88,14 @@ npm run build:web
 5. Acessar area dos pais e validar guard de PIN (`/parent-pin`).
 6. Criar/usar rotina e validar eventos no backend (`event_log`).
 7. Testar modo offline no web e validar sincronizacao via `POST /sync/batch` ao voltar online.
+
+## Performance Notes
+
+- Backend:
+  - `GET /routine/week` usa selecao de colunas necessarias em vez de carregar objetos ORM completos.
+  - `GET /routine/weekly-metrics` usa agregacao SQL (count/sum com case) para evitar iteracao de listas em Python.
+  - Indice dedicado para consulta semanal por crianca: `task_logs(child_id, date)`.
+- Frontend:
+  - Aprovacao no `/parent` usa update otimista da lista pendente para resposta imediata.
+  - Em erro, faz rollback do estado local.
+  - Apos sucesso, recarrega apenas cards secundarios (wallet/trend) em background, sem refetch completo da tela.
