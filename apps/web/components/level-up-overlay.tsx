@@ -23,9 +23,9 @@ export function LevelUpOverlay({ level, onDismiss }: LevelUpOverlayProps) {
   );
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/80 px-6">
-      <div className="relative w-full max-w-sm rounded-2xl border border-white/20 bg-slate-900/90 p-6 text-center text-white shadow-2xl">
-        <div className="absolute inset-0 overflow-hidden rounded-2xl">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-foreground/50 px-6">
+      <div className="relative w-full max-w-sm rounded-xl border border-border bg-card p-6 text-center text-foreground shadow-sm">
+        <div className="absolute inset-0 overflow-hidden rounded-xl">
           {particles.map((particle) => (
             <span
               key={particle.id}
@@ -40,11 +40,12 @@ export function LevelUpOverlay({ level, onDismiss }: LevelUpOverlayProps) {
             />
           ))}
         </div>
-        <p className="relative text-sm font-semibold uppercase tracking-[0.22em] text-cyan-200">Level Up!</p>
+        <p className="relative text-sm font-semibold uppercase tracking-[0.22em] text-secondary">Level Up!</p>
         <p className="relative mt-2 text-6xl font-black leading-none">Lv {level}</p>
         <button
           type="button"
-          className="relative mt-5 rounded-md border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold transition hover:bg-white/20"
+          aria-label="Fechar aviso de level up"
+          className="relative mt-5 rounded-xl border border-border bg-background px-4 py-2 text-sm font-semibold transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
           onClick={onDismiss}
         >
           Dismiss

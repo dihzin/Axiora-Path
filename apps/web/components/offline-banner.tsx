@@ -20,9 +20,8 @@ export function OfflineBanner() {
   if (online) return null;
 
   return (
-    <div className="safe-px fixed inset-x-0 top-0 z-50 bg-orange-500 py-2 text-center text-xs font-medium text-white">
+    <div className="safe-px fixed inset-x-0 top-0 z-50 bg-accent py-2 text-center text-xs font-medium text-accent-foreground">
       You are offline. Changes will sync when connection is back.
     </div>
   );
 }
-

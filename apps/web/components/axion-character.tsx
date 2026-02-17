@@ -55,8 +55,8 @@ export function AxionCharacter({ stage, moodState, celebrating = false, reducedM
       >
         <defs>
           <linearGradient id="axion-body" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="rgb(var(--accent))" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="rgb(var(--primary))" stopOpacity="0.8" />
+            <stop offset="0%" stopColor="#D6A756" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#1E2A38" stopOpacity="0.8" />
           </linearGradient>
         </defs>
         <circle cx="48" cy="48" r="32" fill="url(#axion-body)" />

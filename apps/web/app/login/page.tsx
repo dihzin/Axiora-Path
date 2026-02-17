@@ -39,7 +39,7 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md items-center">
+    <main className="safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md items-center p-4 md:p-6">
       <Card className="w-full">
         <CardHeader>
           <CardTitle>Entrar</CardTitle>
@@ -56,7 +56,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <Button className="w-full" type="submit" disabled={loading}>
               {loading ? "Entrando..." : "Entrar"}
             </Button>

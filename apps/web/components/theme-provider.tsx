@@ -3,7 +3,7 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
 
 import type { ThemeName } from "@/lib/api/client";
-import { isThemeName, THEMES, THEME_LIST, THEME_STORAGE_KEY } from "@/lib/theme";
+import { isThemeName, THEME_LIST, THEME_STORAGE_KEY } from "@/lib/theme";
 
 type ThemeContextValue = {
   theme: ThemeName;
@@ -15,7 +15,6 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 function applyTheme(theme: ThemeName): void {
   const root = document.documentElement;
   const body = document.body;
-  const selected = THEMES[theme];
   const themeClassNames = THEME_LIST.map((name) => `theme-${name}`);
   const currentThemeClass = `theme-${theme}`;
 
@@ -24,11 +23,6 @@ function applyTheme(theme: ThemeName): void {
   root.classList.add(currentThemeClass);
   body.classList.add(currentThemeClass);
   root.dataset.theme = theme;
-
-  root.style.setProperty("--primary", selected.primary);
-  root.style.setProperty("--secondary", selected.secondary);
-  root.style.setProperty("--accent", selected.accent);
-  root.style.setProperty("--theme-background-gradient", selected.backgroundGradient);
 }
 
 type ThemeProviderProps = {

@@ -586,15 +586,15 @@ export default function ChildPage() {
   };
 
   const statusBadgeClass = (status: RoutineWeekLog["status"]) => {
-    if (status === "APPROVED") return "bg-emerald-100 text-emerald-700";
-    if (status === "REJECTED") return "bg-red-100 text-red-700";
-    return "bg-amber-100 text-amber-700";
+    if (status === "APPROVED") return "bg-secondary/15 text-secondary";
+    if (status === "REJECTED") return "bg-destructive/15 text-destructive";
+    return "bg-accent/15 text-accent-foreground";
   };
 
   const checkpointClass = (status: RoutineWeekLog["status"]) => {
-    if (status === "APPROVED") return "border-emerald-500 bg-emerald-500";
-    if (status === "REJECTED") return "border-red-500 bg-red-500";
-    return "border-amber-500 bg-amber-500";
+    if (status === "APPROVED") return "border-secondary bg-secondary";
+    if (status === "REJECTED") return "border-destructive bg-destructive";
+    return "border-accent bg-accent";
   };
 
   const taskStatusById = routineLogs.reduce<Record<number, RoutineWeekLog["status"]>>((acc, log) => {
@@ -604,23 +604,23 @@ export default function ChildPage() {
   }, {});
 
   const taskRowClass = (status: RoutineWeekLog["status"] | undefined) => {
-    if (status === "APPROVED") return "border-emerald-300 bg-emerald-50";
-    if (status === "REJECTED") return "border-red-300 bg-red-50";
-    if (status === "PENDING") return "border-amber-300 bg-amber-50";
+    if (status === "APPROVED") return "border-secondary/35 bg-secondary/10";
+    if (status === "REJECTED") return "border-destructive/35 bg-destructive/10";
+    if (status === "PENDING") return "border-accent/35 bg-accent/10";
     return "border-border bg-background";
   };
 
   const missionRarityBadgeClass = (rarity: DailyMissionResponse["rarity"]) => {
-    if (rarity === "epic") return "border-fuchsia-200 bg-fuchsia-100 text-fuchsia-700";
-    if (rarity === "special") return "border-sky-200 bg-sky-100 text-sky-700";
-    return "border-slate-200 bg-slate-100 text-slate-700";
+    if (rarity === "epic") return "border-primary/25 bg-primary/10 text-primary";
+    if (rarity === "special") return "border-secondary/25 bg-secondary/10 text-secondary";
+    return "border-border bg-muted text-muted-foreground";
   };
 
   const missionCardClass = (status: DailyMissionResponse["status"]) => {
     if (status === "completed") {
-      return "border-emerald-300 bg-gradient-to-b from-emerald-50 to-emerald-100/60";
+      return "border-secondary/35 bg-secondary/10";
     }
-    return "border-primary/30 bg-gradient-to-b from-card to-primary/5 shadow-sm";
+    return "border-border bg-card shadow-sm";
   };
 
   return (
@@ -630,14 +630,15 @@ export default function ChildPage() {
       ) : null}
       <main
         className={cn(
-          "safe-px safe-pb mx-auto flex min-h-screen w-full flex-col pb-24 pt-3",
+          "safe-px safe-pb mx-auto flex min-h-screen w-full flex-col p-4 pb-24 pt-3 md:p-6 md:pb-24",
           isSchoolTenant ? "max-w-2xl" : "max-w-md",
         )}
       >
         <div className="mb-2 flex justify-end">
           <button
             type="button"
-            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-sm text-muted-foreground transition hover:bg-muted"
+            aria-label="Abrir modo pais"
+            className="inline-flex items-center gap-1 rounded-xl border border-border px-2 py-1 text-sm text-muted-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
             onClick={() => router.push("/parent-pin")}
           >
             <Lock className="h-3.5 w-3.5" />
@@ -663,16 +664,16 @@ export default function ChildPage() {
               <p className="text-xs leading-relaxed text-muted-foreground">{dailyMission.description}</p>
               <div className="grid grid-cols-2 gap-2">
                 <div className="flex items-center gap-1.5 rounded-md border border-border bg-background/70 px-2 py-1.5 text-xs font-semibold">
-                  <Sparkles className="h-3.5 w-3.5 text-sky-500" />
+                  <Sparkles className="h-3.5 w-3.5 text-secondary" />
                   +{dailyMission.xp_reward} XP
                 </div>
                 <div className="flex items-center gap-1.5 rounded-md border border-border bg-background/70 px-2 py-1.5 text-xs font-semibold">
-                  <Coins className="h-3.5 w-3.5 text-amber-500" />
+                  <Coins className="h-3.5 w-3.5 text-accent" />
                   +{dailyMission.coin_reward} moedas
                 </div>
               </div>
               {dailyMission.status === "completed" ? (
-                <div className="flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-100 px-3 py-2 text-xs font-semibold text-emerald-700">
+                <div className="flex items-center justify-center gap-1 rounded-xl border border-secondary/35 bg-secondary/10 px-3 py-2 text-xs font-semibold text-secondary">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   Missao concluida
                 </div>
@@ -682,7 +683,7 @@ export default function ChildPage() {
                 state={missionCompleting ? "loading" : missionFeedback}
                 loadingLabel="Processando..."
                 disabled={missionCompleting || dailyMission.status === "completed"}
-                className="w-full rounded-md bg-primary px-3 py-2.5 text-xs font-bold text-primary-foreground shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-xl bg-primary px-3 py-2.5 text-xs font-bold text-primary-foreground shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => void onCompleteDailyMission()}
               >
                 {dailyMission.status === "completed" ? "Concluida" : "Completar Missao"}
@@ -692,19 +693,19 @@ export default function ChildPage() {
         ) : null}
         <Card
           className={cn(
-            "relative overflow-hidden border-primary/20 shadow-md",
-            isSchoolTenant ? "bg-card" : "axion-card-idle bg-gradient-to-b from-card to-primary/5",
+            "relative overflow-hidden border-border shadow-sm",
+            isSchoolTenant ? "bg-card" : "axion-card-idle bg-card",
           )}
         >
-          <div className="pointer-events-none absolute -left-10 top-8 h-24 w-24 rounded-full bg-primary/10 blur-2xl" />
-          <div className="pointer-events-none absolute -right-8 top-12 h-20 w-20 rounded-full bg-accent/20 blur-2xl" />
+          <div className="pointer-events-none absolute -left-10 top-8 h-24 w-24 rounded-full bg-muted/70 blur-2xl" />
+          <div className="pointer-events-none absolute -right-8 top-12 h-20 w-20 rounded-full bg-muted/60 blur-2xl" />
           <CardHeader className="pb-2 text-center">
             <CardTitle className="text-xl font-bold tracking-tight">Axion</CardTitle>
             <p className="text-sm text-muted-foreground">Seu parceiro de missao</p>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-center">
             {axionCelebration ? (
-              <div className="celebrate-badge-pop absolute right-3 top-3 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+              <div className="celebrate-badge-pop absolute right-3 top-3 rounded-xl border border-secondary/35 bg-secondary/10 px-2 py-0.5 text-xs font-semibold text-secondary">
                 {AXION_CELEBRATION_BADGES[axionCelebration]}
               </div>
             ) : null}
@@ -723,8 +724,8 @@ export default function ChildPage() {
               reducedMotion={isSchoolTenant}
             />
             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-              <span className="rounded-full border border-border bg-background/70 px-2 py-1">Stage {axionState?.stage ?? 1}</span>
-              <span className="rounded-full border border-border bg-background/70 px-2 py-1">{axionState?.mood_state ?? "NEUTRAL"}</span>
+              <span className="rounded-xl border border-border bg-background px-2 py-1">Stage {axionState?.stage ?? 1}</span>
+              <span className="rounded-xl border border-border bg-background px-2 py-1">{axionState?.mood_state ?? "NEUTRAL"}</span>
             </div>
           </CardContent>
         </Card>
@@ -734,7 +735,12 @@ export default function ChildPage() {
               <CardHeader>
                 <div className="flex items-center justify-between gap-3">
                   <CardTitle className="text-base">Ready for today&apos;s mission?</CardTitle>
-                  <button type="button" className="text-muted-foreground" onClick={dismissDailyWelcome}>
+                  <button
+                    type="button"
+                    aria-label="Fechar boas-vindas"
+                    className="text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+                    onClick={dismissDailyWelcome}
+                  >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
@@ -759,7 +765,8 @@ export default function ChildPage() {
                         type="button"
                         title={option.label}
                         state={todayMood === option.mood ? moodFeedback : "idle"}
-                        className={`rounded-full border px-2 py-1 text-lg transition ${
+                        aria-label={`Selecionar humor ${option.label}`}
+                        className={`rounded-xl border px-2 py-1 text-lg transition ${
                           todayMood === option.mood ? "border-primary bg-primary/10" : "border-border bg-background"
                         }`}
                         onClick={() => void onQuickMood(option.mood)}
@@ -768,7 +775,7 @@ export default function ChildPage() {
                       </ActionFeedback>
                     ))}
                   </div>
-                  {moodError ? <p className="mt-2 text-sm text-red-600">{moodError}</p> : null}
+                  {moodError ? <p className="mt-2 text-sm text-destructive">{moodError}</p> : null}
                 </div>
               </CardContent>
             </Card>
@@ -777,7 +784,12 @@ export default function ChildPage() {
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between gap-2">
                 <CardTitle className="text-base font-semibold">Painel do dia</CardTitle>
-                <button type="button" className="text-xs text-muted-foreground underline" onClick={onToggleSound}>
+                <button
+                  type="button"
+                  aria-label="Alternar som"
+                  className="text-xs text-muted-foreground underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+                  onClick={onToggleSound}
+                >
                   Sound: {soundEnabled ? "on" : "off"}
                 </button>
               </div>
@@ -792,7 +804,8 @@ export default function ChildPage() {
                     type="button"
                     title={option.label}
                     state={todayMood === option.mood ? moodFeedback : "idle"}
-                    className={`rounded-full border px-2 py-1 text-xl transition ${
+                    aria-label={`Selecionar humor ${option.label}`}
+                    className={`rounded-xl border px-2 py-1 text-xl transition ${
                       todayMood === option.mood ? "border-primary bg-primary/10" : "border-border bg-background"
                     }`}
                     onClick={() => void onSelectMood(option.mood)}
@@ -801,7 +814,7 @@ export default function ChildPage() {
                   </ActionFeedback>
                 ))}
               </div>
-              {moodError ? <p className="mt-2 text-sm text-red-600">{moodError}</p> : null}
+              {moodError ? <p className="mt-2 text-sm text-destructive">{moodError}</p> : null}
               </div>
               <div>
                 <p className="mb-2 text-xs font-semibold text-foreground">Tema</p>
@@ -812,7 +825,7 @@ export default function ChildPage() {
                       type="button"
                       state={theme === item ? themeFeedback : "idle"}
                       disabled={themeSaving}
-                      className={`rounded-md border px-2 py-2 capitalize transition ${
+                      className={`rounded-xl border px-2 py-2 capitalize transition ${
                         theme === item ? "border-primary bg-primary/10 text-foreground" : "border-border bg-background text-muted-foreground"
                       }`}
                       onClick={() => void onSelectTheme(item)}
@@ -864,17 +877,17 @@ export default function ChildPage() {
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-muted-foreground">
               <div className="flex items-center justify-between">
-                <div className="inline-flex rounded-md border border-border p-0.5 text-xs">
+                <div className="inline-flex rounded-xl border border-border p-0.5 text-xs">
                   <button
                     type="button"
-                    className={`rounded px-2 py-1 ${taskView === "list" ? "bg-primary/10 text-foreground" : "text-muted-foreground"}`}
+                    className={`rounded-xl px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${taskView === "list" ? "bg-primary/10 text-foreground" : "text-muted-foreground"}`}
                     onClick={() => onToggleTaskView("list")}
                   >
                     List View
                   </button>
                   <button
                     type="button"
-                    className={`rounded px-2 py-1 ${taskView === "journey" ? "bg-primary/10 text-foreground" : "text-muted-foreground"}`}
+                    className={`rounded-xl px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${taskView === "journey" ? "bg-primary/10 text-foreground" : "text-muted-foreground"}`}
                     onClick={() => onToggleTaskView("journey")}
                   >
                     Journey View
@@ -882,9 +895,9 @@ export default function ChildPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Flame className={`${isSchoolTenant ? "" : "flame-flicker"} ${flameClassName} text-orange-500`} />
+                <Flame className={`${isSchoolTenant ? "" : "flame-flicker"} ${flameClassName} text-accent`} />
                 <span>Streak: {streakCount} dias</span>
-                {streak?.freeze_used_today ? <Snowflake className="h-3.5 w-3.5 text-sky-500" /> : null}
+                {streak?.freeze_used_today ? <Snowflake className="h-3.5 w-3.5 text-secondary" /> : null}
               </div>
               <div className="space-y-2">
                 {tasks.length === 0 ? (
@@ -897,7 +910,7 @@ export default function ChildPage() {
                     return (
                       <div
                         key={task.id}
-                        className={`flex items-center justify-between gap-2 rounded-md border px-2 py-2 transition ${taskRowClass(status)}`}
+                        className={`flex items-center justify-between gap-2 rounded-xl border px-2 py-2 transition ${taskRowClass(status)}`}
                       >
                         <div className="min-w-0">
                           <p className="truncate text-xs font-medium text-foreground">{task.title}</p>
@@ -907,14 +920,14 @@ export default function ChildPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           {status ? (
-                            <span className={`rounded px-2 py-0.5 text-xs font-semibold ${statusBadgeClass(status)}`}>{status}</span>
+                            <span className={`rounded-xl px-2 py-0.5 text-xs font-semibold ${statusBadgeClass(status)}`}>{status}</span>
                           ) : null}
                           <ActionFeedback
                             type="button"
                             state={taskFeedback[task.id] ?? "idle"}
                             loadingLabel="Marcando..."
                             disabled={isProcessing || isMarked}
-                            className="rounded-md border border-border px-2 py-1 text-xs font-semibold text-foreground disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]"
+                            className="rounded-xl border border-border px-2 py-1 text-xs font-semibold text-foreground disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]"
                             onClick={() => void onMarkTask(task.id)}
                           >
                             {isMarked ? "Marcada" : "Marcar"}
@@ -930,9 +943,9 @@ export default function ChildPage() {
               ) : taskView === "list" ? (
                 <div className="space-y-2">
                   {routineLogs.map((log) => (
-                    <div key={log.id} className="flex items-center justify-between rounded-md border border-border px-2 py-1">
+                    <div key={log.id} className="flex items-center justify-between rounded-xl border border-border px-2 py-1">
                       <span className="text-xs">Task #{log.task_id}</span>
-                      <span className={`rounded px-2 py-0.5 text-xs font-semibold ${statusBadgeClass(log.status)}`}>{log.status}</span>
+                      <span className={`rounded-xl px-2 py-0.5 text-xs font-semibold ${statusBadgeClass(log.status)}`}>{log.status}</span>
                     </div>
                   ))}
                 </div>
@@ -959,11 +972,7 @@ export default function ChildPage() {
         <ChildBottomNav />
         {toast ? (
           <div className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4">
-            <div
-              className={`rounded-md px-3 py-2 text-xs font-semibold text-white shadow ${
-                toast.type === "success" ? "bg-emerald-600" : "bg-red-600"
-              }`}
-            >
+            <div className={`rounded-xl px-3 py-2 text-xs font-semibold text-white shadow-sm ${toast.type === "success" ? "bg-secondary" : "bg-destructive"}`}>
               {toast.message}
             </div>
           </div>

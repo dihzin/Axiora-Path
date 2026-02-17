@@ -24,7 +24,7 @@ import { isThemeName, THEME_STORAGE_KEY } from "@/lib/theme";
 function TrendIndicator({ value }: { value: number }) {
   const up = value >= 0;
   return (
-    <span className={`inline-flex items-center gap-1 text-xs font-medium ${up ? "text-emerald-600" : "text-red-600"}`}>
+    <span className={`inline-flex items-center gap-1 text-xs font-medium ${up ? "text-secondary" : "text-destructive"}`}>
       {up ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
       {Math.abs(value).toFixed(1)}%
     </span>
@@ -175,10 +175,10 @@ export default function ParentPage() {
   };
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md py-5">
+    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 md:p-6">
       <ConfettiBurst trigger={confettiTick} />
       {celebrationBadgeVisible ? (
-        <div className="celebrate-badge-pop fixed left-1/2 top-4 z-[70] -translate-x-1/2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 shadow-sm">
+        <div className="celebrate-badge-pop fixed left-1/2 top-4 z-[70] -translate-x-1/2 rounded-xl border border-secondary/35 bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary shadow-sm">
           +1 Missao Aprovada!
         </div>
       ) : null}
@@ -198,11 +198,16 @@ export default function ParentPage() {
           <CardContent className="space-y-2 text-sm">
             <div className="flex items-center justify-between">
               <p className="text-muted-foreground">Pendentes: {pendingLogs.length}</p>
-              <button type="button" className="text-xs text-muted-foreground" onClick={onToggleSound}>
+              <button
+                type="button"
+                aria-label="Alternar som"
+                className="text-xs text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+                onClick={onToggleSound}
+              >
                 Sound: {soundEnabled ? "on" : "off"}
               </button>
             </div>
-            {approveError ? <p className="text-xs text-red-600">{approveError}</p> : null}
+            {approveError ? <p className="text-xs text-destructive">{approveError}</p> : null}
             {pendingLogs.slice(0, 4).map((log) => (
               <div key={log.id} className="flex items-center justify-between rounded-md border border-border px-2 py-1 text-xs">
                 <span>

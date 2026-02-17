@@ -48,14 +48,14 @@ export function PiggyJar({ currentSaveAmountCents, nextGoalAmountCents, savePerc
       </div>
 
       <div className="mt-4 flex justify-center">
-        <div className={`relative h-28 w-20 overflow-hidden rounded-b-[1.8rem] rounded-t-[0.8rem] border-2 border-zinc-300 bg-zinc-100 ${unlockFx ? "goal-unlock-glow" : ""}`}>
+        <div className={`relative h-28 w-20 overflow-hidden rounded-xl border-2 border-border bg-muted ${unlockFx ? "goal-unlock-glow" : ""}`}>
           <div
-            className="absolute inset-x-0 bottom-0 bg-emerald-400 transition-[height] duration-700 ease-out"
+            className="absolute inset-x-0 bottom-0 bg-secondary transition-[height] duration-700 ease-out"
             style={{ height: `${safePercent}%` }}
           />
           {isLocked ? (
             <div className="absolute inset-x-0 top-2 flex justify-center">
-              <span className="goal-lock-wiggle inline-flex rounded-full bg-white/80 p-1 text-zinc-700">
+              <span className="goal-lock-wiggle inline-flex rounded-xl bg-card/90 p-1 text-foreground">
                 <Lock className="h-3 w-3" />
               </span>
             </div>

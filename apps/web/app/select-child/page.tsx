@@ -41,19 +41,19 @@ export default function SelectChildPage() {
   };
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md py-6">
+    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 md:p-6">
       <Card>
         <CardHeader>
           <CardTitle>Selecionar perfil</CardTitle>
           <CardDescription>Pais entram e escolhem qual perfil infantil acompanhar.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
           {children.map((child) => (
             <button
               key={child.id}
               type="button"
-              className="w-full rounded-md border border-border px-3 py-3 text-left text-sm"
+              className="w-full rounded-xl border border-border px-3 py-3 text-left text-sm shadow-sm"
               onClick={() => chooseChild(child)}
             >
               <div className="flex items-center justify-between">

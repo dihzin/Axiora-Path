@@ -12,9 +12,9 @@ type RecommendationsPanelProps = {
 
 function severityClass(severity: string): string {
   const value = severity.toLowerCase();
-  if (value === "high") return "bg-red-100 text-red-700";
-  if (value === "medium") return "bg-orange-100 text-orange-700";
-  return "bg-blue-100 text-blue-700";
+  if (value === "high") return "bg-destructive/15 text-destructive";
+  if (value === "medium") return "bg-accent/20 text-accent-foreground";
+  return "bg-secondary/15 text-secondary";
 }
 
 export function RecommendationsPanel({ childId }: RecommendationsPanelProps) {
@@ -57,10 +57,10 @@ export function RecommendationsPanel({ childId }: RecommendationsPanelProps) {
       </CardHeader>
       <CardContent className="space-y-2">
         {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : null}
-        {dismissError ? <p className="text-sm text-red-600">{dismissError}</p> : null}
+        {dismissError ? <p className="text-sm text-destructive">{dismissError}</p> : null}
         {!loading && items.length === 0 ? <p className="text-sm text-muted-foreground">Sem recomendaes ativas.</p> : null}
         {items.map((item) => (
-          <div key={item.id} className="rounded-lg border border-border p-3">
+          <div key={item.id} className="rounded-xl border border-border p-3 shadow-sm">
             <div className="mb-2 flex items-center justify-between gap-2">
               <p className="text-sm font-medium">{item.title}</p>
               <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${severityClass(item.severity)}`}>

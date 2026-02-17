@@ -4,27 +4,38 @@ const config: Config = {
   content: ["./app/**/*.{js,ts,jsx,tsx,mdx}", "./components/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
       colors: {
-        border: "rgb(var(--border) / <alpha-value>)",
-        input: "rgb(var(--input) / <alpha-value>)",
-        ring: "rgb(var(--ring) / <alpha-value>)",
-        background: "rgb(var(--background) / <alpha-value>)",
-        foreground: "rgb(var(--foreground) / <alpha-value>)",
+        border: "#DCE2E6",
+        input: "#DCE2E6",
+        ring: "#2F5D50",
+        background: "#FFFFFF",
+        foreground: "#1E2A38",
         primary: {
-          DEFAULT: "rgb(var(--primary) / <alpha-value>)",
-          foreground: "rgb(var(--primary-foreground) / <alpha-value>)",
+          DEFAULT: "#1E2A38",
+          foreground: "#FFFFFF",
         },
         secondary: {
-          DEFAULT: "rgb(var(--secondary) / <alpha-value>)",
-          foreground: "rgb(var(--secondary-foreground) / <alpha-value>)",
+          DEFAULT: "#2F5D50",
+          foreground: "#FFFFFF",
+        },
+        accent: {
+          DEFAULT: "#D6A756",
+          foreground: "#1E2A38",
         },
         muted: {
-          DEFAULT: "rgb(var(--muted) / <alpha-value>)",
-          foreground: "rgb(var(--muted-foreground) / <alpha-value>)",
+          DEFAULT: "#F4F6F8",
+          foreground: "#2A3A4C",
+        },
+        destructive: {
+          DEFAULT: "#C04444",
+          foreground: "#FFFFFF",
         },
         card: {
-          DEFAULT: "rgb(var(--card) / <alpha-value>)",
-          foreground: "rgb(var(--card-foreground) / <alpha-value>)",
+          DEFAULT: "#FFFFFF",
+          foreground: "#1E2A38",
         },
       },
     },

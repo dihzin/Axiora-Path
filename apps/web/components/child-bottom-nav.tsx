@@ -23,7 +23,8 @@ function ChildBottomNavComponent() {
           return (
             <Link
               key={item.href}
-              className={`flex min-w-0 flex-col items-center gap-1 rounded-md px-1 py-2 text-xs font-medium leading-tight transition ${
+              aria-label={item.label}
+              className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-xs font-medium leading-tight transition ${
                 isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
               }`}
               href={item.href}

@@ -1,6 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Baloo_2, Nunito } from "next/font/google";
+import { Inter } from "next/font/google";
 import { ReactNode } from "react";
 
 import { OfflineBanner } from "@/components/offline-banner";
@@ -29,16 +29,10 @@ type RootLayoutProps = {
   children: ReactNode;
 };
 
-const fontDisplay = Baloo_2({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["600", "700"],
-  variable: "--font-display",
-});
-
-const fontBody = Nunito({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-body",
+  weight: ["400", "500", "600"],
+  variable: "--font-sans",
 });
 
 export default function RootLayout({ children }: RootLayoutProps) {
@@ -46,7 +40,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="en">
       <body
         suppressHydrationWarning
-        className={`${fontDisplay.variable} ${fontBody.variable} min-h-screen bg-background text-foreground`}
+        className={`${inter.variable} min-h-screen bg-background text-foreground font-sans`}
       >
         <ThemeProvider>
           <PwaRegister />

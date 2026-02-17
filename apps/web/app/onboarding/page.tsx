@@ -149,7 +149,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md py-5">
+    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 md:p-6">
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Onboarding {step}/{TOTAL_STEPS}</CardTitle>
@@ -223,7 +223,7 @@ export default function OnboardingPage() {
             </div>
           ) : null}
 
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
           <div className="flex gap-2">
             <Button type="button" variant="outline" disabled={step === 1 || loading} onClick={() => setStep((s) => s - 1)}>

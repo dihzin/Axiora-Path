@@ -47,7 +47,7 @@ export default function StickerGalleryPage() {
   }, []);
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md py-5 pb-24">
+    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 pb-24 md:p-6 md:pb-24">
       <div className="mb-3">
         <Link className="inline-flex items-center gap-1 text-sm text-muted-foreground" href="/child">
           <ArrowLeft className="h-4 w-4" />
@@ -69,7 +69,7 @@ export default function StickerGalleryPage() {
               return (
                 <div
                   key={item.id}
-                  className={`rounded-lg border p-3 text-center transition ${
+                  className={`rounded-xl border p-3 text-center shadow-sm transition ${
                     unlocked ? "border-primary/40 bg-primary/10" : "border-border bg-background grayscale"
                   } ${isNew ? "sticker-unlock-pop" : ""}`}
                 >

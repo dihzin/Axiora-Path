@@ -32,7 +32,7 @@ export default function ChildCoachPage() {
   }, []);
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md py-5 pb-24">
+    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 pb-24 md:p-6 md:pb-24">
       <Card>
         <CardHeader>
           <CardTitle>Coach</CardTitle>

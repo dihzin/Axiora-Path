@@ -44,7 +44,7 @@ export default function SelectTenantPage() {
   };
 
   return (
-    <main className="safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md items-center">
+    <main className="safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md items-center p-4 md:p-6">
       <Card className="w-full">
         <CardHeader>
           <CardTitle>Selecionar tenant</CardTitle>
@@ -53,7 +53,7 @@ export default function SelectTenantPage() {
         <CardContent>
           <form className="space-y-3" onSubmit={onSubmit}>
             <Input placeholder="ex: familia-silva" value={slug} onChange={(e) => setSlug(e.target.value)} required disabled={loading} />
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <Button className="w-full" type="submit" disabled={loading}>
               {loading ? "Validando..." : "Continuar"}
             </Button>
