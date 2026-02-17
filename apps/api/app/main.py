@@ -13,6 +13,7 @@ from app.api.routes.audit import router as audit_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.axion import router as axion_router
 from app.api.routes.children import router as children_router
+from app.api.routes.daily_missions import router as daily_missions_router
 from app.api.routes.export import router as export_router
 from app.api.routes.features import router as features_router
 from app.api.routes.legal import router as legal_router
@@ -64,6 +65,7 @@ app.include_router(audit_router)
 app.include_router(auth_router)
 app.include_router(axion_router)
 app.include_router(children_router)
+app.include_router(daily_missions_router)
 app.include_router(export_router)
 app.include_router(features_router)
 app.include_router(legal_router)

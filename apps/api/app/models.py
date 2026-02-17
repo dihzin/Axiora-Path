@@ -16,8 +16,9 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     event,
+    text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -68,6 +69,17 @@ class MoodType(str, Enum):
     SAD = "SAD"
     ANGRY = "ANGRY"
     TIRED = "TIRED"
+
+
+class DailyMissionRarity(str, Enum):
+    NORMAL = "normal"
+    SPECIAL = "special"
+    EPIC = "epic"
+
+
+class DailyMissionStatus(str, Enum):
+    PENDING = "pending"
+    COMPLETED = "completed"
 
 
 class Tenant(Base):
@@ -386,6 +398,44 @@ class AxionProfile(Base):
     mood_state: Mapped[str] = mapped_column(String(64), nullable=False, server_default="NEUTRAL")
     personality_seed: Mapped[str] = mapped_column(String(128), nullable=False)
     last_interaction_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class DailyMission(Base):
+    __tablename__ = "daily_missions"
+    __table_args__ = (
+        Index("ix_daily_missions_child_id", "child_id"),
+        Index("ix_daily_missions_date", "date"),
+        Index("ix_daily_missions_child_id_date", "child_id", "date"),
+        UniqueConstraint("child_id", "date", name="uq_daily_missions_child_id_date"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        nullable=False,
+        server_default=text("gen_random_uuid()"),
+    )
+    child_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id"), nullable=False)
+    date: Mapped[date] = mapped_column(Date, nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    rarity: Mapped[DailyMissionRarity] = mapped_column(
+        SqlEnum(DailyMissionRarity, name="daily_mission_rarity"),
+        nullable=False,
+    )
+    xp_reward: Mapped[int] = mapped_column(Integer, nullable=False)
+    coin_reward: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[DailyMissionStatus] = mapped_column(
+        SqlEnum(DailyMissionStatus, name="daily_mission_status"),
+        nullable=False,
+        server_default=text("'pending'"),
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
 
 
 DEFAULT_FAMILY_TASKS: list[dict[str, str | int | TaskDifficulty]] = [

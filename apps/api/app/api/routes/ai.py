@@ -7,15 +7,43 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
 from app.api.deps import DBSession, EventSvc, get_current_tenant, get_current_user, require_role
-from app.models import AxionProfile, ChildProfile, DailyMood, EventLog, Membership, Recommendation, SavingGoal, Streak, TaskLog, TaskLogStatus, Tenant, User
+from app.models import (
+    AxionProfile,
+    ChildProfile,
+    DailyMissionRarity,
+    DailyMissionStatus,
+    DailyMood,
+    EventLog,
+    Membership,
+    Recommendation,
+    SavingGoal,
+    Streak,
+    TaskLog,
+    TaskLogStatus,
+    Tenant,
+    User,
+)
 from app.schemas.ai import CoachRequest, CoachResponse
 from app.services.ai.adapters import CoachContext
 from app.services.ai.factory import get_coach_adapter
 from app.services.ai.personality import generate_personality_from_seed
 from app.services.axion import ensure_axion_profile
+from app.services.daily_mission_service import generate_daily_mission
 from app.services.features import is_feature_enabled
 
 router = APIRouter(prefix="/ai", tags=["ai"])
+
+MISSION_RARITY_INTRO = {
+    DailyMissionRarity.NORMAL: "Missao do dia pronta. Vamos com foco e constancia.",
+    DailyMissionRarity.SPECIAL: "Missao especial do dia liberada. Voce consegue, vamos nessa!",
+    DailyMissionRarity.EPIC: "Missao epica ativa. Hoje e dia de jogada de mestre!",
+}
+
+MISSION_COMPLETED_REACTION = {
+    DailyMissionRarity.NORMAL: "Missao concluida. Bom ritmo, continue assim.",
+    DailyMissionRarity.SPECIAL: "Missao especial concluida. Excelente energia!",
+    DailyMissionRarity.EPIC: "Missao epica concluida. Axion em modo lenda!",
+}
 
 
 @router.post("/coach", response_model=CoachResponse)
@@ -88,6 +116,25 @@ def ai_coach(
     if axion_profile is None:
         axion_profile = ensure_axion_profile(db, child_id=payload.child_id)
 
+    first_login_context = (payload.message or "").strip() == "context:first_login"
+    mission_intro: str | None = None
+    if first_login_context:
+        mission = generate_daily_mission(db, child)
+        if mission.status == DailyMissionStatus.PENDING:
+            mission_intro = MISSION_RARITY_INTRO[mission.rarity]
+
+    mission_completed_reaction: str | None = None
+    latest_mission_completed_event = next((item for item in recent_events if item.type == "mission_completed"), None)
+    if latest_mission_completed_event is not None:
+        rarity_raw = latest_mission_completed_event.payload.get("rarity")
+        if isinstance(rarity_raw, str):
+            try:
+                mission_completed_reaction = MISSION_COMPLETED_REACTION[DailyMissionRarity(rarity_raw)]
+            except ValueError:
+                mission_completed_reaction = "Missao concluida. Axion reconhece seu progresso."
+        else:
+            mission_completed_reaction = "Missao concluida. Axion reconhece seu progresso."
+
     ai_coach_v2_enabled = is_feature_enabled("ai_coach_v2", db, tenant_id=tenant.id)
     adapter = get_coach_adapter("rule_based")
     result = adapter.generate(
@@ -118,8 +165,16 @@ def ai_coach(
     )
     db.commit()
 
+    reply_parts: list[str] = []
+    if mission_intro:
+        reply_parts.append(mission_intro)
+    if mission_completed_reaction:
+        reply_parts.append(mission_completed_reaction)
+    reply_parts.append(result.reply)
+    final_reply = " ".join(part for part in reply_parts if part)
+
     return CoachResponse(
-        reply=result.reply,
+        reply=final_reply,
         suggested_actions=result.suggested_actions,
         tone=result.tone,
     )
