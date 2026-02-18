@@ -34,7 +34,6 @@ import {
   getWalletSummary,
   markRoutine,
   postMood,
-  updateChildTheme,
   useAiCoach as requestAiCoach,
   type DailyMissionResponse,
   type GoalOut,
@@ -43,13 +42,11 @@ import {
   type RoutineWeekLog,
   type StreakResponse,
   type AxionStateResponse,
-  type ThemeName,
   type WeeklyMetricsResponse,
   type WalletSummaryResponse,
 } from "@/lib/api/client";
 import { enqueueDailyMissionComplete } from "@/lib/offline-queue";
 import { getSoundEnabled as getChildSoundEnabled, playSound, setSoundEnabled as setChildSoundEnabled } from "@/lib/sound-manager";
-import { THEME_LIST } from "@/lib/theme";
 import type { Mood } from "@/lib/types/mood";
 import { cn } from "@/lib/utils";
 
@@ -154,8 +151,6 @@ export default function ChildPage() {
   const [todayMood, setTodayMood] = useState<Mood | null>(null);
   const [moodError, setMoodError] = useState<string | null>(null);
   const [xpBarPercent, setXpBarPercent] = useState(0);
-  const [themeSaving, setThemeSaving] = useState(false);
-  const [themeFeedback, setThemeFeedback] = useState<ActionFeedbackState>("idle");
   const [moodFeedback, setMoodFeedback] = useState<ActionFeedbackState>("idle");
   const [missionFeedback, setMissionFeedback] = useState<ActionFeedbackState>("idle");
   const [taskFeedback, setTaskFeedback] = useState<Record<number, ActionFeedbackState>>({});
@@ -177,7 +172,6 @@ export default function ChildPage() {
   const lastKnownStreakRef = useRef<number | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   const moodFeedbackTimerRef = useRef<number | null>(null);
-  const themeFeedbackTimerRef = useRef<number | null>(null);
   const missionFeedbackTimerRef = useRef<number | null>(null);
   const taskFeedbackTimerRef = useRef<Record<number, number>>({});
   const goalNearShownRef = useRef(false);
@@ -526,23 +520,6 @@ export default function ChildPage() {
     }
   };
 
-  const onSelectTheme = async (nextTheme: ThemeName) => {
-    if (childId === null || themeSaving || nextTheme === theme) return;
-    setThemeSaving(true);
-    setThemeFeedback("loading");
-    try {
-      await updateChildTheme(childId, nextTheme);
-      setTheme(nextTheme);
-      setTransientFeedback(setThemeFeedback, themeFeedbackTimerRef, "success");
-      showToast("Tema atualizado", "success");
-    } catch {
-      setTransientFeedback(setThemeFeedback, themeFeedbackTimerRef, "error");
-      showToast("Falha ao atualizar tema", "error");
-    } finally {
-      setThemeSaving(false);
-    }
-  };
-
   const onToggleSound = () => {
     if (childId === null) return;
     setSoundEnabled((prev) => {
@@ -560,10 +537,11 @@ export default function ChildPage() {
   };
 
   const dismissDailyWelcome = () => {
-    if (childId === null) return;
-    const today = new Date().toISOString().slice(0, 10);
-    localStorage.setItem(`axiora_daily_welcome_${childId}_${today}`, "1");
     setShowDailyWelcome(false);
+  };
+
+  const restoreDailyWelcome = () => {
+    setShowDailyWelcome(true);
   };
 
   const onQuickMood = async (mood: Mood) => {
@@ -859,14 +837,24 @@ export default function ChildPage() {
               <CardHeader className="p-5 md:p-6">
                 <div className="flex items-center justify-between gap-3">
                   <CardTitle className="text-base">Pronto para a missão de hoje?</CardTitle>
-                  <button
-                    type="button"
-                    aria-label="Fechar boas-vindas"
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-xl border border-border bg-white text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
-                    onClick={dismissDailyWelcome}
-                  >
-                    <X className="h-4 w-4 stroke-[2.6]" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Alternar som"
+                      className="text-sm text-muted-foreground underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+                      onClick={onToggleSound}
+                    >
+                      Som: {soundEnabled ? "ligado" : "desligado"}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Fechar boas-vindas"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-xl border border-border bg-white text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+                      onClick={dismissDailyWelcome}
+                    >
+                      <X className="h-4 w-4 stroke-[2.6]" />
+                    </button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3 p-5 pt-0 text-sm md:p-6 md:pt-0">
@@ -888,50 +876,20 @@ export default function ChildPage() {
                 </div>
               </CardContent>
             </Card>
-          ) : null}
-          <Card className="border-border/80 bg-muted">
-            <CardHeader className="p-5 pb-2 md:p-6 md:pb-2">
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-lg font-semibold">Painel do dia</CardTitle>
-                <button
+          ) : (
+            <Card className="bg-card">
+              <CardContent className="flex items-center justify-between gap-2 p-4">
+                <p className="text-sm font-medium text-muted-foreground">Painel da missão recolhido</p>
+                <ActionFeedback
                   type="button"
-                  aria-label="Alternar som"
-                  className="text-sm text-muted-foreground underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
-                  onClick={onToggleSound}
+                  className="rounded-xl border border-border bg-white px-3 py-1 text-sm font-semibold text-foreground"
+                  onClick={restoreDailyWelcome}
                 >
-                  Som: {soundEnabled ? "ligado" : "desligado"}
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3 p-5 pt-0 md:p-6 md:pt-0">
-              <div>
-                <p className="mb-2 text-sm font-semibold text-foreground">Como você está hoje?</p>
-              <MoodSelector value={todayMood ?? undefined} onChange={(mood) => void onSelectMood(mood)} />
-              {moodError ? <p className="mt-2 text-sm text-destructive">{moodError}</p> : null}
-              </div>
-              <div>
-                <p className="mb-2 text-sm font-semibold text-foreground">Tema</p>
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                  {THEME_LIST.map((item) => (
-                    <ActionFeedback
-                      key={item}
-                      type="button"
-                      state={theme === item ? themeFeedback : "idle"}
-                      disabled={themeSaving}
-                      className={`rounded-xl border px-2 py-2 capitalize transition ${
-                        theme === item
-                          ? "border-secondary bg-secondary/12 text-secondary ring-2 ring-secondary/20"
-                          : "border-secondary/40 bg-background text-muted-foreground hover:bg-secondary/10 hover:text-secondary"
-                      }`}
-                      onClick={() => void onSelectTheme(item)}
-                    >
-                      {item}
-                    </ActionFeedback>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                  Mostrar painel
+                </ActionFeedback>
+              </CardContent>
+            </Card>
+          )}
           <Card className="border-border/80 bg-card">
             <CardHeader className="p-5 pb-2 md:p-6 md:pb-2">
               <CardTitle className="text-lg font-semibold">Progresso</CardTitle>
