@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,11 +12,9 @@ import { getTenantSlug, setTenantSlug } from "@/lib/api/session";
 
 export default function SelectTenantPage() {
   const router = useRouter();
-  const autoProceedOnce = useRef(false);
   const [slug, setSlug] = useState("");
   const [memberships, setMemberships] = useState<OrganizationMembership[]>([]);
   const [loadingMemberships, setLoadingMemberships] = useState(true);
-  const [isAutoRedirecting, setIsAutoRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -44,7 +42,6 @@ export default function SelectTenantPage() {
       setError(getApiErrorMessage(err, "Não foi possível validar organização. Confira login e credenciais."));
     } finally {
       setLoading(false);
-      setIsAutoRedirecting(false);
     }
   };
 
@@ -64,12 +61,6 @@ export default function SelectTenantPage() {
 
         const selectedSlug = current && items.some((item) => item.tenant_slug === current) ? current : items[0].tenant_slug;
         setSlug(selectedSlug);
-
-        if (items.length === 1 && !autoProceedOnce.current) {
-          autoProceedOnce.current = true;
-          setIsAutoRedirecting(true);
-          void proceedWithSlug(selectedSlug);
-        }
       } catch {
         if (!cancelled) {
           setMemberships([]);
@@ -103,8 +94,6 @@ export default function SelectTenantPage() {
           <form className="space-y-3" onSubmit={onSubmit}>
             {loadingMemberships ? (
               <p className="text-sm text-muted-foreground">Carregando organizações...</p>
-            ) : isAutoRedirecting ? (
-              <p className="text-sm text-muted-foreground">Redirecionando...</p>
             ) : memberships.length > 0 ? (
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="organization-select">
@@ -128,8 +117,8 @@ export default function SelectTenantPage() {
               <Input placeholder="ex: familia-silva" value={slug} onChange={(e) => setSlug(e.target.value)} required disabled={loading} />
             )}
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
-            <Button className="w-full" type="submit" disabled={loading || loadingMemberships || isAutoRedirecting}>
-              {loading || isAutoRedirecting ? "Redirecionando..." : "Continuar"}
+            <Button className="w-full" type="submit" disabled={loading || loadingMemberships}>
+              {loading ? "Continuando..." : "Continuar"}
             </Button>
           </form>
         </CardContent>

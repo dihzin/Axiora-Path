@@ -49,7 +49,7 @@ export default function StickerGalleryPage() {
   }, []);
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 pb-24 md:p-6 md:pb-24">
+    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 pb-52 md:p-6 md:pb-40">
       <div className="mb-3">
         <Link
           className="inline-flex items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted"

@@ -35,7 +35,7 @@ def get_or_generate_daily_mission(
     db: DBSession,
     tenant: Annotated[Tenant, Depends(get_current_tenant)],
     _: Annotated[User, Depends(get_current_user)],
-    __: Annotated[Membership, Depends(require_role(["PARENT", "TEACHER"]))],
+    __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> DailyMissionResponse:
     _ensure_daily_missions_enabled(db, tenant.id)
 
@@ -119,7 +119,7 @@ def complete_daily_mission(
     events: EventSvc,
     tenant: Annotated[Tenant, Depends(get_current_tenant)],
     user: Annotated[User, Depends(get_current_user)],
-    _: Annotated[Membership, Depends(require_role(["PARENT", "TEACHER"]))],
+    _: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> DailyMissionCompleteResponse:
     _ensure_daily_missions_enabled(db, tenant.id)
 

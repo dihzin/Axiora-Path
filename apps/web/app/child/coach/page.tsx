@@ -34,7 +34,7 @@ export default function ChildCoachPage() {
   }, []);
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 pb-24 md:p-6 md:pb-24">
+    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 pb-52 md:p-6 md:pb-40">
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-2">

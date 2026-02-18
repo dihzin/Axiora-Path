@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models import FeatureFlag
 
 DEFAULT_FEATURE_NAMES: tuple[str, ...] = ("ai_coach_v2", "gamification_v2", "feature_daily_missions")
@@ -23,7 +24,7 @@ def is_feature_enabled(name: str, db: Session, *, tenant_id: int | None = None) 
         if tenant_override is not None:
             return bool(tenant_override.enabled_globally)
         if tenant_scoped_only:
-            return False
+            return settings.app_env == "development"
 
     global_flag = db.scalar(
         select(FeatureFlag).where(

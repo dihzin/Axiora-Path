@@ -88,6 +88,14 @@ class DailyMissionSourceType(str, Enum):
     PARENT = "parent"
 
 
+class GameType(str, Enum):
+    TICTACTOE = "TICTACTOE"
+    WORDSEARCH = "WORDSEARCH"
+    CROSSWORD = "CROSSWORD"
+    HANGMAN = "HANGMAN"
+    FINANCE_SIM = "FINANCE_SIM"
+
+
 class Tenant(Base):
     __tablename__ = "tenants"
 
@@ -107,6 +115,19 @@ class Tenant(Base):
         nullable=False,
         server_default=func.now(),
     )
+
+
+class School(Base):
+    __tablename__ = "schools"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+
+class SchoolClass(Base):
+    __tablename__ = "classes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    school_id: Mapped[int | None] = mapped_column(ForeignKey("schools.id"), nullable=True)
 
 
 class User(Base):
@@ -142,6 +163,153 @@ class Membership(Base):
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
+    )
+
+
+class UserGameProfile(Base):
+    __tablename__ = "user_game_profiles"
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        nullable=False,
+        server_default=text("gen_random_uuid()"),
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, unique=True)
+    xp: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    level: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    axion_coins: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    daily_xp: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    last_xp_reset: Mapped[date] = mapped_column(Date, nullable=False, server_default=text("CURRENT_DATE"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class GameSession(Base):
+    __tablename__ = "game_sessions"
+    __table_args__ = (
+        Index("ix_game_sessions_user_id_created_at", "user_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        nullable=False,
+        server_default=text("gen_random_uuid()"),
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    game_type: Mapped[GameType] = mapped_column(
+        SqlEnum(GameType, name="game_type"),
+        nullable=False,
+    )
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    xp_earned: Mapped[int] = mapped_column(Integer, nullable=False)
+    coins_earned: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class CoinConversion(Base):
+    __tablename__ = "coin_conversions"
+    __table_args__ = (
+        Index("ix_coin_conversions_tenant_id_created_at", "tenant_id", "created_at"),
+        Index("ix_coin_conversions_child_id_created_at", "child_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        nullable=False,
+        server_default=text("gen_random_uuid()"),
+    )
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    child_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    coins_used: Mapped[int] = mapped_column(Integer, nullable=False)
+    amount_generated: Mapped[int] = mapped_column(Integer, nullable=False)
+    approved: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class StoreItem(Base):
+    __tablename__ = "store_items"
+    __table_args__ = (
+        UniqueConstraint("name", "type", name="uq_store_items_name_type"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    type: Mapped[str] = mapped_column(String(64), nullable=False)
+    price: Mapped[int] = mapped_column(Integer, nullable=False)
+    rarity: Mapped[str] = mapped_column(String(32), nullable=False)
+    image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class UserInventory(Base):
+    __tablename__ = "user_inventory"
+    __table_args__ = (
+        UniqueConstraint("user_id", "item_id", name="uq_user_inventory_user_item"),
+        Index("ix_user_inventory_user_id", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    item_id: Mapped[int] = mapped_column(ForeignKey("store_items.id"), nullable=False)
+    equipped: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class GameSettings(Base):
+    __tablename__ = "game_settings"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "child_id", name="uq_game_settings_tenant_child"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    child_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id"), nullable=False)
+    max_daily_xp: Mapped[int] = mapped_column(Integer, nullable=False, server_default="200")
+    max_weekly_coin_conversion: Mapped[int] = mapped_column(Integer, nullable=False, server_default="500")
+    enabled_games: Mapped[dict[str, bool]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text(
+            '\'{"TICTACTOE": true, "WORDSEARCH": true, "CROSSWORD": true, "HANGMAN": true, "FINANCE_SIM": true}\'::jsonb',
+        ),
+    )
+    require_approval_after_minutes: Mapped[int] = mapped_column(Integer, nullable=False, server_default="30")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
 
@@ -340,9 +508,12 @@ class Achievement(Base):
     __tablename__ = "achievements"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    icon: Mapped[str] = mapped_column(String(100), nullable=False)
+    xp_reward: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     slug: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=False)
     icon_key: Mapped[str] = mapped_column(String(100), nullable=False)
     condition_type: Mapped[str] = mapped_column(String(100), nullable=False)
     condition_value: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -358,6 +529,19 @@ class ChildAchievement(Base):
         nullable=False,
         server_default=func.now(),
     )
+
+
+class UserAchievement(Base):
+    __tablename__ = "user_achievements"
+    __table_args__ = (
+        UniqueConstraint("user_id", "achievement_id", name="uq_user_achievements_user_achievement"),
+        Index("ix_user_achievements_user_id", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    achievement_id: Mapped[int] = mapped_column(ForeignKey("achievements.id"), nullable=False)
+    unlocked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
 class Streak(Base):

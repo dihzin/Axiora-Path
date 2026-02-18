@@ -712,7 +712,7 @@ export default function ChildPage() {
       ) : null}
       <main
         className={cn(
-          "safe-px safe-pb mx-auto flex min-h-screen w-full flex-col p-4 pb-24 pt-5 md:p-6 md:pb-24",
+          "safe-px safe-pb mx-auto flex min-h-screen w-full flex-col p-4 pb-52 pt-5 md:p-6 md:pb-40",
           isSchoolTenant ? "max-w-md md:max-w-3xl" : "max-w-md md:max-w-2xl",
         )}
       >
@@ -794,7 +794,7 @@ export default function ChildPage() {
         <Card
           className={cn(
             "relative mb-6 overflow-hidden border-border shadow-md",
-            isSchoolTenant ? "bg-muted" : "axion-card-idle bg-muted",
+            isSchoolTenant ? "bg-card" : "axion-card-idle bg-card",
           )}
         >
           <CardHeader className="p-5 pb-2 text-center md:p-6 md:pb-2">
@@ -919,7 +919,7 @@ export default function ChildPage() {
               <WeeklyBossMeter completionRate={weeklyMetrics?.completion_rate ?? 0} />
             </CardContent>
           </Card>
-          <Card className="bg-muted">
+          <Card className="bg-card">
             <CardHeader className="p-5 md:p-6">
               <CardTitle className="text-lg">Lista de tarefas</CardTitle>
             </CardHeader>

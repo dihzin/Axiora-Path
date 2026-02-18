@@ -1,29 +1,52 @@
-<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <style>
-      .body { fill: #2EC4B6; }
-      .mask { fill: #1B9AAA; }
-      .eye { fill: #ffffff; }
-      .pupil { fill: #1b1b1b; }
-      .mouth { stroke: #1b1b1b; stroke-width: 4; fill: none; stroke-linecap: round; }
-      .cape { fill: #FFD166; }
-    </style>
-  </defs>
-
-  <!-- Cape -->
-  <path class="cape" d="M24 64 C10 90, 40 110, 64 96 C88 110, 118 90, 104 64 Z"/>
-
-  <!-- Body -->
-  <circle class="body" cx="64" cy="56" r="36"/>
-
-  <!-- Mask -->
-  <ellipse class="mask" cx="64" cy="52" rx="30" ry="18"/>
-
-  <!-- Eyes -->
-  <line class="eye" x1="44" y1="52" x2="56" y2="52"/><line class="eye" x1="72" y1="52" x2="84" y2="52"/>
-
-  <!-- Mouth -->
-  <path class="mouth" d="M50 78 Q64 82 78 78"/>
-
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <!-- Cape (sagging) -->
+  <ellipse cx="60" cy="98" rx="30" ry="15" fill="#336644"/>
+  <path d="M30 91 Q16 107 23 117 Q40 110 47 100" fill="#224433"/>
+  <path d="M90 91 Q104 107 97 117 Q80 110 73 100" fill="#224433"/>
   
+  <!-- Body -->
+  <ellipse cx="60" cy="91" rx="21" ry="13" fill="#77BB88"/>
+  <text x="60" y="96" font-family="Arial Black" font-size="13" font-weight="900" fill="#336644" text-anchor="middle">Zzz</text>
+  
+  <!-- Head (slightly tilted/drooping) -->
+  <circle cx="60" cy="59" r="28" fill="#FFD580"/>
+  
+  <!-- Mask - green -->
+  <path d="M35 51 Q60 43 85 51 L85 61 Q60 54 35 61 Z" fill="#336644"/>
+  <ellipse cx="47" cy="55" rx="7" ry="5" fill="#FFD580"/>
+  <ellipse cx="73" cy="55" rx="7" ry="5" fill="#FFD580"/>
+  
+  <!-- Half-closed tired eyes -->
+  <circle cx="47" cy="57" r="4" fill="#1A1A1A"/>
+  <circle cx="73" cy="57" r="4" fill="#1A1A1A"/>
+  <!-- Heavy eyelids -->
+  <path d="M40 54 Q47 57 54 54" fill="#FFD580" stroke="none"/>
+  <path d="M66 54 Q73 57 80 54" fill="#FFD580" stroke="none"/>
+  <!-- Eyelid lines -->
+  <path d="M40 55 Q47 58 54 55" stroke="#AA9966" stroke-width="1.5" fill="none"/>
+  <path d="M66 55 Q73 58 80 55" stroke="#AA9966" stroke-width="1.5" fill="none"/>
+  
+  <!-- Droopy eyebrows -->
+  <path d="M41 48 Q47 46 53 48" stroke="#336644" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M67 48 Q73 46 79 48" stroke="#336644" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- Tired slightly open mouth -->
+  <ellipse cx="60" cy="72" rx="7" ry="4" fill="#AA7744"/>
+  <ellipse cx="60" cy="70" rx="7" ry="3" fill="#FFD580"/>
+  <path d="M53 71 Q60 75 67 71" stroke="#AA7744" stroke-width="1.5" fill="none"/>
+  
+  <!-- Zzz floating -->
+  <text x="84" y="42" font-family="Arial" font-size="9" font-weight="bold" fill="#336644" opacity="0.7">z</text>
+  <text x="91" y="34" font-family="Arial" font-size="11" font-weight="bold" fill="#336644" opacity="0.85">z</text>
+  <text x="99" y="25" font-family="Arial" font-size="13" font-weight="bold" fill="#336644">z</text>
+  
+  <!-- Ears -->
+  <ellipse cx="32" cy="59" rx="5" ry="7" fill="#FFD580"/>
+  <ellipse cx="88" cy="59" rx="5" ry="7" fill="#FFD580"/>
+  
+  <!-- Hair/helmet (messy/drooping) -->
+  <path d="M35 44 Q45 29 60 27 Q75 29 85 44" fill="#336644"/>
+  <!-- Messy hair bits -->
+  <path d="M57 27 Q56 17 58 14 Q61 18 60 27" fill="#224433"/>
+  <path d="M63 27 Q65 20 68 17 Q69 22 66 27" fill="#224433"/>
 </svg>

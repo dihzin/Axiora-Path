@@ -1,6 +1,14 @@
 "use client";
 
-import { getAccessToken, getRefreshToken, getTenantSlug, setAccessToken, setRefreshToken } from "@/lib/api/session";
+import {
+  clearTenantSlug,
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  getTenantSlug,
+  setAccessToken,
+  setRefreshToken,
+} from "@/lib/api/session";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 export type ThemeName = "default" | "space" | "jungle" | "ocean" | "soccer" | "capybara" | "dinos" | "princess" | "heroes";
@@ -30,6 +38,12 @@ type ApiErrorPayload = {
   details?: unknown;
 };
 
+function redirectToLoginIfBrowser(): void {
+  if (typeof window === "undefined") return;
+  if (window.location.pathname === "/login") return;
+  window.location.assign("/login");
+}
+
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError) {
     const payload = error.payload as ApiErrorPayload | null;
@@ -51,7 +65,12 @@ async function parseJsonSafe(response: Response): Promise<unknown> {
 async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = getRefreshToken();
   const tenantSlug = getTenantSlug();
-  if (!refreshToken || !tenantSlug) return null;
+  if (!refreshToken || !tenantSlug) {
+    clearTokens();
+    clearTenantSlug();
+    redirectToLoginIfBrowser();
+    return null;
+  }
 
   let response: Response;
   try {
@@ -64,10 +83,20 @@ async function refreshAccessToken(): Promise<string | null> {
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
   } catch {
+    clearTokens();
+    clearTenantSlug();
+    redirectToLoginIfBrowser();
     return null;
   }
 
-  if (!response.ok) return null;
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      clearTokens();
+      clearTenantSlug();
+      redirectToLoginIfBrowser();
+    }
+    return null;
+  }
   const data = (await response.json()) as { access_token: string; refresh_token: string };
   setAccessToken(data.access_token);
   setRefreshToken(data.refresh_token);
@@ -118,6 +147,11 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   if (!response.ok) {
     const payload = await parseJsonSafe(response);
+    if (options.requireAuth !== false && response.status === 401) {
+      clearTokens();
+      clearTenantSlug();
+      redirectToLoginIfBrowser();
+    }
     throw new ApiError("API request failed", response.status, payload);
   }
 
@@ -296,6 +330,55 @@ export type DailyMissionCompleteResponse = {
   coins_gained: number;
   new_level: number;
   streak: number;
+};
+
+export type GameType = "TICTACTOE" | "WORDSEARCH" | "CROSSWORD" | "HANGMAN" | "FINANCE_SIM";
+
+export type GameSessionRegisterResponse = {
+  profile: {
+    id: string;
+    userId: number;
+    xp: number;
+    level: number;
+    axionCoins: number;
+    dailyXp?: number;
+    lastXpReset?: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  session: {
+    id: string;
+    userId: number;
+    gameType: GameType;
+    score: number;
+    xpEarned: number;
+    coinsEarned: number;
+    createdAt: string;
+  };
+  dailyLimit: {
+    maxXpPerDay?: number;
+    maxXpPerDayPerGame?: number;
+    grantedXp: number;
+    requestedXp: number;
+    remainingXpToday: number;
+  };
+  unlockedAchievements?: string[];
+};
+
+export type StoreCatalogItem = {
+  id: number;
+  name: string;
+  type: "AVATAR_SKIN" | "BACKGROUND_THEME" | "CELEBRATION_ANIMATION" | "BADGE_FRAME";
+  price: number;
+  rarity: "COMMON" | "RARE" | "EPIC" | "LEGENDARY";
+  imageUrl: string | null;
+  owned: boolean;
+  equipped: boolean;
+};
+
+export type StoreCatalogResponse = {
+  coins: number;
+  items: StoreCatalogItem[];
 };
 
 export async function login(email: string, password: string): Promise<AuthTokens> {
@@ -594,6 +677,41 @@ export async function getDailyMission(childId: number): Promise<DailyMissionResp
 export async function completeDailyMission(missionId: string): Promise<DailyMissionCompleteResponse> {
   return apiRequest<DailyMissionCompleteResponse>(`/daily-mission/${missionId}/complete`, {
     method: "POST",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function registerGameSession(payload: { gameType: GameType; score: number }): Promise<GameSessionRegisterResponse> {
+  return apiRequest<GameSessionRegisterResponse>("/api/games/session", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getStoreItems(): Promise<StoreCatalogResponse> {
+  return apiRequest<StoreCatalogResponse>("/api/store/items", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function purchaseStoreItem(itemId: number): Promise<{ success: boolean; coins: number; itemId: number }> {
+  return apiRequest<{ success: boolean; coins: number; itemId: number }>("/api/store/purchase", {
+    method: "POST",
+    body: { itemId },
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function equipStoreItem(itemId: number): Promise<{ success: boolean; coins: number; itemId: number }> {
+  return apiRequest<{ success: boolean; coins: number; itemId: number }>("/api/store/equip", {
+    method: "POST",
+    body: { itemId },
     requireAuth: true,
     includeTenant: true,
   });

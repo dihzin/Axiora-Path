@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     csrf_exempt_paths: str = "/health,/docs,/redoc,/openapi.json,/auth/login,/auth/signup"
     account_lock_max_attempts: int = 5
     account_lock_minutes: int = 15
+    coin_conversion_coins_per_real: int = 10
 
 
 settings = Settings()

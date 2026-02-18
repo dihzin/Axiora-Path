@@ -54,13 +54,14 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <form className="space-y-3" onSubmit={onSubmit}>
-            <Input placeholder="Organização" value={tenantSlug} onChange={(e) => setTenantSlugValue(e.target.value)} required />
-            <Input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <Input placeholder="Organização" value={tenantSlug} onChange={(e) => setTenantSlugValue(e.target.value)} autoComplete="organization" required />
+            <Input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
             <Input
               placeholder="Senha"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
               required
             />
             {error ? <p className="text-sm text-destructive">{error}</p> : null}

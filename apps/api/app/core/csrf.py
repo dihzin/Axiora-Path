@@ -24,7 +24,12 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         has_cookie_session = request.cookies.get(REFRESH_COOKIE_NAME) is not None
-        if request.url.path not in _PROTECTED_PATHS and not has_cookie_session:
+        # If the request is not using cookie-session auth, skip CSRF check.
+        # The frontend sends refresh token via JSON body in this project.
+        if not has_cookie_session:
+            return await call_next(request)
+
+        if request.url.path not in _PROTECTED_PATHS:
             return await call_next(request)
 
         csrf_cookie = request.cookies.get(CSRF_COOKIE_NAME)

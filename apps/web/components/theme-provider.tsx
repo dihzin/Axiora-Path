@@ -27,8 +27,8 @@ function applyTheme(theme: ThemeName): void {
   root.style.setProperty("--theme-primary-rgb", definition.primary);
   root.style.setProperty("--theme-secondary-rgb", definition.secondary);
   root.style.setProperty("--theme-accent-rgb", definition.accent);
-  root.style.setProperty("--app-bg-gradient", definition.backgroundGradient);
-  root.style.setProperty("--app-bg-color", "rgb(244 246 248)");
+  root.style.setProperty("--app-bg-gradient", "none");
+  root.style.setProperty("--app-bg-color", "rgb(246 246 243)");
   root.style.setProperty("--app-fg-color", "rgb(30 42 56)");
 }
 

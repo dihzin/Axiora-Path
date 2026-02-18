@@ -1,29 +1,46 @@
-<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <style>
-      .body { fill: #2EC4B6; }
-      .mask { fill: #1B9AAA; }
-      .eye { fill: #ffffff; }
-      .pupil { fill: #1b1b1b; }
-      .mouth { stroke: #1b1b1b; stroke-width: 4; fill: none; stroke-linecap: round; }
-      .cape { fill: #FFD166; }
-    </style>
-  </defs>
-
-  <!-- Cape -->
-  <path class="cape" d="M24 64 C10 90, 40 110, 64 96 C88 110, 118 90, 104 64 Z"/>
-
-  <!-- Body -->
-  <circle class="body" cx="64" cy="56" r="36"/>
-
-  <!-- Mask -->
-  <ellipse class="mask" cx="64" cy="52" rx="30" ry="18"/>
-
-  <!-- Eyes -->
-  <circle class="eye" cx="50" cy="56" r="6"/><circle class="eye" cx="78" cy="56" r="6"/><circle class="pupil" cx="50" cy="56" r="3"/><circle class="pupil" cx="78" cy="56" r="3"/>
-
-  <!-- Mouth -->
-  <path class="mouth" d="M44 84 Q64 70 84 84"/>
-
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <!-- Cape (drooping) -->
+  <ellipse cx="60" cy="97" rx="32" ry="16" fill="#2255CC"/>
+  <path d="M28 90 Q12 108 20 118 Q38 110 45 100" fill="#1133AA"/>
+  <path d="M92 90 Q108 108 100 118 Q82 110 75 100" fill="#1133AA"/>
   
+  <!-- Body -->
+  <ellipse cx="60" cy="90" rx="22" ry="14" fill="#55AAFF"/>
+  <text x="60" y="95" font-family="Arial Black" font-size="13" font-weight="900" fill="#2255CC" text-anchor="middle">💧</text>
+  
+  <!-- Head -->
+  <circle cx="60" cy="58" r="28" fill="#FFD580"/>
+  
+  <!-- Mask - blue -->
+  <path d="M35 50 Q60 42 85 50 L85 60 Q60 53 35 60 Z" fill="#2255CC"/>
+  <ellipse cx="47" cy="54" rx="7" ry="5" fill="#FFD580"/>
+  <ellipse cx="73" cy="54" rx="7" ry="5" fill="#FFD580"/>
+  
+  <!-- Sad puppy eyes -->
+  <circle cx="47" cy="56" r="4.5" fill="#1A1A1A"/>
+  <circle cx="73" cy="56" r="4.5" fill="#1A1A1A"/>
+  <circle cx="49" cy="54" r="1.8" fill="white"/>
+  <circle cx="75" cy="54" r="1.8" fill="white"/>
+  <!-- Watery shine -->
+  <ellipse cx="47" cy="59" rx="3" ry="1.5" fill="#55AAFF" opacity="0.5"/>
+  <ellipse cx="73" cy="59" rx="3" ry="1.5" fill="#55AAFF" opacity="0.5"/>
+  
+  <!-- Sad eyebrows (inner up) -->
+  <path d="M40 46 Q44 43 53 47" stroke="#2255CC" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M67 47 Q76 43 80 46" stroke="#2255CC" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- Sad mouth -->
+  <path d="M48 72 Q60 66 72 72" stroke="#AA7744" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- Tear drop -->
+  <ellipse cx="44" cy="67" rx="2" ry="2.5" fill="#88CCFF" opacity="0.8"/>
+  <path d="M44 69 Q43 73 44 74 Q45 73 44 69" fill="#88CCFF" opacity="0.8"/>
+  
+  <!-- Ears -->
+  <ellipse cx="32" cy="58" rx="5" ry="7" fill="#FFD580"/>
+  <ellipse cx="88" cy="58" rx="5" ry="7" fill="#FFD580"/>
+  
+  <!-- Hair/helmet (slightly tilted sad) -->
+  <path d="M35 43 Q45 28 60 26 Q75 28 85 43" fill="#2255CC"/>
+  <path d="M56 26 Q59 16 60 13 Q61 16 64 26" fill="#1133AA"/>
 </svg>
