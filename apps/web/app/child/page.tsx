@@ -51,11 +51,11 @@ import { THEME_LIST } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 const MOOD_OPTIONS: Array<{ mood: MoodType; emoji: string; label: string }> = [
-  { mood: "HAPPY", emoji: "😀", label: "Happy" },
-  { mood: "OK", emoji: "🙂", label: "Ok" },
-  { mood: "SAD", emoji: "😕", label: "Sad" },
-  { mood: "ANGRY", emoji: "😠", label: "Angry" },
-  { mood: "TIRED", emoji: "🥱", label: "Tired" },
+  { mood: "HAPPY", emoji: "😀", label: "Feliz" },
+  { mood: "OK", emoji: "🙂", label: "Bem" },
+  { mood: "SAD", emoji: "😕", label: "Triste" },
+  { mood: "ANGRY", emoji: "😠", label: "Bravo" },
+  { mood: "TIRED", emoji: "🥱", label: "Cansado" },
 ];
 
 function formatBRL(valueCents: number): string {
@@ -90,14 +90,14 @@ type AxionCelebrationType = "streak_7" | "streak_30" | "level_up" | "goal_comple
 const AXION_CELEBRATION_PHRASES: Record<AxionCelebrationType, string> = {
   streak_7: "Sete dias seguidos! Axion esta em modo lenda!",
   streak_30: "Trinta dias! Axion desbloqueou energia máxima!",
-  level_up: "Level up! Axion evoluiu junto com você!",
+  level_up: "Subiu de nível! Axion evoluiu junto com você!",
   goal_completed: "Meta concluída! Axion esta comemorando essa conquista!",
 };
 
 const AXION_CELEBRATION_BADGES: Record<AxionCelebrationType, string> = {
-  streak_7: "Streak 7",
-  streak_30: "Streak 30",
-  level_up: "Level Up",
+  streak_7: "Sequência 7",
+  streak_30: "Sequência 30",
+  level_up: "Subiu de nível",
   goal_completed: "Meta Concluída",
 };
 
@@ -105,6 +105,7 @@ export default function ChildPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [childId, setChildId] = useState<number | null>(null);
+  const [childName, setChildName] = useState<string>("");
   const [isSchoolTenant, setIsSchoolTenant] = useState(false);
   const [tasks, setTasks] = useState<ChildTask[]>([]);
   const [streak, setStreak] = useState<StreakResponse | null>(null);
@@ -158,6 +159,10 @@ export default function ChildPage() {
       router.push("/select-child");
       return;
     }
+    const rawChildName = localStorage.getItem("axiora_child_name");
+    if (rawChildName) {
+      setChildName(rawChildName);
+    }
     setChildId(parsedChildId);
     setSoundEnabled(getChildSoundEnabled(parsedChildId));
     const savedTaskView = localStorage.getItem("axiora_task_view");
@@ -191,12 +196,16 @@ export default function ChildPage() {
           }
           const fallbackChild = data.child_profiles[0];
           localStorage.setItem("axiora_child_id", String(fallbackChild.id));
+          localStorage.setItem("axiora_child_name", fallbackChild.display_name);
           setChildId(fallbackChild.id);
+          setChildName(fallbackChild.display_name);
           setTheme(fallbackChild.theme);
           setAvatarStage(fallbackChild.avatar_stage);
           return;
         }
         if (child) {
+          localStorage.setItem("axiora_child_name", child.display_name);
+          setChildName(child.display_name);
           setTheme(child.theme);
           setAvatarStage(child.avatar_stage);
         }
@@ -453,7 +462,7 @@ export default function ChildPage() {
   const onSelectMood = async (mood: MoodType): Promise<boolean> => {
     if (childId === null) {
       setMoodError("Selecione um perfil infantil para registrar humor.");
-      showToast("Selecione a crianca primeiro", "error");
+      showToast("Selecione a criança primeiro", "error");
       return false;
     }
 
@@ -471,7 +480,7 @@ export default function ChildPage() {
       showToast("Humor atualizado", "success");
       return true;
     } catch {
-      setMoodError("Nao foi possível salvar humor agora.");
+      setMoodError("Não foi possível salvar humor agora.");
       setTransientFeedback(setMoodFeedback, moodFeedbackTimerRef, "error");
       return false;
     }
@@ -568,7 +577,7 @@ export default function ChildPage() {
       await enqueueDailyMissionComplete({ mission_id: dailyMission.id });
       setDailyMission((prev) => (prev ? { ...prev, status: "completed" } : prev));
       setTransientFeedback(setMissionFeedback, missionFeedbackTimerRef, "success");
-      showToast("Missão concluida offline. Vai sincronizar ao reconectar.", "success");
+      showToast("Missão concluída offline. Vai sincronizar ao reconectar.", "success");
       setMissionCompleting(false);
       return;
     }
@@ -577,7 +586,7 @@ export default function ChildPage() {
       await completeDailyMission(dailyMission.id);
       setDailyMission((prev) => (prev ? { ...prev, status: "completed" } : prev));
       setTransientFeedback(setMissionFeedback, missionFeedbackTimerRef, "success");
-      showToast("Missão concluida!", "success");
+      showToast("Missão concluída!", "success");
       if (childId !== null) {
         void getLevels(childId).then((data) => {
           lastKnownLevelRef.current = data.level;
@@ -598,7 +607,7 @@ export default function ChildPage() {
         showToast("Sem conexao. Missão enfileirada para sincronizar.", "success");
       } else {
         setTransientFeedback(setMissionFeedback, missionFeedbackTimerRef, "error");
-        showToast(getApiErrorMessage(err, "Nao foi possível concluir Missão."), "error");
+        showToast(getApiErrorMessage(err, "Não foi possível concluir a missão."), "error");
       }
     } finally {
       setMissionCompleting(false);
@@ -636,6 +645,18 @@ export default function ChildPage() {
     return "border-border bg-muted text-muted-foreground";
   };
 
+  const missionRarityLabel = (rarity: DailyMissionResponse["rarity"]) => {
+    if (rarity === "epic") return "Épica";
+    if (rarity === "special") return "Especial";
+    return "Normal";
+  };
+
+  const routineStatusLabel = (status: RoutineWeekLog["status"]) => {
+    if (status === "APPROVED") return "Aprovada";
+    if (status === "REJECTED") return "Rejeitada";
+    return "Pendente";
+  };
+
   const missionCardClass = (status: DailyMissionResponse["status"]) => {
     if (status === "completed") {
       return "border-secondary/35 bg-secondary/10";
@@ -654,7 +675,8 @@ export default function ChildPage() {
           isSchoolTenant ? "max-w-md md:max-w-3xl" : "max-w-md md:max-w-2xl",
         )}
       >
-        <div className="mb-3 flex justify-end">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="truncate text-sm font-medium text-muted-foreground">{childName ? `Perfil: ${childName}` : "Perfil infantil"}</p>
           <button
             type="button"
             aria-label="Abrir modo pais"
@@ -675,7 +697,7 @@ export default function ChildPage() {
                       dailyMission.rarity,
                     )}`}
                   >
-                    {dailyMission.rarity}
+                    {missionRarityLabel(dailyMission.rarity)}
                   </span>
                 ) : null}
               </div>
@@ -698,7 +720,7 @@ export default function ChildPage() {
                   {dailyMission.status === "completed" ? (
                     <div className="flex items-center justify-center gap-1 rounded-xl border border-secondary/35 bg-secondary/10 px-3 py-2 text-sm font-semibold text-secondary">
                       <CheckCircle2 className="h-3.5 w-3.5" />
-                      Missão concluida
+                      Missão concluída
                     </div>
                   ) : null}
                   <ActionFeedback
@@ -709,14 +731,14 @@ export default function ChildPage() {
                     className="w-full rounded-xl bg-primary px-3 py-2.5 text-sm font-bold text-primary-foreground shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => void onCompleteDailyMission()}
                   >
-                    {dailyMission.status === "completed" ? "Concluida" : "Completar Missão"}
+                    {dailyMission.status === "completed" ? "Concluída" : "Completar missão"}
                   </ActionFeedback>
                 </>
               ) : (
                 <div className="rounded-xl border border-border bg-muted px-3 py-4 text-center">
                   <p className="text-sm font-medium text-foreground">Missão indisponível no momento</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {missionLoadError ? "Nao foi possível carregar a Missão de hoje." : "Missão ainda nao foi gerada para este perfil."}
+                    {missionLoadError ? "Não foi possível carregar a missão de hoje." : "Missão ainda não foi gerada para este perfil."}
                   </p>
                 </div>
               )}
@@ -755,7 +777,7 @@ export default function ChildPage() {
               reducedMotion={isSchoolTenant}
             />
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-              <span className="rounded-xl border border-border bg-background px-2 py-1">Stage {axionState?.stage ?? 1}</span>
+              <span className="rounded-xl border border-border bg-background px-2 py-1">Estágio {axionState?.stage ?? 1}</span>
               <span className="rounded-xl border border-border bg-background px-2 py-1">{axionState?.mood_state ?? "NEUTRAL"}</span>
             </div>
           </CardContent>
@@ -765,7 +787,7 @@ export default function ChildPage() {
             <Card className="bg-card">
               <CardHeader className="p-5 md:p-6">
                 <div className="flex items-center justify-between gap-3">
-                  <CardTitle className="text-base">Ready for today&apos;s mission?</CardTitle>
+                  <CardTitle className="text-base">Pronto para a missão de hoje?</CardTitle>
                   <button
                     type="button"
                     aria-label="Fechar boas-vindas"
@@ -778,17 +800,17 @@ export default function ChildPage() {
               </CardHeader>
               <CardContent className="space-y-3 p-5 pt-0 text-sm md:p-6 md:pt-0">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Streak</span>
+                  <span className="text-muted-foreground">Sequência</span>
                   <span className="font-semibold">{streakCount} dias</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Main goal</span>
+                  <span className="text-muted-foreground">Meta principal</span>
                   <span className="text-right font-semibold">
                     {activeGoal ? `${activeGoal.title} • ${formatBRL(activeGoal.target_cents)}` : "Sem meta"}
                   </span>
                 </div>
                 <div>
-                  <p className="mb-2 text-sm text-muted-foreground">Quick mood</p>
+                  <p className="mb-2 text-sm text-muted-foreground">Humor rápido</p>
                   <div className="flex items-center gap-2">
                     {MOOD_OPTIONS.map((option) => (
                       <ActionFeedback
@@ -823,7 +845,7 @@ export default function ChildPage() {
                   className="text-sm text-muted-foreground underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
                   onClick={onToggleSound}
                 >
-                  Sound: {soundEnabled ? "on" : "off"}
+                  Som: {soundEnabled ? "ligado" : "desligado"}
                 </button>
               </div>
             </CardHeader>
@@ -895,7 +917,7 @@ export default function ChildPage() {
                 <div className="mb-2 flex items-center justify-between text-sm">
                   <span className="font-medium text-foreground">XP</span>
                   <span className="font-medium text-muted-foreground">
-                    Nvel {level?.level ?? 1} • {xpBarPercent.toFixed(0)}%
+                    Nível {level?.level ?? 1} • {xpBarPercent.toFixed(0)}%
                   </span>
                 </div>
                 <div className="h-3 overflow-hidden rounded-full bg-muted">
@@ -920,25 +942,25 @@ export default function ChildPage() {
                     className={`rounded-xl px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${taskView === "list" ? "bg-primary/10 text-foreground" : "text-muted-foreground"}`}
                     onClick={() => onToggleTaskView("list")}
                   >
-                    List View
+                    Lista
                   </button>
                   <button
                     type="button"
                     className={`rounded-xl px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${taskView === "journey" ? "bg-primary/10 text-foreground" : "text-muted-foreground"}`}
                     onClick={() => onToggleTaskView("journey")}
                   >
-                    Journey View
+                    Jornada
                   </button>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Flame className={`${isSchoolTenant ? "" : "flame-flicker"} ${flameClassName} text-accent`} />
-                <span className="font-medium text-accent-foreground">Streak: {streakCount} dias</span>
+                <span className="font-medium text-accent-foreground">Sequência: {streakCount} dias</span>
                 {streak?.freeze_used_today ? <Snowflake className="h-3.5 w-3.5 text-secondary" /> : null}
               </div>
               <div className="space-y-2">
                 {tasksLoadError ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">Nao foi possível carregar tarefas agora.</p>
+                  <p className="py-6 text-center text-sm text-muted-foreground">Não foi possível carregar tarefas agora.</p>
                 ) : tasks.length === 0 ? (
                   <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma tarefa ativa para hoje.</p>
                 ) : (
@@ -959,7 +981,9 @@ export default function ChildPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           {status ? (
-                            <span className={`rounded-xl px-2 py-0.5 text-sm font-semibold ${statusBadgeClass(status)}`}>{status}</span>
+                            <span className={`rounded-xl px-2 py-0.5 text-sm font-semibold ${statusBadgeClass(status)}`}>
+                              {routineStatusLabel(status)}
+                            </span>
                           ) : null}
                           <ActionFeedback
                             type="button"
@@ -978,13 +1002,15 @@ export default function ChildPage() {
                 )}
               </div>
               {routineLogs.length === 0 ? (
-                <p className="py-4 text-center text-sm text-muted-foreground">Sem checkpoints da semana ainda.</p>
+                <p className="py-4 text-center text-sm text-muted-foreground">Sem registros da semana ainda.</p>
               ) : taskView === "list" ? (
                 <div className="space-y-2">
                   {routineLogs.map((log) => (
                     <div key={log.id} className="flex items-center justify-between rounded-xl border border-border px-2 py-1">
-                      <span className="text-sm">Task #{log.task_id}</span>
-                      <span className={`rounded-xl px-2 py-0.5 text-sm font-semibold ${statusBadgeClass(log.status)}`}>{log.status}</span>
+                      <span className="text-sm">Tarefa #{log.task_id}</span>
+                      <span className={`rounded-xl px-2 py-0.5 text-sm font-semibold ${statusBadgeClass(log.status)}`}>
+                        {routineStatusLabel(log.status)}
+                      </span>
                     </div>
                   ))}
                 </div>

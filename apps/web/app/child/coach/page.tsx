@@ -14,7 +14,7 @@ export default function ChildCoachPage() {
     const rawChildId = localStorage.getItem("axiora_child_id");
     const parsedChildId = Number(rawChildId);
     if (!rawChildId || !Number.isFinite(parsedChildId)) {
-      setMessage("Selecione uma crianca para usar o coach.");
+      setMessage("Selecione uma criança para usar o Axion.");
       setLoading(false);
       return;
     }
@@ -24,7 +24,7 @@ export default function ChildCoachPage() {
         setMessage(data.reply);
       })
       .catch(() => {
-        setMessage("Nao foi possível carregar o coach agora.");
+        setMessage("Não foi possível carregar o Axion agora.");
       })
       .finally(() => {
         setLoading(false);
@@ -35,7 +35,7 @@ export default function ChildCoachPage() {
     <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 pb-24 md:p-6 md:pb-24">
       <Card>
         <CardHeader>
-          <CardTitle>Coach</CardTitle>
+          <CardTitle>Axion</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           <p>{message}</p>

@@ -7,8 +7,8 @@ import { memo } from "react";
 
 const NAV_ITEMS = [
   { href: "/child", label: "Inicio", icon: Home },
-  { href: "/child/stickers", label: "Stickers", icon: Star },
-  { href: "/child/coach", label: "Coach", icon: Sparkles },
+  { href: "/child/stickers", label: "Figurinhas", icon: Star },
+  { href: "/child/coach", label: "Axion", icon: Sparkles },
 ] as const;
 
 function ChildBottomNavComponent() {

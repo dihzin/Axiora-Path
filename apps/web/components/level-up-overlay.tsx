@@ -40,7 +40,7 @@ export function LevelUpOverlay({ level, onDismiss }: LevelUpOverlayProps) {
             />
           ))}
         </div>
-        <p className="relative text-sm font-semibold uppercase tracking-[0.22em] text-secondary">Level Up!</p>
+        <p className="relative text-sm font-semibold uppercase tracking-[0.22em] text-secondary">Subiu de nível!</p>
         <p className="relative mt-2 text-6xl font-black leading-none">Lv {level}</p>
         <button
           type="button"
@@ -48,7 +48,7 @@ export function LevelUpOverlay({ level, onDismiss }: LevelUpOverlayProps) {
           className="relative mt-5 rounded-xl border border-border bg-background px-4 py-2 text-sm font-semibold transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
           onClick={onDismiss}
         >
-          Dismiss
+          Fechar
         </button>
       </div>
     </div>

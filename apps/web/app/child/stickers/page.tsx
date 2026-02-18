@@ -57,10 +57,10 @@ export default function StickerGalleryPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Sticker Gallery</CardTitle>
+          <CardTitle>Galeria de figurinhas</CardTitle>
         </CardHeader>
         <CardContent>
-          {childId === null ? <p className="text-sm text-muted-foreground">Selecione uma crianca primeiro.</p> : null}
+          {childId === null ? <p className="text-sm text-muted-foreground">Selecione uma criança primeiro.</p> : null}
 
           <div className="grid grid-cols-3 gap-3">
             {items.map((item) => {
@@ -75,7 +75,7 @@ export default function StickerGalleryPage() {
                 >
                   <div className="text-3xl">{ICON_MAP[item.icon_key] ?? "⭐"}</div>
                   <p className="mt-2 text-xs font-semibold">{item.title}</p>
-                  <p className="mt-1 text-[10px] text-muted-foreground">{unlocked ? item.description : "Locked"}</p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">{unlocked ? item.description : "Bloqueada"}</p>
                 </div>
               );
             })}

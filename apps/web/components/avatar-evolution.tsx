@@ -9,7 +9,7 @@ export function AvatarEvolution({ stage }: AvatarEvolutionProps) {
 
   return (
     <div className={`mx-auto w-fit rounded-xl border border-border bg-card p-3 ${safeStage >= 3 ? "avatar-stage-3" : ""}`}>
-      <svg viewBox="0 0 120 120" className="h-24 w-24" role="img" aria-label={`Avatar stage ${safeStage}`}>
+      <svg viewBox="0 0 120 120" className="h-24 w-24" role="img" aria-label={`Evolução do avatar estágio ${safeStage}`}>
         <circle cx="60" cy="60" r="42" fill="#2F5D50" />
         <circle cx="60" cy="48" r="18" fill="#D6A756" />
         <rect x="42" y="66" width="36" height="24" rx="12" fill="#1E2A38" />
@@ -31,7 +31,7 @@ export function AvatarEvolution({ stage }: AvatarEvolutionProps) {
           </>
         ) : null}
       </svg>
-      <p className="mt-2 text-center text-sm font-medium text-muted-foreground">Avatar Stage {safeStage}</p>
+      <p className="mt-2 text-center text-sm font-medium text-muted-foreground">Estágio do avatar {safeStage}</p>
     </div>
   );
 }

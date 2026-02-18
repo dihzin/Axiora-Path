@@ -102,7 +102,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     } catch {
       throw new ApiError("Network error", 0, {
         code: "NETWORK_ERROR",
-        message: "Nao foi possivel conectar ao servidor",
+        message: "Não foi possível conectar ao servidor",
       });
     }
   };
@@ -143,6 +143,24 @@ export type OrganizationMembership = {
   tenant_slug: string;
   tenant_type: "FAMILY" | "SCHOOL";
   onboarding_completed: boolean;
+};
+
+export type ChildProfileSummary = {
+  id: number;
+  display_name: string;
+  avatar_key: string | null;
+  birth_year: number | null;
+  theme: ThemeName;
+  avatar_stage: number;
+};
+
+export type TaskOut = {
+  id: number;
+  title: string;
+  description?: string | null;
+  difficulty: "EASY" | "MEDIUM" | "HARD" | "LEGENDARY";
+  weight: number;
+  is_active: boolean;
 };
 
 export type StreakResponse = {
@@ -301,9 +319,82 @@ export async function listMemberships(): Promise<OrganizationMembership[]> {
   return apiRequest<OrganizationMembership[]>("/auth/memberships", { method: "GET", requireAuth: true, includeTenant: false });
 }
 
-export async function getTasks(): Promise<Array<{ id: number; title: string; difficulty: string; weight: number; is_active: boolean }>> {
-  return apiRequest<Array<{ id: number; title: string; difficulty: string; weight: number; is_active: boolean }>>("/tasks", {
+export async function listChildren(): Promise<ChildProfileSummary[]> {
+  return apiRequest<ChildProfileSummary[]>("/children", {
     method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function createChild(payload: {
+  display_name: string;
+  birth_year?: number | null;
+  theme: ThemeName;
+}): Promise<ChildProfileSummary> {
+  return apiRequest<ChildProfileSummary>("/children", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function updateChild(
+  childId: number,
+  payload: { display_name: string; birth_year?: number | null; theme: ThemeName },
+): Promise<ChildProfileSummary> {
+  return apiRequest<ChildProfileSummary>(`/children/${childId}`, {
+    method: "PUT",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getTasks(): Promise<TaskOut[]> {
+  return apiRequest<TaskOut[]>("/tasks", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function createTask(payload: {
+  title: string;
+  description?: string | null;
+  difficulty: "EASY" | "MEDIUM" | "HARD" | "LEGENDARY";
+  weight: number;
+}): Promise<TaskOut> {
+  return apiRequest<TaskOut>("/tasks", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function updateTask(
+  taskId: number,
+  payload: {
+    title: string;
+    description?: string | null;
+    difficulty: "EASY" | "MEDIUM" | "HARD" | "LEGENDARY";
+    weight: number;
+    is_active: boolean;
+  },
+): Promise<TaskOut> {
+  return apiRequest<TaskOut>(`/tasks/${taskId}`, {
+    method: "PUT",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function deleteTask(taskId: number): Promise<TaskOut> {
+  return apiRequest<TaskOut>(`/tasks/${taskId}`, {
+    method: "DELETE",
     requireAuth: true,
     includeTenant: true,
   });

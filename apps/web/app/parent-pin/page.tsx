@@ -21,13 +21,13 @@ export default function ParentPinPage() {
     try {
       const result = await verifyParentPin(pin);
       if (!result.verified) {
-        setError("PIN invalido.");
+        setError("PIN inválido.");
         return;
       }
       sessionStorage.setItem("axiora_parent_pin_ok", "1");
       router.push("/parent");
     } catch (err) {
-      setError(getApiErrorMessage(err, "Nao foi possível validar PIN agora."));
+      setError(getApiErrorMessage(err, "Não foi possível validar PIN agora."));
     } finally {
       setLoading(false);
     }

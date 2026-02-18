@@ -39,7 +39,7 @@ export default function LoginPage() {
       setRefreshToken(tokens.refresh_token);
       router.push("/select-tenant");
     } catch {
-      setError("Nao foi possível autenticar. Verifique organização, email e senha.");
+      setError("Não foi possível autenticar. Verifique organização, email e senha.");
     } finally {
       setLoading(false);
     }

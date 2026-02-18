@@ -25,7 +25,7 @@ type OnboardingDraft = {
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const [childName, setChildName] = useState("Child 2");
+  const [childName, setChildName] = useState("Criança 2");
   const [splitSpend, setSplitSpend] = useState(50);
   const [splitSave, setSplitSave] = useState(30);
   const [splitDonate, setSplitDonate] = useState(20);
@@ -95,11 +95,11 @@ export default function OnboardingPage() {
   };
 
   const getStepError = (currentStep: number): string | null => {
-    if (currentStep === 1 && childName.trim().length === 0) return "Informe o nome da crianca.";
+    if (currentStep === 1 && childName.trim().length === 0) return "Informe o nome da criança.";
     if (currentStep === 2 && splitTotal !== 100) return "A divisao precisa somar 100.";
     if (currentStep === 4) {
       const monthlyAllowance = Number(allowance);
-      if (!Number.isFinite(monthlyAllowance) || monthlyAllowance < 0) return "Allowance invalido.";
+      if (!Number.isFinite(monthlyAllowance) || monthlyAllowance < 0) return "Mesada inválida.";
     }
     if (currentStep === 5 && !legalAccepted) return "Você precisa aceitar os Termos e a Privacidade para continuar.";
     return null;
@@ -113,7 +113,7 @@ export default function OnboardingPage() {
     }
     const monthlyAllowance = Number(allowance);
     if (!Number.isFinite(monthlyAllowance) || monthlyAllowance < 0) {
-      setError("Allowance invalido.");
+      setError("Mesada inválida.");
       return;
     }
     if (!legalAccepted) {
@@ -142,7 +142,7 @@ export default function OnboardingPage() {
       localStorage.removeItem(ONBOARDING_DRAFT_KEY);
       router.push("/parent");
     } catch (err) {
-      setError(getApiErrorMessage(err, "Nao foi possível concluir onboarding."));
+      setError(getApiErrorMessage(err, "Não foi possível concluir onboarding."));
     } finally {
       setLoading(false);
     }
@@ -152,31 +152,31 @@ export default function OnboardingPage() {
     <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 md:p-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Onboarding {step}/{TOTAL_STEPS}</CardTitle>
+          <CardTitle className="text-base">Configuração inicial {step}/{TOTAL_STEPS}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           {step === 1 ? (
             <div className="space-y-2">
-              <p>Step 1: Create child</p>
-              <Input value={childName} onChange={(e) => setChildName(e.target.value)} placeholder="Child name" />
+              <p>Passo 1: Criar perfil infantil</p>
+              <Input value={childName} onChange={(e) => setChildName(e.target.value)} placeholder="Nome da criança" />
             </div>
           ) : null}
 
           {step === 2 ? (
             <div className="space-y-2">
-              <p>Step 2: Choose reward split</p>
+              <p>Passo 2: Definir divisão de recompensas</p>
               <div className="grid grid-cols-3 gap-2">
                 <Input type="number" value={splitSpend} onChange={(e) => setSplitSpend(Number(e.target.value) || 0)} />
                 <Input type="number" value={splitSave} onChange={(e) => setSplitSave(Number(e.target.value) || 0)} />
                 <Input type="number" value={splitDonate} onChange={(e) => setSplitDonate(Number(e.target.value) || 0)} />
               </div>
-              <p className="text-xs text-muted-foreground">SPEND / SAVE / DONATE (total {splitTotal})</p>
+              <p className="text-xs text-muted-foreground">GASTAR / GUARDAR / DOAR (total {splitTotal})</p>
             </div>
           ) : null}
 
           {step === 3 ? (
             <div className="space-y-2">
-              <p>Step 3: Review default tasks</p>
+              <p>Passo 3: Revisar tarefas padrão</p>
               <div className="space-y-1">
                 {tasks.map((task) => (
                   <div key={task.id} className="rounded-md border border-border px-2 py-1 text-xs">
@@ -189,7 +189,7 @@ export default function OnboardingPage() {
 
           {step === 4 ? (
             <div className="space-y-2">
-              <p>Step 4: Set monthly allowance</p>
+              <p>Passo 4: Definir mesada mensal</p>
               <Input type="number" value={allowance} onChange={(e) => setAllowance(e.target.value)} placeholder="10000" />
               <p className="text-xs text-muted-foreground">Valor em centavos.</p>
             </div>
@@ -197,10 +197,10 @@ export default function OnboardingPage() {
 
           {step === 5 ? (
             <div className="space-y-3">
-              <p>Step 5: Terms and Privacy</p>
+              <p>Passo 5: Termos e Privacidade</p>
               <div className="space-y-2 rounded-md border border-border p-3 text-xs text-muted-foreground">
                 <p>
-                  Ao continuar, você confirma que leu e aceita os Termos de Uso e a Politica de Privacidade da organização.
+                  Ao continuar, você confirma que leu e aceita os Termos de Uso e a Política de Privacidade da organização.
                 </p>
                 <p>Resumo: uso educacional familiar, tratamento de dados de rotina e retencao conforme politica vigente.</p>
               </div>
@@ -211,14 +211,14 @@ export default function OnboardingPage() {
                   onChange={(e) => setLegalAccepted(e.target.checked)}
                   className="mt-0.5 h-4 w-4 rounded border-border"
                 />
-                <span>Li e aceito os Termos e a Politica de Privacidade.</span>
+                <span>Li e aceito os Termos e a Política de Privacidade.</span>
               </label>
             </div>
           ) : null}
 
           {step === 6 ? (
             <div className="space-y-2">
-              <p>Step 6: Set Parent PIN</p>
+              <p>Passo 6: Definir PIN dos pais</p>
               <Input type="password" inputMode="numeric" value={parentPin} onChange={(e) => setParentPin(e.target.value)} />
             </div>
           ) : null}
@@ -227,7 +227,7 @@ export default function OnboardingPage() {
 
           <div className="flex gap-2">
             <Button type="button" variant="outline" disabled={step === 1 || loading} onClick={() => setStep((s) => s - 1)}>
-              Back
+              Voltar
             </Button>
             {step < TOTAL_STEPS ? (
               <Button
@@ -243,7 +243,7 @@ export default function OnboardingPage() {
                   setStep((s) => s + 1);
                 }}
               >
-                Next
+                Próximo
               </Button>
             ) : (
               <Button type="button" disabled={loading} onClick={() => void onFinish()}>

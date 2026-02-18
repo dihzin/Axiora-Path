@@ -11,7 +11,7 @@ export function WeeklyBossMeter({ completionRate }: WeeklyBossMeterProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-5 shadow-sm md:p-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium">Weekly Boss Meter</p>
+        <p className="text-sm font-medium">Medidor de desafio semanal</p>
         <p className="text-sm font-medium text-muted-foreground">{percent.toFixed(0)}%</p>
       </div>
       <div className="mt-2 h-3 overflow-hidden rounded-full bg-muted">
@@ -19,7 +19,7 @@ export function WeeklyBossMeter({ completionRate }: WeeklyBossMeterProps) {
       </div>
       {bossDefeated ? (
         <span className="mt-3 inline-flex rounded-xl bg-secondary/12 px-2 py-1 text-sm font-medium text-secondary">
-          Boss Defeated
+          Desafio concluído
         </span>
       ) : null}
     </div>

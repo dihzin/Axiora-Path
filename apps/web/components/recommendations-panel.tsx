@@ -32,7 +32,7 @@ export function RecommendationsPanel({ childId }: RecommendationsPanelProps) {
       setItems(data.filter((item) => item.dismissed_at === null));
     } catch {
       setItems([]);
-      setLoadError("Nao foi possivel carregar recomendacoes agora.");
+      setLoadError("Não foi possível carregar recomendações agora.");
     } finally {
       setLoading(false);
     }
@@ -49,7 +49,7 @@ export function RecommendationsPanel({ childId }: RecommendationsPanelProps) {
       await dismissRecommendation(id);
       setItems((current) => current.filter((item) => item.id !== id));
     } catch {
-      setDismissError("Nao foi possível dispensar recomendacao.");
+      setDismissError("Não foi possível dispensar recomendação.");
     } finally {
       setDismissingId(null);
     }
@@ -75,7 +75,7 @@ export function RecommendationsPanel({ childId }: RecommendationsPanelProps) {
             </div>
             <p className="text-xs text-muted-foreground">{item.body}</p>
             <Button className="mt-3" size="sm" variant="outline" onClick={() => void onDismiss(item.id)} disabled={dismissingId === item.id}>
-              {dismissingId === item.id ? "..." : "Dismiss"}
+              {dismissingId === item.id ? "..." : "Dispensar"}
             </Button>
           </div>
         ))}
