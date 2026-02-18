@@ -24,13 +24,19 @@ function ChildBottomNavComponent() {
             <Link
               key={item.href}
               aria-label={item.label}
-              className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-sm font-medium leading-tight transition ${
+              className={`flex min-w-0 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-sm font-semibold leading-tight transition-all ${
                 isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
               }`}
               href={item.href}
             >
-              <span className={`inline-flex items-center justify-center rounded-full p-1 ${isActive ? "bg-primary/10" : ""}`}>
-                <Icon className="h-5 w-5" />
+              <span
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-2xl border-2 transition-all ${
+                  isActive
+                    ? "border-primary/45 bg-primary/15 shadow-[0_3px_0_rgba(178,69,36,0.25)]"
+                    : "border-border bg-white shadow-[0_2px_0_rgba(184,200,239,0.7)]"
+                }`}
+              >
+                <Icon className={`h-5 w-5 ${isActive ? "stroke-[2.6]" : "stroke-[2.4]"}`} />
               </span>
               {item.label}
             </Link>

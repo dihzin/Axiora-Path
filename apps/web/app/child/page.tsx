@@ -743,10 +743,12 @@ export default function ChildPage() {
           <button
             type="button"
             aria-label="Abrir modo pais"
-            className="inline-flex items-center gap-1 rounded-xl border border-border px-2 py-1 text-sm text-muted-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+            className="inline-flex items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
             onClick={() => router.push("/parent-pin")}
           >
-            <Lock className="h-3.5 w-3.5" />
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-muted">
+              <Lock className="h-3.5 w-3.5 stroke-[2.6]" />
+            </span>
             Modo pais
           </button>
         </div>
@@ -772,11 +774,15 @@ export default function ChildPage() {
                   <p className="text-sm leading-relaxed text-muted-foreground">{dailyMission.description}</p>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2 py-1.5 text-sm font-semibold">
-                      <Sparkles className="h-3.5 w-3.5 text-secondary" />
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-secondary/15">
+                        <Sparkles className="h-3.5 w-3.5 stroke-[2.6] text-secondary" />
+                      </span>
                       +{dailyMission.xp_reward} XP
                     </div>
                     <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2 py-1.5 text-sm font-semibold">
-                      <Coins className="h-3.5 w-3.5 text-accent" />
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-accent/20">
+                        <Coins className="h-3.5 w-3.5 stroke-[2.6] text-accent-foreground" />
+                      </span>
                       +{dailyMission.coin_reward} moedas
                     </div>
                   </div>
@@ -856,10 +862,10 @@ export default function ChildPage() {
                   <button
                     type="button"
                     aria-label="Fechar boas-vindas"
-                    className="text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-xl border border-border bg-white text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
                     onClick={dismissDailyWelcome}
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-4 w-4 stroke-[2.6]" />
                   </button>
                 </div>
               </CardHeader>
@@ -979,7 +985,9 @@ export default function ChildPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Flame className={`${isSchoolTenant ? "" : "flame-flicker"} ${flameClassName} text-accent`} />
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-xl border border-border bg-white shadow-[0_2px_0_rgba(184,200,239,0.6)]">
+                  <Flame className={`${isSchoolTenant ? "" : "flame-flicker"} ${flameClassName} stroke-[2.6] text-accent`} />
+                </span>
                 <span className="font-medium text-accent-foreground">Sequência: {streakCount} dias</span>
                 {streak?.freeze_used_today ? <Snowflake className="h-3.5 w-3.5 text-secondary" /> : null}
               </div>
