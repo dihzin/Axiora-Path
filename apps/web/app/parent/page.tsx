@@ -7,6 +7,7 @@ import {
   ArrowUpRight,
   Baby,
   Building2,
+  CheckCircle2,
   LogOut,
   Pencil,
   Plus,
@@ -18,6 +19,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import { StatusNotice } from "@/components/ui/status-notice";
 import {
   createChild,
   createTask,
@@ -72,6 +75,13 @@ function TrendIndicator({ value }: { value: number }) {
       {Math.abs(value).toFixed(1)}%
     </span>
   );
+}
+
+function formatBRL(valueCents: number): string {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(valueCents / 100);
 }
 
 export default function ParentPage() {
@@ -442,6 +452,8 @@ export default function ParentPage() {
     return null;
   }
 
+  const selectedChild = children.find((child) => child.id === selectedChildId) ?? null;
+
   return (
     <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 md:p-6">
       <header className="mb-3 flex items-center justify-between gap-2">
@@ -458,6 +470,7 @@ export default function ParentPage() {
               variant="outline"
               aria-haspopup="menu"
               aria-expanded={profileMenuOpen}
+              className="duo-icon-button h-10 w-10 border-0 p-0"
               onClick={() => setProfileMenuOpen((prev) => !prev)}
             >
               <UserCircle2 className="h-4 w-4" />
@@ -489,13 +502,21 @@ export default function ParentPage() {
         </div>
       </header>
 
+      {selectedChild ? (
+        <div className="mb-3">
+          <StatusNotice tone="info">
+            Perfil ativo: <strong className="ml-1">{selectedChild.display_name}</strong>
+          </StatusNotice>
+        </div>
+      ) : null}
+
       <section className="space-y-3">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Crianças vinculadas</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            {children.length === 0 ? <p className="text-muted-foreground">Nenhuma criança cadastrada ainda.</p> : null}
+            {children.length === 0 ? <StatusNotice tone="warning">Nenhuma criança cadastrada ainda.</StatusNotice> : null}
             {children.map((child) => (
               <div
                 key={child.id}
@@ -503,7 +524,10 @@ export default function ParentPage() {
               >
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <p className="font-medium">{child.display_name}</p>
+                    <p className="font-medium">
+                      {child.display_name}
+                      {selectedChildId === child.id ? <span className="ml-2 text-xs text-secondary">ativa</span> : null}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       Ano nascimento: {child.birth_year ?? "Não informado"} • Tema: {THEME_LABELS[child.theme]}
                     </p>
@@ -512,9 +536,10 @@ export default function ParentPage() {
                     <Button size="sm" variant="outline" onClick={() => void onSelectChild(child)}>
                       Selecionar
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => startEditChild(child)}>
+                    <Button size="sm" variant="outline" className="duo-icon-button h-9 w-9 border-0 p-0" onClick={() => startEditChild(child)}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
+                    {selectedChildId === child.id ? <CheckCircle2 className="h-4 w-4 text-secondary" /> : null}
                   </div>
                 </div>
               </div>
@@ -531,17 +556,13 @@ export default function ParentPage() {
                     value={editingChildBirthYear}
                     onChange={(e) => setEditingChildBirthYear(e.target.value)}
                   />
-                  <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={editingChildTheme}
-                    onChange={(e) => setEditingChildTheme(e.target.value as ThemeName)}
-                  >
+                  <NativeSelect value={editingChildTheme} onChange={(e) => setEditingChildTheme(e.target.value as ThemeName)}>
                     {THEME_OPTIONS.map((theme) => (
                       <option key={theme} value={theme}>
                         {THEME_LABELS[theme]}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelect>
                   <div className="flex items-center gap-2">
                     <Button size="sm" onClick={() => void onSaveChild()} disabled={savingChild}>
                       <Save className="mr-1 h-3.5 w-3.5" />
@@ -565,30 +586,26 @@ export default function ParentPage() {
                   value={newChildBirthYear}
                   onChange={(e) => setNewChildBirthYear(e.target.value)}
                 />
-                <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={newChildTheme}
-                  onChange={(e) => setNewChildTheme(e.target.value as ThemeName)}
-                >
+                <NativeSelect value={newChildTheme} onChange={(e) => setNewChildTheme(e.target.value as ThemeName)}>
                   {THEME_OPTIONS.map((theme) => (
                     <option key={theme} value={theme}>
                       {THEME_LABELS[theme]}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
                 <Button size="sm" onClick={() => void onCreateChild()} disabled={creatingChild}>
                   <Plus className="mr-1 h-3.5 w-3.5" />
                   {creatingChild ? "Criando..." : "Criar acesso da criança"}
                 </Button>
               </div>
             </div>
-            {childActionError ? <p className="text-xs text-destructive">{childActionError}</p> : null}
+            {childActionError ? <StatusNotice tone="error">{childActionError}</StatusNotice> : null}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Aprovacoes pendentes</CardTitle>
+            <CardTitle className="text-base">Aprovações pendentes</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div className="flex items-center justify-between">
@@ -612,7 +629,10 @@ export default function ParentPage() {
                 </Button>
               </div>
             ))}
-            {dashboardError ? <p className="text-xs text-destructive">{dashboardError}</p> : null}
+            {pendingLogs.length === 0 && !dashboardError ? (
+              <StatusNotice tone="info">Sem pendências de aprovação para a criança ativa.</StatusNotice>
+            ) : null}
+            {dashboardError ? <StatusNotice tone="error">{dashboardError}</StatusNotice> : null}
           </CardContent>
         </Card>
 
@@ -621,10 +641,10 @@ export default function ParentPage() {
             <CardTitle className="text-base">Resumo da carteira</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
-            <p>Total: {wallet ? `R$ ${(wallet.total_balance_cents / 100).toFixed(2)}` : "—"}</p>
-            <p className="text-muted-foreground">Gastar: {wallet ? `R$ ${(wallet.pot_balances_cents.SPEND / 100).toFixed(2)}` : "—"}</p>
-            <p className="text-muted-foreground">Guardar: {wallet ? `R$ ${(wallet.pot_balances_cents.SAVE / 100).toFixed(2)}` : "—"}</p>
-            <p className="text-muted-foreground">Doar: {wallet ? `R$ ${(wallet.pot_balances_cents.DONATE / 100).toFixed(2)}` : "—"}</p>
+            <p>Total: {wallet ? formatBRL(wallet.total_balance_cents) : "—"}</p>
+            <p className="text-muted-foreground">Gastar: {wallet ? formatBRL(wallet.pot_balances_cents.SPEND) : "—"}</p>
+            <p className="text-muted-foreground">Guardar: {wallet ? formatBRL(wallet.pot_balances_cents.SAVE) : "—"}</p>
+            <p className="text-muted-foreground">Doar: {wallet ? formatBRL(wallet.pot_balances_cents.DONATE) : "—"}</p>
           </CardContent>
         </Card>
 
@@ -654,17 +674,13 @@ export default function ParentPage() {
               <div className="grid grid-cols-1 gap-2">
                 <Input placeholder="Título da tarefa" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} />
                 <div className="grid grid-cols-2 gap-2">
-                  <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={newTaskDifficulty}
-                    onChange={(e) => setNewTaskDifficulty(e.target.value as TaskOut["difficulty"])}
-                  >
+                  <NativeSelect value={newTaskDifficulty} onChange={(e) => setNewTaskDifficulty(e.target.value as TaskOut["difficulty"])}>
                     {DIFFICULTY_OPTIONS.map((item) => (
                       <option key={item} value={item}>
                         {DIFFICULTY_LABELS[item]}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelect>
                   <Input inputMode="numeric" placeholder="Peso" value={newTaskWeight} onChange={(e) => setNewTaskWeight(e.target.value)} />
                 </div>
                 <Button size="sm" onClick={() => void onCreateTask()} disabled={creatingTask}>
@@ -684,10 +700,10 @@ export default function ParentPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button size="sm" variant="outline" onClick={() => startEditTask(task)}>
+                    <Button size="sm" variant="outline" className="duo-icon-button h-9 w-9 border-0 p-0" onClick={() => startEditTask(task)}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => void onDeleteTask(task.id)}>
+                    <Button size="sm" variant="outline" className="duo-icon-button h-9 w-9 border-0 p-0" onClick={() => void onDeleteTask(task.id)}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -696,17 +712,13 @@ export default function ParentPage() {
                   <div className="mt-2 grid grid-cols-1 gap-2">
                     <Input value={editingTaskTitle} onChange={(e) => setEditingTaskTitle(e.target.value)} />
                     <div className="grid grid-cols-2 gap-2">
-                      <select
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        value={editingTaskDifficulty}
-                        onChange={(e) => setEditingTaskDifficulty(e.target.value as TaskOut["difficulty"])}
-                      >
+                      <NativeSelect value={editingTaskDifficulty} onChange={(e) => setEditingTaskDifficulty(e.target.value as TaskOut["difficulty"])}>
                         {DIFFICULTY_OPTIONS.map((item) => (
                           <option key={item} value={item}>
                             {DIFFICULTY_LABELS[item]}
                           </option>
                         ))}
-                      </select>
+                      </NativeSelect>
                       <Input value={editingTaskWeight} onChange={(e) => setEditingTaskWeight(e.target.value)} inputMode="numeric" />
                     </div>
                     <label className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -727,7 +739,8 @@ export default function ParentPage() {
               </div>
             ))}
 
-            {taskActionError ? <p className="text-xs text-destructive">{taskActionError}</p> : null}
+            {tasks.length === 0 ? <StatusNotice tone="info">Nenhuma tarefa cadastrada ainda.</StatusNotice> : null}
+            {taskActionError ? <StatusNotice tone="error">{taskActionError}</StatusNotice> : null}
           </CardContent>
         </Card>
       </section>

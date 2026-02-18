@@ -5,37 +5,38 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["var(--font-ui)", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-ui)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       colors: {
-        border: "#DCE2E6",
-        input: "#DCE2E6",
-        ring: "#2F5D50",
-        background: "#FFFFFF",
-        foreground: "#1E2A38",
+        border: "#CFD9F3",
+        input: "#C8D4F0",
+        ring: "#0EA5A4",
+        background: "#F5F9FF",
+        foreground: "#1A2D4A",
         primary: {
-          DEFAULT: "#1E2A38",
+          DEFAULT: "#FF6B3D",
           foreground: "#FFFFFF",
         },
         secondary: {
-          DEFAULT: "#2F5D50",
+          DEFAULT: "#0EA5A4",
           foreground: "#FFFFFF",
         },
         accent: {
-          DEFAULT: "#D6A756",
-          foreground: "#1E2A38",
+          DEFAULT: "#FFC857",
+          foreground: "#1F1300",
         },
         muted: {
-          DEFAULT: "#F4F6F8",
-          foreground: "#2A3A4C",
+          DEFAULT: "#EAF1FF",
+          foreground: "#34507A",
         },
         destructive: {
-          DEFAULT: "#C04444",
+          DEFAULT: "#FF4B4B",
           foreground: "#FFFFFF",
         },
         card: {
           DEFAULT: "#FFFFFF",
-          foreground: "#1E2A38",
+          foreground: "#1A2D4A",
         },
       },
     },

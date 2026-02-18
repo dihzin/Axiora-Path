@@ -4,14 +4,16 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 
+import { AxioraAvatar } from "@/components/axiora/AxioraAvatar";
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAchievements, type AchievementItem } from "@/lib/api/client";
+import type { Mood } from "@/lib/types/mood";
 
-const ICON_MAP: Record<string, string> = {
-  flame_7: "🔥",
-  approved_10: "✅",
-  goal_1: "🏆",
+const ICON_MAP: Record<string, Mood> = {
+  flame_7: "angry",
+  approved_10: "happy",
+  goal_1: "neutral",
 };
 
 function toStorageKey(childId: number): string {
@@ -73,7 +75,9 @@ export default function StickerGalleryPage() {
                     unlocked ? "border-primary/40 bg-primary/10" : "border-border bg-background grayscale"
                   } ${isNew ? "sticker-unlock-pop" : ""}`}
                 >
-                  <div className="text-3xl">{ICON_MAP[item.icon_key] ?? "⭐"}</div>
+                  <div className="flex justify-center">
+                    <AxioraAvatar mood={ICON_MAP[item.icon_key] ?? "neutral"} size={40} />
+                  </div>
                   <p className="mt-2 text-xs font-semibold">{item.title}</p>
                   <p className="mt-1 text-[10px] text-muted-foreground">{unlocked ? item.description : "Bloqueada"}</p>
                 </div>

@@ -56,7 +56,7 @@ export function RecommendationsPanel({ childId }: RecommendationsPanelProps) {
   };
 
   return (
-    <Card>
+    <Card className="mb-6">
       <CardHeader>
         <CardTitle className="text-base">Recomendações</CardTitle>
       </CardHeader>

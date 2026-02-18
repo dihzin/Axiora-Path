@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { getApiErrorMessage, getMe, listMemberships, type OrganizationMembership } from "@/lib/api/client";
 import { getTenantSlug, setTenantSlug } from "@/lib/api/session";
 
@@ -109,9 +110,8 @@ export default function SelectTenantPage() {
                 <label className="text-sm font-medium" htmlFor="organization-select">
                   Organização
                 </label>
-                <select
+                <NativeSelect
                   id="organization-select"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
                   required
@@ -122,7 +122,7 @@ export default function SelectTenantPage() {
                       {item.tenant_name} ({item.tenant_type}) - {item.tenant_slug}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </div>
             ) : (
               <Input placeholder="ex: familia-silva" value={slug} onChange={(e) => setSlug(e.target.value)} required disabled={loading} />

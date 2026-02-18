@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Coins, Flame, Lock, Snowflake, Sparkles, X } from "lucide-react";
 
 import { ActionFeedback, type ActionFeedbackState } from "@/components/action-feedback";
+import { MoodSelector } from "@/components/axiora/MoodSelector";
 import { AxionCharacter } from "@/components/axion-character";
 import { AxionDialogue } from "@/components/axion-dialogue";
 import { AvatarEvolution } from "@/components/avatar-evolution";
@@ -15,6 +16,7 @@ import { PiggyJar } from "@/components/piggy-jar";
 import { RecommendationsPanel } from "@/components/recommendations-panel";
 import { WeeklyBossMeter } from "@/components/weekly-boss-meter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProgressBar } from "@/components/ui/progress-bar";
 import {
   ApiError,
   completeDailyMission,
@@ -48,15 +50,8 @@ import {
 import { enqueueDailyMissionComplete } from "@/lib/offline-queue";
 import { getSoundEnabled as getChildSoundEnabled, playSound, setSoundEnabled as setChildSoundEnabled } from "@/lib/sound-manager";
 import { THEME_LIST } from "@/lib/theme";
+import type { Mood } from "@/lib/types/mood";
 import { cn } from "@/lib/utils";
-
-const MOOD_OPTIONS: Array<{ mood: MoodType; emoji: string; label: string }> = [
-  { mood: "HAPPY", emoji: "😀", label: "Feliz" },
-  { mood: "OK", emoji: "🙂", label: "Bem" },
-  { mood: "SAD", emoji: "😕", label: "Triste" },
-  { mood: "ANGRY", emoji: "😠", label: "Bravo" },
-  { mood: "TIRED", emoji: "🥱", label: "Cansado" },
-];
 
 function formatBRL(valueCents: number): string {
   return new Intl.NumberFormat("pt-BR", {
@@ -77,6 +72,30 @@ function moodToAxionMoodState(mood: MoodType): string {
   return "NEUTRAL";
 }
 
+function formatShortDate(isoDate: string): string {
+  const today = new Date().toISOString().slice(0, 10);
+  if (isoDate === today) return "Hoje";
+  const parsed = new Date(`${isoDate}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return isoDate;
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(parsed);
+}
+
+function apiMoodToMood(mood: MoodType): Mood {
+  if (mood === "HAPPY") return "happy";
+  if (mood === "OK") return "neutral";
+  if (mood === "SAD") return "sad";
+  if (mood === "ANGRY") return "angry";
+  return "tired";
+}
+
+function moodToApiMood(mood: Mood): MoodType {
+  if (mood === "happy") return "HAPPY";
+  if (mood === "neutral") return "OK";
+  if (mood === "sad") return "SAD";
+  if (mood === "angry") return "ANGRY";
+  return "TIRED";
+}
+
 type ChildTask = {
   id: number;
   title: string;
@@ -88,18 +107,35 @@ type ChildTask = {
 type AxionCelebrationType = "streak_7" | "streak_30" | "level_up" | "goal_completed";
 
 const AXION_CELEBRATION_PHRASES: Record<AxionCelebrationType, string> = {
-  streak_7: "Sete dias seguidos! Axion esta em modo lenda!",
+  streak_7: "Sete dias seguidos! Axion está em modo lenda!",
   streak_30: "Trinta dias! Axion desbloqueou energia máxima!",
   level_up: "Subiu de nível! Axion evoluiu junto com você!",
-  goal_completed: "Meta concluída! Axion esta comemorando essa conquista!",
+  goal_completed: "Meta concluída! Axion está comemorando essa conquista!",
 };
 
 const AXION_CELEBRATION_BADGES: Record<AxionCelebrationType, string> = {
   streak_7: "Sequência 7",
   streak_30: "Sequência 30",
   level_up: "Subiu de nível",
-  goal_completed: "Meta Concluída",
+  goal_completed: "Meta concluída",
 };
+
+function taskDifficultyLabel(value: string): string {
+  if (value === "EASY") return "Fácil";
+  if (value === "MEDIUM") return "Média";
+  if (value === "HARD") return "Difícil";
+  if (value === "LEGENDARY") return "Lendária";
+  return value;
+}
+
+function axionMoodStateLabel(value: string): string {
+  if (value === "NEUTRAL") return "Neutro";
+  if (value === "CELEBRATING") return "Comemorando";
+  if (value === "CONCERNED") return "Atento";
+  if (value === "EXCITED") return "Animado";
+  if (value === "PROUD") return "Orgulhoso";
+  return value;
+}
 
 export default function ChildPage() {
   const router = useRouter();
@@ -108,13 +144,14 @@ export default function ChildPage() {
   const [childName, setChildName] = useState<string>("");
   const [isSchoolTenant, setIsSchoolTenant] = useState(false);
   const [tasks, setTasks] = useState<ChildTask[]>([]);
+  const [allTasks, setAllTasks] = useState<ChildTask[]>([]);
   const [streak, setStreak] = useState<StreakResponse | null>(null);
   const [walletSummary, setWalletSummary] = useState<WalletSummaryResponse | null>(null);
   const [goals, setGoals] = useState<GoalOut[]>([]);
   const [level, setLevel] = useState<LevelResponse | null>(null);
   const [weeklyMetrics, setWeeklyMetrics] = useState<WeeklyMetricsResponse | null>(null);
   const [routineLogs, setRoutineLogs] = useState<RoutineWeekLog[]>([]);
-  const [todayMood, setTodayMood] = useState<MoodType | null>(null);
+  const [todayMood, setTodayMood] = useState<Mood | null>(null);
   const [moodError, setMoodError] = useState<string | null>(null);
   const [xpBarPercent, setXpBarPercent] = useState(0);
   const [themeSaving, setThemeSaving] = useState(false);
@@ -173,10 +210,12 @@ export default function ChildPage() {
     setShowDailyWelcome(localStorage.getItem(welcomeKey) !== "1");
     getTasks()
       .then((data) => {
+        setAllTasks(data);
         setTasks(data.filter((task) => task.is_active));
         setTasksLoadError(false);
       })
       .catch(() => {
+        setAllTasks([]);
         setTasks([]);
         setTasksLoadError(true);
       });
@@ -254,7 +293,7 @@ export default function ChildPage() {
     getMood(parsedChildId)
       .then((data) => {
         const found = data.find((item) => item.date === todayIso);
-        setTodayMood(found?.mood ?? null);
+        setTodayMood(found ? apiMoodToMood(found.mood) : null);
       })
       .catch(() => {
         setTodayMood(null);
@@ -459,22 +498,23 @@ export default function ChildPage() {
     previousGoalRef.current = { id: activeGoal.id, isLocked: activeGoal.is_locked };
   }, [activeGoal?.id, activeGoal?.is_locked]);
 
-  const onSelectMood = async (mood: MoodType): Promise<boolean> => {
+  const onSelectMood = async (mood: Mood): Promise<boolean> => {
     if (childId === null) {
       setMoodError("Selecione um perfil infantil para registrar humor.");
       showToast("Selecione a criança primeiro", "error");
       return false;
     }
 
+    const apiMood = moodToApiMood(mood);
     setMoodError(null);
     setMoodFeedback("loading");
     try {
-      await postMood(childId, mood);
+      await postMood(childId, apiMood);
       setTodayMood(mood);
       setAxionState((prev) =>
         prev
-          ? { ...prev, mood_state: moodToAxionMoodState(mood) }
-          : { stage: 1, mood_state: moodToAxionMoodState(mood), personality_traits: [] },
+          ? { ...prev, mood_state: moodToAxionMoodState(apiMood) }
+          : { stage: 1, mood_state: moodToAxionMoodState(apiMood), personality_traits: [] },
       );
       setTransientFeedback(setMoodFeedback, moodFeedbackTimerRef, "success");
       showToast("Humor atualizado", "success");
@@ -526,7 +566,7 @@ export default function ChildPage() {
     setShowDailyWelcome(false);
   };
 
-  const onQuickMood = async (mood: MoodType) => {
+  const onQuickMood = async (mood: Mood) => {
     const success = await onSelectMood(mood);
     if (success) {
       dismissDailyWelcome();
@@ -626,11 +666,34 @@ export default function ChildPage() {
     return "border-accent bg-accent";
   };
 
-  const taskStatusById = routineLogs.reduce<Record<number, RoutineWeekLog["status"]>>((acc, log) => {
-    if (log.date !== todayIso) return acc;
-    acc[log.task_id] = log.status;
+  const taskStatusById = routineLogs
+    .filter((log) => log.date === todayIso)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .reduce<Record<number, RoutineWeekLog["status"]>>((acc, log) => {
+      if (!(log.task_id in acc)) {
+        acc[log.task_id] = log.status;
+      }
+      return acc;
+    }, {});
+
+  const taskLabelById = allTasks.reduce<Record<number, string>>((acc, task) => {
+    acc[task.id] = task.title;
     return acc;
   }, {});
+
+  const weeklyLogs = [...routineLogs].sort((a, b) => {
+    const byDate = b.date.localeCompare(a.date);
+    if (byDate !== 0) return byDate;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  const groupedWeeklyLogs = (
+    [
+      { title: "Pendentes", status: "PENDING", items: weeklyLogs.filter((log) => log.status === "PENDING") },
+      { title: "Aprovadas", status: "APPROVED", items: weeklyLogs.filter((log) => log.status === "APPROVED") },
+      { title: "Rejeitadas", status: "REJECTED", items: weeklyLogs.filter((log) => log.status === "REJECTED") },
+    ] satisfies Array<{ title: string; status: RoutineWeekLog["status"]; items: RoutineWeekLog[] }>
+  ).filter((group) => group.items.length > 0);
 
   const taskRowClass = (status: RoutineWeekLog["status"] | undefined) => {
     if (status === "APPROVED") return "border-secondary/35 bg-secondary/10";
@@ -778,7 +841,9 @@ export default function ChildPage() {
             />
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <span className="rounded-xl border border-border bg-background px-2 py-1">Estágio {axionState?.stage ?? 1}</span>
-              <span className="rounded-xl border border-border bg-background px-2 py-1">{axionState?.mood_state ?? "NEUTRAL"}</span>
+              <span className="rounded-xl border border-border bg-background px-2 py-1">
+                {axionMoodStateLabel(axionState?.mood_state ?? "NEUTRAL")}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -811,25 +876,8 @@ export default function ChildPage() {
                 </div>
                 <div>
                   <p className="mb-2 text-sm text-muted-foreground">Humor rápido</p>
-                  <div className="flex items-center gap-2">
-                    {MOOD_OPTIONS.map((option) => (
-                      <ActionFeedback
-                        key={`quick-${option.mood}`}
-                        type="button"
-                        title={option.label}
-                        state={todayMood === option.mood ? moodFeedback : "idle"}
-                        aria-label={`Selecionar humor ${option.label}`}
-                        className={`rounded-xl border px-2 py-1 text-xl transition-transform hover:scale-105 ${
-                          todayMood === option.mood
-                            ? "border-primary bg-primary/10 ring-2 ring-primary/25"
-                            : "border-border bg-background"
-                        }`}
-                        onClick={() => void onQuickMood(option.mood)}
-                      >
-                        {option.emoji}
-                      </ActionFeedback>
-                    ))}
-                  </div>
+                  <MoodSelector value={todayMood ?? undefined} onChange={(mood) => void onQuickMood(mood)} />
+                  {moodFeedback === "loading" ? <p className="mt-2 text-sm text-muted-foreground">Salvando humor...</p> : null}
                   {moodError ? <p className="mt-2 text-sm text-destructive">{moodError}</p> : null}
                 </div>
               </CardContent>
@@ -852,25 +900,7 @@ export default function ChildPage() {
             <CardContent className="space-y-3 p-5 pt-0 md:p-6 md:pt-0">
               <div>
                 <p className="mb-2 text-sm font-semibold text-foreground">Como você está hoje?</p>
-              <div className="flex items-center gap-2">
-                {MOOD_OPTIONS.map((option) => (
-                  <ActionFeedback
-                    key={option.mood}
-                    type="button"
-                    title={option.label}
-                    state={todayMood === option.mood ? moodFeedback : "idle"}
-                    aria-label={`Selecionar humor ${option.label}`}
-                    className={`rounded-xl border px-2 py-1 text-2xl transition-transform hover:scale-105 ${
-                      todayMood === option.mood
-                        ? "border-primary bg-primary/10 ring-2 ring-primary/25"
-                        : "border-border bg-background"
-                    }`}
-                    onClick={() => void onSelectMood(option.mood)}
-                  >
-                    {option.emoji}
-                  </ActionFeedback>
-                ))}
-              </div>
+              <MoodSelector value={todayMood ?? undefined} onChange={(mood) => void onSelectMood(mood)} />
               {moodError ? <p className="mt-2 text-sm text-destructive">{moodError}</p> : null}
               </div>
               <div>
@@ -920,12 +950,7 @@ export default function ChildPage() {
                     Nível {level?.level ?? 1} • {xpBarPercent.toFixed(0)}%
                   </span>
                 </div>
-                <div className="h-3 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-accent transition-[width] duration-700 ease-out"
-                    style={{ width: `${xpBarPercent}%` }}
-                  />
-                </div>
+                <ProgressBar tone="secondary" value={xpBarPercent} />
               </div>
               <WeeklyBossMeter completionRate={weeklyMetrics?.completion_rate ?? 0} />
             </CardContent>
@@ -976,7 +1001,7 @@ export default function ChildPage() {
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-foreground">{task.title}</p>
                           <p className="text-sm text-muted-foreground">
-                            {task.difficulty} • peso {task.weight}
+                            {taskDifficultyLabel(task.difficulty)} • peso {task.weight}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1005,25 +1030,36 @@ export default function ChildPage() {
                 <p className="py-4 text-center text-sm text-muted-foreground">Sem registros da semana ainda.</p>
               ) : taskView === "list" ? (
                 <div className="space-y-2">
-                  {routineLogs.map((log) => (
-                    <div key={log.id} className="flex items-center justify-between rounded-xl border border-border px-2 py-1">
-                      <span className="text-sm">Tarefa #{log.task_id}</span>
-                      <span className={`rounded-xl px-2 py-0.5 text-sm font-semibold ${statusBadgeClass(log.status)}`}>
-                        {routineStatusLabel(log.status)}
-                      </span>
+                  <p className="text-sm font-semibold text-foreground">Histórico da semana</p>
+                  {groupedWeeklyLogs.map((group) => (
+                    <div key={group.status} className="space-y-1.5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {group.title} ({group.items.length})
+                      </p>
+                      {group.items.map((log) => (
+                        <div key={log.id} className="flex items-center justify-between rounded-xl border border-border px-2 py-1.5">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-foreground">{taskLabelById[log.task_id] ?? "Tarefa não encontrada"}</p>
+                            <p className="text-xs text-muted-foreground">{formatShortDate(log.date)}</p>
+                          </div>
+                          <span className={`rounded-xl px-2 py-0.5 text-sm font-semibold ${statusBadgeClass(log.status)}`}>
+                            {routineStatusLabel(log.status)}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="overflow-x-auto pb-2">
                   <div className="relative flex min-w-max items-center gap-3 px-1 py-3">
-                    {routineLogs.map((log, index) => (
+                    {weeklyLogs.map((log, index) => (
                       <div key={log.id} className="flex items-center gap-3">
                         <div className="flex flex-col items-center gap-1">
                           <span className={`h-5 w-5 rounded-full border-2 ${checkpointClass(log.status)}`} />
-                          <span className="text-xs text-muted-foreground">#{log.task_id}</span>
+                          <span className="max-w-20 truncate text-xs text-muted-foreground">{taskLabelById[log.task_id] ?? `#${log.task_id}`}</span>
                         </div>
-                        {index < routineLogs.length - 1 ? <span className="h-0.5 w-8 bg-border" /> : null}
+                        {index < weeklyLogs.length - 1 ? <span className="h-0.5 w-8 bg-border" /> : null}
                       </div>
                     ))}
                   </div>

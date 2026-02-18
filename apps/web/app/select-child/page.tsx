@@ -72,7 +72,7 @@ export default function SelectChildPage() {
               key={child.id}
               type="button"
               className={cn(
-                "w-full rounded-xl border px-3 py-3 text-left text-sm shadow-sm transition-colors",
+                "w-full rounded-2xl border px-3 py-3 text-left text-sm shadow-sm transition-all duration-150 hover:-translate-y-0.5",
                 selectingChildId === child.id ? "border-secondary bg-secondary/10" : "border-border hover:bg-muted",
               )}
               onClick={() => chooseChild(child)}
