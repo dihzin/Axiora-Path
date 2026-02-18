@@ -136,6 +136,15 @@ export type AuthMeResponse = {
   child_profiles: Array<{ id: number; display_name: string; avatar_key: string | null; birth_year: number | null; theme: ThemeName; avatar_stage: number }>;
 };
 
+export type OrganizationMembership = {
+  role: string;
+  tenant_id: number;
+  tenant_name: string;
+  tenant_slug: string;
+  tenant_type: "FAMILY" | "SCHOOL";
+  onboarding_completed: boolean;
+};
+
 export type StreakResponse = {
   child_id: number;
   current: number;
@@ -282,6 +291,14 @@ export async function login(email: string, password: string): Promise<AuthTokens
 
 export async function getMe(): Promise<AuthMeResponse> {
   return apiRequest<AuthMeResponse>("/auth/me", { method: "GET", requireAuth: true, includeTenant: true });
+}
+
+export async function logout(): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>("/auth/logout", { method: "POST", requireAuth: false, includeTenant: false });
+}
+
+export async function listMemberships(): Promise<OrganizationMembership[]> {
+  return apiRequest<OrganizationMembership[]>("/auth/memberships", { method: "GET", requireAuth: true, includeTenant: false });
 }
 
 export async function getTasks(): Promise<Array<{ id: number; title: string; difficulty: string; weight: number; is_active: boolean }>> {

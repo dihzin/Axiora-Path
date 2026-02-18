@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, Baby } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowDownRight, ArrowUpRight, Baby, Building2, LogOut, UserCircle2 } from "lucide-react";
 
 import { ConfettiBurst } from "@/components/confetti-burst";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   decideRoutine,
   getMe,
+  logout,
   getRoutineWeek,
   getWalletSummary,
   getWeeklyTrend,
@@ -18,6 +19,7 @@ import {
   type WalletSummaryResponse,
   type WeeklyTrendResponse,
 } from "@/lib/api/client";
+import { clearTenantSlug, clearTokens } from "@/lib/api/session";
 import { getSoundEnabled as getChildSoundEnabled, playSound, setSoundEnabled as setChildSoundEnabled } from "@/lib/sound-manager";
 import { isThemeName, THEME_STORAGE_KEY } from "@/lib/theme";
 
@@ -33,6 +35,7 @@ function TrendIndicator({ value }: { value: number }) {
 
 export default function ParentPage() {
   const router = useRouter();
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const [allowed, setAllowed] = useState(false);
   const [childId, setChildId] = useState<number | null>(null);
   const [pendingLogs, setPendingLogs] = useState<RoutineWeekLog[]>([]);
@@ -44,6 +47,17 @@ export default function ParentPage() {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [approveError, setApproveError] = useState<string | null>(null);
   const [allowedChildIds, setAllowedChildIds] = useState<number[]>([]);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+
+  const clearLocalSession = (options?: { keepOrganization?: boolean }) => {
+    clearTokens();
+    if (!options?.keepOrganization) {
+      clearTenantSlug();
+    }
+    localStorage.removeItem("axiora_child_id");
+    sessionStorage.removeItem("axiora_parent_pin_ok");
+  };
 
   useEffect(() => {
     const ok = sessionStorage.getItem("axiora_parent_pin_ok");
@@ -53,6 +67,28 @@ export default function ParentPage() {
     }
     router.replace("/parent-pin");
   }, [router]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!profileMenuRef.current) return;
+      if (!profileMenuRef.current.contains(event.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
 
   useEffect(() => {
     const rawChildId = localStorage.getItem("axiora_child_id");
@@ -174,6 +210,27 @@ export default function ParentPage() {
     router.push("/child");
   };
 
+  const onSwitchOrganization = () => {
+    setProfileMenuOpen(false);
+    sessionStorage.removeItem("axiora_parent_pin_ok");
+    localStorage.removeItem("axiora_child_id");
+    router.push("/select-tenant");
+  };
+
+  const onLogout = async () => {
+    setProfileMenuOpen(false);
+    setLoggingOut(true);
+    try {
+      await logout();
+    } catch {
+      // ignore API logout failures and still clear local session
+    } finally {
+      clearLocalSession();
+      router.replace("/login");
+      setLoggingOut(false);
+    }
+  };
+
   return (
     <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 md:p-6">
       <ConfettiBurst trigger={confettiTick} />
@@ -184,10 +241,47 @@ export default function ParentPage() {
       ) : null}
       <header className="mb-3 flex items-center justify-between gap-2">
         <h1 className="text-lg font-semibold">Area dos pais</h1>
-        <Button type="button" size="sm" variant="outline" onClick={onGoChildMode}>
-          <Baby className="mr-1 h-4 w-4" />
-          Ver modo crianca
-        </Button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button type="button" size="sm" variant="outline" onClick={onGoChildMode}>
+            <Baby className="mr-1 h-4 w-4" />
+            Ver modo crianca
+          </Button>
+          <div className="relative" ref={profileMenuRef}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              aria-haspopup="menu"
+              aria-expanded={profileMenuOpen}
+              onClick={() => setProfileMenuOpen((prev) => !prev)}
+            >
+              <UserCircle2 className="h-4 w-4" />
+            </Button>
+            {profileMenuOpen ? (
+              <div className="absolute right-0 top-11 z-20 w-52 rounded-xl border border-border bg-card p-1 shadow-md" role="menu">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-muted"
+                  onClick={onSwitchOrganization}
+                  role="menuitem"
+                >
+                  <Building2 className="h-4 w-4" />
+                  Trocar organizacao
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-muted disabled:opacity-50"
+                  onClick={() => void onLogout()}
+                  disabled={loggingOut}
+                  role="menuitem"
+                >
+                  <LogOut className="h-4 w-4" />
+                  {loggingOut ? "Saindo..." : "Sair"}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
       </header>
 
       <section className="space-y-3">

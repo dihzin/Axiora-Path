@@ -43,6 +43,15 @@ class MembershipOut(BaseModel):
     onboarding_completed: bool
 
 
+class OrganizationMembershipOut(BaseModel):
+    role: str
+    tenant_id: int
+    tenant_name: str
+    tenant_slug: str
+    tenant_type: str
+    onboarding_completed: bool
+
+
 class ChildProfileOut(BaseModel):
     id: int
     display_name: str

@@ -200,7 +200,7 @@ export default function OnboardingPage() {
               <p>Step 5: Terms and Privacy</p>
               <div className="space-y-2 rounded-md border border-border p-3 text-xs text-muted-foreground">
                 <p>
-                  Ao continuar, você confirma que leu e aceita os Termos de Uso e a Politica de Privacidade do tenant.
+                  Ao continuar, você confirma que leu e aceita os Termos de Uso e a Politica de Privacidade da organização.
                 </p>
                 <p>Resumo: uso educacional familiar, tratamento de dados de rotina e retencao conforme politica vigente.</p>
               </div>

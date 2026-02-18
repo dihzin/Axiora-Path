@@ -24,9 +24,10 @@ from app.schemas.auth import (
     AuthTokens,
     ChildProfileOut,
     LoginRequest,
-    MeResponse,
     MembershipOut,
+    MeResponse,
     MessageResponse,
+    OrganizationMembershipOut,
     RefreshRequest,
     SignupRequest,
     UserOut,
@@ -286,3 +287,31 @@ def me(
             for child in children
         ],
     )
+
+
+@router.get("/memberships", response_model=list[OrganizationMembershipOut])
+def list_memberships(
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> list[OrganizationMembershipOut]:
+    memberships = db.execute(
+        select(Membership, Tenant)
+        .join(Tenant, Tenant.id == Membership.tenant_id)
+        .where(
+            Membership.user_id == user.id,
+            Tenant.deleted_at.is_(None),
+        )
+        .order_by(Tenant.name.asc(), Tenant.id.asc()),
+    ).all()
+
+    return [
+        OrganizationMembershipOut(
+            role=membership.role.value,
+            tenant_id=tenant.id,
+            tenant_name=tenant.name,
+            tenant_slug=tenant.slug,
+            tenant_type=tenant.type.value,
+            onboarding_completed=tenant.onboarding_completed,
+        )
+        for membership, tenant in memberships
+    ]

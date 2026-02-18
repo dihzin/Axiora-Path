@@ -40,3 +40,7 @@ export function setTenantSlug(slug: string): void {
   localStorage.setItem(TENANT_SLUG_KEY, slug);
 }
 
+export function clearTenantSlug(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(TENANT_SLUG_KEY);
+}

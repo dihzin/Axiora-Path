@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,13 +17,20 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const savedTenantSlug = getTenantSlug();
+    if (savedTenantSlug) {
+      setTenantSlugValue(savedTenantSlug);
+    }
+  }, []);
+
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
     setLoading(true);
     try {
       if (!tenantSlug.trim()) {
-        setError("Informe o tenant slug.");
+        setError("Informe a organização.");
         return;
       }
       setTenantSlug(tenantSlug);
@@ -32,7 +39,7 @@ export default function LoginPage() {
       setRefreshToken(tokens.refresh_token);
       router.push("/select-tenant");
     } catch {
-      setError("Nao foi possível autenticar. Verifique tenant, email e senha.");
+      setError("Nao foi possível autenticar. Verifique organização, email e senha.");
     } finally {
       setLoading(false);
     }
@@ -43,11 +50,11 @@ export default function LoginPage() {
       <Card className="w-full">
         <CardHeader>
           <CardTitle>Entrar</CardTitle>
-          <CardDescription>Use seu tenant e credenciais para acessar o MVP.</CardDescription>
+          <CardDescription>Use sua organização e credenciais para acessar o MVP.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-3" onSubmit={onSubmit}>
-            <Input placeholder="Tenant slug" value={tenantSlug} onChange={(e) => setTenantSlugValue(e.target.value)} required />
+            <Input placeholder="Organização" value={tenantSlug} onChange={(e) => setTenantSlugValue(e.target.value)} required />
             <Input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             <Input
               placeholder="Senha"
@@ -59,9 +66,6 @@ export default function LoginPage() {
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <Button className="w-full" type="submit" disabled={loading}>
               {loading ? "Entrando..." : "Entrar"}
-            </Button>
-            <Button className="w-full" type="button" variant="outline" onClick={() => setTenantSlugValue(getTenantSlug() ?? "")}>
-              Usar tenant salvo
             </Button>
           </form>
         </CardContent>
