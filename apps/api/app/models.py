@@ -26,6 +26,10 @@ from sqlalchemy.sql import func
 from app.db.base import Base
 
 
+def _enum_values(enum_cls: type[Enum]) -> list[str]:
+    return [str(item.value) for item in enum_cls]
+
+
 class TenantType(str, Enum):
     FAMILY = "FAMILY"
     SCHOOL = "SCHOOL"
@@ -800,7 +804,7 @@ class DailyMission(Base):
     title: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     source_type: Mapped[DailyMissionSourceType] = mapped_column(
-        SqlEnum(DailyMissionSourceType, name="daily_mission_source_type"),
+        SqlEnum(DailyMissionSourceType, name="daily_mission_source_type", values_callable=_enum_values),
         nullable=False,
         server_default=text("'system'"),
     )
@@ -808,13 +812,13 @@ class DailyMission(Base):
     school_id: Mapped[int | None] = mapped_column(ForeignKey("schools.id"), nullable=True)
     class_id: Mapped[int | None] = mapped_column(ForeignKey("classes.id"), nullable=True)
     rarity: Mapped[DailyMissionRarity] = mapped_column(
-        SqlEnum(DailyMissionRarity, name="daily_mission_rarity"),
+        SqlEnum(DailyMissionRarity, name="daily_mission_rarity", values_callable=_enum_values),
         nullable=False,
     )
     xp_reward: Mapped[int] = mapped_column(Integer, nullable=False)
     coin_reward: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[DailyMissionStatus] = mapped_column(
-        SqlEnum(DailyMissionStatus, name="daily_mission_status"),
+        SqlEnum(DailyMissionStatus, name="daily_mission_status", values_callable=_enum_values),
         nullable=False,
         server_default=text("'pending'"),
     )
@@ -841,7 +845,7 @@ class MissionTemplate(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     rarity: Mapped[DailyMissionRarity] = mapped_column(
-        SqlEnum(DailyMissionRarity, name="daily_mission_rarity"),
+        SqlEnum(DailyMissionRarity, name="daily_mission_rarity", values_callable=_enum_values),
         nullable=False,
     )
     base_xp: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -858,7 +862,7 @@ class Subject(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     age_group: Mapped[SubjectAgeGroup] = mapped_column(
-        SqlEnum(SubjectAgeGroup, name="subject_age_group"),
+        SqlEnum(SubjectAgeGroup, name="subject_age_group", values_callable=_enum_values),
         nullable=False,
     )
     icon: Mapped[str | None] = mapped_column(String(120), nullable=True)
@@ -958,7 +962,7 @@ class Skill(Base):
     name: Mapped[str] = mapped_column(String(140), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     age_group: Mapped[SubjectAgeGroup] = mapped_column(
-        SqlEnum(SubjectAgeGroup, name="subject_age_group"),
+        SqlEnum(SubjectAgeGroup, name="subject_age_group", values_callable=_enum_values),
         nullable=False,
     )
     order: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -1210,7 +1214,7 @@ class WeeklyMission(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     age_group: Mapped[SubjectAgeGroup] = mapped_column(
-        SqlEnum(SubjectAgeGroup, name="subject_age_group"),
+        SqlEnum(SubjectAgeGroup, name="subject_age_group", values_callable=_enum_values),
         nullable=False,
     )
     subject_id: Mapped[int | None] = mapped_column(ForeignKey("subjects.id"), nullable=True)
@@ -1301,7 +1305,7 @@ class PathEvent(Base):
     )
     subject_id: Mapped[int] = mapped_column(ForeignKey("subjects.id"), nullable=False)
     age_group: Mapped[SubjectAgeGroup] = mapped_column(
-        SqlEnum(SubjectAgeGroup, name="subject_age_group"),
+        SqlEnum(SubjectAgeGroup, name="subject_age_group", values_callable=_enum_values),
         nullable=False,
     )
     unit_id: Mapped[int | None] = mapped_column(ForeignKey("units.id"), nullable=True)
