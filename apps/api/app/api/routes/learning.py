@@ -205,16 +205,25 @@ def get_learning_next_questions(
     user: Annotated[User, Depends(get_current_user)],
     __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> LearningNextResponse:
-    plan = build_next_questions(
-        db,
-        user_id=user.id,
-        subject_id=payload.subject_id,
-        lesson_id=payload.lesson_id,
-        focus_skill_id=payload.focus_skill_id,
-        force_difficulty=payload.force_difficulty,
-        tenant_id=tenant.id,
-        count=payload.count or 10,
-    )
+    try:
+        plan = build_next_questions(
+            db,
+            user_id=user.id,
+            subject_id=payload.subject_id,
+            lesson_id=payload.lesson_id,
+            focus_skill_id=payload.focus_skill_id,
+            force_difficulty=payload.force_difficulty,
+            tenant_id=tenant.id,
+            count=payload.count or 10,
+        )
+        # Persist generated variants so /answer can resolve template attempts.
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Adaptive question engine unavailable. Try again in a moment.",
+        ) from exc
 
     return LearningNextResponse(
         items=[

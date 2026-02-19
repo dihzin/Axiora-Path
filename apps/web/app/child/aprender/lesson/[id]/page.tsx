@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CheckCircle2, Coins, Flame, Lightbulb, Star, Volume2, VolumeX, Zap } from "lucide-react";
@@ -76,7 +75,7 @@ function toStringSafe(value: unknown, fallback = ""): string {
 }
 
 function normalizeOptions(metadata: Record<string, unknown>): SelectOption[] {
-  const optionsRaw = asArray(metadata.options);
+  const optionsRaw = asArray(metadata.options).length > 0 ? asArray(metadata.options) : asArray(metadata.choices);
   return optionsRaw
     .map((entry, index) => {
       const parsed = asRecord(entry);
@@ -127,9 +126,9 @@ function formatClock(totalSeconds: number): string {
 }
 
 function starMessage(stars: number): string {
-  if (stars === 3) return "Excelente! Sessao perfeita.";
-  if (stars === 2) return "Muito bom! Voce evoluiu bastante.";
-  return "Bom esforco! Continue praticando para subir de nivel.";
+  if (stars === 3) return "Excelente! Sessão perfeita.";
+  if (stars === 2) return "Muito bom! Você evoluiu bastante.";
+  return "Bom esforço! Continue praticando para subir de nível.";
 }
 
 function resolveAxionTip(question: LearningNextItem | null): string {
@@ -142,6 +141,188 @@ function resolveAxionTip(question: LearningNextItem | null): string {
   if (question.type === "TRUE_FALSE") return "Dica do Axion: procure palavras-chave para validar a afirmação.";
   if (question.type === "FILL_BLANK") return "Dica do Axion: pense no contexto da frase para completar com segurança.";
   return "Dica do Axion: você aprende melhor quando revisa a resposta com atenção.";
+}
+
+function hashSeed(input: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i += 1) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Math.abs(h >>> 0);
+}
+
+function pickBySeed(seed: string, salt: string, values: readonly string[]): string {
+  if (!values.length) return "";
+  const idx = hashSeed(`${seed}|${salt}`) % values.length;
+  return values[idx];
+}
+
+const SUCCESS_OPENERS = [
+  "Boa resposta!",
+  "Muito bem!",
+  "Arrasou!",
+  "Que demais!",
+  "Mandou super bem!",
+  "Isso aí!",
+  "Brilhou nessa!",
+  "Resposta certa!",
+  "Acertou em cheio!",
+  "Show de bola!",
+  "Perfeito!",
+  "Excelente!",
+  "Uau, você foi ótimo!",
+  "Você voou nessa!",
+  "Muito capricho!",
+  "Parabéns!",
+] as const;
+
+const SUCCESS_CORES = [
+  "Seu cérebro está em modo turbo.",
+  "Você pensou com calma e acertou.",
+  "Seu raciocínio foi muito esperto.",
+  "Cada acerto deixa você mais forte.",
+  "Você está dominando essa habilidade.",
+  "Esse foi um belo passo na trilha.",
+  "Seu foco fez toda diferença.",
+  "Você está ficando craque nisso.",
+  "Seu treino está dando resultado.",
+  "Você acertou com confiança.",
+  "Sua estratégia foi excelente.",
+  "Você percebeu o caminho certinho.",
+  "Seu progresso está lindo de ver.",
+  "Você encarou e resolveu direitinho.",
+  "Seu jeito de pensar está afiado.",
+  "Isso mostra o quanto você evoluiu.",
+  "Você está construindo uma super base.",
+  "Seu talento apareceu aqui.",
+] as const;
+
+const SUCCESS_CLOSERS = [
+  "Vamos para a próxima!",
+  "Continue nesse ritmo!",
+  "Mais um passinho de campeão.",
+  "Bora conquistar outra!",
+  "Axion está orgulhoso de você.",
+  "Que tal buscar mais uma estrela?",
+  "Siga firme, você consegue!",
+  "Partiu próximo desafio!",
+  "Você está voando!",
+  "Mantenha essa energia boa!",
+  "Cada acerto conta muito.",
+  "Seu mapa está abrindo caminho.",
+  "Rumo ao próximo nível!",
+  "Já já vem mais recompensa.",
+  "Você está em uma fase incrível.",
+  "Continue brilhando!",
+] as const;
+
+const SUCCESS_STREAK = [
+  "Sequência incrível! Continue assim.",
+  "Uau! Você está em uma super sequência.",
+  "Que ritmo lindo! Sua sequência está crescendo.",
+  "Você entrou no embalo dos acertos!",
+  "Sequência de mestre ativada!",
+  "Axion comemorou sua sequência!",
+  "Que constância poderosa!",
+  "Você está imparável hoje!",
+] as const;
+
+const ENCOURAGE_OPENERS = [
+  "Quase lá!",
+  "Tudo bem!",
+  "Sem problema!",
+  "Você está aprendendo!",
+  "Respira fundo!",
+  "Foi por pouco!",
+  "Tá tudo certo!",
+  "Faz parte do treino!",
+  "Errar também ensina!",
+  "Calma, você consegue!",
+  "Cada tentativa ajuda!",
+  "Você está no caminho!",
+] as const;
+
+const ENCOURAGE_CORES = [
+  "Vamos tentar de novo com calma.",
+  "Seu cérebro aprende muito em cada tentativa.",
+  "Com mais uma chance, você acerta.",
+  "Olhe os detalhes e tente mais uma vez.",
+  "Você está mais perto do acerto do que parece.",
+  "Aprender é um passo de cada vez.",
+  "Seu esforço vale ouro.",
+  "Você está construindo uma base forte.",
+  "Cada erro vira uma pista para acertar.",
+  "Treino + paciência = progresso.",
+  "Axion acredita em você.",
+  "A próxima pode ser a certa.",
+  "Você já evoluiu muito até aqui.",
+  "Seu foco vai te levar longe.",
+  "Não desista, você está indo bem.",
+  "Seu ritmo é importante.",
+] as const;
+
+const ENCOURAGE_CLOSERS = [
+  "Vamos juntos!",
+  "Você consegue!",
+  "Partiu mais uma tentativa!",
+  "Tenta de novo, vai dar bom!",
+  "Axion está com você.",
+  "Mais um passinho e pronto.",
+  "Vamos nessa!",
+  "Siga confiante!",
+  "Bora praticar!",
+  "Continua que vai dar certo!",
+  "Seu momento de acertar está chegando.",
+  "A resposta certa está pertinho.",
+] as const;
+
+function joinParts(parts: string[]): string {
+  return parts.filter((part) => part.trim().length > 0).join(" ").replace(/\s+/g, " ").trim();
+}
+
+function buildBoundedMessage(candidates: string[], maxChars = 92): string {
+  for (const candidate of candidates) {
+    const normalized = joinParts([candidate]);
+    if (normalized.length <= maxChars) return normalized;
+  }
+  return joinParts([candidates[0] ?? "Mandou bem!"]);
+}
+
+function buildSuccessMicrocopy(seed: string, options: { streakMode: boolean; maxChars?: number }): string {
+  const { streakMode, maxChars = 92 } = options;
+  const opener = pickBySeed(seed, "s_open", SUCCESS_OPENERS);
+  const core = pickBySeed(seed, "s_core", SUCCESS_CORES);
+  const closer = pickBySeed(seed, "s_close", SUCCESS_CLOSERS);
+  const streak = pickBySeed(seed, "s_streak", SUCCESS_STREAK);
+  const candidates = streakMode
+    ? [
+        joinParts([opener, core, streak]),
+        joinParts([opener, streak]),
+        joinParts([opener, core]),
+        joinParts([opener]),
+      ]
+    : [
+        joinParts([opener, core, closer]),
+        joinParts([opener, core]),
+        joinParts([opener, closer]),
+        joinParts([opener]),
+      ];
+  return buildBoundedMessage(candidates, maxChars);
+}
+
+function buildEncourageMicrocopy(seed: string, options?: { maxChars?: number }): string {
+  const maxChars = options?.maxChars ?? 92;
+  const opener = pickBySeed(seed, "e_open", ENCOURAGE_OPENERS);
+  const core = pickBySeed(seed, "e_core", ENCOURAGE_CORES);
+  const closer = pickBySeed(seed, "e_close", ENCOURAGE_CLOSERS);
+  const candidates = [
+    joinParts([opener, core, closer]),
+    joinParts([opener, core]),
+    joinParts([opener, closer]),
+    joinParts([opener]),
+  ];
+  return buildBoundedMessage(candidates, maxChars);
 }
 
 
@@ -181,6 +362,10 @@ export default function AdaptiveLessonSessionPage() {
   const [displayXp, setDisplayXp] = useState(0);
   const [displayCoins, setDisplayCoins] = useState(0);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
+  const [tipVisible, setTipVisible] = useState(false);
+  const [correctFxTick, setCorrectFxTick] = useState(0);
+  const [microcopyTick, setMicrocopyTick] = useState(0);
+  const [backSaving, setBackSaving] = useState(false);
   const reducedMotion = effectiveReducedMotion(uxSettings);
 
   const current = queue[index] ?? null;
@@ -204,7 +389,7 @@ export default function AdaptiveLessonSessionPage() {
 
   useEffect(() => {
     if (!Number.isFinite(lessonId) || lessonId <= 0) {
-      setError("Licao invalida.");
+      setError("Lição inválida.");
       setLoading(false);
       return;
     }
@@ -225,8 +410,8 @@ export default function AdaptiveLessonSessionPage() {
       } catch (err: unknown) {
         const message =
           err instanceof ApiError
-            ? getApiErrorMessage(err, "Nao foi possivel iniciar a sessao adaptativa.")
-            : "Nao foi possivel iniciar a sessao adaptativa.";
+            ? getApiErrorMessage(err, "Não foi possível iniciar a sessão adaptativa.")
+            : "Não foi possível iniciar a sessão adaptativa.";
         setError(message);
       } finally {
         setLoading(false);
@@ -250,6 +435,10 @@ export default function AdaptiveLessonSessionPage() {
     }, 10000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    setTipVisible(false);
+  }, [index, current?.questionId, current?.templateId]);
 
   useEffect(() => {
     if (!result) return;
@@ -304,10 +493,15 @@ export default function AdaptiveLessonSessionPage() {
       if (!outcome.correct) {
         await applyWrongEnergy();
         const explanation = current.explanation || "Vamos revisar juntos e praticar com uma versão mais simples.";
+        const seed = `${lessonId}|${index}|${current.questionId ?? current.templateId}|wrong|${microcopyTick}`;
+        const base = buildEncourageMicrocopy(seed, { maxChars: 88 });
+        const explained = joinParts([base, explanation]);
         setFeedback({
           tone: "encourage",
-          message: `${explanation} Axion já separou uma prática leve para você.`,
+          message: buildBoundedMessage([explained, base], 108),
         });
+        setMicrocopyTick((prev) => prev + 1);
+        setTipVisible(true);
         playSfx("/sfx/node-pop.ogg", uxSettings.soundEnabled);
         hapticPress(uxSettings);
         if (session) {
@@ -327,24 +521,36 @@ export default function AdaptiveLessonSessionPage() {
           }
         }
       } else {
-        const masteryGain = Math.max(0, answerResult.masteryDelta) * 100;
         const streakCelebrate =
           answerResult.streakCorrect > 0 && answerResult.streakCorrect % 3 === 0
-            ? " Sequência brilhante em construção."
-            : "";
+            ? true
+            : false;
+        const seed = `${lessonId}|${index}|${current.questionId ?? current.templateId}|correct|${microcopyTick}`;
         setFeedback({
           tone: "success",
-          message: `Boa resposta! Mastery +${masteryGain.toFixed(1)}%.${streakCelebrate}`,
+          message: buildSuccessMicrocopy(seed, { streakMode: streakCelebrate, maxChars: 108 }),
         });
+        setMicrocopyTick((prev) => prev + 1);
+        setCorrectFxTick((prev) => prev + 1);
         playSfx("/sfx/completion-chime.ogg", uxSettings.soundEnabled);
         hapticCompletion(uxSettings);
       }
     } catch (err: unknown) {
       const message =
         err instanceof ApiError
-          ? getApiErrorMessage(err, "Nao foi possivel registrar a resposta.")
-          : "Nao foi possivel registrar a resposta.";
-      setError(message);
+          ? getApiErrorMessage(err, "Não foi possível registrar a resposta.")
+          : "Não foi possível registrar a resposta.";
+      setFeedback({
+        tone: "encourage",
+        message: buildBoundedMessage(
+          [
+            joinParts([buildEncourageMicrocopy(`${lessonId}|${index}|error|${microcopyTick}`, { maxChars: 88 }), message]),
+            buildEncourageMicrocopy(`${lessonId}|${index}|error|${microcopyTick}`, { maxChars: 88 }),
+          ],
+          108,
+        ),
+      });
+      setMicrocopyTick((prev) => prev + 1);
     } finally {
       setSubmitting(false);
     }
@@ -387,11 +593,42 @@ export default function AdaptiveLessonSessionPage() {
     } catch (err: unknown) {
       const message =
         err instanceof ApiError
-          ? getApiErrorMessage(err, "Nao foi possivel finalizar a sessao.")
-          : "Nao foi possivel finalizar a sessao.";
+          ? getApiErrorMessage(err, "Não foi possível finalizar a sessão.")
+          : "Não foi possível finalizar a sessão.";
       setError(message);
     } finally {
       setFinishing(false);
+    }
+  };
+
+  const pushPathWithResult = (payload: LearningSessionFinishResponse) => {
+    router.push(
+      `/child/aprender?completedLessonId=${lessonId}&stars=${payload.stars}&xp=${payload.xpEarned}&coins=${payload.coinsEarned}&levelUp=${payload.leveledUp ? 1 : 0}`,
+    );
+  };
+
+  const onBackToPath = async () => {
+    if (backSaving || finishing) return;
+    if (result) {
+      pushPathWithResult(result);
+      return;
+    }
+    if (!session || answeredCount === 0) {
+      router.push("/child/aprender");
+      return;
+    }
+    setBackSaving(true);
+    try {
+      const response = await finishLearningSession({
+        sessionId: session.sessionId,
+        totalQuestions: answeredCount,
+        correctCount,
+      });
+      pushPathWithResult(response);
+    } catch {
+      router.push("/child/aprender");
+    } finally {
+      setBackSaving(false);
     }
   };
 
@@ -445,20 +682,22 @@ export default function AdaptiveLessonSessionPage() {
 
   return (
     <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 pb-52 md:max-w-2xl md:p-6 md:pb-40">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <Link
-          className="inline-flex items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted"
-          href="/child/aprender"
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          className="inline-flex w-full items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted"
+          onClick={() => void onBackToPath()}
+          disabled={backSaving}
         >
           <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-muted">
             <ArrowLeft className="h-4 w-4 stroke-[2.6]" />
           </span>
-          Voltar ao caminho
-        </Link>
+          {backSaving ? "Salvando..." : "Voltar ao caminho"}
+        </button>
         <Button
           type="button"
           variant="secondary"
-          className="px-3"
+          className="min-w-0 flex-1 px-2 text-xs"
           onClick={() =>
             void saveUXSettings({
               soundEnabled: !uxSettings.soundEnabled,
@@ -473,7 +712,7 @@ export default function AdaptiveLessonSessionPage() {
         <Button
           type="button"
           variant="secondary"
-          className="px-3"
+          className="min-w-0 flex-1 px-2 text-xs"
           onClick={() =>
             void saveUXSettings({
               soundEnabled: uxSettings.soundEnabled,
@@ -487,7 +726,7 @@ export default function AdaptiveLessonSessionPage() {
         <Button
           type="button"
           variant="secondary"
-          className="px-3"
+          className="min-w-0 flex-1 px-2 text-xs"
           onClick={() =>
             void saveUXSettings({
               soundEnabled: uxSettings.soundEnabled,
@@ -502,10 +741,10 @@ export default function AdaptiveLessonSessionPage() {
 
       <ConfettiBurst trigger={confettiTrigger} />
 
-      <Card className="mb-4 overflow-hidden border-border bg-[radial-gradient(circle_at_85%_12%,rgba(255,107,61,0.2),transparent_48%),linear-gradient(180deg,#ffffff_0%,#f3fbff_100%)] shadow-[0_2px_0_rgba(184,200,239,0.7),0_14px_28px_rgba(34,63,107,0.12)]">
+      <Card className="mb-4 overflow-hidden border-border bg-[radial-gradient(circle_at_85%_12%,rgba(45,212,191,0.18),transparent_48%),linear-gradient(180deg,#ffffff_0%,#f3fbff_100%)] shadow-[0_2px_0_rgba(184,200,239,0.7),0_14px_28px_rgba(34,63,107,0.12)]">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-lg">Sessao adaptativa #{Number.isFinite(lessonId) ? lessonId : "--"}</CardTitle>
+            <CardTitle className="text-lg">Sessão adaptativa #{Number.isFinite(lessonId) ? lessonId : "--"}</CardTitle>
             <span className="inline-flex items-center gap-1 rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-xs font-semibold text-accent-foreground">
               <Flame className="h-3.5 w-3.5 text-accent" />
               {learningStreak?.currentStreak ?? 0}
@@ -524,7 +763,7 @@ export default function AdaptiveLessonSessionPage() {
             </div>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-muted-foreground">Progresso da sessao</span>
+            <span className="font-semibold text-muted-foreground">Progresso da sessão</span>
             <span className="font-semibold text-foreground">{Math.round(progressPercent)}%</span>
           </div>
           <ProgressBar value={progressPercent} tone="secondary" />
@@ -533,7 +772,7 @@ export default function AdaptiveLessonSessionPage() {
 
       {loading ? (
         <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">Preparando sessao adaptativa...</CardContent>
+          <CardContent className="p-6 text-sm text-muted-foreground">Preparando sessão adaptativa...</CardContent>
         </Card>
       ) : null}
 
@@ -562,19 +801,33 @@ export default function AdaptiveLessonSessionPage() {
               </div>
             ) : null}
 
-            <div key={`${current.questionId ?? current.templateId ?? "q"}-${index}`} className="question-enter space-y-3">
-              <div className="rounded-2xl border border-secondary/35 bg-secondary/10 px-3 py-2">
-                <p className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-secondary">
-                  <Lightbulb className="h-3.5 w-3.5" />
-                  Axion tip
-                </p>
-                <p className="mt-1 text-sm font-semibold text-secondary/90">{axionTip}</p>
-              </div>
+            <div
+              key={`${current.questionId ?? current.templateId ?? "q"}-${index}-${correctFxTick}`}
+              className={cn("question-enter space-y-3", feedback?.tone === "success" ? "correct-glow" : "")}
+            >
+              {tipVisible ? (
+                <div className="rounded-2xl border border-secondary/35 bg-secondary/10 px-3 py-2">
+                  <p className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-secondary">
+                    <Lightbulb className="h-3.5 w-3.5" />
+                    Dica do Axion
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-secondary/90">{axionTip}</p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-2 rounded-2xl border border-border bg-muted/30 px-3 py-2">
+                  <p className="text-xs font-semibold text-muted-foreground">Precisa de ajuda? O Axion pode dar uma dica.</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="h-8 shrink-0 whitespace-nowrap rounded-xl border-b-2 px-3 text-xs leading-none shadow-[0_3px_0_rgba(10,114,113,0.28),0_6px_10px_rgba(10,76,74,0.14)] active:translate-y-[1px]"
+                    onClick={() => setTipVisible(true)}
+                  >
+                    Mostrar dica
+                  </Button>
+                </div>
+              )}
               <h2 className="text-lg font-extrabold text-foreground">{current.prompt}</h2>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {current.type} · passo {index + 1}
-              </p>
-
               {current.type === "DRAG_DROP" ? (
                 <div className="space-y-3">
                   <div className="rounded-2xl border border-border bg-white/90 p-3">
@@ -626,21 +879,28 @@ export default function AdaptiveLessonSessionPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-2">
-                  {options.map((option) => (
-                    <button
-                      key={option.id}
-                      type="button"
-                      className={cn(
+                  {options.length > 0 ? (
+                    options.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={cn(
                         "rounded-2xl border px-3 py-3 text-left text-sm font-semibold transition-all",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2",
                         selectedOption === option.id ? "border-primary bg-primary/10 text-primary" : "border-border bg-white text-foreground hover:bg-muted",
+                        currentAnswered && correctByStep[index] && selectedOption === option.id ? "answer-correct-pop" : "",
                       )}
-                      disabled={currentAnswered || energyBlocked || submitting}
-                      onClick={() => void onPickOption(option.id)}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+                        disabled={currentAnswered || energyBlocked || submitting}
+                        onClick={() => void onPickOption(option.id)}
+                      >
+                        {option.label}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="rounded-2xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-accent-foreground">
+                      Esta atividade ainda está sendo preparada. Tente novamente em instantes.
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -648,7 +908,7 @@ export default function AdaptiveLessonSessionPage() {
             {feedback ? (
               <div
                 className={cn(
-                  "rounded-2xl border px-3 py-2 text-sm font-semibold lesson-feedback",
+                  "rounded-2xl border px-3 py-2 text-sm font-semibold leading-snug break-words lesson-feedback",
                   feedback.tone === "success" ? "border-secondary/40 bg-secondary/10 text-secondary" : "border-accent/40 bg-accent/10 text-accent-foreground",
                 )}
               >
@@ -676,7 +936,7 @@ export default function AdaptiveLessonSessionPage() {
                 disabled={!currentAnswered || submitting || finishing || energyBlocked || Boolean(result)}
                 onClick={() => void goNext()}
               >
-                {index >= queue.length - 1 ? (finishing ? "Finalizando..." : "Finalizar sessao") : "Proximo"}
+                {index >= queue.length - 1 ? (finishing ? "Finalizando..." : "Finalizar sessão") : "Próximo"}
               </Button>
             </div>
           </CardContent>
@@ -685,7 +945,7 @@ export default function AdaptiveLessonSessionPage() {
 
       {result ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-4 md:items-center"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4"
           onClick={() => router.push(`/child/aprender?completedLessonId=${lessonId}&stars=${result.stars}&xp=${result.xpEarned}&coins=${result.coinsEarned}&levelUp=${result.leveledUp ? 1 : 0}`)}
         >
           <div
@@ -769,6 +1029,28 @@ export default function AdaptiveLessonSessionPage() {
             opacity: 1;
           }
         }
+        @keyframes correct-glow {
+          0% {
+            box-shadow: 0 0 0 rgba(45, 212, 191, 0);
+          }
+          40% {
+            box-shadow: 0 0 0 8px rgba(45, 212, 191, 0.14);
+          }
+          100% {
+            box-shadow: 0 0 0 rgba(45, 212, 191, 0);
+          }
+        }
+        @keyframes answer-correct-pop {
+          0% {
+            transform: scale(1);
+          }
+          40% {
+            transform: scale(1.02);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
 
         .lesson-feedback {
           animation: lesson-feedback-pop 220ms ease-out;
@@ -781,11 +1063,22 @@ export default function AdaptiveLessonSessionPage() {
         .star-pop {
           animation: star-pop 300ms ease-out;
         }
+        .correct-glow {
+          animation: correct-glow 380ms ease-out;
+        }
+        .answer-correct-pop {
+          animation: answer-correct-pop 300ms ease-out;
+          border-color: rgba(45, 212, 191, 0.75) !important;
+          background: rgba(45, 212, 191, 0.12) !important;
+          color: #0f766e !important;
+        }
 
         @media (prefers-reduced-motion: reduce) {
           .lesson-feedback,
           .question-enter,
-          .star-pop {
+          .star-pop,
+          .correct-glow,
+          .answer-correct-pop {
             animation: none;
           }
         }
@@ -793,3 +1086,4 @@ export default function AdaptiveLessonSessionPage() {
     </main>
   );
 }
+

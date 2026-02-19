@@ -74,10 +74,10 @@ type Particle = {
 };
 
 function missionTypeLabel(kind: string): string {
-  if (kind === "LESSONS_COMPLETED") return "Licoes";
+  if (kind === "LESSONS_COMPLETED") return "Lições";
   if (kind === "XP_GAINED") return "XP";
   if (kind === "PERFECT_SCORES") return "3 estrelas";
-  if (kind === "STREAK_DAYS") return "Sequencia";
+  if (kind === "STREAK_DAYS") return "Sequência";
   if (kind === "MINI_BOSS_WINS") return "Mini-boss";
   return kind;
 }
@@ -102,13 +102,13 @@ function buildSerpentinePoints(count: number): Point[] {
 }
 
 function compactNodeLabel(node: LearningPathNode): string {
-  if (node.lesson) return `Licao ${node.lesson.order}`;
+  if (node.lesson) return `Lição ${node.lesson.order}`;
   if (!node.event) return "";
   if (node.event.type === "CHECKPOINT") return "Checkpoint";
   if (node.event.type === "MINI_BOSS") return "Mini-boss";
   if (node.event.type === "STORY_STOP") return "Parada narrativa";
   if (node.event.type === "REVIEW_GATE") return "Portal";
-  if (node.event.type === "CHEST") return "Bau";
+  if (node.event.type === "CHEST") return "Baú";
   if (node.event.type === "BOOST") return "Turbo";
   return node.event.title;
 }
@@ -116,43 +116,43 @@ function compactNodeLabel(node: LearningPathNode): string {
 function eventFriendlyDetails(event: LearningPathEventNode): { objective: string; reward: string; hint: string } {
   if (event.type === "BOOST") {
     return {
-      objective: "Mantenha sua sequencia de estudos para ativar este turbo.",
-      reward: "Quando ativar, voce ganha mais XP por tempo limitado.",
-      hint: "Complete uma licao por dia para chegar la mais rapido.",
+      objective: "Mantenha sua sequência de estudos para ativar este turbo.",
+      reward: "Quando ativar, você ganha mais XP por tempo limitado.",
+      hint: "Complete uma lição por dia para chegar lá mais rápido.",
     };
   }
   if (event.type === "CHEST") {
     return {
-      objective: "Abra o bau surpresa ao avancar na trilha.",
-      reward: "Voce pode ganhar moedas e itens especiais.",
-      hint: "Continue concluindo licoes para encontrar mais baus.",
+      objective: "Abra o baú surpresa ao avançar na trilha.",
+      reward: "Você pode ganhar moedas e itens especiais.",
+      hint: "Continue concluindo lições para encontrar mais baús.",
     };
   }
   if (event.type === "CHECKPOINT") {
     return {
       objective: "Revise o que aprendeu em um desafio curtinho.",
-      reward: "Voce fortalece suas habilidades e ganha recompensas.",
-      hint: "Respire fundo, leia com calma e va passo a passo.",
+      reward: "Você fortalece suas habilidades e ganha recompensas.",
+      hint: "Respire fundo, leia com calma e vá passo a passo.",
     };
   }
   if (event.type === "MINI_BOSS") {
     return {
       objective: "Encare um mini desafio final da unidade.",
-      reward: "Se mandar bem, libera o proximo trecho do mapa.",
-      hint: "Use suas melhores estrategias e tente novamente se precisar.",
+      reward: "Se mandar bem, libera o próximo trecho do mapa.",
+      hint: "Use suas melhores estratégias e tente novamente se precisar.",
     };
   }
   if (event.type === "REVIEW_GATE") {
     return {
-      objective: "Conclua suas revisoes pendentes para seguir viagem.",
-      reward: "Com revisao feita, o caminho fica livre novamente.",
-      hint: "Uma revisao por vez: voce consegue!",
+      objective: "Conclua suas revisões pendentes para seguir viagem.",
+      reward: "Com revisão feita, o caminho fica livre novamente.",
+      hint: "Uma revisão por vez: você consegue!",
     };
   }
   return {
     objective: "Participe desta parada especial da aventura.",
     reward: "Ganhe progresso e recompensas no seu ritmo.",
-    hint: "Cada tentativa ajuda voce a evoluir.",
+    hint: "Cada tentativa ajuda você a evoluir.",
   };
 }
 
@@ -447,7 +447,7 @@ export default function ChildAprenderPage() {
       setPath(data);
       setError(null);
     } catch (err: unknown) {
-      const message = err instanceof ApiError ? getApiErrorMessage(err, "Nao foi possivel carregar a trilha.") : "Nao foi possivel carregar a trilha.";
+      const message = err instanceof ApiError ? getApiErrorMessage(err, "Não foi possível carregar a trilha.") : "Não foi possível carregar a trilha.";
       setError(message);
     } finally {
       setLoading(false);
@@ -584,7 +584,10 @@ export default function ChildAprenderPage() {
     [path],
   );
   const completedLessons = lessons.filter((lesson) => lesson?.completed).length;
-  const completionPercent = lessons.length > 0 ? Math.round((completedLessons / lessons.length) * 100) : 0;
+  const completionPercent =
+    lessons.length > 0
+      ? Math.max(completedLessons > 0 ? 1 : 0, Math.round((completedLessons / lessons.length) * 100))
+      : 0;
   const calendarDaysCount = calendar ? daysInMonth(calendar.month, calendar.year) : 0;
   const calendarLeadingSlots = useMemo(() => {
     if (!calendar) return 0;
@@ -646,7 +649,7 @@ export default function ChildAprenderPage() {
       }
       await Promise.all([loadPath(), loadRetention().catch(() => undefined)]);
     } catch (err: unknown) {
-      const message = err instanceof ApiError ? getApiErrorMessage(err, "Nao foi possivel concluir o evento.") : "Nao foi possivel concluir o evento.";
+      const message = err instanceof ApiError ? getApiErrorMessage(err, "Não foi possível concluir o evento.") : "Não foi possível concluir o evento.";
       setError(message);
     } finally {
       setModalLoading(null);
@@ -657,13 +660,13 @@ export default function ChildAprenderPage() {
     try {
       const response = await claimMission(missionId);
       if (response.rewardGranted && (response.xpReward > 0 || response.coinReward > 0)) {
-        setMissionToast(`Missao concluida! +${response.xpReward} XP e +${response.coinReward} moedas`);
+        setMissionToast(`Missão concluída! +${response.xpReward} XP e +${response.coinReward} moedas`);
         playSfx("/sfx/completion-chime.ogg", uxSettings.soundEnabled);
         hapticCompletion(uxSettings);
       }
       await loadRetention();
     } catch (err: unknown) {
-      const message = err instanceof ApiError ? getApiErrorMessage(err, "Nao foi possivel resgatar a missao.") : "Nao foi possivel resgatar a missao.";
+      const message = err instanceof ApiError ? getApiErrorMessage(err, "Não foi possível resgatar a missão.") : "Não foi possível resgatar a missão.";
       setError(message);
     }
   };
@@ -732,14 +735,14 @@ export default function ChildAprenderPage() {
               </div>
             </div>
             {missions?.almostThere ? (
-              <div className="rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent-foreground">Missao quase la! Continue com esse ritmo.</div>
+              <div className="rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent-foreground">Missão quase lá! Continue com esse ritmo.</div>
             ) : null}
             {missions?.showNudge && !missions.almostThere ? (
               <div className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary">{missions.nudgeMessage}</div>
             ) : null}
             {missions?.upcomingSeasonalEvent ? (
               <div className="rounded-xl border border-secondary/30 bg-secondary/10 px-3 py-2 text-xs text-secondary">
-                Proximo evento: <span className="font-semibold">{missions.upcomingSeasonalEvent.name}</span> em {Math.max(0, missions.upcomingSeasonalEvent.startsInDays)} dia(s).
+                Próximo evento: <span className="font-semibold">{missions.upcomingSeasonalEvent.name}</span> em {Math.max(0, missions.upcomingSeasonalEvent.startsInDays)} dia(s).
               </div>
             ) : null}
             {activeSeason ? (
@@ -753,7 +756,7 @@ export default function ChildAprenderPage() {
         <div className="mb-4 grid gap-3 md:grid-cols-2">
           <Card className="border-border bg-white/95">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Missoes da Semana</CardTitle>
+              <CardTitle className="text-base">Missões da Semana</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {(missions?.missions ?? []).slice(0, 5).map((mission) => (
@@ -781,10 +784,10 @@ export default function ChildAprenderPage() {
                   </div>
                 </div>
               ))}
-              {retentionLoading && (!missions || missions.missions.length === 0) ? <p className="text-xs text-muted-foreground">Carregando missoes...</p> : null}
+              {retentionLoading && (!missions || missions.missions.length === 0) ? <p className="text-xs text-muted-foreground">Carregando missões...</p> : null}
               {!retentionLoading && missions && missions.missions.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-                  Nenhuma missao ativa nesta semana.
+                  Nenhuma missão ativa nesta semana.
                 </div>
               ) : null}
               {retentionError ? (
@@ -800,7 +803,7 @@ export default function ChildAprenderPage() {
 
           <Card className="border-border bg-white/95">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Calendario de Constancia</CardTitle>
+              <CardTitle className="text-base">Calendário de Constância</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
@@ -893,7 +896,7 @@ export default function ChildAprenderPage() {
       ) : null}
 
       {selectedNode?.event ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-4 md:items-center" onClick={() => setSelectedNode(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" onClick={() => setSelectedNode(null)}>
           <div className="w-full max-w-md rounded-3xl border border-border bg-white p-5 shadow-[0_24px_60px_rgba(13,25,41,0.32)]" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true">
             <p className="text-lg font-extrabold text-foreground">{selectedNode.event.title}</p>
             <p className="mt-1 text-sm text-muted-foreground">{selectedNode.event.description}</p>
@@ -903,7 +906,7 @@ export default function ChildAprenderPage() {
             </p>
 
             <div className="mt-3 rounded-2xl border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-              <p className="font-semibold text-foreground">Missao deste evento</p>
+              <p className="font-semibold text-foreground">Missão deste evento</p>
               <p className="mt-1">{eventFriendlyDetails(selectedNode.event).objective}</p>
               <p className="mt-2 font-semibold text-foreground">Recompensa</p>
               <p className="mt-1">{eventFriendlyDetails(selectedNode.event).reward}</p>
@@ -945,7 +948,7 @@ export default function ChildAprenderPage() {
               </Button>
             </div>
             <p className="mt-2 text-center text-[11px] text-muted-foreground">
-              A badge sera concluida depois que a atividade for finalizada.
+              A badge será concluída depois que a atividade for finalizada.
             </p>
           </div>
         </div>
@@ -1064,3 +1067,4 @@ export default function ChildAprenderPage() {
     </>
   );
 }
+

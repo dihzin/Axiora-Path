@@ -22,6 +22,7 @@ from app.models import (
     QuestionDifficulty,
     QuestionResult,
     QuestionTemplate,
+    QuestionTemplateType,
     QuestionType,
     QuestionVariant,
     Skill,
@@ -42,6 +43,17 @@ DEFAULT_MAX_LESSONS_PER_DAY = 5
 DEFAULT_XP_MULTIPLIER = 1.0
 THREE_STAR_BONUS_COINS = 10
 ANTI_REPEAT_DAYS = 7
+
+PT_NOUN_FORMS: dict[str, tuple[str, str]] = {
+    "figurinhas": ("figurinha", "figurinhas"),
+    "livros": ("livro", "livros"),
+    "adesivos": ("adesivo", "adesivos"),
+    "cartas": ("carta", "cartas"),
+    "blocos": ("bloco", "blocos"),
+    "blocos coloridos": ("bloco colorido", "blocos coloridos"),
+    "bolinhas de gude": ("bolinha de gude", "bolinhas de gude"),
+    "frutas": ("fruta", "frutas"),
+}
 
 
 @dataclass(slots=True)
@@ -379,6 +391,20 @@ def _render_template_str(value: str | None, variables: dict[str, Any]) -> str | 
     return Template(out).safe_substitute({k: str(v) for k, v in variables.items()})
 
 
+def _noun_forms_pt(raw: str) -> tuple[str, str]:
+    key = raw.strip().lower()
+    if key in PT_NOUN_FORMS:
+        return PT_NOUN_FORMS[key]
+    if key.endswith("s") and len(key) > 1:
+        return key[:-1], key
+    return key, f"{key}s"
+
+
+def _label_with_count_pt(count: int, raw_noun: str) -> str:
+    singular, plural = _noun_forms_pt(raw_noun)
+    return singular if abs(int(count)) == 1 else plural
+
+
 def _generate_variables(*, spec: dict[str, Any], rng: SeededRng) -> dict[str, Any]:
     variables: dict[str, Any] = {}
     for key, definition in spec.items():
@@ -464,8 +490,33 @@ def generate_variant(
     seed = sha256(f"{user_id}:{template.id}:{day_bucket}:{attempt_index}".encode("utf-8")).hexdigest()[:32]
     rng = SeededRng(seed)
     variables = _generate_variables(spec=template.generator_spec or {}, rng=rng)
+    if isinstance(variables.get("context"), str):
+        context = str(variables["context"])
+        singular, plural = _noun_forms_pt(context)
+        variables["contextSingular"] = singular
+        variables["contextPlural"] = plural
+        if "a" in variables:
+            variables["contextA"] = _label_with_count_pt(int(variables["a"]), context)
+        if "b" in variables:
+            variables["contextB"] = _label_with_count_pt(int(variables["b"]), context)
+        if "answer" in variables:
+            variables["contextAnswer"] = _label_with_count_pt(int(variables["answer"]), context)
+
     prompt = _render_template_str(template.prompt_template, variables) or ""
     explanation = _render_template_str(template.explanation_template, variables)
+
+    if template.template_type == QuestionTemplateType.MATH_WORDPROB:
+        name = str(variables.get("name", "A criança"))
+        a = int(variables.get("a", 0))
+        b = int(variables.get("b", 0))
+        answer = int(variables.get("answer", a + b))
+        context = str(variables.get("context", "itens"))
+        context_a = _label_with_count_pt(a, context)
+        context_b = _label_with_count_pt(b, context)
+        context_answer = _label_with_count_pt(answer, context)
+        prompt = f"{name} tinha {a} {context_a} e ganhou {b} {context_b}. Quantos {context_answer} tem agora?"
+        explanation = f"{name} somou {a} com {b} e chegou a {answer} {context_answer}."
+
     metadata = _render_metadata(renderer_spec=template.renderer_spec or {}, variables=variables, rng=rng)
     payload = {
         "variables": variables,
@@ -556,14 +607,30 @@ def _build_template_item(*, template: QuestionTemplate, generated_variant: Gener
     payload = generated_variant.variant_data or {}
     metadata = dict(payload.get("metadata", {}))
     metadata["signature"] = payload.get("signature")
+    prompt = str(payload.get("prompt", ""))
+    explanation = payload.get("explanation") if isinstance(payload.get("explanation"), str) else None
+
+    if template.template_type == QuestionTemplateType.MATH_WORDPROB:
+        variables = payload.get("variables") if isinstance(payload.get("variables"), dict) else {}
+        name = str(variables.get("name", "A criança"))
+        a = int(variables.get("a", 0))
+        b = int(variables.get("b", 0))
+        answer = int(variables.get("answer", a + b))
+        context = str(variables.get("context", "itens"))
+        context_a = _label_with_count_pt(a, context)
+        context_b = _label_with_count_pt(b, context)
+        context_answer = _label_with_count_pt(answer, context)
+        prompt = f"{name} tinha {a} {context_a} e ganhou {b} {context_b}. Quantos {context_answer} tem agora?"
+        explanation = f"{name} somou {a} com {b} e chegou a {answer} {context_answer}."
+
     return NextQuestionItem(
         question_id=None,
         template_id=str(template.id),
         generated_variant_id=str(generated_variant.id),
         variant_id=None,
         type=QuestionType.TEMPLATE,
-        prompt=str(payload.get("prompt", "")),
-        explanation=payload.get("explanation") if isinstance(payload.get("explanation"), str) else None,
+        prompt=prompt,
+        explanation=explanation,
         skill_id=str(template.skill_id),
         metadata=metadata,
     )

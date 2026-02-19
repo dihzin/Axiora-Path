@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { memo } from "react";
 
 const NAV_ITEMS = [
-  { href: "/child", label: "Inicio", iconSrc: "/icons/inicio.svg" },
+  { href: "/child", label: "Início", iconSrc: "/icons/inicio.svg" },
   { href: "/child/aprender", label: "Aprender", iconSrc: "/icons/aprender.svg" },
   { href: "/child/stickers", label: "Figurinhas", iconSrc: "/icons/figurinhas.svg" },
   { href: "/child/games", label: "Jogos", iconSrc: "/icons/jogos.svg" },
