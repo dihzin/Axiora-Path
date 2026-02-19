@@ -14,6 +14,7 @@ export const UX_SETTINGS_FALLBACK: UserUXSettings = {
 
 const UX_LOCAL_KEY = "axiora_ux_settings_v1";
 const audioCache = new Map<string, HTMLAudioElement>();
+const SFX_VOLUME = 0.6;
 
 export function systemPrefersReducedMotion(): boolean {
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
@@ -66,7 +67,7 @@ export function playSfx(path: string, enabled: boolean): void {
   if (!audio) {
     audio = new Audio(path);
     audio.preload = "auto";
-    audio.volume = 0.35;
+    audio.volume = SFX_VOLUME;
     audioCache.set(path, audio);
   }
   audio.currentTime = 0;

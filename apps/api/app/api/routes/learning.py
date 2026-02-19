@@ -236,6 +236,7 @@ def get_learning_next_questions(
                 prompt=item.prompt,
                 explanation=item.explanation,
                 skillId=item.skill_id,
+                difficulty=item.difficulty,
                 metadata=item.metadata,
             )
             for item in plan.items

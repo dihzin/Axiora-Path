@@ -91,6 +91,28 @@ function buildCoachTip(params: { streakDays: number; dueReviews: number; complet
   return "Cada lição concluída deixa sua trilha mais forte. Continue nesse ritmo.";
 }
 
+function LearningPathSkeleton() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <div className="rounded-3xl border border-border bg-white/80 p-4">
+        <div className="h-4 w-44 rounded bg-slate-200" />
+        <div className="mt-2 h-3 w-64 rounded bg-slate-200" />
+        <div className="mt-3 h-2.5 w-full rounded bg-slate-200" />
+      </div>
+      <div className="relative h-[28rem] overflow-hidden rounded-3xl border border-border bg-white/65">
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 120" preserveAspectRatio="none" aria-hidden>
+          <path d="M 25 10 C 25 22, 75 22, 75 34 C 75 46, 25 46, 25 58 C 25 70, 75 70, 75 82 C 75 94, 25 94, 25 106" fill="none" stroke="rgba(191,205,226,0.9)" strokeWidth="4" strokeLinecap="round" />
+        </svg>
+        <div className="absolute left-[22%] top-[9%] h-14 w-14 rounded-full bg-slate-200" />
+        <div className="absolute left-[68%] top-[27%] h-14 w-14 rounded-full bg-slate-200" />
+        <div className="absolute left-[22%] top-[46%] h-14 w-14 rounded-full bg-slate-200" />
+        <div className="absolute left-[68%] top-[64%] h-14 w-14 rounded-full bg-slate-200" />
+        <div className="absolute left-[22%] top-[83%] h-14 w-14 rounded-full bg-slate-200" />
+      </div>
+    </div>
+  );
+}
+
 function daysInMonth(month: number, year: number): number {
   return new Date(year, month, 0).getDate();
 }
@@ -100,9 +122,9 @@ const WEEKDAY_SHORT = ["D", "S", "T", "Q", "Q", "S", "S"] as const;
 function buildSerpentinePoints(count: number): Point[] {
   if (count <= 0) return [];
   const center = 50;
-  const swing = 28;
+  const swing = 24;
   const top = 10;
-  const step = 24;
+  const step = 23;
   return Array.from({ length: count }, (_, index) => {
     const side = index % 2 === 0 ? -1 : 1;
     const organic = 0.8 + Math.sin((index + 1) * 0.7) * 0.2;
@@ -223,7 +245,7 @@ function UnitPath({
   soundEnabled,
   onUnlockDone,
   collapsed,
-  onExpand,
+  onToggleCollapsed,
 }: {
   unit: LearningPathUnit;
   onOpenNode: (node: LearningPathNode) => void;
@@ -232,7 +254,7 @@ function UnitPath({
   soundEnabled: boolean;
   onUnlockDone: (toast: string) => void;
   collapsed: boolean;
-  onExpand: () => void;
+  onToggleCollapsed: () => void;
 }) {
   const points = useMemo(() => buildSerpentinePoints(unit.nodes.length), [unit.nodes.length]);
   const path = useMemo(() => buildBezier(points), [points]);
@@ -286,13 +308,13 @@ function UnitPath({
 
   useEffect(() => {
     const pathEl = pathRef.current;
-    if (!pathEl || trailLength <= 0 || trailProgressRatio <= 0 || trailProgressRatio >= 1) {
+    if (reducedMotion || !pathEl || trailLength <= 0 || trailProgressRatio <= 0 || trailProgressRatio >= 1) {
       setTrailHead(null);
       return;
     }
     const p = pathEl.getPointAtLength(trailLength * trailProgressRatio);
     setTrailHead({ x: p.x, y: p.y });
-  }, [trailLength, trailProgressRatio]);
+  }, [reducedMotion, trailLength, trailProgressRatio]);
 
   useEffect(() => {
     if (!unlockAnimation || unlockAnimation.unitId !== unit.id) return;
@@ -378,13 +400,11 @@ function UnitPath({
             {unitStars.earned}/{unitStars.total}
           </span>
         </div>
-        {collapsed ? (
-          <div className="mt-3">
-            <Button size="sm" variant="secondary" className="h-8 px-3 text-xs" onClick={onExpand}>
-              Expandir unidade
-            </Button>
-          </div>
-        ) : null}
+        <div className="mt-3">
+          <Button size="sm" variant="secondary" className="h-8 px-3 text-xs" onClick={onToggleCollapsed}>
+            {collapsed ? "Expandir unidade" : "Recolher unidade"}
+          </Button>
+        </div>
       </article>
 
       {collapsed ? null : (
@@ -410,19 +430,26 @@ function UnitPath({
               </feMerge>
             </filter>
           </defs>
-          <path ref={pathRef} d={path} fill="none" stroke="rgba(184,200,220,0.72)" strokeWidth="3.8" strokeLinecap="round" />
+          <path
+            ref={pathRef}
+            d={path}
+            fill="none"
+            stroke="rgba(184,200,220,0.56)"
+            strokeWidth="2.8"
+            strokeLinecap="round"
+            strokeDasharray="0.1 9.2"
+          />
           <path
             d={path}
             fill="none"
             stroke={`url(#trail-${unit.id})`}
-            strokeWidth="3.8"
+            strokeWidth="3.6"
             strokeLinecap="round"
             strokeDasharray={`${Math.max(0, trailLength * trailProgressRatio)} ${Math.max(1, trailLength)}`}
           />
           {trailHead ? (
             <>
-              <circle cx={trailHead.x} cy={trailHead.y} r="2.7" fill="#4DD9C0" filter={`url(#trail-head-glow-${unit.id})`} />
-              <circle cx={trailHead.x} cy={trailHead.y} r="1.3" fill="#ffffff" opacity="0.92" />
+              <circle cx={trailHead.x} cy={trailHead.y} r="2.1" fill="#4DD9C0" opacity="0.9" filter={`url(#trail-head-glow-${unit.id})`} />
             </>
           ) : null}
           {spark ? <circle cx={spark.x} cy={spark.y} r="2.8" fill="#FFD166" filter={`url(#spark-glow-${unit.id})`} /> : null}
@@ -447,7 +474,7 @@ function UnitPath({
               : (nextPoint?.x ?? prevPoint?.x ?? 50) >= left
                 ? "left"
                 : "right";
-          const labelOffsetPx = isEventNode ? 88 : 80;
+          const labelOffsetPx = isEventNode ? 112 : 92;
           const isNearLeftEdge = left < 42;
           const isNearRightEdge = left > 58;
           const forceSide: "left" | "right" | null = isNearLeftEdge ? "right" : isNearRightEdge ? "left" : null;
@@ -460,6 +487,7 @@ function UnitPath({
             >
               <button
                 type="button"
+                aria-label={lesson ? `${compactNodeLabel(node)}${lesson.unlocked ? "" : " (bloqueada)"}` : event ? event.title : "Nó da trilha"}
                 className={cn(
                   "node-hover inline-flex h-16 w-16 items-center justify-center rounded-full border-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2",
                   lesson
@@ -488,20 +516,32 @@ function UnitPath({
               />
               <div
                 className={cn(
-                  "pointer-events-none absolute top-1/2 flex w-[106px] -translate-y-1/2 flex-col",
+                  "pointer-events-none absolute top-1/2 flex w-[110px] -translate-y-1/2 flex-col gap-0.5 sm:w-[118px]",
                   safeSide === "left" ? "items-end text-right" : "items-start text-left",
                 )}
                 style={safeSide === "left" ? { right: `${labelOffsetPx}px` } : { left: `${labelOffsetPx}px` }}
               >
-                <p className={cn("leading-tight", isEventNode ? "text-[10.5px] font-semibold text-foreground/90" : "text-[11px] font-bold text-foreground")}>
+                <p
+                  className={cn(
+                    "rounded-md bg-[#E8EEF8] px-1.5 py-0.5 leading-tight shadow-[0_0_0_5px_#EEF3FB,0_1px_0_rgba(184,200,239,0.2)]",
+                    isEventNode ? "text-[10.5px] font-semibold text-foreground/90" : "text-[11px] font-bold text-foreground",
+                  )}
+                >
                   <span
-                    className="inline-block max-w-[106px] overflow-hidden text-ellipsis whitespace-nowrap align-top"
+                    className={cn(
+                      "inline-block max-w-[110px] align-top sm:max-w-[118px]",
+                      isEventNode ? "whitespace-normal leading-tight" : "overflow-hidden text-ellipsis whitespace-nowrap",
+                    )}
                     title={lesson ? lesson.title : event?.title ?? ""}
                   >
                     {mobileFriendlyNodeLabel(node)}
                   </span>
                 </p>
-                {lesson ? <p className="mt-0.5 text-[9px] font-bold tracking-wide text-secondary/85">+{lesson.xpReward} XP</p> : null}
+                {lesson ? (
+                  <p className="rounded-md bg-[#E8EEF8] px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-secondary/85 shadow-[0_0_0_5px_#EEF3FB,0_1px_0_rgba(184,200,239,0.18)]">
+                    +{lesson.xpReward} XP
+                  </p>
+                ) : null}
               </div>
             </div>
           );
@@ -986,7 +1026,7 @@ export default function ChildAprenderPage() {
           </Card>
         </div>
 
-        {loading ? <Card><CardContent className="p-6 text-sm text-muted-foreground">Carregando mapa...</CardContent></Card> : null}
+        {loading ? <LearningPathSkeleton /> : null}
         {error && !path ? (
           <Card>
             <CardContent className="flex items-center justify-between gap-3 p-4 text-sm text-muted-foreground">
@@ -1024,7 +1064,12 @@ export default function ChildAprenderPage() {
               reducedMotion={reducedMotion}
               soundEnabled={uxSettings.soundEnabled}
               collapsed={Boolean(collapsedUnits[unit.id])}
-              onExpand={() => setCollapsedUnits((prev) => ({ ...prev, [unit.id]: false }))}
+              onToggleCollapsed={() =>
+                setCollapsedUnits((prev) => ({
+                  ...prev,
+                  [unit.id]: !Boolean(prev[unit.id]),
+                }))
+              }
               onUnlockDone={(toast) => {
                 setUnlockToast(toast);
                 setUnlockAnimation(null);

@@ -452,6 +452,7 @@ export type LearningNextItem = {
   generatedVariantId: string | null;
   variantId: string | null;
   skillId: string;
+  difficulty: LearningDifficulty;
   type: LearningQuestionType;
   prompt: string;
   explanation?: string | null;

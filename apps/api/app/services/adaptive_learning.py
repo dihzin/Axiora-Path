@@ -92,6 +92,7 @@ class NextQuestionItem:
     prompt: str
     explanation: str | None
     skill_id: str
+    difficulty: QuestionDifficulty
     metadata: dict[str, Any]
 
 
@@ -585,11 +586,14 @@ def _build_question_item(*, question: Question, variant: QuestionVariant | None)
     prompt = question.prompt
     explanation = question.explanation
     metadata = dict(question.metadata_json or {})
+    difficulty = question.difficulty
     if variant is not None:
         payload = variant.variant_data or {}
         prompt = str(payload.get("prompt", prompt))
         explanation = payload.get("explanation", explanation)
         metadata = dict(payload.get("metadata", metadata))
+        if variant.difficulty_override is not None:
+            difficulty = variant.difficulty_override
     return NextQuestionItem(
         question_id=str(question.id),
         template_id=None,
@@ -599,6 +603,7 @@ def _build_question_item(*, question: Question, variant: QuestionVariant | None)
         prompt=prompt,
         explanation=explanation if isinstance(explanation, str) else None,
         skill_id=str(question.skill_id),
+        difficulty=difficulty,
         metadata=metadata,
     )
 
@@ -632,6 +637,7 @@ def _build_template_item(*, template: QuestionTemplate, generated_variant: Gener
         prompt=prompt,
         explanation=explanation,
         skill_id=str(template.skill_id),
+        difficulty=template.difficulty,
         metadata=metadata,
     )
 

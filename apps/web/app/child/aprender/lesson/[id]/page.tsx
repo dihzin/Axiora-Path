@@ -143,6 +143,12 @@ function resolveAxionTip(question: LearningNextItem | null): string {
   return "Dica do Axion: você aprende melhor quando revisa a resposta com atenção.";
 }
 
+function difficultyLabel(difficulty: LearningNextItem["difficulty"] | undefined): { text: string; className: string } {
+  if (difficulty === "HARD") return { text: "Difícil", className: "border-violet-300/60 bg-violet-100/65 text-violet-700" };
+  if (difficulty === "MEDIUM") return { text: "Média", className: "border-amber-300/60 bg-amber-100/65 text-amber-700" };
+  return { text: "Fácil", className: "border-secondary/35 bg-secondary/10 text-secondary" };
+}
+
 function hashSeed(input: string): number {
   let h = 2166136261;
   for (let i = 0; i < input.length; i += 1) {
@@ -369,6 +375,7 @@ export default function AdaptiveLessonSessionPage() {
   const reducedMotion = effectiveReducedMotion(uxSettings);
 
   const current = queue[index] ?? null;
+  const currentDifficulty = difficultyLabel(current?.difficulty);
   const progressPercent = queue.length > 0 ? ((index + 1) / queue.length) * 100 : 0;
   const answeredCount = Object.keys(answeredByStep).length;
   const correctCount = Object.values(correctByStep).filter(Boolean).length;
@@ -828,6 +835,11 @@ export default function AdaptiveLessonSessionPage() {
                 </div>
               )}
               <h2 className="text-lg font-extrabold text-foreground">{current.prompt}</h2>
+              <div className="flex items-center justify-between">
+                <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-extrabold", currentDifficulty.className)}>
+                  {currentDifficulty.text}
+                </span>
+              </div>
               {current.type === "DRAG_DROP" ? (
                 <div className="space-y-3">
                   <div className="rounded-2xl border border-border bg-white/90 p-3">

@@ -32,6 +32,7 @@ class LearningNextItemOut(BaseModel):
     prompt: str
     explanation: str | None = None
     skill_id: str = Field(alias="skillId")
+    difficulty: QuestionDifficulty
     metadata: dict[str, Any]
 
 
