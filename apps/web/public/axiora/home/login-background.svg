@@ -1,0 +1,204 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844">
+  <defs>
+
+    <!-- Base background gradient: deep navy to soft blue -->
+    <linearGradient id="bg-main" x1="0%" y1="0%" x2="30%" y2="100%">
+      <stop offset="0%" stop-color="#0D1929"/>
+      <stop offset="45%" stop-color="#1B2A4A"/>
+      <stop offset="100%" stop-color="#162440"/>
+    </linearGradient>
+
+    <!-- Upper glow: teal bloom -->
+    <radialGradient id="glow-top" cx="65%" cy="12%" r="55%">
+      <stop offset="0%" stop-color="#4DD9C0" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#4DD9C0" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Mid glow: gold warm -->
+    <radialGradient id="glow-mid" cx="20%" cy="48%" r="45%">
+      <stop offset="0%" stop-color="#F5C842" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#F5C842" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Bottom glow: deep teal -->
+    <radialGradient id="glow-bot" cx="80%" cy="90%" r="40%">
+      <stop offset="0%" stop-color="#4DD9C0" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#4DD9C0" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Crown jewel glow -->
+    <radialGradient id="jewel-teal" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#4DD9C0" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#2BB09A" stop-opacity="0.5"/>
+    </radialGradient>
+
+    <!-- Card backdrop blur sim -->
+    <filter id="soft-blur" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="18" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-blur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12"/>
+    </filter>
+    <filter id="star-blur">
+      <feGaussianBlur stdDeviation="1.5"/>
+    </filter>
+
+  </defs>
+
+  <!-- ── BASE BACKGROUND ── -->
+  <rect width="390" height="844" fill="url(#bg-main)"/>
+
+  <!-- ── ATMOSPHERIC GLOWS ── -->
+  <rect width="390" height="844" fill="url(#glow-top)"/>
+  <rect width="390" height="844" fill="url(#glow-mid)"/>
+  <rect width="390" height="844" fill="url(#glow-bot)"/>
+
+  <!-- ── SUBTLE GRID LINES (depth) ── -->
+  <g opacity="0.04" stroke="#4DD9C0" stroke-width="1">
+    <!-- vertical -->
+    <line x1="78" y1="0" x2="78" y2="844"/>
+    <line x1="156" y1="0" x2="156" y2="844"/>
+    <line x1="234" y1="0" x2="234" y2="844"/>
+    <line x1="312" y1="0" x2="312" y2="844"/>
+    <!-- horizontal -->
+    <line x1="0" y1="168" x2="390" y2="168"/>
+    <line x1="0" y1="336" x2="390" y2="336"/>
+    <line x1="0" y1="504" x2="390" y2="504"/>
+    <line x1="0" y1="672" x2="390" y2="672"/>
+  </g>
+
+  <!-- ── FLOATING ORB BLOBS (back layer) ── -->
+  <!-- Large teal orb top-right -->
+  <circle cx="310" cy="90" r="120" fill="#4DD9C0" fill-opacity="0.07" filter="url(#soft-blur)"/>
+  <!-- Gold orb mid-left -->
+  <circle cx="50" cy="400" r="90" fill="#F5C842" fill-opacity="0.06" filter="url(#soft-blur)"/>
+  <!-- Teal orb bottom-right -->
+  <circle cx="350" cy="740" r="100" fill="#4DD9C0" fill-opacity="0.08" filter="url(#soft-blur)"/>
+
+  <!-- ── DECORATIVE RINGS (hero energy) ── -->
+  <!-- Top area large ring -->
+  <circle cx="310" cy="95" r="88" fill="none" stroke="#4DD9C0" stroke-width="1.5" stroke-opacity="0.18" stroke-dasharray="6 10"/>
+  <circle cx="310" cy="95" r="108" fill="none" stroke="#4DD9C0" stroke-width="1" stroke-opacity="0.10" stroke-dasharray="3 14"/>
+  <!-- Mid left ring -->
+  <circle cx="55" cy="395" r="65" fill="none" stroke="#F5C842" stroke-width="1.2" stroke-opacity="0.14" stroke-dasharray="4 9"/>
+  <!-- Bottom right ring -->
+  <circle cx="348" cy="738" r="75" fill="none" stroke="#4DD9C0" stroke-width="1.2" stroke-opacity="0.15" stroke-dasharray="5 11"/>
+
+  <!-- ── STAR PARTICLES ── -->
+  <g fill="#FFFFFF">
+    <!-- scattered small dots -->
+    <circle cx="30" cy="55" r="1.2" opacity="0.5"/>
+    <circle cx="68" cy="130" r="0.8" opacity="0.35"/>
+    <circle cx="145" cy="40" r="1.5" opacity="0.45"/>
+    <circle cx="190" cy="82" r="0.7" opacity="0.3"/>
+    <circle cx="250" cy="28" r="1" opacity="0.5"/>
+    <circle cx="330" cy="180" r="0.8" opacity="0.3"/>
+    <circle cx="370" cy="65" r="1.3" opacity="0.4"/>
+    <circle cx="20" cy="230" r="0.9" opacity="0.3"/>
+    <circle cx="88" cy="290" r="1.2" opacity="0.35"/>
+    <circle cx="362" cy="310" r="0.7" opacity="0.28"/>
+    <circle cx="10" cy="480" r="1" opacity="0.3"/>
+    <circle cx="375" cy="460" r="1.2" opacity="0.35"/>
+    <circle cx="50" cy="620" r="0.8" opacity="0.28"/>
+    <circle cx="110" cy="700" r="1.1" opacity="0.32"/>
+    <circle cx="280" cy="800" r="0.9" opacity="0.3"/>
+    <circle cx="340" cy="820" r="1.3" opacity="0.38"/>
+    <circle cx="160" cy="760" r="0.7" opacity="0.25"/>
+  </g>
+  <!-- Slightly bigger bright stars with soft glow -->
+  <g filter="url(#star-blur)">
+    <circle cx="48" cy="165" r="2" fill="#4DD9C0" opacity="0.6"/>
+    <circle cx="340" cy="240" r="1.8" fill="#F5C842" opacity="0.55"/>
+    <circle cx="195" cy="155" r="1.5" fill="#FFFFFF" opacity="0.5"/>
+    <circle cx="72" cy="540" r="2" fill="#4DD9C0" opacity="0.45"/>
+    <circle cx="355" cy="580" r="1.8" fill="#F5C842" opacity="0.5"/>
+    <circle cx="170" cy="640" r="1.6" fill="#FFFFFF" opacity="0.4"/>
+    <circle cx="300" cy="680" r="2" fill="#4DD9C0" opacity="0.4"/>
+  </g>
+
+  <!-- ── DIAMOND / AXION EMBLEM SHAPES (hero motif) ── -->
+  <!-- Top right floating diamond -->
+  <g transform="translate(330 140) rotate(15)">
+    <path d="M0 -22 L14 0 L0 22 L-14 0 Z" fill="none" stroke="#F5C842" stroke-width="1.5" stroke-opacity="0.35"/>
+    <path d="M0 -14 L9 0 L0 14 L-9 0 Z" fill="#F5C842" fill-opacity="0.08"/>
+  </g>
+  <!-- Mid left small diamond -->
+  <g transform="translate(42 352) rotate(-10)">
+    <path d="M0 -14 L9 0 L0 14 L-9 0 Z" fill="none" stroke="#4DD9C0" stroke-width="1.2" stroke-opacity="0.4"/>
+    <path d="M0 -8 L5 0 L0 8 L-5 0 Z" fill="#4DD9C0" fill-opacity="0.1"/>
+  </g>
+  <!-- Bottom small diamond -->
+  <g transform="translate(80 730) rotate(5)">
+    <path d="M0 -12 L8 0 L0 12 L-8 0 Z" fill="none" stroke="#F5C842" stroke-width="1" stroke-opacity="0.3"/>
+  </g>
+  <!-- Right mid diamond -->
+  <g transform="translate(368 490) rotate(-20)">
+    <path d="M0 -16 L10 0 L0 16 L-10 0 Z" fill="none" stroke="#4DD9C0" stroke-width="1.2" stroke-opacity="0.32"/>
+    <path d="M0 -9 L6 0 L0 9 L-6 0 Z" fill="#4DD9C0" fill-opacity="0.08"/>
+  </g>
+
+  <!-- ── CROWN SILHOUETTE (large, ghostly, top area) ── -->
+  <g transform="translate(195 -10) scale(3.2)" opacity="0.055" fill="#F5C842">
+    <path d="M-18 28 L-18 8 L-10 16 L0 0 L10 16 L18 8 L18 28 Z"/>
+    <rect x="-20" y="28" width="40" height="10" rx="5"/>
+  </g>
+
+  <!-- ── AXION SILHOUETTE (large ghost, bottom area) ── -->
+  <!-- Head ghost -->
+  <ellipse cx="195" cy="680" r="72" fill="none" stroke="#4DD9C0" stroke-width="1" stroke-opacity="0.06"/>
+  <ellipse cx="195" cy="680" r="52" fill="#4DD9C0" fill-opacity="0.025"/>
+  <!-- Body ghost -->
+  <ellipse cx="195" cy="770" rx="48" ry="54" fill="#1B2A4A" fill-opacity="0.18" stroke="#4DD9C0" stroke-width="0.8" stroke-opacity="0.06"/>
+
+  <!-- ── ENERGY TRAIL LINES (diagonal, hero speed feel) ── -->
+  <g stroke="#4DD9C0" stroke-linecap="round" opacity="0.10">
+    <line x1="-10" y1="200" x2="80" y2="188" stroke-width="1.5"/>
+    <line x1="-10" y1="210" x2="55" y2="202" stroke-width="1"/>
+    <line x1="-10" y1="218" x2="40" y2="213" stroke-width="0.7"/>
+  </g>
+  <g stroke="#F5C842" stroke-linecap="round" opacity="0.10">
+    <line x1="400" y1="590" x2="310" y2="576" stroke-width="1.5"/>
+    <line x1="400" y1="600" x2="322" y2="589" stroke-width="1"/>
+    <line x1="400" y1="608" x2="335" y2="600" stroke-width="0.7"/>
+  </g>
+
+  <!-- ── CAPE SHAPE (abstract, mid-left) ── -->
+  <path d="M0 310 Q-20 380 5 440 Q40 410 52 360 Q30 330 0 310 Z"
+    fill="#0F1C30" fill-opacity="0.5" stroke="#4DD9C0" stroke-width="0.8" stroke-opacity="0.12"/>
+
+  <!-- ── SOFT BOTTOM FADE (so login card sits cleanly) ── -->
+  <linearGradient id="bottom-fade" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#1B2A4A" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#EEF2F8" stop-opacity="1"/>
+  </linearGradient>
+  <rect x="0" y="480" width="390" height="364" fill="url(#bottom-fade)"/>
+
+  <!-- ── FLOATING BADGE / SEAL TOP CENTER ── -->
+  <g transform="translate(195 56)">
+    <!-- outer ring -->
+    <circle r="30" fill="none" stroke="#F5C842" stroke-width="1.5" stroke-opacity="0.35" stroke-dasharray="4 6"/>
+    <!-- inner disc -->
+    <circle r="22" fill="#1B2A4A" fill-opacity="0.6" stroke="#F5C842" stroke-width="1" stroke-opacity="0.5"/>
+    <!-- mini crown inside badge -->
+    <g transform="scale(0.55)" fill="#F5C842" opacity="0.9">
+      <path d="M-12 8 L-12 -2 L-6 4 L0 -8 L6 4 L12 -2 L12 8 Z"/>
+      <rect x="-13" y="8" width="26" height="6" rx="3"/>
+    </g>
+    <!-- teal dot accent -->
+    <circle cx="0" cy="-4" r="3.5" fill="#4DD9C0" fill-opacity="0.7"/>
+  </g>
+
+  <!-- ── SUBTLE HEXAGON GRID TOP (premium tech feel) ── -->
+  <g fill="none" stroke="#4DD9C0" stroke-width="0.6" stroke-opacity="0.07">
+    <!-- Row 1 -->
+    <polygon points="295,20 315,20 325,37 315,54 295,54 285,37"/>
+    <polygon points="325,37 345,37 355,54 345,71 325,71 315,54"/>
+    <polygon points="355,54 375,54 385,71 375,88 355,88 345,71"/>
+    <!-- Row 2 -->
+    <polygon points="265,37 285,37 295,54 285,71 265,71 255,54"/>
+    <polygon points="295,54 315,54 325,71 315,88 295,88 285,71"/>
+    <polygon points="325,71 345,71 355,88 345,105 325,105 315,88"/>
+  </g>
+
+</svg>

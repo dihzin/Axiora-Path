@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Axion — Login Background Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 40px;
+    flex-wrap: wrap;
+    padding: 40px 24px;
+    font-family: system-ui, sans-serif;
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 390px;
+    height: 844px;
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    box-shadow:
+      0 0 0 2px #333,
+      0 40px 80px rgba(0,0,0,0.7),
+      0 0 60px rgba(77,217,192,0.12);
+    flex-shrink: 0;
+  }
+
+  .phone-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Login card - mimics the app's card */
+  .login-card {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    bottom: 120px;
+    background: rgba(255,255,255,0.97);
+    border-radius: 20px;
+    padding: 28px 24px 28px;
+    box-shadow: 0 -4px 40px rgba(13,25,41,0.25), 0 8px 32px rgba(0,0,0,0.15);
+  }
+
+  .card-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #1B2A4A;
+    margin-bottom: 6px;
+  }
+
+  .card-sub {
+    font-size: 12px;
+    color: #8A9BBD;
+    margin-bottom: 20px;
+    line-height: 1.4;
+  }
+
+  .input-field {
+    width: 100%;
+    border: 1.5px solid #E2E8F4;
+    border-radius: 12px;
+    padding: 13px 16px;
+    font-size: 14px;
+    color: #1B2A4A;
+    margin-bottom: 10px;
+    outline: none;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .input-field span { color: #C0CCDD; font-size: 12px; }
+
+  .btn-login {
+    width: 100%;
+    background: linear-gradient(135deg, #FF7A45 0%, #FF5C1A 100%);
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    border-radius: 14px;
+    padding: 16px;
+    cursor: pointer;
+    margin-top: 4px;
+    box-shadow: 0 4px 16px rgba(255,90,26,0.35);
+    letter-spacing: 0.02em;
+  }
+
+  /* Axion mascot on background */
+  .axion-mascot {
+    position: absolute;
+    left: 50%;
+    top: 120px;
+    transform: translateX(-50%);
+  }
+
+  /* Right side: just background isolated */
+  .bg-only {
+    width: 195px;
+    height: 422px;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    flex-shrink: 0;
+  }
+
+  .label {
+    color: #6B82A8;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-align: center;
+    margin-top: 12px;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<!-- Full phone mockup -->
+<div>
+  <div class="phone">
+    <!-- Background SVG -->
+    <img src="login-background.svg" class="phone-bg" alt="background"/>
+
+    <!-- Axion mascot floating above card -->
+    <div class="axion-mascot">
+      <svg viewBox="0 0 96 96" width="100" height="100" fill="none" overflow="visible">
+        <style>
+          @keyframes fl { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+          @keyframes gl { 0%,100%{opacity:1} 50%{opacity:0.5} }
+          @keyframes cb { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
+          @keyframes bl { 0%,90%,100%{transform:scaleY(1)} 95%{transform:scaleY(0.06)} }
+          .fl{animation:fl 3s ease-in-out infinite;transform-origin:center}
+          .gl{animation:gl 3s ease-in-out infinite}
+          .cb{animation:cb 2.5s ease-in-out infinite;transform-origin:48px 14px}
+          .bl{animation:bl 4s ease-in-out infinite;transform-origin:center}
+        </style>
+        <g class="gl"><ellipse cx="48" cy="56" rx="40" ry="42" fill="#4DD9C0" fill-opacity="0.22"/></g>
+        <g class="fl">
+          <ellipse cx="48" cy="90" rx="22" ry="5" fill="#0D1A2E" fill-opacity="0.28"/>
+          <path d="M22 62 Q14 76 17 85 Q28 78 34 68" fill="#0F1C30"/>
+          <path d="M74 62 Q82 76 79 85 Q68 78 62 68" fill="#0F1C30"/>
+          <path d="M23 58 Q48 66 73 58 L71 66 Q48 74 25 66Z" fill="#1B2A4A" stroke="#4DD9C0" stroke-width="1.5" stroke-opacity="0.8"/>
+          <path d="M23 58 Q48 66 73 58" fill="none" stroke="#4DD9C0" stroke-width="2" stroke-linecap="round"/>
+          <ellipse cx="48" cy="62" rx="28" ry="30" fill="#1B2A4A" stroke="#243F6A" stroke-width="1.5"/>
+          <ellipse cx="42" cy="52" rx="9" ry="5" fill="#4DD9C0" fill-opacity="0.1" transform="rotate(-12 42 52)"/>
+          <path d="M48 54 L52 60 L48 66 L44 60Z" fill="#F5C842" fill-opacity="0.9" stroke="#C8990A" stroke-width="1"/>
+          <path d="M48 56 L51 60 L48 64 L45 60Z" fill="#FFE07A" fill-opacity="0.5"/>
+          <ellipse cx="48" cy="44" rx="26" ry="28" fill="#2D4A7A" stroke="#1B2A4A" stroke-width="1.5"/>
+          <ellipse cx="40" cy="34" rx="10" ry="6" fill="white" fill-opacity="0.05"/>
+          <ellipse cx="22" cy="44" rx="4" ry="5.5" fill="#2D4A7A" stroke="#1B2A4A" stroke-width="1"/>
+          <ellipse cx="74" cy="44" rx="4" ry="5.5" fill="#2D4A7A" stroke="#1B2A4A" stroke-width="1"/>
+          <ellipse cx="27" cy="50" rx="7" ry="5" fill="#F5C842" fill-opacity="0.16"/>
+          <ellipse cx="69" cy="50" rx="7" ry="5" fill="#F5C842" fill-opacity="0.16"/>
+          <path d="M27 33 Q36 28 44 32" stroke="#F5C842" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M52 32 Q60 28 69 33" stroke="#F5C842" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <g class="bl">
+            <path d="M29 42 Q36 34 43 42" stroke="#1B2A4A" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+            <path d="M53 42 Q60 34 67 42" stroke="#1B2A4A" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+          </g>
+          <path d="M33 53 Q48 67 63 53" fill="#1B2A4A" stroke="#1B2A4A" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M35 54 Q48 65 61 54" fill="white"/>
+          <ellipse cx="48" cy="61" rx="8" ry="5" fill="#E8709A" fill-opacity="0.75"/>
+          <g class="cb">
+            <rect x="30" y="18" width="36" height="8" rx="4" fill="#F5C842" stroke="#C8990A" stroke-width="1"/>
+            <path d="M33 18 L33 9 L39 15 L48 6 L57 15 L63 9 L63 18Z" fill="#F5C842" stroke="#C8990A" stroke-width="1" stroke-linejoin="round"/>
+            <ellipse cx="48" cy="13" rx="3.5" ry="3.5" fill="#4DD9C0" stroke="#2AB09A" stroke-width="0.75"/>
+            <ellipse cx="36" cy="17" rx="2.5" ry="2.5" fill="#E8709A" stroke="#B84A78" stroke-width="0.75"/>
+            <ellipse cx="60" cy="17" rx="2.5" ry="2.5" fill="#E8709A" stroke="#B84A78" stroke-width="0.75"/>
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Login card -->
+    <div class="login-card">
+      <div class="card-title">Entrar</div>
+      <div class="card-sub">Use sua organização e credenciais para acessar o MVP.</div>
+      <div class="input-field">familia-silva</div>
+      <div class="input-field">Email <span>···</span></div>
+      <div class="input-field">Senha <span>···</span></div>
+      <button class="btn-login">Entrar</button>
+    </div>
+  </div>
+  <p class="label">Mockup completo</p>
+</div>
+
+<!-- Background isolated -->
+<div>
+  <div class="bg-only">
+    <img src="login-background.svg" width="390" height="844" style="width:390px;height:844px;transform-origin:top left;transform:scale(0.5)" alt="bg"/>
+  </div>
+  <p class="label">Background isolado</p>
+</div>
+
+</body>
+</html>

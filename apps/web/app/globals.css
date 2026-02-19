@@ -428,6 +428,60 @@ h2 {
   animation: axion-float 2.8s ease-in-out infinite;
 }
 
+@keyframes axion-mascot-idle {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes axion-mascot-angry {
+  0% {
+    transform: rotate(0deg) translateY(0);
+  }
+  25% {
+    transform: rotate(-2deg) translateY(-1px);
+  }
+  75% {
+    transform: rotate(2deg) translateY(-1px);
+  }
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+}
+
+@keyframes axion-mascot-tired {
+  0% {
+    transform: rotate(0deg) translateY(0);
+  }
+  50% {
+    transform: rotate(-2deg) translateY(1px);
+  }
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+}
+
+.axion-mascot {
+  transform-origin: center;
+  animation: axion-mascot-idle 2.8s ease-in-out infinite;
+}
+
+.axion-mascot--angry {
+  animation-duration: 0.65s;
+  animation-name: axion-mascot-angry;
+}
+
+.axion-mascot--tired {
+  animation-duration: 3.8s;
+  animation-name: axion-mascot-tired;
+}
+
 .axion-stage-1 {
   width: 8.5rem;
   height: 8.5rem;
@@ -522,6 +576,148 @@ h2 {
   border-left: 1px solid #dce2e6;
   border-bottom: 1px solid #dce2e6;
   transform: rotate(-45deg);
+}
+
+@keyframes axion-hero-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes axion-hero-breathe {
+  0%,
+  100% {
+    transform: scaleY(1) translateY(0);
+  }
+  50% {
+    transform: scaleY(1.015) translateY(-1px);
+  }
+}
+
+@keyframes axion-hero-shake {
+  0%,
+  100% {
+    transform: rotate(0deg) translateX(0);
+  }
+  20% {
+    transform: rotate(-3deg) translateX(-2px);
+  }
+  40% {
+    transform: rotate(3deg) translateX(2px);
+  }
+  60% {
+    transform: rotate(-2deg) translateX(-1px);
+  }
+  80% {
+    transform: rotate(2deg) translateX(1px);
+  }
+}
+
+@keyframes axion-hero-droop {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(2px) rotate(-2deg);
+  }
+}
+
+@keyframes axion-hero-sway {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  33% {
+    transform: rotate(3deg);
+  }
+  66% {
+    transform: rotate(-2deg);
+  }
+}
+
+@keyframes axion-hero-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.08);
+  }
+}
+
+@keyframes axion-hero-glow-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes axion-hero-crown-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes axion-hero-tear-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.axion-hero-body {
+  transform-origin: center center;
+}
+
+.axion-hero-blink {
+  transform-origin: center 40px;
+  animation: axion-hero-blink 4s ease-in-out infinite;
+}
+
+.axion-hero-glow {
+  animation: axion-hero-glow-pulse 3s ease-in-out infinite;
+}
+
+.axion-hero-crown {
+  transform-origin: 48px 12px;
+  animation: axion-hero-crown-bob 2.5s ease-in-out infinite;
+}
+
+.axion-hero-tear-l {
+  animation: axion-hero-tear-fall 2.2s ease-in 0.3s infinite;
+}
+
+.axion-hero-tear-r {
+  animation: axion-hero-tear-fall 2.2s ease-in 0.8s infinite;
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 .store-card-animated {

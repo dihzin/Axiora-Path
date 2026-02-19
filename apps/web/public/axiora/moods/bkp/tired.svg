@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <!-- Cape -->
+  <path d="M28 90 Q15 108 22 118 Q40 109 48 98" fill="#224433"/>
+  <path d="M92 90 Q105 108 98 118 Q80 109 72 98" fill="#224433"/>
+  <ellipse cx="60" cy="97" rx="30" ry="15" fill="#336644"/>
+  <ellipse cx="60" cy="90" rx="20" ry="12" fill="#77BB88"/>
+  
+  <!-- Head -->
+  <circle cx="60" cy="57" r="28" fill="#FFD580"/>
+  
+  <!-- Mask - green -->
+  <path d="M33 50 Q60 41 87 50 L87 62 Q60 53 33 62 Z" fill="#336644"/>
+  <ellipse cx="47" cy="55" rx="8" ry="6" fill="#FFD580"/>
+  <ellipse cx="73" cy="55" rx="8" ry="6" fill="#FFD580"/>
+  
+  <!-- Eyes open bottom half only (drooping) -->
+  <circle cx="47" cy="58" r="5" fill="#111"/>
+  <circle cx="73" cy="58" r="5" fill="#111"/>
+  <circle cx="48.5" cy="56" r="1.8" fill="white"/>
+  <circle cx="74.5" cy="56" r="1.8" fill="white"/>
+  <!-- Heavy drooping eyelids covering top 60% -->
+  <path d="M40 54 Q47 50 54 54 L54 59 Q47 56 40 59 Z" fill="#FFD580"/>
+  <path d="M66 54 Q73 50 80 54 L80 59 Q73 56 66 59 Z" fill="#FFD580"/>
+  <!-- Eyelid crease lines -->
+  <path d="M40 58 Q47 55 54 58" stroke="#D4A870" stroke-width="1.5" fill="none"/>
+  <path d="M66 58 Q73 55 80 58" stroke="#D4A870" stroke-width="1.5" fill="none"/>
+  
+  <!-- Droopy eyebrows -->
+  <path d="M40 47 Q47 46 54 49" stroke="#336644" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M66 49 Q73 46 80 47" stroke="#336644" stroke-width="3" fill="none" stroke-linecap="round"/>
+  
+  <!-- Big yawning open mouth -->
+  <ellipse cx="60" cy="74" rx="13" ry="9" fill="#884422"/>
+  <ellipse cx="60" cy="70" rx="13" ry="6" fill="#FFD580"/>
+  <!-- Yawn opening -->
+  <ellipse cx="60" cy="74" rx="10" ry="7" fill="#CC7744"/>
+  <!-- Tongue inside -->
+  <ellipse cx="60" cy="77" rx="7" ry="4" fill="#FF8888"/>
+  
+  <!-- Big Zzz -->
+  <text x="82" y="44" font-family="Arial Black" font-size="10" font-weight="900" fill="#336644" opacity="0.6">z</text>
+  <text x="89" y="34" font-family="Arial Black" font-size="13" font-weight="900" fill="#336644" opacity="0.8">z</text>
+  <text x="97" y="22" font-family="Arial Black" font-size="16" font-weight="900" fill="#336644">Z</text>
+  
+  <!-- Ears -->
+  <ellipse cx="32" cy="57" rx="5" ry="7" fill="#FFD580"/>
+  <ellipse cx="88" cy="57" rx="5" ry="7" fill="#FFD580"/>
+  
+  <!-- Helmet (messy) -->
+  <path d="M33 44 Q44 27 60 25 Q76 27 87 44" fill="#336644"/>
+  <path d="M55 25 Q57 17 60 13 Q63 17 65 25" fill="#224433"/>
+  <!-- Messy extra tuft -->
+  <path d="M63 26 Q67 18 70 16 Q70 22 67 26" fill="#224433"/>
+</svg>

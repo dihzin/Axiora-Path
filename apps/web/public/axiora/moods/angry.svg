@@ -1,43 +1,102 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
-  <!-- Cape/body -->
-  <ellipse cx="60" cy="95" rx="32" ry="18" fill="#CC2200"/>
-  <!-- Cape flowing sides -->
-  <path d="M28 88 Q15 105 22 115 Q38 108 45 98" fill="#AA1800"/>
-  <path d="M92 88 Q105 105 98 115 Q82 108 75 98" fill="#AA1800"/>
-  
-  <!-- Body/torso -->
-  <ellipse cx="60" cy="88" rx="22" ry="14" fill="#FFD700"/>
-  <!-- S emblem -->
-  <text x="60" y="93" font-family="Arial Black" font-size="14" font-weight="900" fill="#CC2200" text-anchor="middle">⚡</text>
-  
-  <!-- Head -->
-  <circle cx="60" cy="58" r="28" fill="#FFD580"/>
-  
-  <!-- Mask -->
-  <path d="M35 52 Q60 44 85 52 L85 62 Q60 55 35 62 Z" fill="#CC2200"/>
-  <!-- Mask eye holes -->
-  <ellipse cx="47" cy="56" rx="7" ry="5" fill="#FFD580"/>
-  <ellipse cx="73" cy="56" rx="7" ry="5" fill="#FFD580"/>
-  
-  <!-- Angry eyes -->
-  <circle cx="47" cy="57" r="4" fill="#1A1A1A"/>
-  <circle cx="73" cy="57" r="4" fill="#1A1A1A"/>
-  <circle cx="49" cy="55" r="1.5" fill="white"/>
-  <circle cx="75" cy="55" r="1.5" fill="white"/>
-  
-  <!-- Angry eyebrows -->
-  <path d="M40 48 L54 52" stroke="#CC2200" stroke-width="3" stroke-linecap="round"/>
-  <path d="M66 52 L80 48" stroke="#CC2200" stroke-width="3" stroke-linecap="round"/>
-  
-  <!-- Angry mouth -->
-  <path d="M48 70 Q60 64 72 70" stroke="#CC4400" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-  
-  <!-- Ears -->
-  <ellipse cx="32" cy="58" rx="5" ry="7" fill="#FFD580"/>
-  <ellipse cx="88" cy="58" rx="5" ry="7" fill="#FFD580"/>
-  
-  <!-- Hair/helmet top -->
-  <path d="M35 45 Q45 30 60 28 Q75 30 85 45" fill="#CC2200" stroke="none"/>
-  <!-- Hair detail -->
-  <path d="M55 28 Q58 18 60 15 Q62 18 65 28" fill="#AA1800"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <defs>
+    <radialGradient id="glow-angry" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FF6B4A" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#FF6B4A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="body-grad" cx="38%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#3A2A5A"/>
+      <stop offset="100%" stop-color="#1E1A3A"/>
+    </radialGradient>
+    <radialGradient id="face-grad" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#4A3570"/>
+      <stop offset="100%" stop-color="#2A1E52"/>
+    </radialGradient>
+    <radialGradient id="shadow-grad" cx="50%" cy="30%" r="50%">
+      <stop offset="0%" stop-color="#0D1A2E" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#0D1A2E" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- SHADOW -->
+  <g id="shadow">
+    <ellipse cx="128" cy="224" rx="52" ry="12" fill="url(#shadow-grad)"/>
+  </g>
+
+  <!-- GLOW - warm/angry tint -->
+  <g id="glow">
+    <ellipse cx="128" cy="148" rx="80" ry="84" fill="url(#glow-angry)"/>
+    <ellipse cx="128" cy="152" rx="65" ry="68" fill="none" stroke="#FF6B4A" stroke-width="2.5" stroke-opacity="0.2"/>
+    <!-- Energy spark lines -->
+    <path d="M62 118 L52 112 M62 128 L50 128 M64 138 L53 144" stroke="#FF6B4A" stroke-width="2" stroke-linecap="round" stroke-opacity="0.4"/>
+    <path d="M194 118 L204 112 M194 128 L206 128 M192 138 L203 144" stroke="#FF6B4A" stroke-width="2" stroke-linecap="round" stroke-opacity="0.4"/>
+  </g>
+
+  <!-- CAPE -->
+  <g id="cape">
+    <path d="M82 162 Q66 188 70 212 Q90 200 104 182" fill="#1A1030" stroke="#1E1A3A" stroke-width="1.5"/>
+    <path d="M174 162 Q190 188 186 212 Q166 200 152 182" fill="#1A1030" stroke="#1E1A3A" stroke-width="1.5"/>
+    <path d="M84 155 Q128 168 172 155 L168 170 Q128 183 88 170 Z" fill="#1E1A3A" stroke="#FF6B4A" stroke-width="2" stroke-opacity="0.55"/>
+    <path d="M84 155 Q128 168 172 155" fill="none" stroke="#FF6B4A" stroke-width="3" stroke-linecap="round" stroke-opacity="0.75"/>
+  </g>
+
+  <!-- BODY -->
+  <g id="body">
+    <ellipse cx="128" cy="158" rx="62" ry="70" fill="url(#body-grad)" stroke="#2A1E52" stroke-width="2"/>
+    <ellipse cx="114" cy="128" rx="18" ry="10" fill="#FF6B4A" fill-opacity="0.10" transform="rotate(-15 114 128)"/>
+    <path d="M128 138 L134 148 L128 158 L122 148 Z" fill="#F5C842" fill-opacity="0.9" stroke="#C8990A" stroke-width="1.5"/>
+    <path d="M128 141 L132 148 L128 155 L124 148 Z" fill="#FFE07A" fill-opacity="0.6"/>
+  </g>
+
+  <!-- FACE -->
+  <g id="face">
+    <ellipse cx="128" cy="128" rx="54" ry="56" fill="url(#face-grad)" stroke="#1E1A3A" stroke-width="2.5"/>
+    <ellipse cx="116" cy="112" rx="22" ry="14" fill="#FFFFFF" fill-opacity="0.04"/>
+  </g>
+
+  <!-- EYES - angry: pupils narrow, intense look -->
+  <g id="eyes">
+    <!-- Left eye -->
+    <ellipse cx="110" cy="126" rx="13" ry="13" fill="#0D0D1E"/>
+    <ellipse cx="110" cy="126" rx="10" ry="10" fill="#FFFFFF"/>
+    <!-- Narrow angry pupil -->
+    <ellipse cx="111" cy="126" rx="5" ry="7" fill="#1E1A3A"/>
+    <ellipse cx="113" cy="123" rx="2" ry="2" fill="#FFFFFF"/>
+
+    <!-- Right eye -->
+    <ellipse cx="146" cy="126" rx="13" ry="13" fill="#0D0D1E"/>
+    <ellipse cx="146" cy="126" rx="10" ry="10" fill="#FFFFFF"/>
+    <ellipse cx="147" cy="126" rx="5" ry="7" fill="#1E1A3A"/>
+    <ellipse cx="149" cy="123" rx="2" ry="2" fill="#FFFFFF"/>
+
+    <!-- ANGRY brow left - steep inward diagonal, thick -->
+    <path d="M96 110 L122 120" fill="none" stroke="#F5C842" stroke-width="5.5" stroke-linecap="round"/>
+    <!-- ANGRY brow right - steep inward diagonal -->
+    <path d="M134 120 L160 110" fill="none" stroke="#F5C842" stroke-width="5.5" stroke-linecap="round"/>
+
+    <!-- Brow shadow / furrowed crease -->
+    <path d="M108 116 L120 120" fill="none" stroke="#0D0D1E" stroke-width="3" stroke-linecap="round" stroke-opacity="0.4"/>
+    <path d="M136 120 L148 116" fill="none" stroke="#0D0D1E" stroke-width="3" stroke-linecap="round" stroke-opacity="0.4"/>
+  </g>
+
+  <!-- MOUTH - angry: pressed tight frown, gritted -->
+  <g id="mouth">
+    <!-- Strong downward frown -->
+    <path d="M106 162 Q128 148 150 162" fill="none" stroke="#0D0D1E" stroke-width="5.5" stroke-linecap="round"/>
+    <!-- Inner tense line -->
+    <path d="M110 161 Q128 150 146 161" fill="none" stroke="#8860B0" stroke-width="2" stroke-linecap="round"/>
+    <!-- Corner tension marks -->
+    <path d="M106 162 L101 156" stroke="#0D0D1E" stroke-width="3" stroke-linecap="round"/>
+    <path d="M150 162 L155 156" stroke="#0D0D1E" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <!-- CROWN - upright, authoritative -->
+  <g id="crown">
+    <rect x="102" y="72" width="52" height="14" rx="7" fill="#F5C842" stroke="#C8990A" stroke-width="1.5"/>
+    <path d="M108 72 L108 56 L118 68 L128 50 L138 68 L148 56 L148 72 Z" fill="#F5C842" stroke="#C8990A" stroke-width="1.5" stroke-linejoin="round"/>
+    <ellipse cx="128" cy="63" rx="5" ry="5" fill="#FF6B4A" stroke="#CC4422" stroke-width="1"/>
+    <ellipse cx="112" cy="68" rx="3.5" ry="3.5" fill="#F5C842" stroke="#C8990A" stroke-width="1"/>
+    <ellipse cx="144" cy="68" rx="3.5" ry="3.5" fill="#F5C842" stroke="#C8990A" stroke-width="1"/>
+    <path d="M116 60 L119 57 L118 61" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.7"/>
+  </g>
 </svg>

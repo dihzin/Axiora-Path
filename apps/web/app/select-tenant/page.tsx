@@ -84,45 +84,50 @@ export default function SelectTenantPage() {
   };
 
   return (
-    <main className="safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md items-center p-4 md:p-6">
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Selecionar organização</CardTitle>
-          <CardDescription>Confirme a organização ativa antes de escolher o perfil infantil.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-3" onSubmit={onSubmit}>
-            {loadingMemberships ? (
-              <p className="text-sm text-muted-foreground">Carregando organizações...</p>
-            ) : memberships.length > 0 ? (
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="organization-select">
-                  Organização
-                </label>
-                <NativeSelect
-                  id="organization-select"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  required
-                  disabled={loading}
-                >
-                  {memberships.map((item) => (
-                    <option key={item.tenant_id} value={item.tenant_slug}>
-                      {item.tenant_name} ({item.tenant_type}) - {item.tenant_slug}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </div>
-            ) : (
-              <Input placeholder="ex: familia-silva" value={slug} onChange={(e) => setSlug(e.target.value)} required disabled={loading} />
-            )}
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
-            <Button className="w-full" type="submit" disabled={loading || loadingMemberships}>
-              {loading ? "Continuando..." : "Continuar"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </main>
+    <div
+      className="min-h-screen bg-[#f6f6f3] bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('/axiora/home/login-background.svg')" }}
+    >
+      <main className="safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md items-center p-4 md:p-6">
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Selecionar organização</CardTitle>
+            <CardDescription>Confirme a organização ativa antes de escolher o perfil infantil.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-3" onSubmit={onSubmit}>
+              {loadingMemberships ? (
+                <p className="text-sm text-muted-foreground">Carregando organizações...</p>
+              ) : memberships.length > 0 ? (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="organization-select">
+                    Organização
+                  </label>
+                  <NativeSelect
+                    id="organization-select"
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value)}
+                    required
+                    disabled={loading}
+                  >
+                    {memberships.map((item) => (
+                      <option key={item.tenant_id} value={item.tenant_slug}>
+                        {item.tenant_name} ({item.tenant_type}) - {item.tenant_slug}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </div>
+              ) : (
+                <Input placeholder="ex: familia-silva" value={slug} onChange={(e) => setSlug(e.target.value)} required disabled={loading} />
+              )}
+              {error ? <p className="text-sm text-destructive">{error}</p> : null}
+              <Button className="w-full" type="submit" disabled={loading || loadingMemberships}>
+                {loading ? "Continuando..." : "Continuar"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </main>
+    </div>
   );
 }

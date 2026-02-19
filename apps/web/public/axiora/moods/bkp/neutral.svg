@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <!-- Cape -->
+  <path d="M28 88 Q15 108 22 118 Q40 108 48 96" fill="#5522AA"/>
+  <path d="M92 88 Q105 108 98 118 Q80 108 72 96" fill="#5522AA"/>
+  <ellipse cx="60" cy="95" rx="30" ry="16" fill="#7744CC"/>
+  <ellipse cx="60" cy="88" rx="20" ry="12" fill="#44AACC"/>
+  
+  <!-- Head -->
+  <circle cx="60" cy="57" r="28" fill="#FFD580"/>
+  
+  <!-- Mask - purple -->
+  <path d="M33 50 Q60 41 87 50 L87 62 Q60 53 33 62 Z" fill="#7744CC"/>
+  <ellipse cx="47" cy="55" rx="8" ry="6" fill="#FFD580"/>
+  <ellipse cx="73" cy="55" rx="8" ry="6" fill="#FFD580"/>
+  
+  <!-- Deadpan eyes - large, staring -->
+  <circle cx="47" cy="56" r="5.5" fill="#111"/>
+  <circle cx="73" cy="56" r="5.5" fill="#111"/>
+  <circle cx="49" cy="53.5" r="2" fill="white"/>
+  <circle cx="75" cy="53.5" r="2" fill="white"/>
+  
+  <!-- Perfectly flat eyebrows -->
+  <path d="M40 46 L54 46" stroke="#5522AA" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M66 46 L80 46" stroke="#5522AA" stroke-width="3.5" stroke-linecap="round"/>
+  
+  <!-- Completely flat mouth - thick line -->
+  <path d="M46 71 L74 71" stroke="#AA8844" stroke-width="4" stroke-linecap="round"/>
+  
+  <!-- Ears -->
+  <ellipse cx="32" cy="57" rx="5" ry="7" fill="#FFD580"/>
+  <ellipse cx="88" cy="57" rx="5" ry="7" fill="#FFD580"/>
+  
+  <!-- Helmet -->
+  <path d="M33 44 Q44 27 60 25 Q76 27 87 44" fill="#7744CC"/>
+  <path d="M55 25 Q58 15 60 12 Q62 15 65 25" fill="#5522AA"/>
+</svg>

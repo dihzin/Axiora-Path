@@ -1,39 +1,82 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
-  <!-- Cape -->
-  <ellipse cx="60" cy="95" rx="32" ry="18" fill="#7744CC"/>
-  <path d="M28 88 Q15 105 22 115 Q38 108 45 98" fill="#5522AA"/>
-  <path d="M92 88 Q105 105 98 115 Q82 108 75 98" fill="#5522AA"/>
-  
-  <!-- Body -->
-  <ellipse cx="60" cy="88" rx="22" ry="14" fill="#44AACC"/>
-  <text x="60" y="93" font-family="Arial Black" font-size="14" font-weight="900" fill="#7744CC" text-anchor="middle">◈</text>
-  
-  <!-- Head -->
-  <circle cx="60" cy="58" r="28" fill="#FFD580"/>
-  
-  <!-- Mask - purple -->
-  <path d="M35 50 Q60 42 85 50 L85 60 Q60 53 35 60 Z" fill="#7744CC"/>
-  <ellipse cx="47" cy="54" rx="7" ry="5" fill="#FFD580"/>
-  <ellipse cx="73" cy="54" rx="7" ry="5" fill="#FFD580"/>
-  
-  <!-- Neutral eyes -->
-  <circle cx="47" cy="55" r="4" fill="#1A1A1A"/>
-  <circle cx="73" cy="55" r="4" fill="#1A1A1A"/>
-  <circle cx="49" cy="53" r="1.5" fill="white"/>
-  <circle cx="75" cy="53" r="1.5" fill="white"/>
-  
-  <!-- Eyebrows straight -->
-  <path d="M41 46 L53 46" stroke="#7744CC" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M67 46 L79 46" stroke="#7744CC" stroke-width="2.5" stroke-linecap="round"/>
-  
-  <!-- Flat mouth -->
-  <path d="M49 70 L71 70" stroke="#AA8844" stroke-width="2.5" stroke-linecap="round"/>
-  
-  <!-- Ears -->
-  <ellipse cx="32" cy="58" rx="5" ry="7" fill="#FFD580"/>
-  <ellipse cx="88" cy="58" rx="5" ry="7" fill="#FFD580"/>
-  
-  <!-- Hair/helmet -->
-  <path d="M35 43 Q45 28 60 26 Q75 28 85 43" fill="#7744CC"/>
-  <path d="M55 26 Q58 16 60 13 Q62 16 65 26" fill="#5522AA"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <defs>
+    <radialGradient id="glow-neutral" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#4DD9C0" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#4DD9C0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="body-grad" cx="38%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#2D4A7A"/>
+      <stop offset="100%" stop-color="#1B2A4A"/>
+    </radialGradient>
+    <radialGradient id="face-grad" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#3A5F94"/>
+      <stop offset="100%" stop-color="#243F6A"/>
+    </radialGradient>
+    <radialGradient id="shadow-grad" cx="50%" cy="30%" r="50%">
+      <stop offset="0%" stop-color="#0D1A2E" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#0D1A2E" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- SHADOW -->
+  <g id="shadow">
+    <ellipse cx="128" cy="224" rx="52" ry="12" fill="url(#shadow-grad)"/>
+  </g>
+<!-- CAPE -->
+  <g id="cape">
+    <path d="M82 162 Q68 185 72 210 Q90 200 104 182" fill="#152238" stroke="#1B2A4A" stroke-width="1.5"/>
+    <path d="M174 162 Q188 185 184 210 Q166 200 152 182" fill="#152238" stroke="#1B2A4A" stroke-width="1.5"/>
+    <path d="M84 155 Q128 168 172 155 L168 170 Q128 183 88 170 Z" fill="#1B2A4A" stroke="#4DD9C0" stroke-width="2" stroke-opacity="0.7"/>
+    <path d="M84 155 Q128 168 172 155" fill="none" stroke="#4DD9C0" stroke-width="3" stroke-linecap="round" stroke-opacity="0.9"/>
+  </g>
+
+  <!-- BODY -->
+  <g id="body">
+    <ellipse cx="128" cy="158" rx="62" ry="70" fill="url(#body-grad)" stroke="#243F6A" stroke-width="2"/>
+    <ellipse cx="114" cy="128" rx="18" ry="10" fill="#4DD9C0" fill-opacity="0.10" transform="rotate(-15 114 128)"/>
+    <path d="M128 138 L134 148 L128 158 L122 148 Z" fill="#F5C842" fill-opacity="0.85" stroke="#C8990A" stroke-width="1.5"/>
+    <path d="M128 141 L132 148 L128 155 L124 148 Z" fill="#FFE07A" fill-opacity="0.6"/>
+  </g>
+
+  <!-- FACE -->
+  <g id="face">
+    <ellipse cx="128" cy="128" rx="54" ry="56" fill="url(#face-grad)" stroke="#1B2A4A" stroke-width="2.5"/>
+    <ellipse cx="116" cy="112" rx="22" ry="14" fill="#FFFFFF" fill-opacity="0.04"/>
+  </g>
+
+  <!-- EYES - neutral: open, calm, steady gaze -->
+  <g id="eyes">
+    <!-- Left eye -->
+    <ellipse cx="110" cy="126" rx="13" ry="14" fill="#0D1A2E"/>
+    <ellipse cx="110" cy="126" rx="10" ry="11" fill="#FFFFFF"/>
+    <ellipse cx="111" cy="127" rx="6.5" ry="7" fill="#1B2A4A"/>
+    <ellipse cx="113" cy="124" rx="2.5" ry="2.5" fill="#FFFFFF"/>
+
+    <!-- Right eye -->
+    <ellipse cx="146" cy="126" rx="13" ry="14" fill="#0D1A2E"/>
+    <ellipse cx="146" cy="126" rx="10" ry="11" fill="#FFFFFF"/>
+    <ellipse cx="147" cy="127" rx="6.5" ry="7" fill="#1B2A4A"/>
+    <ellipse cx="149" cy="124" rx="2.5" ry="2.5" fill="#FFFFFF"/>
+
+    <!-- Eyebrow left - straight, calm -->
+    <path d="M97 111 Q110 107 123 111" fill="none" stroke="#F5C842" stroke-width="4" stroke-linecap="round" stroke-opacity="0.85"/>
+    <!-- Eyebrow right - straight, calm -->
+    <path d="M133 111 Q146 107 159 111" fill="none" stroke="#F5C842" stroke-width="4" stroke-linecap="round" stroke-opacity="0.85"/>
+  </g>
+
+  <!-- MOUTH - neutral: gentle soft line, barely curved -->
+  <g id="mouth">
+    <path d="M112 154 Q128 159 144 154" fill="none" stroke="#0D1A2E" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M112 154 Q128 157 144 154" fill="none" stroke="#6B8FC0" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <!-- CROWN -->
+  <g id="crown">
+    <rect x="102" y="72" width="52" height="14" rx="7" fill="#F5C842" stroke="#C8990A" stroke-width="1.5"/>
+    <path d="M108 72 L108 56 L118 68 L128 50 L138 68 L148 56 L148 72 Z" fill="#F5C842" stroke="#C8990A" stroke-width="1.5" stroke-linejoin="round"/>
+    <ellipse cx="128" cy="63" rx="5" ry="5" fill="#4DD9C0" stroke="#2AB09A" stroke-width="1"/>
+    <ellipse cx="112" cy="68" rx="3.5" ry="3.5" fill="#E8709A" stroke="#B84A78" stroke-width="1"/>
+    <ellipse cx="144" cy="68" rx="3.5" ry="3.5" fill="#E8709A" stroke="#B84A78" stroke-width="1"/>
+    <path d="M116 60 L119 57 L118 61" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.7"/>
+  </g>
 </svg>
