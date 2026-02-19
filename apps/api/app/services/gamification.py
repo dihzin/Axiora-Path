@@ -49,10 +49,17 @@ def _reset_daily_xp_if_needed(profile: UserGameProfile, *, target_date: date) ->
         profile.last_xp_reset = target_date
 
 
-def _apply_xp(profile: UserGameProfile, *, amount: int, target_date: date) -> int:
+def _apply_xp(
+    profile: UserGameProfile,
+    *,
+    amount: int,
+    target_date: date,
+    max_xp_per_day: int,
+) -> int:
     _reset_daily_xp_if_needed(profile, target_date=target_date)
     requested = max(0, amount)
-    remaining_today = max(0, MAX_XP_PER_DAY - profile.daily_xp)
+    effective_max_xp_per_day = max(0, max_xp_per_day)
+    remaining_today = max(0, effective_max_xp_per_day - profile.daily_xp)
     granted = min(requested, remaining_today)
     if granted <= 0:
         return 0
@@ -63,9 +70,21 @@ def _apply_xp(profile: UserGameProfile, *, amount: int, target_date: date) -> in
     return granted
 
 
-def addXP(db: Session, *, user_id: int, xp_amount: int, target_date: date | None = None) -> UserGameProfile:
+def addXP(
+    db: Session,
+    *,
+    user_id: int,
+    xp_amount: int,
+    target_date: date | None = None,
+    max_xp_per_day: int = MAX_XP_PER_DAY,
+) -> UserGameProfile:
     profile = _get_or_create_profile(db, user_id=user_id)
-    _apply_xp(profile, amount=xp_amount, target_date=target_date or date.today())
+    _apply_xp(
+        profile,
+        amount=xp_amount,
+        target_date=target_date or date.today(),
+        max_xp_per_day=max_xp_per_day,
+    )
     db.flush()
     return profile
 

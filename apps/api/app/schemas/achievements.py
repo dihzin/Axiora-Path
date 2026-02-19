@@ -11,6 +11,9 @@ class AchievementItemOut(BaseModel):
     title: str
     description: str
     icon_key: str
+    xp_reward: int
+    coin_reward: int
+    badge_key: str | None
     unlocked: bool
     unlocked_at: datetime | None
 

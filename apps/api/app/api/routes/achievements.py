@@ -44,6 +44,9 @@ def list_achievements(
                 title=item.title,
                 description=item.description,
                 icon_key=item.icon_key,
+                xp_reward=item.xp_reward,
+                coin_reward=item.coin_reward,
+                badge_key=item.badge_key,
                 unlocked=item.id in unlocked_map,
                 unlocked_at=unlocked_map.get(item.id),
             )

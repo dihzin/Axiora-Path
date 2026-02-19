@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Puzzle, ShoppingBag, Sparkles, Star } from "lucide-react";
+import { BookOpen, Home, Puzzle, ShoppingBag, Sparkles, Star } from "lucide-react";
 import { memo } from "react";
 
 const NAV_ITEMS = [
   { href: "/child", label: "Inicio", icon: Home },
+  { href: "/child/aprender", label: "Aprender", icon: BookOpen },
   { href: "/child/stickers", label: "Figurinhas", icon: Star },
   { href: "/child/games", label: "Jogos", icon: Puzzle },
   { href: "/child/store", label: "Loja", icon: ShoppingBag },
@@ -20,7 +21,7 @@ function ChildBottomNavComponent() {
     <>
       <div aria-hidden className="pointer-events-none" style={{ height: "calc(6rem + env(safe-area-inset-bottom))" }} />
       <nav className="safe-px safe-pb fixed inset-x-0 bottom-0 border-t border-border bg-background/95 py-2 backdrop-blur">
-        <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-1 md:max-w-2xl">
+        <div className="mx-auto grid w-full max-w-md grid-cols-6 gap-1 md:max-w-2xl">
           {NAV_ITEMS.map((item) => {
             const isActive = item.href === "/child" ? pathname === item.href : pathname.startsWith(item.href);
             const Icon = item.icon;

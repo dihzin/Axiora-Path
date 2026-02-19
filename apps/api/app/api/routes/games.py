@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import DBSession, get_current_tenant, get_current_user, require_role
 from app.models import ChildProfile, GameSettings, GameType, Membership, Tenant, User
@@ -15,6 +16,7 @@ from app.schemas.games import (
     UserGameProfileOut,
 )
 from app.services.gamification import MAX_XP_PER_DAY, registerGameSession
+from app.services.learning_retention import MissionDelta, track_mission_progress
 
 router = APIRouter(prefix="/api/games", tags=["games"])
 
@@ -61,6 +63,19 @@ def create_game_session(
         score=payload.score,
         max_xp_per_day=max_xp_per_day,
     )
+    try:
+        track_mission_progress(
+            db,
+            user_id=user.id,
+            tenant_id=tenant.id,
+            delta=MissionDelta(
+                xp_gained=result.granted_xp,
+                from_game=True,
+            ),
+            auto_claim=True,
+        )
+    except SQLAlchemyError:
+        db.rollback()
     db.commit()
 
     return GameSessionRegisterResponse(

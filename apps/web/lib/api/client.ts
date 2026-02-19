@@ -266,6 +266,9 @@ export type AchievementItem = {
   title: string;
   description: string;
   icon_key: string;
+  xp_reward?: number;
+  coin_reward?: number;
+  badge_key?: string | null;
   unlocked: boolean;
   unlocked_at: string | null;
 };
@@ -379,6 +382,303 @@ export type StoreCatalogItem = {
 export type StoreCatalogResponse = {
   coins: number;
   items: StoreCatalogItem[];
+};
+
+export type AprenderLessonContentType = "TEXT" | "IMAGE" | "AUDIO" | "QUESTION";
+
+export type AprenderLessonContent = {
+  id: number;
+  lessonId: number;
+  contentType: AprenderLessonContentType;
+  contentData: Record<string, unknown>;
+  order: number;
+};
+
+export type AprenderLessonCompleteResponse = {
+  lessonProgress: {
+    id: number;
+    userId: number;
+    lessonId: number;
+    completed: boolean;
+    score: number | null;
+    attempts: number;
+    repeatRequired: boolean;
+    variationSeed: string | null;
+    completedAt: string | null;
+  };
+  xpRequested: number;
+  xpGranted: number;
+  repeatRequired: boolean;
+  variationSeed: string | null;
+  unlockedAchievements: string[];
+  learningStreak: AprenderLearningStreak | null;
+  gamification: {
+    xp: number;
+    level: number;
+    dailyXp: number;
+  };
+};
+
+export type AprenderLearningStreak = {
+  currentStreak: number;
+  longestStreak: number;
+  lastLessonDate: string | null;
+  bonusCoinsGranted: number;
+  unlocked30DayBadge: boolean;
+};
+
+export type AprenderLearningEnergyStatus = {
+  energy: number;
+  maxEnergy: number;
+  canPlay: boolean;
+  secondsUntilPlayable: number;
+  secondsUntilNextEnergy: number;
+  refillCoinCost: number;
+  axionCoins: number;
+};
+
+export type AprenderLearningEnergyConsumeResponse = {
+  consumed: boolean;
+  status: AprenderLearningEnergyStatus;
+};
+
+export type LearningQuestionType = "MCQ" | "TRUE_FALSE" | "DRAG_DROP" | "FILL_BLANK" | "MATCH" | "ORDERING" | "TEMPLATE";
+export type LearningDifficulty = "EASY" | "MEDIUM" | "HARD";
+export type LearningAnswerResult = "CORRECT" | "WRONG" | "SKIPPED";
+
+export type LearningNextItem = {
+  questionId: string | null;
+  templateId: string | null;
+  generatedVariantId: string | null;
+  variantId: string | null;
+  skillId: string;
+  type: LearningQuestionType;
+  prompt: string;
+  explanation?: string | null;
+  metadata: Record<string, unknown>;
+};
+
+export type LearningNextResponse = {
+  items: LearningNextItem[];
+  plan: {
+    focusSkills: Array<{ skillId: string; mastery: number; priority: number }>;
+    difficultyMix: { easy: number; medium: number; hard: number };
+  };
+};
+
+export type LearningAnswerResponse = {
+  questionId: string | null;
+  templateId: string | null;
+  generatedVariantId: string | null;
+  skillId: string;
+  mastery: number;
+  masteryDelta: number;
+  streakCorrect: number;
+  streakWrong: number;
+  nextReviewAt: string | null;
+  retryRecommended: boolean;
+};
+
+export type LearningPathEventType = "CHEST" | "CHECKPOINT" | "MINI_BOSS" | "STORY_STOP" | "BOOST" | "REVIEW_GATE";
+export type LearningPathEventStatus = "LOCKED" | "AVAILABLE" | "COMPLETED" | "SKIPPED";
+
+export type LearningPathLessonNode = {
+  id: number;
+  title: string;
+  order: number;
+  xpReward: number;
+  unlocked: boolean;
+  completed: boolean;
+  score: number | null;
+  starsEarned: number;
+};
+
+export type LearningPathEventNode = {
+  id: string;
+  type: LearningPathEventType;
+  title: string;
+  description: string | null;
+  iconKey: string;
+  rarity: string;
+  status: LearningPathEventStatus;
+  orderIndex: number;
+  rules: Record<string, unknown>;
+  rewardGranted: boolean;
+};
+
+export type LearningPathNode = {
+  kind: "LESSON" | "EVENT";
+  orderIndex: number;
+  lesson: LearningPathLessonNode | null;
+  event: LearningPathEventNode | null;
+};
+
+export type LearningPathUnit = {
+  id: number;
+  title: string;
+  description: string | null;
+  order: number;
+  completionRate: number;
+  nodes: LearningPathNode[];
+};
+
+export type LearningPathResponse = {
+  subjectId: number;
+  subjectName: string;
+  ageGroup: string;
+  dueReviewsCount: number;
+  streakDays: number;
+  masteryAverage: number;
+  units: LearningPathUnit[];
+};
+
+export type LearningEventStartResponse = {
+  event: LearningPathEventNode;
+  payload: Record<string, unknown>;
+};
+
+export type LearningEventCompleteResponse = {
+  event: LearningPathEventNode;
+  status: LearningPathEventStatus;
+  rewards: Record<string, unknown>;
+  passed: boolean;
+  needsRetry: boolean;
+};
+
+export type LearningSessionStartResponse = {
+  sessionId: string;
+  subjectId: number;
+  unitId: number | null;
+  lessonId: number | null;
+  startedAt: string;
+};
+
+export type LearningSessionFinishResponse = {
+  sessionId: string;
+  endedAt: string | null;
+  stars: number;
+  accuracy: number;
+  totalQuestions: number;
+  correctCount: number;
+  xpEarned: number;
+  coinsEarned: number;
+  leveledUp: boolean;
+  gamification: {
+    xp: number;
+    level: number;
+    axionCoins: number;
+  };
+};
+
+export type LearningInsightSkill = {
+  skillId: string;
+  skillName: string;
+  subjectName: string;
+  mastery: number;
+};
+
+export type LearningInsightSubject = {
+  subjectId: number;
+  subjectName: string;
+  ageGroup: string;
+  masteryAverage: number;
+  unitCompletionPercent: number;
+};
+
+export type LearningInsightsResponse = {
+  strongestSkills: LearningInsightSkill[];
+  practiceSkills: LearningInsightSkill[];
+  dueReviewsCount: number;
+  weeklyXpEarned: number;
+  subjects: LearningInsightSubject[];
+};
+
+export type WeeklyMissionType = "LESSONS_COMPLETED" | "XP_GAINED" | "PERFECT_SCORES" | "STREAK_DAYS" | "MINI_BOSS_WINS";
+
+export type MissionProgress = {
+  missionId: string;
+  title: string;
+  description?: string | null;
+  missionType: WeeklyMissionType;
+  targetValue: number;
+  currentValue: number;
+  completed: boolean;
+  completedAt: string | null;
+  rewardGranted: boolean;
+  xpReward: number;
+  coinReward: number;
+  isSeasonal: boolean;
+  themeKey: string | null;
+  startDate: string;
+  endDate: string;
+  progressPercent: number;
+};
+
+export type MissionsCurrentResponse = {
+  missions: MissionProgress[];
+  currentStreak: number;
+  longestStreak: number;
+  almostThere: boolean;
+  showNudge: boolean;
+  nudgeMessage: string;
+  upcomingSeasonalEvent: {
+    name: string;
+    themeKey: string;
+    startsInDays: number;
+  } | null;
+};
+
+export type MissionClaimResponse = {
+  missionId: string;
+  completed: boolean;
+  rewardGranted: boolean;
+  xpReward: number;
+  coinReward: number;
+};
+
+export type SeasonEvent = {
+  id: string;
+  name: string;
+  themeKey: string;
+  startDate: string;
+  endDate: string;
+  description?: string | null;
+  backgroundStyle: Record<string, unknown>;
+  bonusXpMultiplier: number;
+  bonusCoinMultiplier: number;
+};
+
+export type ActiveSeasonEventsResponse = {
+  active: SeasonEvent[];
+  upcoming: SeasonEvent | null;
+  countdownDays: number | null;
+};
+
+export type CalendarActivityDay = {
+  date: string;
+  lessonsCompleted: number;
+  xpEarned: number;
+  missionsCompleted: number;
+  streakMaintained: boolean;
+  perfectSessions: number;
+};
+
+export type CalendarActivityResponse = {
+  month: number;
+  year: number;
+  currentStreak: number;
+  longestStreak: number;
+  days: CalendarActivityDay[];
+};
+
+export type UserUXSettings = {
+  id: number;
+  userId: number;
+  soundEnabled: boolean;
+  hapticsEnabled: boolean;
+  reducedMotion: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export async function login(email: string, password: string): Promise<AuthTokens> {
@@ -712,6 +1012,216 @@ export async function equipStoreItem(itemId: number): Promise<{ success: boolean
   return apiRequest<{ success: boolean; coins: number; itemId: number }>("/api/store/equip", {
     method: "POST",
     body: { itemId },
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAprenderLessonContents(lessonId: number): Promise<AprenderLessonContent[]> {
+  return apiRequest<AprenderLessonContent[]>(`/api/aprender/lessons/${lessonId}/contents`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function completeAprenderLesson(lessonId: number, score: number): Promise<AprenderLessonCompleteResponse> {
+  return apiRequest<AprenderLessonCompleteResponse>(`/api/aprender/lessons/${lessonId}/complete`, {
+    method: "POST",
+    body: { score },
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAprenderLearningEnergy(): Promise<AprenderLearningEnergyStatus> {
+  return apiRequest<AprenderLearningEnergyStatus>("/api/aprender/energy", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function consumeAprenderWrongAnswerEnergy(): Promise<AprenderLearningEnergyConsumeResponse> {
+  return apiRequest<AprenderLearningEnergyConsumeResponse>("/api/aprender/energy/consume-wrong", {
+    method: "POST",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function refillAprenderEnergyWithWait(): Promise<AprenderLearningEnergyStatus> {
+  return apiRequest<AprenderLearningEnergyStatus>("/api/aprender/energy/refill/wait", {
+    method: "POST",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function refillAprenderEnergyWithCoins(): Promise<AprenderLearningEnergyStatus> {
+  return apiRequest<AprenderLearningEnergyStatus>("/api/aprender/energy/refill/coins", {
+    method: "POST",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAprenderLearningStreak(): Promise<AprenderLearningStreak> {
+  return apiRequest<AprenderLearningStreak>("/api/aprender/streak", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function startLearningSession(payload: {
+  subjectId?: number;
+  unitId?: number;
+  lessonId?: number;
+}): Promise<LearningSessionStartResponse> {
+  return apiRequest<LearningSessionStartResponse>("/api/learning/session/start", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function finishLearningSession(payload: {
+  sessionId: string;
+  totalQuestions: number;
+  correctCount: number;
+}): Promise<LearningSessionFinishResponse> {
+  return apiRequest<LearningSessionFinishResponse>("/api/learning/session/finish", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAdaptiveLearningNext(payload: {
+  subjectId?: number;
+  lessonId?: number;
+  focusSkillId?: string;
+  forceDifficulty?: LearningDifficulty;
+  count?: number;
+}): Promise<LearningNextResponse> {
+  return apiRequest<LearningNextResponse>("/api/learning/next", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function submitAdaptiveLearningAnswer(payload: {
+  questionId?: string | null;
+  templateId?: string | null;
+  generatedVariantId?: string | null;
+  variantId?: string | null;
+  result: LearningAnswerResult;
+  timeMs: number;
+}): Promise<LearningAnswerResponse> {
+  return apiRequest<LearningAnswerResponse>("/api/learning/answer", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getLearningPath(subjectId?: number): Promise<LearningPathResponse> {
+  const query = subjectId ? `?subjectId=${subjectId}` : "";
+  return apiRequest<LearningPathResponse>(`/api/learning/path${query}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function startLearningPathEvent(eventId: string): Promise<LearningEventStartResponse> {
+  return apiRequest<LearningEventStartResponse>("/api/learning/event/start", {
+    method: "POST",
+    body: { eventId },
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function completeLearningPathEvent(payload: {
+  eventId: string;
+  resultSummary: Record<string, unknown>;
+}): Promise<LearningEventCompleteResponse> {
+  return apiRequest<LearningEventCompleteResponse>("/api/learning/event/complete", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getLearningInsights(): Promise<LearningInsightsResponse> {
+  return apiRequest<LearningInsightsResponse>("/api/learning/insights", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getCurrentMissions(): Promise<MissionsCurrentResponse> {
+  return apiRequest<MissionsCurrentResponse>("/api/missions/current", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function claimMission(missionId: string): Promise<MissionClaimResponse> {
+  return apiRequest<MissionClaimResponse>("/api/missions/claim", {
+    method: "POST",
+    body: { missionId },
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getActiveSeasonEvents(): Promise<ActiveSeasonEventsResponse> {
+  return apiRequest<ActiveSeasonEventsResponse>("/api/events/active", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getCalendarActivity(params?: { month?: number; year?: number }): Promise<CalendarActivityResponse> {
+  const query = new URLSearchParams();
+  if (params?.month) query.set("month", String(params.month));
+  if (params?.year) query.set("year", String(params.year));
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<CalendarActivityResponse>(`/api/calendar/activity${suffix}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getUserUXSettings(): Promise<UserUXSettings> {
+  return apiRequest<UserUXSettings>("/api/user/ux-settings", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function upsertUserUXSettings(payload: {
+  soundEnabled: boolean;
+  hapticsEnabled: boolean;
+  reducedMotion: boolean;
+}): Promise<UserUXSettings> {
+  return apiRequest<UserUXSettings>("/api/user/ux-settings", {
+    method: "POST",
+    body: payload,
     requireAuth: true,
     includeTenant: true,
   });

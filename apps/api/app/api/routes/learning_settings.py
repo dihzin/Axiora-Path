@@ -6,18 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 
 from app.api.deps import DBSession, get_current_tenant, require_role
-from app.models import ChildProfile, GameSettings, Membership, Tenant
-from app.schemas.game_settings import GameSettingsOut, GameSettingsUpsertRequest
+from app.models import ChildProfile, LearningSettings, Membership, QuestionDifficulty, Tenant
+from app.schemas.learning_settings import LearningSettingsOut, LearningSettingsUpsertRequest
 
-router = APIRouter(prefix="/api/parent", tags=["game-settings"])
-
-DEFAULT_ENABLED_GAMES: dict[str, bool] = {
-    "TICTACTOE": True,
-    "WORDSEARCH": True,
-    "CROSSWORD": True,
-    "HANGMAN": True,
-    "FINANCE_SIM": True,
-}
+router = APIRouter(prefix="/api/parent", tags=["learning-settings"])
 
 
 def _get_child_or_404(db: DBSession, *, tenant_id: int, child_id: int) -> ChildProfile:
@@ -51,75 +43,81 @@ def _resolve_child_id(db: DBSession, *, tenant_id: int, requested_child_id: int 
     return children[0].id
 
 
-def _get_or_create_settings(db: DBSession, *, tenant_id: int, child_id: int) -> GameSettings:
+def _get_or_create_settings(db: DBSession, *, tenant_id: int, child_id: int) -> LearningSettings:
     settings = db.scalar(
-        select(GameSettings).where(
-            GameSettings.tenant_id == tenant_id,
-            GameSettings.child_id == child_id,
+        select(LearningSettings).where(
+            LearningSettings.tenant_id == tenant_id,
+            LearningSettings.child_id == child_id,
         ),
     )
     if settings is not None:
         return settings
 
-    settings = GameSettings(
+    settings = LearningSettings(
         tenant_id=tenant_id,
         child_id=child_id,
-        max_daily_xp=200,
         max_daily_learning_xp=200,
-        max_weekly_coin_conversion=500,
-        learning_coin_reward_multiplier=1.0,
-        enabled_games=DEFAULT_ENABLED_GAMES.copy(),
-        require_approval_after_minutes=30,
+        max_lessons_per_day=5,
+        difficulty_ceiling=QuestionDifficulty.HARD,
+        enable_spaced_repetition=True,
+        enable_coins_rewards=True,
+        xp_multiplier=1.0,
+        coins_enabled=True,
+        enabled_subjects={},
     )
     db.add(settings)
     db.flush()
     return settings
 
 
-def _to_response(settings: GameSettings) -> GameSettingsOut:
-    return GameSettingsOut(
+def _to_response(settings: LearningSettings) -> LearningSettingsOut:
+    return LearningSettingsOut(
         id=settings.id,
         childId=settings.child_id,
-        maxDailyXp=settings.max_daily_xp,
-        maxDailyLearningXp=settings.max_daily_learning_xp,
-        maxWeeklyCoinConversion=settings.max_weekly_coin_conversion,
-        learningCoinRewardMultiplier=float(settings.learning_coin_reward_multiplier),
-        enabledGames=settings.enabled_games,
-        requireApprovalAfterMinutes=settings.require_approval_after_minutes,
+        maxDailyLearningXP=settings.max_daily_learning_xp,
+        maxLessonsPerDay=settings.max_lessons_per_day,
+        difficultyCeiling=settings.difficulty_ceiling,
+        enableSpacedRepetition=settings.enable_spaced_repetition,
+        enableCoinsRewards=settings.enable_coins_rewards,
+        xpMultiplier=float(settings.xp_multiplier),
+        coinsEnabled=settings.enable_coins_rewards,
+        enabledSubjects=settings.enabled_subjects,
         createdAt=settings.created_at,
         updatedAt=settings.updated_at,
     )
 
 
-@router.get("/game-settings", response_model=GameSettingsOut)
-def get_game_settings(
+@router.get("/learning-settings", response_model=LearningSettingsOut)
+def get_learning_settings(
     db: DBSession,
     tenant: Annotated[Tenant, Depends(get_current_tenant)],
     _: Annotated[Membership, Depends(require_role(["PARENT"]))],
     child_id: Annotated[int | None, Query(alias="childId")] = None,
-) -> GameSettingsOut:
+) -> LearningSettingsOut:
     resolved_child_id = _resolve_child_id(db, tenant_id=tenant.id, requested_child_id=child_id)
     settings = _get_or_create_settings(db, tenant_id=tenant.id, child_id=resolved_child_id)
     db.commit()
     return _to_response(settings)
 
 
-@router.post("/game-settings", response_model=GameSettingsOut)
-def upsert_game_settings(
-    payload: GameSettingsUpsertRequest,
+@router.post("/learning-settings", response_model=LearningSettingsOut)
+def upsert_learning_settings(
+    payload: LearningSettingsUpsertRequest,
     db: DBSession,
     tenant: Annotated[Tenant, Depends(get_current_tenant)],
     _: Annotated[Membership, Depends(require_role(["PARENT"]))],
-) -> GameSettingsOut:
+) -> LearningSettingsOut:
     _get_child_or_404(db, tenant_id=tenant.id, child_id=payload.child_id)
     settings = _get_or_create_settings(db, tenant_id=tenant.id, child_id=payload.child_id)
 
-    settings.max_daily_xp = payload.max_daily_xp
     settings.max_daily_learning_xp = payload.max_daily_learning_xp
-    settings.max_weekly_coin_conversion = payload.max_weekly_coin_conversion
-    settings.learning_coin_reward_multiplier = payload.learning_coin_reward_multiplier
-    settings.enabled_games = payload.enabled_games
-    settings.require_approval_after_minutes = payload.require_approval_after_minutes
+    settings.max_lessons_per_day = payload.max_lessons_per_day
+    settings.difficulty_ceiling = payload.difficulty_ceiling
+    settings.enable_spaced_repetition = payload.enable_spaced_repetition
+    settings.enable_coins_rewards = payload.enable_coins_rewards
+    settings.xp_multiplier = payload.xp_multiplier
+    settings.coins_enabled = payload.enable_coins_rewards
+    settings.enabled_subjects = payload.enabled_subjects
 
     db.commit()
     return _to_response(settings)
