@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="28" y1="4" x2="28" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#60A5FA"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="inner-shadow" x1="28" y1="4" x2="28" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="60%" stop-color="transparent"/>
+      <stop offset="100%" stop-color="#1232A0" stop-opacity="0.38"/>
+    </linearGradient>
+    <linearGradient id="highlight" x1="28" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="white" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 3D base -->
+  <circle cx="28" cy="29" r="23" fill="#1232A0"/>
+  <circle cx="28" cy="27" r="23" fill="url(#bg)"/>
+  <circle cx="28" cy="27" r="23" fill="url(#inner-shadow)"/>
+  <circle cx="28" cy="27" r="23" fill="url(#highlight)"/>
+
+  <!-- CONTROLLER — simplified fat silhouette -->
+  <!-- Main body -->
+  <path d="M11 24.5 Q11 20.5 15 20 L20 19.5 L28 17.5 L36 19.5 L41 20 Q45 20.5 45 24.5 L44 32 Q44 37 40 37 L37.5 37 Q34.5 37.5 33 35 L31.5 33 L24.5 33 L23 35 Q21.5 37.5 18.5 37 L16 37 Q12 37 12 32 Z"
+    fill="white" fill-opacity="0.95"/>
+
+  <!-- D-pad: cross shape, big and clear -->
+  <!-- Vertical -->
+  <rect x="18" y="22" width="4" height="11" rx="2" fill="#1D4ED8"/>
+  <!-- Horizontal -->
+  <rect x="14" y="25.5" width="12" height="4" rx="2" fill="#1D4ED8"/>
+
+  <!-- Right buttons: 4 circles, colored -->
+  <!-- Top (Y/triangle) -->
+  <circle cx="34" cy="23" r="3.2" fill="#4DD9C0"/>
+  <!-- Right (B/circle) -->
+  <circle cx="38.5" cy="27.5" r="3.2" fill="#E8709A"/>
+  <!-- Bottom (A/cross) -->
+  <circle cx="34" cy="32" r="3.2" fill="#F5C842"/>
+  <!-- Left (X/square) -->
+  <circle cx="29.5" cy="27.5" r="3.2" fill="#A78BFA"/>
+
+  <!-- Center select buttons -->
+  <rect x="23" y="25" width="5" height="2.5" rx="1.25" fill="#1D4ED8" fill-opacity="0.3"/>
+  <rect x="23" y="29" width="5" height="2.5" rx="1.25" fill="#1D4ED8" fill-opacity="0.3"/>
+</svg>

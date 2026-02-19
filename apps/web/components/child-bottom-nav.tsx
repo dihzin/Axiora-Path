@@ -2,16 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Home, Puzzle, ShoppingBag, Sparkles, Star } from "lucide-react";
 import { memo } from "react";
 
 const NAV_ITEMS = [
-  { href: "/child", label: "Inicio", icon: Home },
-  { href: "/child/aprender", label: "Aprender", icon: BookOpen },
-  { href: "/child/stickers", label: "Figurinhas", icon: Star },
-  { href: "/child/games", label: "Jogos", icon: Puzzle },
-  { href: "/child/store", label: "Loja", icon: ShoppingBag },
-  { href: "/child/coach", label: "Axion", icon: Sparkles },
+  { href: "/child", label: "Inicio", iconSrc: "/icons/inicio.svg" },
+  { href: "/child/aprender", label: "Aprender", iconSrc: "/icons/aprender.svg" },
+  { href: "/child/stickers", label: "Figurinhas", iconSrc: "/icons/figurinhas.svg" },
+  { href: "/child/games", label: "Jogos", iconSrc: "/icons/jogos.svg" },
+  { href: "/child/store", label: "Loja", iconSrc: "/icons/loja.svg" },
+  { href: "/child/coach", label: "Axion", iconSrc: "/icons/axion.svg" },
 ] as const;
 
 function ChildBottomNavComponent() {
@@ -20,30 +19,27 @@ function ChildBottomNavComponent() {
   return (
     <>
       <div aria-hidden className="pointer-events-none" style={{ height: "calc(6rem + env(safe-area-inset-bottom))" }} />
-      <nav className="safe-px safe-pb fixed inset-x-0 bottom-0 border-t border-border bg-background/95 py-2 backdrop-blur">
+      <nav className="safe-px safe-pb fixed inset-x-0 bottom-0 border-t border-[rgba(77,217,192,0.18)] bg-[rgba(255,255,255,0.97)] py-2 backdrop-blur">
         <div className="mx-auto grid w-full max-w-md grid-cols-6 gap-1 md:max-w-2xl">
           {NAV_ITEMS.map((item) => {
             const isActive = item.href === "/child" ? pathname === item.href : pathname.startsWith(item.href);
-            const Icon = item.icon;
             return (
               <Link
                 key={item.href}
                 aria-label={item.label}
-                className={`flex min-w-0 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-xs font-semibold leading-tight transition-all ${
-                  isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
-                }`}
+                className="relative flex min-w-0 flex-col items-center gap-1 rounded-[14px] px-0.5 py-1 text-[8px] font-extrabold uppercase leading-none tracking-[0.02em] text-[#B8C8DC] transition-all hover:bg-[rgba(77,217,192,0.08)]"
                 href={item.href}
               >
-                <span
-                  className={`inline-flex h-8 w-8 items-center justify-center rounded-2xl border-2 transition-all ${
-                    isActive
-                      ? "border-primary/45 bg-primary/15 shadow-[0_3px_0_rgba(178,69,36,0.25)]"
-                      : "border-border bg-white shadow-[0_2px_0_rgba(184,200,239,0.7)]"
+                <img
+                  src={item.iconSrc}
+                  alt=""
+                  aria-hidden
+                  className={`h-10 w-10 select-none object-contain transition-transform duration-200 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] ${
+                    isActive ? "scale-[1.15] -translate-y-[3px]" : "hover:scale-[1.2] hover:-translate-y-1"
                   }`}
-                >
-                  <Icon className={`h-[18px] w-[18px] ${isActive ? "stroke-[2.6]" : "stroke-[2.4]"}`} />
-                </span>
-                {item.label}
+                  draggable={false}
+                />
+                <span className={`text-center ${isActive ? "text-[#2ABBA3]" : "text-[#B8C8DC]"}`}>{item.label}</span>
               </Link>
             );
           })}

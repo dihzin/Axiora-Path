@@ -14,8 +14,9 @@ export const metadata: Metadata = {
   description: "Axiora Path MVP",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/icons/icon-192.svg",
-    apple: "/icons/icon-192.svg",
+    icon: "/icons/favicon-axion.svg",
+    shortcut: "/icons/favicon-axion.svg",
+    apple: "/icons/axion.svg",
   },
   appleWebApp: {
     capable: true,
