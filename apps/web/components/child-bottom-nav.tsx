@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { memo } from "react";
+import { BookOpen, Gamepad2, House, ShoppingBag, Sparkles, Star } from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/child", label: "Início", iconSrc: "/icons/inicio.svg" },
-  { href: "/child/aprender", label: "Aprender", iconSrc: "/icons/aprender.svg" },
-  { href: "/child/stickers", label: "Figurinhas", iconSrc: "/icons/figurinhas.svg" },
-  { href: "/child/games", label: "Jogos", iconSrc: "/icons/jogos.svg" },
-  { href: "/child/store", label: "Loja", iconSrc: "/icons/loja.svg" },
-  { href: "/child/coach", label: "Axion", iconSrc: "/icons/axion.svg" },
+  { href: "/child", label: "Início", icon: House },
+  { href: "/child/aprender", label: "Aprender", icon: BookOpen },
+  { href: "/child/stickers", label: "Figurinhas", icon: Star },
+  { href: "/child/games", label: "Jogos", icon: Gamepad2 },
+  { href: "/child/store", label: "Loja", icon: ShoppingBag },
+  { href: "/child/coach", label: "Axion", icon: Sparkles },
 ] as const;
 
 function ChildBottomNavComponent() {
@@ -23,23 +24,22 @@ function ChildBottomNavComponent() {
         <div className="mx-auto grid w-full max-w-md grid-cols-6 gap-1 md:max-w-2xl">
           {NAV_ITEMS.map((item) => {
             const isActive = item.href === "/child" ? pathname === item.href : pathname.startsWith(item.href);
+            const Icon = item.icon;
             return (
               <Link
                 key={item.href}
                 aria-label={item.label}
-                className="relative flex min-w-0 flex-col items-center gap-1 rounded-[14px] px-0.5 py-1 text-[8px] font-extrabold uppercase leading-none tracking-[0.02em] text-[#B8C8DC] transition-all hover:bg-[rgba(77,217,192,0.08)]"
+                className="relative flex min-w-0 flex-col items-center gap-1 rounded-xl px-0.5 py-1 text-[8px] font-bold uppercase leading-none tracking-[0.02em] transition-all"
                 href={item.href}
               >
-                <img
-                  src={item.iconSrc}
-                  alt=""
-                  aria-hidden
-                  className={`h-10 w-10 select-none object-contain transition-transform duration-200 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] ${
-                    isActive ? "scale-[1.15] -translate-y-[3px]" : "hover:scale-[1.2] hover:-translate-y-1"
+                <span
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
+                    isActive ? "border-[#4DD9C0]/45 bg-[#4DD9C0]/12 text-[#1E293B]" : "border-[#C9D5E8] bg-white text-[#8FA1BE]"
                   }`}
-                  draggable={false}
-                />
-                <span className={`text-center ${isActive ? "text-[#2ABBA3]" : "text-[#B8C8DC]"}`}>{item.label}</span>
+                >
+                  <Icon className="h-4.5 w-4.5" strokeWidth={2.2} />
+                </span>
+                <span className={`text-center ${isActive ? "text-[#2ABBA3]" : "text-[#9CB0CC]"}`}>{item.label}</span>
               </Link>
             );
           })}
