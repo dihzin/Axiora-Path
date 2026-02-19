@@ -86,6 +86,8 @@ function daysInMonth(month: number, year: number): number {
   return new Date(year, month, 0).getDate();
 }
 
+const WEEKDAY_SHORT = ["D", "S", "T", "Q", "Q", "S", "S"] as const;
+
 function buildSerpentinePoints(count: number): Point[] {
   if (count <= 0) return [];
   const center = 50;
@@ -358,6 +360,8 @@ export default function ChildAprenderPage() {
     longestStreak: number;
     days: Record<string, { streak: boolean; perfect: boolean; mission: boolean }>;
   } | null>(null);
+  const [retentionLoading, setRetentionLoading] = useState(true);
+  const [retentionError, setRetentionError] = useState<string | null>(null);
   const [missionToast, setMissionToast] = useState<string | null>(null);
 
   const reducedMotion = effectiveReducedMotion(uxSettings);
@@ -377,38 +381,70 @@ export default function ChildAprenderPage() {
   };
 
   const loadRetention = async () => {
+    setRetentionLoading(true);
+    setRetentionError(null);
     const now = new Date();
-    const [missionsRes, seasonalRes, calendarRes] = await Promise.all([
+    const [missionsResult, seasonalResult, calendarResult] = await Promise.allSettled([
       getCurrentMissions(),
       getActiveSeasonEvents(),
       getCalendarActivity({ month: now.getMonth() + 1, year: now.getFullYear() }),
     ]);
-    setMissions(missionsRes);
-    setSeasonal(seasonalRes);
-    const daysMap = Object.fromEntries(
-      calendarRes.days.map((day) => [
-        day.date,
-        {
-          streak: day.streakMaintained,
-          perfect: day.perfectSessions > 0,
-          mission: day.missionsCompleted > 0,
-        },
-      ]),
-    );
-    setCalendar({
-      month: calendarRes.month,
-      year: calendarRes.year,
-      currentStreak: calendarRes.currentStreak,
-      longestStreak: calendarRes.longestStreak,
-      days: daysMap,
-    });
+    if (missionsResult.status === "fulfilled") {
+      setMissions(missionsResult.value);
+    } else {
+      setMissions({
+        missions: [],
+        currentStreak: 0,
+        longestStreak: 0,
+        almostThere: false,
+        showNudge: false,
+        nudgeMessage: "",
+        upcomingSeasonalEvent: null,
+      });
+      setRetentionError("Missões indisponíveis agora. Tentaremos novamente.");
+    }
+
+    if (seasonalResult.status === "fulfilled") {
+      setSeasonal(seasonalResult.value);
+    } else {
+      setSeasonal({ active: [], upcoming: null, countdownDays: null });
+    }
+
+    if (calendarResult.status === "fulfilled") {
+      const calendarRes = calendarResult.value;
+      const daysMap = Object.fromEntries(
+        calendarRes.days.map((day) => [
+          day.date,
+          {
+            streak: day.streakMaintained,
+            perfect: day.perfectSessions > 0,
+            mission: day.missionsCompleted > 0,
+          },
+        ]),
+      );
+      setCalendar({
+        month: calendarRes.month,
+        year: calendarRes.year,
+        currentStreak: calendarRes.currentStreak,
+        longestStreak: calendarRes.longestStreak,
+        days: daysMap,
+      });
+    } else {
+      setCalendar({
+        month: now.getMonth() + 1,
+        year: now.getFullYear(),
+        currentStreak: 0,
+        longestStreak: 0,
+        days: {},
+      });
+      setRetentionError((prev) => prev ?? "Calendário indisponível agora.");
+    }
+    setRetentionLoading(false);
   };
 
   useEffect(() => {
     void loadPath();
-    void loadRetention().catch(() => {
-      // keep core path usable even if retention endpoints fail
-    });
+    void loadRetention();
     void fetchUXSettings().then(setUxSettings);
   }, []);
 
@@ -462,10 +498,18 @@ export default function ChildAprenderPage() {
   const completedLessons = lessons.filter((lesson) => lesson?.completed).length;
   const completionPercent = lessons.length > 0 ? Math.round((completedLessons / lessons.length) * 100) : 0;
   const calendarDaysCount = calendar ? daysInMonth(calendar.month, calendar.year) : 0;
-  const calendarGrid = useMemo(
-    () => Array.from({ length: calendarDaysCount }, (_, index) => index + 1),
-    [calendarDaysCount],
-  );
+  const calendarLeadingSlots = useMemo(() => {
+    if (!calendar) return 0;
+    return new Date(calendar.year, calendar.month - 1, 1).getDay();
+  }, [calendar]);
+  const calendarGrid = useMemo(() => {
+    const days = Array.from({ length: calendarDaysCount }, (_, index) => index + 1);
+    return [...Array.from({ length: calendarLeadingSlots }, () => null), ...days];
+  }, [calendarDaysCount, calendarLeadingSlots]);
+  const todayKey = useMemo(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  }, []);
   const activeSeason = seasonal?.active[0] ?? null;
 
   const onOpenNode = (node: LearningPathNode) => {
@@ -649,7 +693,20 @@ export default function ChildAprenderPage() {
                   </div>
                 </div>
               ))}
-              {!missions || missions.missions.length === 0 ? <p className="text-xs text-muted-foreground">Carregando missoes...</p> : null}
+              {retentionLoading && (!missions || missions.missions.length === 0) ? <p className="text-xs text-muted-foreground">Carregando missoes...</p> : null}
+              {!retentionLoading && missions && missions.missions.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                  Nenhuma missao ativa nesta semana.
+                </div>
+              ) : null}
+              {retentionError ? (
+                <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-2 text-[11px] text-primary">
+                  <span>{retentionError}</span>
+                  <Button size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => void loadRetention()}>
+                    Tentar de novo
+                  </Button>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -662,14 +719,25 @@ export default function ChildAprenderPage() {
                 <span>Atual: {calendar?.currentStreak ?? 0} dias</span>
                 <span>Recorde: {calendar?.longestStreak ?? 0}</span>
               </div>
-              <div className="grid grid-cols-7 gap-1">
-                {calendarGrid.map((day) => {
+              <div className="mb-1 grid grid-cols-7 gap-1 px-0.5">
+                {WEEKDAY_SHORT.map((label, index) => (
+                  <div key={`${label}-${index}`} className="text-center text-[10px] font-semibold text-muted-foreground/85">
+                    {label}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1.5">
+                {calendarGrid.map((day, index) => {
+                  if (day === null) {
+                    return <div key={`blank-${index}`} className="h-9" aria-hidden />;
+                  }
                   const key = calendar ? `${calendar.year}-${String(calendar.month).padStart(2, "0")}-${String(day).padStart(2, "0")}` : "";
                   const marker = key ? calendar?.days[key] : undefined;
+                  const isToday = key === todayKey;
                   return (
-                    <div key={day} className="flex h-9 flex-col items-center justify-center rounded-md border border-border bg-muted/40 text-[10px]">
-                      <span>{day}</span>
-                      <span className="flex items-center gap-0.5">
+                    <div key={day} className={cn("flex h-9 flex-col items-center justify-center rounded-lg text-[10px] transition-colors", marker ? "bg-primary/8" : "bg-muted/25", isToday ? "ring-1 ring-primary/45" : "")}>
+                      <span className={cn("font-semibold", marker ? "text-foreground" : "text-muted-foreground")}>{day}</span>
+                      <span className="mt-0.5 flex items-center gap-0.5">
                         {marker?.streak ? <Flame className="h-2.5 w-2.5 text-accent" /> : null}
                         {marker?.perfect ? <Star className="h-2.5 w-2.5 text-amber-500" /> : null}
                         {marker?.mission ? <Coins className="h-2.5 w-2.5 text-secondary" /> : null}
@@ -683,7 +751,19 @@ export default function ChildAprenderPage() {
         </div>
 
         {loading ? <Card><CardContent className="p-6 text-sm text-muted-foreground">Carregando mapa...</CardContent></Card> : null}
-        {error ? <Card><CardContent className="p-6 text-sm text-muted-foreground">{error}</CardContent></Card> : null}
+        {error && !path ? (
+          <Card>
+            <CardContent className="flex items-center justify-between gap-3 p-4 text-sm text-muted-foreground">
+              <span>{error}</span>
+              <Button size="sm" variant="secondary" onClick={() => void loadPath()}>
+                Tentar novamente
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
+        {error && path ? (
+          <div className="mb-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary">{error}</div>
+        ) : null}
 
         <section className="relative space-y-5 pb-24">
           <svg className="pointer-events-none absolute -left-4 top-6 h-20 w-20 opacity-25" viewBox="0 0 160 120" aria-hidden>
