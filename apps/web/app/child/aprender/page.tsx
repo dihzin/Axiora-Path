@@ -93,12 +93,67 @@ function buildSerpentinePoints(count: number): Point[] {
   const center = 50;
   const swing = 28;
   const top = 10;
-  const step = 20;
+  const step = 24;
   return Array.from({ length: count }, (_, index) => {
     const side = index % 2 === 0 ? -1 : 1;
     const organic = 0.8 + Math.sin((index + 1) * 0.7) * 0.2;
     return { x: center + side * swing * organic, y: top + index * step };
   });
+}
+
+function compactNodeLabel(node: LearningPathNode): string {
+  if (node.lesson) return `Licao ${node.lesson.order}`;
+  if (!node.event) return "";
+  if (node.event.type === "CHECKPOINT") return "Checkpoint";
+  if (node.event.type === "MINI_BOSS") return "Mini-boss";
+  if (node.event.type === "STORY_STOP") return "Parada narrativa";
+  if (node.event.type === "REVIEW_GATE") return "Portal";
+  if (node.event.type === "CHEST") return "Bau";
+  if (node.event.type === "BOOST") return "Turbo";
+  return node.event.title;
+}
+
+function eventFriendlyDetails(event: LearningPathEventNode): { objective: string; reward: string; hint: string } {
+  if (event.type === "BOOST") {
+    return {
+      objective: "Mantenha sua sequencia de estudos para ativar este turbo.",
+      reward: "Quando ativar, voce ganha mais XP por tempo limitado.",
+      hint: "Complete uma licao por dia para chegar la mais rapido.",
+    };
+  }
+  if (event.type === "CHEST") {
+    return {
+      objective: "Abra o bau surpresa ao avancar na trilha.",
+      reward: "Voce pode ganhar moedas e itens especiais.",
+      hint: "Continue concluindo licoes para encontrar mais baus.",
+    };
+  }
+  if (event.type === "CHECKPOINT") {
+    return {
+      objective: "Revise o que aprendeu em um desafio curtinho.",
+      reward: "Voce fortalece suas habilidades e ganha recompensas.",
+      hint: "Respire fundo, leia com calma e va passo a passo.",
+    };
+  }
+  if (event.type === "MINI_BOSS") {
+    return {
+      objective: "Encare um mini desafio final da unidade.",
+      reward: "Se mandar bem, libera o proximo trecho do mapa.",
+      hint: "Use suas melhores estrategias e tente novamente se precisar.",
+    };
+  }
+  if (event.type === "REVIEW_GATE") {
+    return {
+      objective: "Conclua suas revisoes pendentes para seguir viagem.",
+      reward: "Com revisao feita, o caminho fica livre novamente.",
+      hint: "Uma revisao por vez: voce consegue!",
+    };
+  }
+  return {
+    objective: "Participe desta parada especial da aventura.",
+    reward: "Ganhe progresso e recompensas no seu ritmo.",
+    hint: "Cada tentativa ajuda voce a evoluir.",
+  };
 }
 
 function buildBezier(points: Point[]): string {
@@ -147,6 +202,8 @@ function UnitPath({
   reducedMotion,
   soundEnabled,
   onUnlockDone,
+  collapsed,
+  onExpand,
 }: {
   unit: LearningPathUnit;
   onOpenNode: (node: LearningPathNode) => void;
@@ -154,6 +211,8 @@ function UnitPath({
   reducedMotion: boolean;
   soundEnabled: boolean;
   onUnlockDone: (toast: string) => void;
+  collapsed: boolean;
+  onExpand: () => void;
 }) {
   const points = useMemo(() => buildSerpentinePoints(unit.nodes.length), [unit.nodes.length]);
   const path = useMemo(() => buildBezier(points), [points]);
@@ -250,9 +309,17 @@ function UnitPath({
           </div>
           <ProgressBar value={Math.round(unit.completionRate * 100)} tone="secondary" />
         </div>
+        {collapsed ? (
+          <div className="mt-3">
+            <Button size="sm" variant="secondary" className="h-8 px-3 text-xs" onClick={onExpand}>
+              Expandir unidade
+            </Button>
+          </div>
+        ) : null}
       </article>
 
-      <div className="relative w-full" style={{ height: `${Math.max(24, unit.nodes.length * 5.4)}rem` }}>
+      {collapsed ? null : (
+      <div className="relative w-full" style={{ height: `${Math.max(28, (viewHeight / 100) * 28)}rem` }}>
         <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 100 ${viewHeight}`} preserveAspectRatio="none" aria-hidden>
           <defs>
             <linearGradient id={`trail-${unit.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -311,7 +378,12 @@ function UnitPath({
                 ) : null}
               </button>
               <p className="mt-1 w-24 -translate-x-2 text-center text-[11px] font-semibold text-foreground">
-                {lesson ? lesson.title : event?.title}
+                <span
+                  className="inline-block max-w-[110px] overflow-hidden text-ellipsis whitespace-nowrap align-top"
+                  title={lesson ? lesson.title : event?.title ?? ""}
+                >
+                  {compactNodeLabel(node)}
+                </span>
               </p>
             </div>
           );
@@ -333,6 +405,7 @@ function UnitPath({
           />
         ))}
       </div>
+      )}
     </div>
   );
 }
@@ -363,6 +436,7 @@ export default function ChildAprenderPage() {
   const [retentionLoading, setRetentionLoading] = useState(true);
   const [retentionError, setRetentionError] = useState<string | null>(null);
   const [missionToast, setMissionToast] = useState<string | null>(null);
+  const [collapsedUnits, setCollapsedUnits] = useState<Record<number, boolean>>({});
 
   const reducedMotion = effectiveReducedMotion(uxSettings);
 
@@ -474,6 +548,20 @@ export default function ChildAprenderPage() {
       break;
     }
   }, [path, pathname, router, search, uxSettings]);
+
+  useEffect(() => {
+    if (!path) return;
+    const currentUnitIndex = path.units.findIndex((unit) =>
+      unit.nodes.some((node) => node.lesson && node.lesson.unlocked && !node.lesson.completed),
+    );
+    const nextState: Record<number, boolean> = {};
+    path.units.forEach((unit, index) => {
+      const hasStarted = unit.completionRate > 0;
+      const keepExpanded = index === 0 || hasStarted || (currentUnitIndex >= 0 && index <= currentUnitIndex);
+      nextState[unit.id] = !keepExpanded;
+    });
+    setCollapsedUnits(nextState);
+  }, [path]);
 
   useEffect(() => {
     if (!unlockToast) return;
@@ -780,6 +868,8 @@ export default function ChildAprenderPage() {
               unlockAnimation={unlockAnimation}
               reducedMotion={reducedMotion}
               soundEnabled={uxSettings.soundEnabled}
+              collapsed={Boolean(collapsedUnits[unit.id])}
+              onExpand={() => setCollapsedUnits((prev) => ({ ...prev, [unit.id]: false }))}
               onUnlockDone={(toast) => {
                 setUnlockToast(toast);
                 setUnlockAnimation(null);
@@ -813,8 +903,12 @@ export default function ChildAprenderPage() {
             </p>
 
             <div className="mt-3 rounded-2xl border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-              <p className="font-semibold text-foreground">Regras / recompensas</p>
-              <pre className="mt-1 whitespace-pre-wrap">{JSON.stringify(selectedNode.event.rules, null, 2)}</pre>
+              <p className="font-semibold text-foreground">Missao deste evento</p>
+              <p className="mt-1">{eventFriendlyDetails(selectedNode.event).objective}</p>
+              <p className="mt-2 font-semibold text-foreground">Recompensa</p>
+              <p className="mt-1">{eventFriendlyDetails(selectedNode.event).reward}</p>
+              <p className="mt-2 font-semibold text-foreground">Dica do Axion</p>
+              <p className="mt-1">{eventFriendlyDetails(selectedNode.event).hint}</p>
             </div>
 
             {eventStartPayload ? (
@@ -846,10 +940,13 @@ export default function ChildAprenderPage() {
               <Button className="w-full" disabled={modalLoading !== null || selectedNode.event.status === "LOCKED"} onClick={() => void onStartEvent()}>
                 {modalLoading === "start" ? "Iniciando..." : "Iniciar"}
               </Button>
-              <Button className="w-full" disabled={modalLoading !== null || selectedNode.event.status === "LOCKED"} onClick={() => void onCompleteEvent()}>
-                {modalLoading === "complete" ? "Concluindo..." : "Concluir"}
+              <Button className="w-full" disabled title="Conclua a atividade para liberar esta badge.">
+                Concluir
               </Button>
             </div>
+            <p className="mt-2 text-center text-[11px] text-muted-foreground">
+              A badge sera concluida depois que a atividade for finalizada.
+            </p>
           </div>
         </div>
       ) : null}
