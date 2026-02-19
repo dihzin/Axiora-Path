@@ -82,6 +82,15 @@ function missionTypeLabel(kind: string): string {
   return kind;
 }
 
+function buildCoachTip(params: { streakDays: number; dueReviews: number; completionPercent: number; subjectName: string | null }): string {
+  const { streakDays, dueReviews, completionPercent, subjectName } = params;
+  if (dueReviews > 8) return "Tem revisões esperando por você. Uma por vez e o caminho fica livre rapidinho.";
+  if (completionPercent >= 70) return "Você está perto de fechar esta região. Mais uma missão e vai desbloquear novidades.";
+  if (streakDays >= 5) return `Que constância linda! Continue em ${subjectName ?? "Aprender"} para manter o ritmo.`;
+  if (streakDays === 0) return "Vamos reacender sua sequência com uma lição curtinha hoje?";
+  return "Cada lição concluída deixa sua trilha mais forte. Continue nesse ritmo.";
+}
+
 function daysInMonth(month: number, year: number): number {
   return new Date(year, month, 0).getDate();
 }
@@ -179,8 +188,8 @@ function eventIcon(event: LearningPathEventNode) {
 }
 
 function eventNodeClass(event: LearningPathEventNode): string {
-  if (event.status === "COMPLETED") return "border-secondary/45 bg-secondary text-white shadow-[0_10px_22px_rgba(45,212,191,0.35)]";
-  if (event.status === "LOCKED") return "border-slate-300 bg-slate-300/85 text-slate-600";
+  if (event.status === "COMPLETED") return "border-[#2BB09A]/60 bg-[#4DD9C0] text-white shadow-[0_10px_22px_rgba(45,212,191,0.35)]";
+  if (event.status === "LOCKED") return "locked-node border-slate-300 bg-slate-300/85 text-slate-600";
   if (event.type === "MINI_BOSS") return "border-accent/45 bg-accent text-white shadow-[0_14px_30px_rgba(255,107,61,0.48)]";
   if (event.type === "CHEST") return "border-amber-400/55 bg-amber-500 text-white shadow-[0_10px_24px_rgba(245,158,11,0.38)]";
   if (event.type === "BOOST") return "border-primary/45 bg-primary text-white shadow-[0_10px_24px_rgba(29,78,216,0.36)]";
@@ -189,9 +198,9 @@ function eventNodeClass(event: LearningPathEventNode): string {
 }
 
 function lessonNodeClass(completed: boolean, current: boolean, unlocked: boolean): string {
-  if (completed) return "border-secondary/45 bg-secondary text-white shadow-[0_10px_22px_rgba(45,212,191,0.35)]";
-  if (current) return "border-accent/45 bg-accent text-white node-current shadow-[0_12px_28px_rgba(255,107,61,0.4)]";
-  if (!unlocked) return "border-slate-300 bg-slate-300/85 text-slate-600";
+  if (completed) return "border-[#2BB09A]/60 bg-[#4DD9C0] text-white shadow-[0_10px_22px_rgba(45,212,191,0.35)]";
+  if (current) return "border-amber-300/70 bg-amber-400 text-slate-900 node-current shadow-[0_12px_28px_rgba(245,166,35,0.45)]";
+  if (!unlocked) return "locked-node border-slate-300 bg-slate-300/85 text-slate-600";
   return "border-primary/40 bg-white text-primary shadow-[0_8px_18px_rgba(29,78,216,0.24)]";
 }
 
@@ -222,6 +231,7 @@ function UnitPath({
   const [spark, setSpark] = useState<{ x: number; y: number } | null>(null);
   const [highlightLessonId, setHighlightLessonId] = useState<number | null>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
+  const [trailLength, setTrailLength] = useState<number>(0);
 
   const currentLessonId = useMemo(
     () =>
@@ -231,6 +241,36 @@ function UnitPath({
         .find((lesson) => lesson && lesson.unlocked && !lesson.completed)?.id,
     [unit.nodes],
   );
+  const unitStars = useMemo(() => {
+    const lessons = unit.nodes
+      .filter((node) => node.lesson)
+      .map((node) => node.lesson)
+      .filter((lesson): lesson is NonNullable<typeof lesson> => Boolean(lesson));
+    const earned = lessons.reduce((acc, lesson) => acc + Math.max(0, Math.min(3, lesson.starsEarned ?? 0)), 0);
+    const total = lessons.length * 3;
+    return { earned, total };
+  }, [unit.nodes]);
+  const trailProgressRatio = useMemo(() => {
+    if (unit.nodes.length <= 1) return 0;
+    const currentIndex = unit.nodes.findIndex((node) => node.lesson?.id === currentLessonId);
+    if (currentIndex >= 0) {
+      return Math.max(0, Math.min(1, currentIndex / (unit.nodes.length - 1)));
+    }
+    let lastCompletedIndex = -1;
+    unit.nodes.forEach((node, index) => {
+      const lessonDone = Boolean(node.lesson?.completed);
+      const eventDone = Boolean(node.event?.status === "COMPLETED");
+      if (lessonDone || eventDone) lastCompletedIndex = index;
+    });
+    if (lastCompletedIndex < 0) return 0;
+    return Math.max(0, Math.min(1, lastCompletedIndex / (unit.nodes.length - 1)));
+  }, [currentLessonId, unit.nodes]);
+
+  useEffect(() => {
+    const pathEl = pathRef.current;
+    if (!pathEl) return;
+    setTrailLength(pathEl.getTotalLength());
+  }, [path, unit.nodes.length]);
 
   useEffect(() => {
     if (!unlockAnimation || unlockAnimation.unitId !== unit.id) return;
@@ -309,6 +349,13 @@ function UnitPath({
           </div>
           <ProgressBar value={Math.round(unit.completionRate * 100)} tone="secondary" />
         </div>
+        <div className="mt-2 flex items-center justify-between">
+          <span className="text-[11px] font-semibold text-muted-foreground">Estrelas da unidade</span>
+          <span className="inline-flex items-center rounded-full border border-amber-300/40 bg-amber-100/65 px-2 py-0.5 text-[11px] font-extrabold text-amber-700">
+            <Star className="mr-1 h-3.5 w-3.5 fill-amber-400 text-amber-500" />
+            {unitStars.earned}/{unitStars.total}
+          </span>
+        </div>
         {collapsed ? (
           <div className="mt-3">
             <Button size="sm" variant="secondary" className="h-8 px-3 text-xs" onClick={onExpand}>
@@ -323,8 +370,8 @@ function UnitPath({
         <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 100 ${viewHeight}`} preserveAspectRatio="none" aria-hidden>
           <defs>
             <linearGradient id={`trail-${unit.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#8DD9FF" />
-              <stop offset="100%" stopColor="#2DD4BF" />
+              <stop offset="0%" stopColor="#5EEAD4" />
+              <stop offset="100%" stopColor="#2BB09A" />
             </linearGradient>
             <filter id={`spark-glow-${unit.id}`} x="-200%" y="-200%" width="400%" height="400%">
               <feGaussianBlur stdDeviation="1.8" result="b" />
@@ -334,8 +381,15 @@ function UnitPath({
               </feMerge>
             </filter>
           </defs>
-          <path ref={pathRef} d={path} fill="none" stroke="rgba(180,205,240,0.7)" strokeWidth="3.4" strokeLinecap="round" />
-          <path d={path} fill="none" stroke={`url(#trail-${unit.id})`} strokeWidth="4.2" strokeLinecap="round" strokeDasharray={1} strokeDashoffset={1 - unit.completionRate} pathLength={1} />
+          <path ref={pathRef} d={path} fill="none" stroke="rgba(184,200,220,0.72)" strokeWidth="3.8" strokeLinecap="round" />
+          <path
+            d={path}
+            fill="none"
+            stroke={`url(#trail-${unit.id})`}
+            strokeWidth="3.8"
+            strokeLinecap="round"
+            strokeDasharray={`${Math.max(0, trailLength * trailProgressRatio)} ${Math.max(1, trailLength)}`}
+          />
           {spark ? <circle cx={spark.x} cy={spark.y} r="2.8" fill="#FFD166" filter={`url(#spark-glow-${unit.id})`} /> : null}
         </svg>
 
@@ -344,10 +398,25 @@ function UnitPath({
           if (!point) return null;
           const top = (point.y / viewHeight) * 100;
           const left = point.x;
+          const prevPoint = points[index - 1];
+          const nextPoint = points[index + 1];
           const lesson = node.lesson;
           const event = node.event;
           const isRareEvent = Boolean(event && (event.rarity === "RARE" || event.rarity === "EPIC"));
           const chestIdle = Boolean(event && event.type === "CHEST");
+          const isEventNode = Boolean(event);
+          const labelSide: "left" | "right" = left <= 46
+            ? "left"
+            : left >= 54
+              ? "right"
+              : (nextPoint?.x ?? prevPoint?.x ?? 50) >= left
+                ? "left"
+                : "right";
+          const labelOffsetPx = isEventNode ? 88 : 80;
+          const isNearLeftEdge = left < 42;
+          const isNearRightEdge = left > 58;
+          const forceSide: "left" | "right" | null = isNearLeftEdge ? "right" : isNearRightEdge ? "left" : null;
+          const safeSide = forceSide ?? labelSide;
           return (
             <div
               key={`${node.kind}-${node.orderIndex}-${lesson?.id ?? event?.id}`}
@@ -377,14 +446,28 @@ function UnitPath({
                   eventIcon(event)
                 ) : null}
               </button>
-              <p className="mt-1 w-24 -translate-x-2 text-center text-[11px] font-semibold text-foreground">
-                <span
-                  className="inline-block max-w-[110px] overflow-hidden text-ellipsis whitespace-nowrap align-top"
-                  title={lesson ? lesson.title : event?.title ?? ""}
-                >
-                  {compactNodeLabel(node)}
-                </span>
-              </p>
+              <span
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 h-[2px] w-5 -translate-y-1/2 rounded-full bg-slate-400/28"
+                style={safeSide === "left" ? { right: `${labelOffsetPx - 16}px` } : { left: "64px" }}
+              />
+              <div
+                className={cn(
+                  "pointer-events-none absolute top-1/2 flex w-[106px] -translate-y-1/2 flex-col",
+                  safeSide === "left" ? "items-end text-right" : "items-start text-left",
+                )}
+                style={safeSide === "left" ? { right: `${labelOffsetPx}px` } : { left: `${labelOffsetPx}px` }}
+              >
+                <p className={cn("leading-tight", isEventNode ? "text-[10.5px] font-semibold text-foreground/90" : "text-[11px] font-bold text-foreground")}>
+                  <span
+                    className="inline-block max-w-[106px] overflow-hidden text-ellipsis whitespace-nowrap align-top"
+                    title={lesson ? lesson.title : event?.title ?? ""}
+                  >
+                    {compactNodeLabel(node)}
+                  </span>
+                </p>
+                {lesson ? <p className="mt-0.5 text-[9px] font-bold tracking-wide text-secondary/85">+{lesson.xpReward} XP</p> : null}
+              </div>
             </div>
           );
         })}
@@ -602,6 +685,14 @@ export default function ChildAprenderPage() {
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   }, []);
   const activeSeason = seasonal?.active[0] ?? null;
+  const streakDays = path?.streakDays ?? 0;
+  const streakAtRisk = streakDays <= 1;
+  const coachTip = buildCoachTip({
+    streakDays,
+    dueReviews: path?.dueReviewsCount ?? 0,
+    completionPercent,
+    subjectName: path?.subjectName ?? null,
+  });
 
   const onOpenNode = (node: LearningPathNode) => {
     hapticPress(uxSettings);
@@ -753,6 +844,25 @@ export default function ChildAprenderPage() {
           </CardContent>
         </Card>
 
+        <div
+          className={cn(
+            "mb-4 flex items-center gap-2 rounded-2xl border px-3 py-2.5 shadow-[0_2px_0_rgba(184,200,239,0.45)]",
+            streakAtRisk
+              ? "border-rose-300/55 bg-[linear-gradient(120deg,rgba(251,113,133,0.2),rgba(255,255,255,0.9))]"
+              : "border-accent/35 bg-[linear-gradient(120deg,rgba(255,122,69,0.22),rgba(255,255,255,0.95))]",
+          )}
+        >
+          <Flame className={cn("h-5 w-5", streakAtRisk ? "text-rose-500" : "text-accent")} />
+          <div className="min-w-0">
+            <p className={cn("text-sm font-extrabold", streakAtRisk ? "text-rose-700" : "text-accent-foreground")}>
+              {streakDays > 0 ? `Sequência de ${streakDays} dia(s)` : "Sua sequência está em pausa"}
+            </p>
+            <p className={cn("text-[11px] font-semibold", streakAtRisk ? "text-rose-600/90" : "text-accent-foreground/85")}>
+              {streakAtRisk ? "Faça uma lição hoje para proteger seu ritmo." : "Continue assim para ganhar bônus especiais."}
+            </p>
+          </div>
+        </div>
+
         <div className="mb-4 grid gap-3 md:grid-cols-2">
           <Card className="border-border bg-white/95">
             <CardHeader className="pb-2">
@@ -855,6 +965,13 @@ export default function ChildAprenderPage() {
         {error && path ? (
           <div className="mb-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary">{error}</div>
         ) : null}
+
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-primary/25 bg-[linear-gradient(120deg,rgba(27,42,74,0.92),rgba(23,36,62,0.9))] px-3 py-2.5 shadow-[0_10px_22px_rgba(16,29,51,0.25)]">
+          <img src="/icons/axion.svg" alt="" aria-hidden className="h-10 w-10 shrink-0 rounded-full object-contain" draggable={false} />
+          <p className="text-xs font-semibold leading-relaxed text-white/90">
+            <span className="font-extrabold text-[#4DD9C0]">Dica do Axion:</span> {coachTip}
+          </p>
+        </div>
 
         <section className="relative space-y-5 pb-24">
           <svg className="pointer-events-none absolute -left-4 top-6 h-20 w-20 opacity-25" viewBox="0 0 160 120" aria-hidden>
@@ -1020,7 +1137,7 @@ export default function ChildAprenderPage() {
           }
         }
         .node-current {
-          animation: node-pulse 2.2s ease-in-out infinite;
+          animation: node-pulse 1.9s ease-in-out infinite;
         }
         .node-hover:hover {
           transform: scale(1.02);
@@ -1047,6 +1164,10 @@ export default function ChildAprenderPage() {
         .locked-fade {
           opacity: 0.82;
           transition: opacity 260ms ease;
+        }
+        .locked-node {
+          filter: saturate(0.4) blur(0.2px);
+          opacity: 0.9;
         }
         .mini-boss-aura {
           box-shadow: 0 0 0 0 rgba(255, 107, 61, 0.52), 0 0 0 12px rgba(255, 107, 61, 0.12);
