@@ -14,7 +14,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 export type ThemeName = "default" | "space" | "jungle" | "ocean" | "soccer" | "capybara" | "dinos" | "princess" | "heroes";
 
 type RequestOptions = {
-  method?: "GET" | "POST" | "PUT" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   requireAuth?: boolean;
   includeTenant?: boolean;
@@ -308,6 +308,88 @@ export type AxionStateResponse = {
   stage: number;
   mood_state: string;
   personality_traits: string[];
+};
+
+export type AxionBriefResponse = {
+  stateSummary: {
+    trend: "UP" | "DOWN" | "STABLE";
+  };
+  message: string;
+  tone: "CALM" | "ENCOURAGE" | "CHALLENGE" | "CELEBRATE" | "SUPPORT" | string;
+  cta: {
+    label: string;
+    actionType: string;
+    payload: Record<string, unknown>;
+  };
+  miniStats: {
+    streak: number;
+    dueReviews: number;
+    energy: number;
+  };
+};
+
+export type AxionStudioPolicy = {
+  id: number;
+  name: string;
+  context: string;
+  condition: Record<string, unknown>;
+  actions: Array<Record<string, unknown>>;
+  priority: number;
+  enabled: boolean;
+  lastUpdated: string;
+};
+
+export type AxionStudioTemplate = {
+  id: number;
+  context: string;
+  tone: string;
+  tags: string[];
+  conditions: Record<string, unknown>;
+  text: string;
+  weight: number;
+  enabled: boolean;
+  lastUpdated: string;
+};
+
+export type AxionStudioVersion = {
+  id: string;
+  version: number;
+  snapshot: Record<string, unknown>;
+  createdByUserId: number;
+  createdAt: string;
+};
+
+export type AxionStudioAudit = {
+  id: number;
+  actorUserId: number;
+  action: string;
+  entityType: string;
+  entityId: string;
+  diff: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type AxionStudioPreviewUser = {
+  userId: number;
+  name: string;
+  email: string;
+};
+
+export type AxionStudioMe = {
+  userId: number;
+  name: string;
+  email: string;
+};
+
+export type AxionStudioPreviewResponse = {
+  state: Record<string, unknown>;
+  facts: Record<string, unknown>;
+  actions: Array<Record<string, unknown>>;
+  message: string;
+  tone: string;
+  cta: Record<string, unknown>;
+  chosenRuleIds: number[];
+  chosenTemplateId: number | null;
 };
 
 export type CoachResponse = {
@@ -958,6 +1040,14 @@ export async function getAxionState(childId: number): Promise<AxionStateResponse
   });
 }
 
+export async function getAxionBrief(): Promise<AxionBriefResponse> {
+  return apiRequest<AxionBriefResponse>("/api/axion/brief", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
 export async function useAiCoach(childId: number, mode: "CHILD" | "PARENT", message?: string): Promise<CoachResponse> {
   return apiRequest<CoachResponse>("/ai/coach", {
     method: "POST",
@@ -1225,5 +1315,188 @@ export async function upsertUserUXSettings(payload: {
     body: payload,
     requireAuth: true,
     includeTenant: true,
+  });
+}
+
+export async function getAxionStudioPolicies(params?: { context?: string; q?: string }): Promise<AxionStudioPolicy[]> {
+  const query = new URLSearchParams();
+  if (params?.context) query.set("context", params.context);
+  if (params?.q) query.set("q", params.q);
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<AxionStudioPolicy[]>(`/api/platform-admin/axion/policies${suffix}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function getAxionStudioMe(): Promise<AxionStudioMe> {
+  return apiRequest<AxionStudioMe>("/api/platform-admin/axion/me", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function createAxionStudioPolicy(payload: {
+  name: string;
+  context: string;
+  condition: Record<string, unknown>;
+  actions: Array<Record<string, unknown>>;
+  priority: number;
+  enabled: boolean;
+}): Promise<AxionStudioPolicy> {
+  return apiRequest<AxionStudioPolicy>("/api/platform-admin/axion/policies", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function patchAxionStudioPolicy(
+  policyId: number,
+  payload: Partial<{
+    name: string;
+    context: string;
+    condition: Record<string, unknown>;
+    actions: Array<Record<string, unknown>>;
+    priority: number;
+    enabled: boolean;
+  }>
+): Promise<AxionStudioPolicy> {
+  return apiRequest<AxionStudioPolicy>(`/api/platform-admin/axion/policies/${policyId}`, {
+    method: "PATCH",
+    body: payload,
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function toggleAxionStudioPolicy(policyId: number): Promise<AxionStudioPolicy> {
+  return apiRequest<AxionStudioPolicy>(`/api/platform-admin/axion/policies/${policyId}/toggle`, {
+    method: "POST",
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function getAxionStudioPolicyVersions(policyId: number): Promise<AxionStudioVersion[]> {
+  return apiRequest<AxionStudioVersion[]>(`/api/platform-admin/axion/policies/${policyId}/versions`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function restoreAxionStudioPolicy(policyId: number, version: number): Promise<AxionStudioPolicy> {
+  return apiRequest<AxionStudioPolicy>(`/api/platform-admin/axion/policies/${policyId}/restore`, {
+    method: "POST",
+    body: { version },
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function getAxionStudioTemplates(params?: { context?: string; tone?: string }): Promise<AxionStudioTemplate[]> {
+  const query = new URLSearchParams();
+  if (params?.context) query.set("context", params.context);
+  if (params?.tone) query.set("tone", params.tone);
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<AxionStudioTemplate[]>(`/api/platform-admin/axion/templates${suffix}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function createAxionStudioTemplate(payload: {
+  context: string;
+  tone: string;
+  tags: string[];
+  conditions: Record<string, unknown>;
+  text: string;
+  weight: number;
+  enabled: boolean;
+}): Promise<AxionStudioTemplate> {
+  return apiRequest<AxionStudioTemplate>("/api/platform-admin/axion/templates", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function patchAxionStudioTemplate(
+  templateId: number,
+  payload: Partial<{
+    context: string;
+    tone: string;
+    tags: string[];
+    conditions: Record<string, unknown>;
+    text: string;
+    weight: number;
+    enabled: boolean;
+  }>
+): Promise<AxionStudioTemplate> {
+  return apiRequest<AxionStudioTemplate>(`/api/platform-admin/axion/templates/${templateId}`, {
+    method: "PATCH",
+    body: payload,
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function toggleAxionStudioTemplate(templateId: number): Promise<AxionStudioTemplate> {
+  return apiRequest<AxionStudioTemplate>(`/api/platform-admin/axion/templates/${templateId}/toggle`, {
+    method: "POST",
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function getAxionStudioTemplateVersions(templateId: number): Promise<AxionStudioVersion[]> {
+  return apiRequest<AxionStudioVersion[]>(`/api/platform-admin/axion/templates/${templateId}/versions`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function restoreAxionStudioTemplate(templateId: number, version: number): Promise<AxionStudioTemplate> {
+  return apiRequest<AxionStudioTemplate>(`/api/platform-admin/axion/templates/${templateId}/restore`, {
+    method: "POST",
+    body: { version },
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function getAxionStudioAudit(params?: { actorUserId?: number; entityType?: string }): Promise<AxionStudioAudit[]> {
+  const query = new URLSearchParams();
+  if (params?.actorUserId) query.set("actorUserId", String(params.actorUserId));
+  if (params?.entityType) query.set("entityType", params.entityType);
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<AxionStudioAudit[]>(`/api/platform-admin/axion/audit${suffix}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function getAxionStudioPreviewUsers(): Promise<AxionStudioPreviewUser[]> {
+  return apiRequest<AxionStudioPreviewUser[]>("/api/platform-admin/axion/users", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function previewAxionStudio(payload: { userId: number; context: string }): Promise<AxionStudioPreviewResponse> {
+  return apiRequest<AxionStudioPreviewResponse>("/api/platform-admin/axion/preview", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: false,
   });
 }
