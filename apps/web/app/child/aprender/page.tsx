@@ -122,6 +122,17 @@ function compactNodeLabel(node: LearningPathNode): string {
   return node.event.title;
 }
 
+function mobileFriendlyNodeLabel(node: LearningPathNode): string {
+  const base = compactNodeLabel(node);
+  if (node.lesson) return base;
+  const normalized = base.trim().toLowerCase();
+  if (normalized === "parada narrativa") return "Parada narrativa";
+  if (normalized === "mini-boss") return "Mini-boss";
+  if (normalized === "checkpoint") return "Checkpoint";
+  if (normalized.length > 13) return `${base.slice(0, 11).trim()}.`;
+  return base;
+}
+
 function eventFriendlyDetails(event: LearningPathEventNode): { objective: string; reward: string; hint: string } {
   if (event.type === "BOOST") {
     return {
@@ -232,6 +243,7 @@ function UnitPath({
   const [highlightLessonId, setHighlightLessonId] = useState<number | null>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
   const [trailLength, setTrailLength] = useState<number>(0);
+  const [trailHead, setTrailHead] = useState<{ x: number; y: number } | null>(null);
 
   const currentLessonId = useMemo(
     () =>
@@ -271,6 +283,16 @@ function UnitPath({
     if (!pathEl) return;
     setTrailLength(pathEl.getTotalLength());
   }, [path, unit.nodes.length]);
+
+  useEffect(() => {
+    const pathEl = pathRef.current;
+    if (!pathEl || trailLength <= 0 || trailProgressRatio <= 0 || trailProgressRatio >= 1) {
+      setTrailHead(null);
+      return;
+    }
+    const p = pathEl.getPointAtLength(trailLength * trailProgressRatio);
+    setTrailHead({ x: p.x, y: p.y });
+  }, [trailLength, trailProgressRatio]);
 
   useEffect(() => {
     if (!unlockAnimation || unlockAnimation.unitId !== unit.id) return;
@@ -380,6 +402,13 @@ function UnitPath({
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
+            <filter id={`trail-head-glow-${unit.id}`} x="-300%" y="-300%" width="600%" height="600%">
+              <feGaussianBlur stdDeviation="2.4" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
           </defs>
           <path ref={pathRef} d={path} fill="none" stroke="rgba(184,200,220,0.72)" strokeWidth="3.8" strokeLinecap="round" />
           <path
@@ -390,6 +419,12 @@ function UnitPath({
             strokeLinecap="round"
             strokeDasharray={`${Math.max(0, trailLength * trailProgressRatio)} ${Math.max(1, trailLength)}`}
           />
+          {trailHead ? (
+            <>
+              <circle cx={trailHead.x} cy={trailHead.y} r="2.7" fill="#4DD9C0" filter={`url(#trail-head-glow-${unit.id})`} />
+              <circle cx={trailHead.x} cy={trailHead.y} r="1.3" fill="#ffffff" opacity="0.92" />
+            </>
+          ) : null}
           {spark ? <circle cx={spark.x} cy={spark.y} r="2.8" fill="#FFD166" filter={`url(#spark-glow-${unit.id})`} /> : null}
         </svg>
 
@@ -463,7 +498,7 @@ function UnitPath({
                     className="inline-block max-w-[106px] overflow-hidden text-ellipsis whitespace-nowrap align-top"
                     title={lesson ? lesson.title : event?.title ?? ""}
                   >
-                    {compactNodeLabel(node)}
+                    {mobileFriendlyNodeLabel(node)}
                   </span>
                 </p>
                 {lesson ? <p className="mt-0.5 text-[9px] font-bold tracking-wide text-secondary/85">+{lesson.xpReward} XP</p> : null}
