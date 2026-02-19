@@ -17,7 +17,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
@@ -571,7 +571,7 @@ function UnitPath({
 export default function ChildAprenderPage() {
   const router = useRouter();
   const pathname = usePathname();
-  const search = useSearchParams();
+  const [completedLessonIdFromQuery, setCompletedLessonIdFromQuery] = useState<number | null>(null);
   const [path, setPath] = useState<LearningPathResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -681,9 +681,18 @@ export default function ChildAprenderPage() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = new URLSearchParams(window.location.search).get("completedLessonId");
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      setCompletedLessonIdFromQuery(parsed);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!path) return;
-    const completedLessonId = Number(search.get("completedLessonId"));
-    if (!Number.isFinite(completedLessonId) || completedLessonId <= 0) return;
+    const completedLessonId = completedLessonIdFromQuery;
+    if (completedLessonId == null || !Number.isFinite(completedLessonId) || completedLessonId <= 0) return;
 
     for (const unit of path.units) {
       const lessonNodes = unit.nodes.filter((node) => node.lesson);
@@ -703,9 +712,10 @@ export default function ChildAprenderPage() {
       playSfx("/sfx/completion-chime.ogg", uxSettings.soundEnabled);
       hapticCompletion(uxSettings);
       router.replace(pathname, { scroll: false });
+      setCompletedLessonIdFromQuery(null);
       break;
     }
-  }, [path, pathname, router, search, uxSettings]);
+  }, [completedLessonIdFromQuery, path, pathname, router, uxSettings]);
 
   useEffect(() => {
     if (!path) return;

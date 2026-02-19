@@ -151,19 +151,41 @@ export default function AxionStudioPage() {
     setLoading(true);
     setError(null);
     try {
-      const [meData, policyRows, templateRows, auditRows, userRows] = await Promise.all([
+      const [meResult, policyResult, templateResult, auditResult, usersResult] = await Promise.allSettled([
         getAxionStudioMe(),
         getAxionStudioPolicies({ context: policyContext || undefined, q: policySearch || undefined }),
         getAxionStudioTemplates(),
         getAxionStudioAudit(),
         getAxionStudioPreviewUsers(),
       ]);
-      setMe(meData);
-      setPolicies(policyRows);
-      setTemplates(templateRows);
-      setAudit(auditRows);
-      setUsers(userRows);
-      if (!previewUserId && userRows.length > 0) setPreviewUserId(userRows[0].userId);
+
+      if (meResult.status === "fulfilled") {
+        setMe(meResult.value);
+      }
+      if (policyResult.status === "fulfilled") {
+        setPolicies(policyResult.value);
+      }
+      if (templateResult.status === "fulfilled") {
+        setTemplates(templateResult.value);
+      }
+      if (auditResult.status === "fulfilled") {
+        setAudit(auditResult.value);
+      }
+      if (usersResult.status === "fulfilled") {
+        setUsers(usersResult.value);
+        if (!previewUserId && usersResult.value.length > 0) setPreviewUserId(usersResult.value[0].userId);
+      }
+
+      const firstFailure =
+        (meResult.status === "rejected" && meResult.reason) ||
+        (policyResult.status === "rejected" && policyResult.reason) ||
+        (templateResult.status === "rejected" && templateResult.reason) ||
+        (auditResult.status === "rejected" && auditResult.reason) ||
+        (usersResult.status === "rejected" && usersResult.reason) ||
+        null;
+      if (firstFailure) {
+        setError(getApiErrorMessage(firstFailure, "Não foi possível carregar todos os dados do Axion Studio."));
+      }
     } catch (err) {
       setError(getApiErrorMessage(err, "Não foi possível carregar o Axion Studio."));
     } finally {
@@ -279,7 +301,7 @@ export default function AxionStudioPage() {
   };
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-[1500px] px-4 py-6 md:px-8 xl:px-12">
+    <main className="min-h-screen w-full px-4 py-6 md:px-8 xl:px-14 2xl:px-20">
       <div className="rounded-3xl border border-[#BFD3EE] bg-white p-5 shadow-[0_14px_40px_rgba(16,48,90,0.08)] md:p-7">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -289,8 +311,8 @@ export default function AxionStudioPage() {
           <div className="flex items-center gap-2">
             <div className="rounded-2xl border border-[#C9D8EF] bg-[#F6FAFF] px-4 py-2 text-right">
               <p className="text-[11px] font-bold uppercase tracking-wide text-[#6A86AA]">Sessão</p>
-              <p className="text-sm font-black text-[#1E3B65]">{me?.name ?? "Carregando..."}</p>
-              <p className="text-xs font-semibold text-[#5F7EA6]">{me?.email ?? ""}</p>
+              <p className="text-sm font-black text-[#1E3B65]">{me?.name ?? "Não identificado"}</p>
+              <p className="text-xs font-semibold text-[#5F7EA6]">{me?.email ?? "sem e-mail na sessão"}</p>
             </div>
             <button
               className="rounded-2xl border border-[#F5B2A9] bg-[#FFF3F1] px-4 py-3 text-sm font-black text-[#B8574B] transition hover:bg-[#FFE7E2]"
@@ -328,7 +350,7 @@ export default function AxionStudioPage() {
         {error ? <div className="mt-4 rounded-2xl border border-[#F4C5C2] bg-[#FFF2F1] px-3 py-2 text-sm font-semibold text-[#B54C47]">{error}</div> : null}
 
         {tab === "policies" ? (
-          <section className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          <section className="mt-5 grid gap-5 2xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
             <div className="rounded-2xl border border-[#C9D8EF] p-3">
               <div className="mb-3 flex flex-wrap gap-2">
                 <input className="min-w-[220px] flex-1 rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setPolicySearch(e.target.value)} placeholder="Buscar regra..." value={policySearch} />
@@ -434,7 +456,7 @@ export default function AxionStudioPage() {
         ) : null}
 
         {tab === "messages" ? (
-          <section className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          <section className="mt-5 grid gap-5 2xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
             <div className="rounded-2xl border border-[#C9D8EF] p-3">
               <div className="max-h-[560px] overflow-auto rounded-xl border border-[#D7E2F4]">
                 <div className="overflow-x-auto">
@@ -577,7 +599,7 @@ export default function AxionStudioPage() {
         ) : null}
 
         {tab === "audit" ? (
-          <section className="mt-5 grid gap-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+          <section className="mt-5 grid gap-4 2xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
             <div className="max-h-[560px] overflow-auto rounded-2xl border border-[#C9D8EF] p-3">
               {audit.length === 0 ? <p className="text-sm font-semibold text-[#6B87AC]">Sem eventos de auditoria ainda.</p> : null}
               {audit.map((item) => (
