@@ -472,6 +472,21 @@ export type PlatformTenantCreateResponse = {
   testChildCreated: boolean;
 };
 
+export type PlatformTenantAdminMember = {
+  userId: number;
+  name: string;
+  email: string;
+  role: "PARENT" | "TEACHER" | string;
+};
+
+export type PlatformTenantDetail = {
+  tenant: PlatformTenantSummary;
+  adminMembers: PlatformTenantAdminMember[];
+  childrenCount: number;
+  activeChildrenCount: number;
+  membershipsCount: number;
+};
+
 export type AxionStudioPreviewResponse = {
   state: Record<string, unknown>;
   facts: Record<string, unknown>;
@@ -933,6 +948,7 @@ export async function createChild(payload: {
   display_name: string;
   birth_year?: number | null;
   theme: ThemeName;
+  avatar_key?: string | null;
 }): Promise<ChildProfileSummary> {
   return apiRequest<ChildProfileSummary>("/children", {
     method: "POST",
@@ -944,11 +960,20 @@ export async function createChild(payload: {
 
 export async function updateChild(
   childId: number,
-  payload: { display_name: string; birth_year?: number | null; theme: ThemeName },
+  payload: { display_name: string; birth_year?: number | null; theme: ThemeName; avatar_key?: string | null },
 ): Promise<ChildProfileSummary> {
   return apiRequest<ChildProfileSummary>(`/children/${childId}`, {
     method: "PUT",
     body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function deleteChild(childId: number, pin: string): Promise<{ deleted: boolean }> {
+  return apiRequest<{ deleted: boolean }>(`/children/${childId}`, {
+    method: "DELETE",
+    body: { pin },
     requireAuth: true,
     includeTenant: true,
   });
@@ -1004,6 +1029,7 @@ export async function deleteTask(taskId: number): Promise<TaskOut> {
 
 export async function completeOnboarding(payload: {
   child_name: string;
+  child_avatar_key?: string | null;
   reward_split: { spend: number; save: number; donate: number };
   monthly_allowance_cents: number;
   parent_pin: string;
@@ -1516,6 +1542,23 @@ export async function createPlatformTenant(payload: {
   return apiRequest<PlatformTenantCreateResponse>("/api/platform-admin/tenants", {
     method: "POST",
     body: payload,
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function getPlatformTenantDetail(tenantId: number): Promise<PlatformTenantDetail> {
+  return apiRequest<PlatformTenantDetail>(`/api/platform-admin/tenants/${tenantId}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function deletePlatformTenant(tenantId: number, confirmSlug: string): Promise<{ deleted: boolean; tenantId: number }> {
+  return apiRequest<{ deleted: boolean; tenantId: number }>(`/api/platform-admin/tenants/${tenantId}`, {
+    method: "DELETE",
+    body: { confirmSlug },
     requireAuth: true,
     includeTenant: false,
   });
