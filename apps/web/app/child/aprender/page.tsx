@@ -869,7 +869,7 @@ export default function ChildAprenderPage() {
 
   return (
     <>
-      <main className={cn("safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 pb-52 md:max-w-2xl md:p-6 md:pb-40", activeSeason?.themeKey === "halloween" ? "bg-[radial-gradient(circle_at_88%_2%,rgba(120,53,15,0.2),transparent_44%)]" : "")}>
+      <main className={cn("safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 pb-52 md:max-w-5xl md:p-6 md:pb-40 xl:max-w-6xl", activeSeason?.themeKey === "halloween" ? "bg-[radial-gradient(circle_at_88%_2%,rgba(120,53,15,0.2),transparent_44%)]" : "")}>
         <Card className="mb-4 overflow-hidden border-border bg-[radial-gradient(circle_at_82%_14%,rgba(45,212,191,0.22),transparent_46%),linear-gradient(180deg,#ffffff_0%,#f3fbff_100%)] shadow-[0_2px_0_rgba(184,200,239,0.7),0_14px_28px_rgba(34,63,107,0.12)]">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">

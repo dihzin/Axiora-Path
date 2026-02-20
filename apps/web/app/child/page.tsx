@@ -722,7 +722,7 @@ export default function ChildPage() {
       <main
         className={cn(
           "safe-px safe-pb mx-auto flex min-h-screen w-full flex-col overflow-x-clip p-4 pb-52 pt-5 md:p-6 md:pb-40",
-          isSchoolTenant ? "max-w-md md:max-w-3xl" : "max-w-md md:max-w-2xl",
+          isSchoolTenant ? "max-w-md md:max-w-5xl xl:max-w-6xl" : "max-w-md md:max-w-4xl xl:max-w-6xl",
         )}
       >
         <div className="mb-3 flex items-center justify-between gap-2">

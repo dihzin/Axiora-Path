@@ -119,7 +119,7 @@ export default function ChildGamesPage() {
   }, [childId]);
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 pb-52 md:p-6 md:pb-40">
+    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 pb-52 md:max-w-5xl md:p-6 md:pb-40 xl:max-w-6xl">
       <Card className="mb-4 overflow-hidden border-border bg-[radial-gradient(circle_at_85%_15%,rgba(255,107,61,0.18),transparent_50%),linear-gradient(180deg,#ffffff_0%,#f7fbff_100%)] shadow-[0_2px_0_rgba(184,200,239,0.7),0_14px_28px_rgba(34,63,107,0.12)]">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between gap-2">

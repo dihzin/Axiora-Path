@@ -566,7 +566,7 @@ class ChildProfile(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    avatar_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    avatar_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     birth_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     theme: Mapped[str] = mapped_column(String(32), nullable=False, server_default="default")
     avatar_stage: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")

@@ -16,6 +16,20 @@ from app.schemas.onboarding import (
 )
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
+MAX_AVATAR_DATA_URL_CHARS = 1_500_000
+
+
+def _sanitize_avatar_key(raw_value: str | None) -> str | None:
+    if raw_value is None:
+        return None
+    value = raw_value.strip()
+    if not value:
+        return None
+    if value.startswith("data:image/"):
+        if len(value) > MAX_AVATAR_DATA_URL_CHARS:
+            raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Imagem muito grande. Use até 1MB.")
+        return value
+    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Formato de imagem inválido.")
 
 
 @router.post("/complete", response_model=OnboardingCompleteResponse)
@@ -34,7 +48,7 @@ def complete_onboarding(
     child = ChildProfile(
         tenant_id=tenant.id,
         display_name=payload.child_name,
-        avatar_key=None,
+        avatar_key=_sanitize_avatar_key(payload.child_avatar_key),
         birth_year=None,
         avatar_stage=1,
         xp_total=0,

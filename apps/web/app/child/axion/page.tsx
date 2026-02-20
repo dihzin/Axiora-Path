@@ -119,7 +119,7 @@ export default function ChildAxionPage() {
   };
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md px-4 pb-48 pt-4 md:max-w-lg md:px-6">
+    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip px-4 pb-48 pt-4 md:max-w-4xl md:px-6 xl:max-w-5xl">
       <section className={`rounded-[30px] border border-[#BFD3EE] bg-gradient-to-br p-5 shadow-[0_8px_24px_rgba(32,88,140,0.08)] ${toneBg}`}>
         <div className="mb-4 flex items-center justify-between">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#BFD3EE] bg-white/85 px-3 py-1 text-xs font-bold text-[#2A456D]">

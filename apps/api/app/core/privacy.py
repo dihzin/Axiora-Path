@@ -13,6 +13,7 @@ _ALLOWED_PREFIXES = (
     "/health",
     "/auth/",
     "/legal",
+    "/tasks",
     "/docs",
     "/redoc",
     "/openapi.json",

@@ -64,7 +64,7 @@ export default function SelectChildPage() {
       className="min-h-screen bg-[#f6f6f3] bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: "url('/axiora/home/login-background.svg')" }}
     >
-      <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 md:p-6">
+      <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 md:max-w-4xl md:p-6 xl:max-w-5xl">
         <Card>
           <CardHeader>
             <CardTitle>Selecionar perfil</CardTitle>

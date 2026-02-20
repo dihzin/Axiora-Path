@@ -11,6 +11,7 @@ class RewardSplitInput(BaseModel):
 
 class OnboardingCompleteRequest(BaseModel):
     child_name: str
+    child_avatar_key: str | None = None
     reward_split: RewardSplitInput
     monthly_allowance_cents: int = Field(ge=0)
     parent_pin: str = Field(min_length=4, max_length=12)

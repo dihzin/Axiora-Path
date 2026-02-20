@@ -153,3 +153,22 @@ class AxionTenantCreateResponse(BaseModel):
     userCreated: bool
     membershipCreated: bool
     testChildCreated: bool
+
+
+class AxionTenantAdminMemberOut(BaseModel):
+    userId: int
+    name: str
+    email: str
+    role: str
+
+
+class AxionTenantDetailOut(BaseModel):
+    tenant: AxionTenantSummaryOut
+    adminMembers: list[AxionTenantAdminMemberOut]
+    childrenCount: int
+    activeChildrenCount: int
+    membershipsCount: int
+
+
+class AxionTenantDeleteRequest(BaseModel):
+    confirmSlug: str = Field(min_length=3, max_length=255)

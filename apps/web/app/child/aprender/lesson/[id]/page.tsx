@@ -688,7 +688,7 @@ export default function AdaptiveLessonSessionPage() {
   const canSubmitDragDrop = pairs.length > 0 && Object.keys(dragAssignments).length >= pairs.length;
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 pb-52 md:max-w-2xl md:p-6 md:pb-40">
+    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 pb-52 md:max-w-4xl md:p-6 md:pb-40 xl:max-w-5xl">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <button
           type="button"

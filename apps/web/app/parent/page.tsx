@@ -557,7 +557,7 @@ export default function ParentPage() {
   };
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 md:p-6">
+    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 md:max-w-5xl md:p-6 xl:max-w-6xl">
       <header className="mb-3 flex items-center justify-between gap-2">
         <h1 className="min-w-0 flex-1 truncate text-lg font-semibold">Área dos pais</h1>
         <div className="flex shrink-0 items-center gap-2">

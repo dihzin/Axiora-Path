@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import DBSession, get_current_tenant, get_current_user, require_role
-from app.models import Lesson, Membership, QuestionResult, Tenant, Unit, User
+from app.models import Lesson, Membership, QuestionResult, SubjectAgeGroup, Tenant, Unit, User
 from app.schemas.learning import (
     LearningAnswerRequest,
     LearningAnswerResponse,
@@ -65,6 +65,17 @@ def get_learning_path(
             subject_id=subject_id,
         )
     except ValueError as exc:
+        # Produção resiliente: não quebrar a tela quando a trilha ainda não foi semeada.
+        if str(exc) == "No subject available":
+            return LearningPathResponse(
+                subjectId=subject_id or 0,
+                subjectName="Aprender",
+                ageGroup=SubjectAgeGroup.AGE_9_12.value,
+                dueReviewsCount=0,
+                streakDays=0,
+                masteryAverage=0.0,
+                units=[],
+            )
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
         db.rollback()

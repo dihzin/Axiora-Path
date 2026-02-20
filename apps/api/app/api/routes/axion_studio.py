@@ -26,6 +26,8 @@ from app.models import (
     User,
 )
 from app.schemas.axion_studio import (
+    AxionTenantAdminMemberOut,
+    AxionTenantDeleteRequest,
     AxionImpactResponse,
     AxionMessageTemplateCreate,
     AxionMessageTemplateOut,
@@ -39,6 +41,7 @@ from app.schemas.axion_studio import (
     AxionStudioAuditLogOut,
     AxionTenantCreateRequest,
     AxionTenantCreateResponse,
+    AxionTenantDetailOut,
     AxionTenantSummaryOut,
     AxionStudioUserOption,
     AxionVersionOut,
@@ -243,6 +246,20 @@ def _tenant_out(tenant: Tenant, *, consent_completed: bool) -> AxionTenantSummar
     )
 
 
+def _tenant_consent_done(db: DBSession, *, tenant: Tenant) -> bool:
+    is_family = tenant.type == TenantType.FAMILY if isinstance(tenant.type, TenantType) else str(tenant.type).upper() == "FAMILY"
+    if not is_family:
+        return True
+    consent = db.scalar(
+        select(ParentalConsent).where(
+            ParentalConsent.tenant_id == tenant.id,
+            ParentalConsent.accepted_terms_at.is_not(None),
+            ParentalConsent.accepted_privacy_at.is_not(None),
+        )
+    )
+    return consent is not None
+
+
 def _map_cta(actions: list[dict[str, Any]], *, due_reviews: int) -> dict[str, Any]:
     first = actions[0] if actions else {"type": "OFFER_MICRO_MISSION", "params": {"durationMinutes": 2}}
     action_type = str(first.get("type", "")).upper()
@@ -443,6 +460,90 @@ def create_tenant(
         membershipCreated=membership_created,
         testChildCreated=test_child_created,
     )
+
+
+@router.get("/api/platform-admin/tenants/{tenant_id}", response_model=AxionTenantDetailOut)
+def get_tenant_detail(
+    tenant_id: int,
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> AxionTenantDetailOut:
+    _require_platform_admin(user)
+    tenant = db.scalar(select(Tenant).where(Tenant.id == tenant_id, Tenant.deleted_at.is_(None)))
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organização não encontrada")
+
+    consent_done = _tenant_consent_done(db, tenant=tenant)
+    admin_rows = db.execute(
+        select(User, Membership.role)
+        .join(Membership, Membership.user_id == User.id)
+        .where(
+            Membership.tenant_id == tenant.id,
+            Membership.role.in_([MembershipRole.PARENT, MembershipRole.TEACHER]),
+        )
+        .order_by(User.name.asc(), User.id.asc())
+    ).all()
+    admin_members = [
+        AxionTenantAdminMemberOut(
+            userId=row[0].id,
+            name=row[0].name,
+            email=row[0].email,
+            role=row[1].value if isinstance(row[1], MembershipRole) else str(row[1]),
+        )
+        for row in admin_rows
+    ]
+
+    children_count = int(db.scalar(select(func.count(ChildProfile.id)).where(ChildProfile.tenant_id == tenant.id)) or 0)
+    active_children_count = int(
+        db.scalar(select(func.count(ChildProfile.id)).where(ChildProfile.tenant_id == tenant.id, ChildProfile.deleted_at.is_(None))) or 0
+    )
+    memberships_count = int(db.scalar(select(func.count(Membership.id)).where(Membership.tenant_id == tenant.id)) or 0)
+
+    return AxionTenantDetailOut(
+        tenant=_tenant_out(tenant, consent_completed=consent_done),
+        adminMembers=admin_members,
+        childrenCount=children_count,
+        activeChildrenCount=active_children_count,
+        membershipsCount=memberships_count,
+    )
+
+
+@router.delete("/api/platform-admin/tenants/{tenant_id}")
+def delete_tenant(
+    tenant_id: int,
+    payload: AxionTenantDeleteRequest,
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> dict[str, Any]:
+    _require_platform_admin(user)
+    tenant = db.scalar(select(Tenant).where(Tenant.id == tenant_id, Tenant.deleted_at.is_(None)))
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organização não encontrada")
+    if tenant.slug == "platform-admin":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A organização platform-admin não pode ser excluída")
+
+    provided_slug = payload.confirmSlug.strip().lower()
+    if provided_slug != tenant.slug:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Confirmação inválida. Informe o slug exato da organização.")
+
+    before_snapshot = _tenant_out(tenant, consent_completed=_tenant_consent_done(db, tenant=tenant)).model_dump()
+    now = datetime.now(UTC)
+    tenant.deleted_at = now
+    children_rows = db.scalars(select(ChildProfile).where(ChildProfile.tenant_id == tenant.id, ChildProfile.deleted_at.is_(None))).all()
+    for child in children_rows:
+        child.deleted_at = now
+
+    _write_audit(
+        db,
+        actor_user_id=user.id,
+        action="ORG_DELETE",
+        entity_type="ORG",
+        entity_id=str(tenant.id),
+        before=before_snapshot,
+        after={"deletedAt": now.isoformat()},
+    )
+    db.commit()
+    return {"deleted": True, "tenantId": tenant_id}
 
 
 @router.post("/api/platform-admin/axion/policies", response_model=AxionPolicyRuleOut)

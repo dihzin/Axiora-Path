@@ -21,7 +21,7 @@ function ChildBottomNavComponent() {
     <>
       <div aria-hidden className="pointer-events-none" style={{ height: "calc(6rem + env(safe-area-inset-bottom))" }} />
       <nav className="safe-px safe-pb fixed inset-x-0 bottom-0 border-t border-[rgba(77,217,192,0.15)] bg-[rgba(255,255,255,0.98)] py-2 backdrop-blur">
-        <div className="mx-auto grid w-full max-w-md grid-cols-6 gap-0.5 md:max-w-2xl">
+        <div className="mx-auto grid w-full max-w-md grid-cols-6 gap-0.5 md:max-w-4xl xl:max-w-6xl">
           {NAV_ITEMS.map((item) => {
             const isActive = item.href === "/child" ? pathname === item.href : pathname.startsWith(item.href);
             return (

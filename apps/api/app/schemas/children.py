@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 ThemeName = Literal["default", "space", "jungle", "ocean", "soccer", "capybara", "dinos", "princess", "heroes"]
@@ -21,12 +21,14 @@ class ChildCreateRequest(BaseModel):
     display_name: str
     birth_year: int | None = None
     theme: ThemeName = "default"
+    avatar_key: str | None = None
 
 
 class ChildUpdateRequest(BaseModel):
     display_name: str
     birth_year: int | None = None
     theme: ThemeName
+    avatar_key: str | None = None
 
 
 class ChildOut(BaseModel):
@@ -36,3 +38,7 @@ class ChildOut(BaseModel):
     birth_year: int | None
     theme: ThemeName
     avatar_stage: int
+
+
+class ChildDeleteRequest(BaseModel):
+    pin: str = Field(min_length=4, max_length=12)
