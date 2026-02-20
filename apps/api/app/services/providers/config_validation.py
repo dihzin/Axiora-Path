@@ -36,3 +36,24 @@ def validate_llm_provider_config_on_boot() -> None:
     else:
         logger.warning("LLM provider disabled due to config issues. App will continue with noop provider.")
 
+
+def validate_runtime_security_on_boot() -> None:
+    env = (settings.app_env or "development").strip().lower()
+    origins = [item.strip() for item in (settings.cors_allowed_origins or "").split(",") if item.strip()]
+    same_site = (settings.auth_cookie_samesite or "lax").strip().lower()
+
+    if env == "production":
+        if not origins:
+            raise RuntimeError("AXIORA_CORS_ALLOWED_ORIGINS must be set in production.")
+        if "*" in origins:
+            raise RuntimeError("Wildcard CORS origin is not allowed in production.")
+        if any("localhost" in origin or "127.0.0.1" in origin for origin in origins):
+            raise RuntimeError("localhost/127.0.0.1 CORS origins are not allowed in production.")
+        if same_site not in {"none", "lax", "strict"}:
+            raise RuntimeError("AXIORA_AUTH_COOKIE_SAMESITE must be one of: none, lax, strict.")
+        if same_site == "none" and not settings.auth_cookie_secure:
+            raise RuntimeError("AXIORA_AUTH_COOKIE_SECURE must be true when AXIORA_AUTH_COOKIE_SAMESITE=none.")
+
+    if env != "production":
+        if same_site not in {"none", "lax", "strict"}:
+            logger.warning("Invalid AXIORA_AUTH_COOKIE_SAMESITE value. Expected none/lax/strict.")

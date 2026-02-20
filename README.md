@@ -300,8 +300,9 @@ Quando excede, a API retorna `429` com:
 - CORS estrito:
   - sem wildcard; usa `AXIORA_CORS_ALLOWED_ORIGINS`.
 - Cookies de auth:
-  - refresh token com `HttpOnly`, `Secure`, `SameSite=Strict`.
-  - CSRF cookie com `Secure`, `SameSite=Strict`.
+  - refresh token com `HttpOnly`, `Secure`, `SameSite` configuravel.
+  - CSRF cookie com `Secure`, `SameSite` configuravel.
+  - em producao com frontend e API em dominios diferentes, usar `AXIORA_AUTH_COOKIE_SAMESITE=none` e `AXIORA_AUTH_COOKIE_SECURE=true`.
 - Protecao CSRF:
   - middleware exige `X-CSRF-Token` para fluxos com cookie (`/auth/refresh`, `/auth/logout` e sessoes com cookie ativa).
 - Senha forte:

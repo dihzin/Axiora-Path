@@ -41,7 +41,10 @@ from app.core.logging import setup_json_logging
 from app.core.privacy import PrivacyConsentMiddleware
 from app.core.rate_limit import RateLimitMiddleware
 from app.core.request_logging import RequestLoggingMiddleware
-from app.services.providers.config_validation import validate_llm_provider_config_on_boot
+from app.services.providers.config_validation import (
+    validate_llm_provider_config_on_boot,
+    validate_runtime_security_on_boot,
+)
 
 setup_json_logging()
 
@@ -49,6 +52,7 @@ setup_json_logging()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     validate_llm_provider_config_on_boot()
+    validate_runtime_security_on_boot()
     redis = Redis.from_url(settings.redis_url, encoding="utf-8", decode_responses=True)
     app.state.redis = redis
     try:
