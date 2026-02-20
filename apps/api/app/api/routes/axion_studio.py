@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 
 from app.api.deps import DBSession, get_current_user
 from app.core.config import settings
+from app.core.security import hash_password, validate_password_strength
 from app.models import (
     AxionDecisionContext,
     AxionMessageTemplate,
@@ -16,8 +17,11 @@ from app.models import (
     AxionPolicyRule,
     AxionPolicyRuleVersion,
     AxionStudioAuditLog,
+    ChildProfile,
     Membership,
     MembershipRole,
+    Tenant,
+    TenantType,
     User,
 )
 from app.schemas.axion_studio import (
@@ -32,6 +36,9 @@ from app.schemas.axion_studio import (
     AxionPreviewResponse,
     AxionRestoreRequest,
     AxionStudioAuditLogOut,
+    AxionTenantCreateRequest,
+    AxionTenantCreateResponse,
+    AxionTenantSummaryOut,
     AxionStudioUserOption,
     AxionVersionOut,
 )
@@ -221,6 +228,17 @@ def _template_out(db: DBSession, template: AxionMessageTemplate) -> AxionMessage
     )
 
 
+def _tenant_out(tenant: Tenant) -> AxionTenantSummaryOut:
+    return AxionTenantSummaryOut(
+        id=tenant.id,
+        name=tenant.name,
+        slug=tenant.slug,
+        type=tenant.type.value if isinstance(tenant.type, TenantType) else str(tenant.type),
+        onboardingCompleted=bool(tenant.onboarding_completed),
+        createdAt=tenant.created_at,
+    )
+
+
 def _map_cta(actions: list[dict[str, Any]], *, due_reviews: int) -> dict[str, Any]:
     first = actions[0] if actions else {"type": "OFFER_MICRO_MISSION", "params": {"durationMinutes": 2}}
     action_type = str(first.get("type", "")).upper()
@@ -269,6 +287,144 @@ def platform_admin_me(
 ) -> dict[str, Any]:
     _require_platform_admin(user)
     return {"userId": user.id, "name": user.name, "email": user.email}
+
+
+@router.get("/api/platform-admin/tenants", response_model=list[AxionTenantSummaryOut])
+def list_tenants(
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+    q: str | None = Query(default=None),
+    tenantType: str | None = Query(default=None),
+) -> list[AxionTenantSummaryOut]:
+    _require_platform_admin(user)
+    stmt = select(Tenant).where(Tenant.deleted_at.is_(None))
+    if q and q.strip():
+        query = q.strip()
+        stmt = stmt.where((Tenant.name.ilike(f"%{query}%")) | (Tenant.slug.ilike(f"%{query}%")))
+    if tenantType and tenantType.strip():
+        normalized_type = tenantType.strip().upper()
+        if normalized_type not in {"FAMILY", "SCHOOL"}:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Tipo de organização inválido")
+        stmt = stmt.where(Tenant.type == normalized_type)
+    rows = db.scalars(stmt.order_by(Tenant.created_at.desc(), Tenant.id.desc()).limit(300)).all()
+    return [_tenant_out(tenant) for tenant in rows]
+
+
+@router.post("/api/platform-admin/tenants", response_model=AxionTenantCreateResponse, status_code=status.HTTP_201_CREATED)
+def create_tenant(
+    payload: AxionTenantCreateRequest,
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> AxionTenantCreateResponse:
+    _require_platform_admin(user)
+
+    slug = payload.slug.strip().lower()
+    if not slug:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Slug é obrigatório")
+    if any(ch.isspace() for ch in slug):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Slug não pode conter espaços")
+
+    existing_tenant = db.scalar(select(Tenant).where(Tenant.slug == slug, Tenant.deleted_at.is_(None)))
+    if existing_tenant is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Já existe uma organização com esse slug")
+
+    tenant_type_value = payload.type.strip().upper()
+    if tenant_type_value not in {"FAMILY", "SCHOOL"}:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Tipo de organização inválido")
+    tenant_type = TenantType(tenant_type_value)
+
+    password_error = validate_password_strength(payload.adminPassword)
+    if password_error is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=password_error)
+
+    tenant = Tenant(
+        type=tenant_type,
+        name=payload.name.strip(),
+        slug=slug,
+        onboarding_completed=True,
+    )
+    db.add(tenant)
+    db.flush()
+
+    admin_email = payload.adminEmail.strip().lower()
+    admin_name = payload.adminName.strip()
+    existing_user = db.scalar(select(User).where(User.email == admin_email))
+    user_created = False
+    if existing_user is None:
+        existing_user = User(
+            email=admin_email,
+            name=admin_name,
+            password_hash=hash_password(payload.adminPassword),
+            failed_login_attempts=0,
+        )
+        db.add(existing_user)
+        db.flush()
+        user_created = True
+    else:
+        existing_user.name = admin_name or existing_user.name
+        if payload.resetExistingUserPassword:
+            existing_user.password_hash = hash_password(payload.adminPassword)
+            existing_user.failed_login_attempts = 0
+            existing_user.locked_until = None
+
+    admin_role = MembershipRole.PARENT if tenant_type == TenantType.FAMILY else MembershipRole.TEACHER
+    membership = db.scalar(
+        select(Membership).where(
+            Membership.user_id == existing_user.id,
+            Membership.tenant_id == tenant.id,
+        )
+    )
+    membership_created = False
+    if membership is None:
+        membership = Membership(
+            user_id=existing_user.id,
+            tenant_id=tenant.id,
+            role=admin_role,
+        )
+        db.add(membership)
+        membership_created = True
+    else:
+        membership.role = admin_role
+
+    test_child_created = False
+    if payload.createTestChild and tenant_type == TenantType.FAMILY:
+        db.add(
+            ChildProfile(
+                tenant_id=tenant.id,
+                display_name=payload.testChildName.strip(),
+                birth_year=payload.testChildBirthYear,
+            )
+        )
+        test_child_created = True
+
+    _write_audit(
+        db,
+        actor_user_id=user.id,
+        action="ORG_CREATE",
+        entity_type="ORG",
+        entity_id=str(tenant.id),
+        before=None,
+        after={
+            "tenant": {"name": tenant.name, "slug": tenant.slug, "type": tenant.type.value},
+            "adminEmail": admin_email,
+            "adminRole": admin_role.value,
+            "userCreated": user_created,
+            "membershipCreated": membership_created,
+            "testChildCreated": test_child_created,
+        },
+    )
+    db.commit()
+    db.refresh(tenant)
+
+    return AxionTenantCreateResponse(
+        tenant=_tenant_out(tenant),
+        adminUserId=existing_user.id,
+        adminEmail=existing_user.email,
+        adminRole=admin_role.value,
+        userCreated=user_created,
+        membershipCreated=membership_created,
+        testChildCreated=test_child_created,
+    )
 
 
 @router.post("/api/platform-admin/axion/policies", response_model=AxionPolicyRuleOut)

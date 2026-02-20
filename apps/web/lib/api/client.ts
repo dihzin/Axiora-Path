@@ -398,6 +398,25 @@ export type AxionStudioMe = {
   email: string;
 };
 
+export type PlatformTenantSummary = {
+  id: number;
+  name: string;
+  slug: string;
+  type: "FAMILY" | "SCHOOL" | string;
+  onboardingCompleted: boolean;
+  createdAt: string;
+};
+
+export type PlatformTenantCreateResponse = {
+  tenant: PlatformTenantSummary;
+  adminUserId: number;
+  adminEmail: string;
+  adminRole: "PARENT" | "TEACHER" | string;
+  userCreated: boolean;
+  membershipCreated: boolean;
+  testChildCreated: boolean;
+};
+
 export type AxionStudioPreviewResponse = {
   state: Record<string, unknown>;
   facts: Record<string, unknown>;
@@ -1385,6 +1404,38 @@ export async function getAxionStudioPolicies(params?: { context?: string; q?: st
 export async function getAxionStudioMe(): Promise<AxionStudioMe> {
   return apiRequest<AxionStudioMe>("/api/platform-admin/axion/me", {
     method: "GET",
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function getPlatformTenants(params?: { q?: string; tenantType?: "FAMILY" | "SCHOOL" | "" }): Promise<PlatformTenantSummary[]> {
+  const query = new URLSearchParams();
+  if (params?.q) query.set("q", params.q);
+  if (params?.tenantType) query.set("tenantType", params.tenantType);
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<PlatformTenantSummary[]>(`/api/platform-admin/tenants${suffix}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function createPlatformTenant(payload: {
+  name: string;
+  slug: string;
+  type: "FAMILY" | "SCHOOL";
+  adminEmail: string;
+  adminName: string;
+  adminPassword: string;
+  createTestChild: boolean;
+  testChildName: string;
+  testChildBirthYear?: number | null;
+  resetExistingUserPassword: boolean;
+}): Promise<PlatformTenantCreateResponse> {
+  return apiRequest<PlatformTenantCreateResponse>("/api/platform-admin/tenants", {
+    method: "POST",
+    body: payload,
     requireAuth: true,
     includeTenant: false,
   });

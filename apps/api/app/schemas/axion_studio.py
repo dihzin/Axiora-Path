@@ -120,3 +120,35 @@ class AxionImpactResponse(BaseModel):
     avgFrustrationDeltaAfterDifficultyCap: float
     avgDropoutRiskDelta: float
     masteryGrowthProxy: float
+
+
+class AxionTenantSummaryOut(BaseModel):
+    id: int
+    name: str
+    slug: str
+    type: str
+    onboardingCompleted: bool
+    createdAt: datetime
+
+
+class AxionTenantCreateRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=255)
+    slug: str = Field(min_length=3, max_length=255)
+    type: str = Field(pattern="^(FAMILY|SCHOOL)$")
+    adminEmail: str
+    adminName: str = Field(min_length=2, max_length=255)
+    adminPassword: str = Field(min_length=10)
+    createTestChild: bool = False
+    testChildName: str = Field(default="Filho Teste", min_length=2, max_length=255)
+    testChildBirthYear: int | None = None
+    resetExistingUserPassword: bool = False
+
+
+class AxionTenantCreateResponse(BaseModel):
+    tenant: AxionTenantSummaryOut
+    adminUserId: int
+    adminEmail: str
+    adminRole: str
+    userCreated: bool
+    membershipCreated: bool
+    testChildCreated: bool

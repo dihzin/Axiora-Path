@@ -5,12 +5,14 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ApiError,
   changePassword,
+  createPlatformTenant,
   createAxionStudioPolicy,
   createAxionStudioTemplate,
   getApiErrorMessage,
   getAxionStudioAudit,
   getAxionStudioImpact,
   getAxionStudioMe,
+  getPlatformTenants,
   getAxionStudioPolicies,
   getAxionStudioPolicyVersions,
   getAxionStudioPreviewUsers,
@@ -32,10 +34,12 @@ import {
   type AxionStudioPreviewUser,
   type AxionStudioTemplate,
   type AxionStudioVersion,
+  type PlatformTenantCreateResponse,
+  type PlatformTenantSummary,
 } from "@/lib/api/client";
 import { clearTenantSlug, clearTokens, getAccessToken, getRefreshToken } from "@/lib/api/session";
 
-type Tab = "policies" | "messages" | "preview" | "audit" | "impact";
+type Tab = "policies" | "messages" | "preview" | "audit" | "impact" | "orgs";
 
 const CONTEXTS = ["child_tab", "before_learning", "after_learning", "games_tab", "wallet_tab"] as const;
 const TONES = ["CALM", "ENCOURAGE", "CHALLENGE", "CELEBRATE", "SUPPORT"] as const;
@@ -102,6 +106,22 @@ export default function AxionStudioPage() {
   const [templates, setTemplates] = useState<AxionStudioTemplate[]>([]);
   const [audit, setAudit] = useState<AxionStudioAudit[]>([]);
   const [users, setUsers] = useState<AxionStudioPreviewUser[]>([]);
+  const [tenants, setTenants] = useState<PlatformTenantSummary[]>([]);
+  const [tenantSearch, setTenantSearch] = useState("");
+  const [tenantTypeFilter, setTenantTypeFilter] = useState<"" | "FAMILY" | "SCHOOL">("");
+  const [tenantCreateResult, setTenantCreateResult] = useState<PlatformTenantCreateResponse | null>(null);
+  const [tenantDraft, setTenantDraft] = useState({
+    name: "",
+    slug: "",
+    type: "FAMILY" as "FAMILY" | "SCHOOL",
+    adminEmail: "",
+    adminName: "",
+    adminPassword: "",
+    createTestChild: true,
+    testChildName: "Filho Teste",
+    testChildBirthYear: "",
+    resetExistingUserPassword: false,
+  });
 
   const [policySearch, setPolicySearch] = useState("");
   const [policyContext, setPolicyContext] = useState("");
@@ -172,12 +192,13 @@ export default function AxionStudioPage() {
     setLoading(true);
     setError(null);
     try {
-      const [meResult, policyResult, templateResult, auditResult, usersResult] = await Promise.allSettled([
+      const [meResult, policyResult, templateResult, auditResult, usersResult, tenantsResult] = await Promise.allSettled([
         getAxionStudioMe(),
         getAxionStudioPolicies({ context: policyContext || undefined, q: policySearch || undefined }),
         getAxionStudioTemplates(),
         getAxionStudioAudit(),
         getAxionStudioPreviewUsers(),
+        getPlatformTenants({ q: tenantSearch || undefined, tenantType: tenantTypeFilter }),
       ]);
 
       if (meResult.status === "fulfilled") {
@@ -197,6 +218,9 @@ export default function AxionStudioPage() {
         if (!previewUserId && usersResult.value.length > 0) setPreviewUserId(usersResult.value[0].userId);
         if (!impactUserId && usersResult.value.length > 0) setImpactUserId(usersResult.value[0].userId);
       }
+      if (tenantsResult.status === "fulfilled") {
+        setTenants(tenantsResult.value);
+      }
 
       const firstFailure =
         (meResult.status === "rejected" && meResult.reason) ||
@@ -204,6 +228,7 @@ export default function AxionStudioPage() {
         (templateResult.status === "rejected" && templateResult.reason) ||
         (auditResult.status === "rejected" && auditResult.reason) ||
         (usersResult.status === "rejected" && usersResult.reason) ||
+        (tenantsResult.status === "rejected" && tenantsResult.reason) ||
         null;
       if (firstFailure) {
         if (isAuthError(firstFailure)) {
@@ -364,6 +389,41 @@ export default function AxionStudioPage() {
     }
   };
 
+  const saveTenant = async () => {
+    setLoading(true);
+    setError(null);
+    setTenantCreateResult(null);
+    try {
+      const payload = {
+        name: tenantDraft.name.trim(),
+        slug: tenantDraft.slug.trim().toLowerCase(),
+        type: tenantDraft.type,
+        adminEmail: tenantDraft.adminEmail.trim().toLowerCase(),
+        adminName: tenantDraft.adminName.trim(),
+        adminPassword: tenantDraft.adminPassword,
+        createTestChild: tenantDraft.createTestChild && tenantDraft.type === "FAMILY",
+        testChildName: tenantDraft.testChildName.trim() || "Filho Teste",
+        testChildBirthYear: tenantDraft.testChildBirthYear.trim() ? Number(tenantDraft.testChildBirthYear) : null,
+        resetExistingUserPassword: tenantDraft.resetExistingUserPassword,
+      };
+      const result = await createPlatformTenant(payload);
+      setTenantCreateResult(result);
+      await loadBase();
+      setTenantDraft((prev) => ({
+        ...prev,
+        name: "",
+        slug: "",
+        adminEmail: "",
+        adminName: "",
+        adminPassword: "",
+      }));
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Falha ao criar organização."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loadPolicyVersions = async (policyId: number) => {
     const rows = await getAxionStudioPolicyVersions(policyId);
     setVersions(rows);
@@ -427,6 +487,7 @@ export default function AxionStudioPage() {
             { id: "preview", label: "Prévia" },
             { id: "audit", label: "Auditoria" },
             { id: "impact", label: "Impacto" },
+            { id: "orgs", label: "Organizações" },
           ].map((item) => (
             <button
               key={item.id}
@@ -780,6 +841,164 @@ export default function AxionStudioPage() {
             ) : (
               <p className="text-sm font-semibold text-[#6B87AC]">Selecione um aluno e rode o cálculo para ver correlações reais de resultado.</p>
             )}
+          </section>
+        ) : null}
+
+        {tab === "orgs" ? (
+          <section className="mt-5 grid gap-5 2xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+            <div className="rounded-2xl border border-[#C9D8EF] p-3">
+              <div className="mb-3 flex flex-wrap gap-2">
+                <input
+                  className="min-w-[220px] flex-1 rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                  onChange={(e) => setTenantSearch(e.target.value)}
+                  placeholder="Buscar organização por nome ou slug..."
+                  value={tenantSearch}
+                />
+                <select
+                  className="min-w-[180px] rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                  onChange={(e) => setTenantTypeFilter(e.target.value as "" | "FAMILY" | "SCHOOL")}
+                  value={tenantTypeFilter}
+                >
+                  <option value="">Todos os tipos</option>
+                  <option value="FAMILY">Família</option>
+                  <option value="SCHOOL">Escola</option>
+                </select>
+                <button className="rounded-xl bg-[#2ABBA3] px-3 py-2 text-sm font-bold text-white" onClick={() => void loadBase()} type="button">
+                  Filtrar
+                </button>
+              </div>
+              <div className="max-h-[560px] overflow-auto rounded-xl border border-[#D7E2F4]">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[760px] text-left text-sm">
+                    <thead className="bg-[#F4F8FF] text-[#35567F]">
+                      <tr>
+                        <th className="px-3 py-2">Nome</th>
+                        <th className="px-3 py-2">Slug</th>
+                        <th className="px-3 py-2">Tipo</th>
+                        <th className="px-3 py-2">Onboarding</th>
+                        <th className="px-3 py-2">Criada em</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tenants.length === 0 ? (
+                        <tr>
+                          <td className="px-3 py-6 text-center text-sm font-semibold text-[#6B87AC]" colSpan={5}>
+                            Nenhuma organização encontrada com os filtros atuais.
+                          </td>
+                        </tr>
+                      ) : null}
+                      {tenants.map((tenant) => (
+                        <tr key={tenant.id} className="border-t border-[#E2EAF8]">
+                          <td className="px-3 py-2 font-semibold text-[#223F68]">{tenant.name}</td>
+                          <td className="px-3 py-2 font-mono text-xs text-[#35567F]">{tenant.slug}</td>
+                          <td className="px-3 py-2">{tenant.type === "FAMILY" ? "Família" : tenant.type === "SCHOOL" ? "Escola" : tenant.type}</td>
+                          <td className="px-3 py-2">{tenant.onboardingCompleted ? "Concluído" : "Pendente"}</td>
+                          <td className="px-3 py-2">{new Date(tenant.createdAt).toLocaleString("pt-BR")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-[#C9D8EF] p-3 xl:sticky xl:top-4 xl:self-start">
+              <h3 className="mb-2 text-sm font-black text-[#1E3B65]">Nova organização de teste</h3>
+              <input
+                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                onChange={(e) => setTenantDraft((d) => ({ ...d, name: e.target.value }))}
+                placeholder="Nome da organização"
+                value={tenantDraft.name}
+              />
+              <input
+                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm font-mono"
+                onChange={(e) => setTenantDraft((d) => ({ ...d, slug: e.target.value.toLowerCase() }))}
+                placeholder="Slug (ex.: familia-silva)"
+                value={tenantDraft.slug}
+              />
+              <select
+                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                onChange={(e) => setTenantDraft((d) => ({ ...d, type: e.target.value as "FAMILY" | "SCHOOL" }))}
+                value={tenantDraft.type}
+              >
+                <option value="FAMILY">Família (pais)</option>
+                <option value="SCHOOL">Escola</option>
+              </select>
+              <input
+                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                onChange={(e) => setTenantDraft((d) => ({ ...d, adminName: e.target.value }))}
+                placeholder="Nome do administrador"
+                value={tenantDraft.adminName}
+              />
+              <input
+                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                onChange={(e) => setTenantDraft((d) => ({ ...d, adminEmail: e.target.value }))}
+                placeholder="E-mail do administrador"
+                type="email"
+                value={tenantDraft.adminEmail}
+              />
+              <input
+                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                onChange={(e) => setTenantDraft((d) => ({ ...d, adminPassword: e.target.value }))}
+                placeholder="Senha inicial do administrador"
+                type="password"
+                value={tenantDraft.adminPassword}
+              />
+
+              {tenantDraft.type === "FAMILY" ? (
+                <>
+                  <label className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-[#2B4E79]">
+                    <input
+                      checked={tenantDraft.createTestChild}
+                      onChange={(e) => setTenantDraft((d) => ({ ...d, createTestChild: e.target.checked }))}
+                      type="checkbox"
+                    />
+                    Criar filho de teste
+                  </label>
+                  {tenantDraft.createTestChild ? (
+                    <>
+                      <input
+                        className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                        onChange={(e) => setTenantDraft((d) => ({ ...d, testChildName: e.target.value }))}
+                        placeholder="Nome da criança"
+                        value={tenantDraft.testChildName}
+                      />
+                      <input
+                        className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                        onChange={(e) => setTenantDraft((d) => ({ ...d, testChildBirthYear: e.target.value }))}
+                        placeholder="Ano de nascimento (opcional)"
+                        type="number"
+                        value={tenantDraft.testChildBirthYear}
+                      />
+                    </>
+                  ) : null}
+                </>
+              ) : null}
+
+              <label className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-[#2B4E79]">
+                <input
+                  checked={tenantDraft.resetExistingUserPassword}
+                  onChange={(e) => setTenantDraft((d) => ({ ...d, resetExistingUserPassword: e.target.checked }))}
+                  type="checkbox"
+                />
+                Redefinir senha se usuário já existir
+              </label>
+
+              <button className="rounded-xl bg-[#2ABBA3] px-3 py-2 text-sm font-black text-white disabled:opacity-60" disabled={loading} onClick={() => void saveTenant()} type="button">
+                Criar organização
+              </button>
+
+              {tenantCreateResult ? (
+                <div className="mt-3 rounded-xl border border-[#CBE7E4] bg-[#F1FCFA] p-3 text-xs font-semibold text-[#245A67]">
+                  <p className="font-black text-[#1F4F5D]">Organização criada com sucesso.</p>
+                  <p className="mt-1">Slug: {tenantCreateResult.tenant.slug}</p>
+                  <p>Admin: {tenantCreateResult.adminEmail}</p>
+                  <p>Perfil criado: {tenantCreateResult.userCreated ? "sim" : "não (já existia)"}</p>
+                  <p>Vínculo criado: {tenantCreateResult.membershipCreated ? "sim" : "não (já existia)"}</p>
+                  <p>Filho teste: {tenantCreateResult.testChildCreated ? "sim" : "não"}</p>
+                </div>
+              ) : null}
+            </div>
           </section>
         ) : null}
       </div>
