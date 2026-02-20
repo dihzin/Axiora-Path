@@ -65,18 +65,28 @@ def get_learning_path(
             subject_id=subject_id,
         )
     except ValueError as exc:
-        # Produção resiliente: não quebrar a tela quando a trilha ainda não foi semeada.
-        if str(exc) == "No subject available":
-            return LearningPathResponse(
-                subjectId=subject_id or 0,
-                subjectName="Aprender",
-                ageGroup=SubjectAgeGroup.AGE_9_12.value,
-                dueReviewsCount=0,
-                streakDays=0,
-                masteryAverage=0.0,
-                units=[],
-            )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        message = str(exc).strip().lower()
+        # Produção resiliente: não quebrar a tela quando a trilha ainda não foi semeada
+        # ou quando um subjectId inválido foi enviado.
+        if "subject not found" in message or "no subject available" in message:
+            try:
+                snapshot = build_learning_path(
+                    db,
+                    user_id=user.id,
+                    subject_id=None,
+                )
+            except ValueError:
+                return LearningPathResponse(
+                    subjectId=subject_id or 0,
+                    subjectName="Aprender",
+                    ageGroup=SubjectAgeGroup.AGE_9_12.value,
+                    dueReviewsCount=0,
+                    streakDays=0,
+                    masteryAverage=0.0,
+                    units=[],
+                )
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
         db.rollback()
         raise HTTPException(
