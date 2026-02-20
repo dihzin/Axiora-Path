@@ -1,7 +1,7 @@
 """create mission_templates table
 
 Revision ID: 0020_mission_templates
-Revises: 0019_child_last_mission_completed_at
+Revises: 0019_child_last_mission_done_at
 Create Date: 2026-02-17 23:10:00
 """
 
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "0020_mission_templates"
-down_revision: str | None = "0019_child_last_mission_completed_at"
+down_revision: str | None = "0019_child_last_mission_done_at"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

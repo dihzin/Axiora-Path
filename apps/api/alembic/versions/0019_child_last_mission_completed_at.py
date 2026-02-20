@@ -1,6 +1,6 @@
 """add last_mission_completed_at to child_profiles
 
-Revision ID: 0019_child_last_mission_completed_at
+Revision ID: 0019_child_last_mission_done_at
 Revises: 0018_daily_mission_future_fields
 Create Date: 2026-02-17 22:10:00
 """
@@ -10,7 +10,7 @@ from collections.abc import Sequence
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "0019_child_last_mission_completed_at"
+revision: str = "0019_child_last_mission_done_at"
 down_revision: str | None = "0018_daily_mission_future_fields"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
