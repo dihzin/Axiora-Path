@@ -1,7 +1,7 @@
 """add parent pin hash to tenants
 
 Revision ID: 0022_tenant_parent_pin_hash
-Revises: 0021_daily_missions_child_date_desc_index
+Revises: 0021_dm_child_date_desc_idx
 Create Date: 2026-02-17 16:40:00
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "0022_tenant_parent_pin_hash"
-down_revision: str | None = "0021_daily_missions_child_date_desc_index"
+down_revision: str | None = "0021_dm_child_date_desc_idx"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

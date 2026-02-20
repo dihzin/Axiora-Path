@@ -1,6 +1,6 @@
 """add daily_missions child/date desc index
 
-Revision ID: 0021_daily_missions_child_date_desc_index
+Revision ID: 0021_dm_child_date_desc_idx
 Revises: 0020_mission_templates
 Create Date: 2026-02-17 23:40:00
 """
@@ -10,7 +10,7 @@ from collections.abc import Sequence
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "0021_daily_missions_child_date_desc_index"
+revision: str = "0021_dm_child_date_desc_idx"
 down_revision: str | None = "0020_mission_templates"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

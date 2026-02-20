@@ -51,7 +51,6 @@ API (`apps/api/.env`):
 Web (`apps/web/.env.local`):
 
 - `NEXT_PUBLIC_API_URL` (default esperado: `http://localhost:8000`)
-- `NEXT_PUBLIC_PARENT_PIN` (default no MVP: `1234`)
 
 ## Execucao Local (3 Terminais)
 
@@ -161,6 +160,14 @@ npm run lint:web
 npm run typecheck:web
 npm run build:web
 ```
+
+## Alembic (Regra de Revisao)
+
+- O campo `alembic_version.version_num` pode quebrar deploy se o `revision` for muito longo.
+- Padrao obrigatorio para novas migrations:
+  - usar IDs curtos (recomendado <= 32 chars)
+  - exemplo: `0056_axion_brief_idx`
+- Evitar `revision` descritivo longo (ex.: frases completas com 40+ chars).
 
 ## Smoke Test Checklist
 
