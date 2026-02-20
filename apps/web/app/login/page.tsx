@@ -55,12 +55,23 @@ function AxionMascot() {
 export default function LoginPage() {
   const router = useRouter();
   const [tenantSlug, setTenantSlugValue] = useState("");
+  const [nextPath, setNextPath] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tenantFromQuery = params.get("tenant");
+    const nextFromQuery = params.get("next");
+    if (nextFromQuery && nextFromQuery.startsWith("/")) {
+      setNextPath(nextFromQuery);
+    }
+    if (tenantFromQuery && tenantFromQuery.trim()) {
+      setTenantSlugValue(tenantFromQuery.trim());
+      return;
+    }
     const savedTenantSlug = getTenantSlug();
     if (savedTenantSlug) {
       setTenantSlugValue(savedTenantSlug);
@@ -80,7 +91,11 @@ export default function LoginPage() {
       const tokens = await login(email, password);
       setAccessToken(tokens.access_token);
       setRefreshToken(tokens.refresh_token);
-      router.push("/select-tenant");
+      if (nextPath) {
+        router.push(nextPath);
+      } else {
+        router.push("/select-tenant");
+      }
     } catch {
       setError("Não foi possível autenticar. Verifique organização, email e senha.");
     } finally {

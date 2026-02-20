@@ -158,7 +158,7 @@ export default function AxionStudioPage() {
     clearTokens();
     clearTenantSlug();
     const next = encodeURIComponent(`${window.location.pathname}${window.location.search}`);
-    window.location.assign(`/login?next=${next}`);
+    window.location.assign(`/login?tenant=platform-admin&next=${next}`);
   };
 
   const isAuthError = (err: unknown): boolean => err instanceof ApiError && (err.status === 401 || err.status === 403);
