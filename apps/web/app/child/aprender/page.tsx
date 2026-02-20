@@ -30,6 +30,7 @@ import {
   completeLearningPathEvent,
   getActiveSeasonEvents,
   getApiErrorMessage,
+  getAxionBrief,
   getCalendarActivity,
   getCurrentMissions,
   getLearningPath,
@@ -673,6 +674,10 @@ export default function ChildAprenderPage() {
     }
     setRetentionLoading(false);
   };
+
+  useEffect(() => {
+    void getAxionBrief({ context: "before_learning" }).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     void loadPath();

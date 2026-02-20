@@ -13,6 +13,7 @@ from app.api.routes.analytics import router as analytics_router
 from app.api.routes.audit import router as audit_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.axion import router as axion_router
+from app.api.routes.axion_studio import router as axion_studio_router
 from app.api.routes.children import router as children_router
 from app.api.routes.coins import router as coins_router
 from app.api.routes.daily_missions import router as daily_missions_router
@@ -40,12 +41,14 @@ from app.core.logging import setup_json_logging
 from app.core.privacy import PrivacyConsentMiddleware
 from app.core.rate_limit import RateLimitMiddleware
 from app.core.request_logging import RequestLoggingMiddleware
+from app.services.providers.config_validation import validate_llm_provider_config_on_boot
 
 setup_json_logging()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    validate_llm_provider_config_on_boot()
     redis = Redis.from_url(settings.redis_url, encoding="utf-8", decode_responses=True)
     app.state.redis = redis
     try:
@@ -66,7 +69,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Tenant-Slug", "X-CSRF-Token", "X-Request-Id"],
 )
 app.include_router(ai_router)
@@ -76,6 +79,7 @@ app.include_router(analytics_router)
 app.include_router(audit_router)
 app.include_router(auth_router)
 app.include_router(axion_router)
+app.include_router(axion_studio_router)
 app.include_router(children_router)
 app.include_router(coins_router)
 app.include_router(daily_missions_router)

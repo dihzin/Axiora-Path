@@ -1,80 +1,86 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <defs>
-    <linearGradient id="bg" x1="28" y1="4" x2="28" y2="52" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#3B62A8"/>
-      <stop offset="100%" stop-color="#1B2A4A"/>
-    </linearGradient>
-    <linearGradient id="inner-shadow" x1="28" y1="4" x2="28" y2="52" gradientUnits="userSpaceOnUse">
-      <stop offset="60%" stop-color="transparent"/>
-      <stop offset="100%" stop-color="#08111E" stop-opacity="0.5"/>
-    </linearGradient>
-    <linearGradient id="highlight" x1="28" y1="4" x2="28" y2="26" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="white" stop-opacity="0.22"/>
-      <stop offset="100%" stop-color="white" stop-opacity="0"/>
-    </linearGradient>
-    <radialGradient id="face-g" cx="42%" cy="36%" r="62%">
-      <stop offset="0%" stop-color="#4E7ABF"/>
+    <radialGradient id="face-g" cx="42%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#5D88D0"/>
       <stop offset="100%" stop-color="#2D4A7A"/>
     </radialGradient>
-    <radialGradient id="teal-glow" cx="50%" cy="60%" r="50%">
+    <radialGradient id="glow" cx="50%" cy="55%" r="55%">
       <stop offset="0%" stop-color="#4DD9C0" stop-opacity="0.3"/>
       <stop offset="100%" stop-color="#4DD9C0" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="face-shadow" x1="32" y1="10" x2="32" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="60%" stop-color="#1B3060" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#1B3060" stop-opacity="0.5"/>
+    </linearGradient>
   </defs>
 
-  <!-- 3D base -->
-  <circle cx="28" cy="29" r="23" fill="#08111E"/>
-  <!-- Main disc -->
-  <circle cx="28" cy="27" r="23" fill="url(#bg)"/>
-  <circle cx="28" cy="27" r="23" fill="url(#inner-shadow)"/>
-  <circle cx="28" cy="27" r="23" fill="url(#highlight)"/>
+  <!-- Sombra base (elipse escura embaixo) -->
+  <ellipse cx="32" cy="60" rx="22" ry="4" fill="#1B3060" fill-opacity="0.2"/>
 
-  <!-- Teal glow halo -->
-  <circle cx="28" cy="32" r="18" fill="url(#teal-glow)"/>
+  <!-- CORPO (pequeno, embaixo do rosto) -->
+  <ellipse cx="32" cy="56" rx="16" ry="10" fill="#1B2A4A"/>
+  <!-- Diamante no peito -->
+  <path d="M32 50 L35 54.5 L32 59 L29 54.5 Z" fill="#F5C842" stroke="#C88A00" stroke-width="0.8"/>
 
-  <!-- CAPE — visible behind body -->
-  <path d="M14 38 Q9 46 12 49 Q20 44 22 39" fill="#08111E" fill-opacity="0.8"/>
-  <path d="M42 38 Q47 46 44 49 Q36 44 34 39" fill="#08111E" fill-opacity="0.8"/>
-  <!-- Cape collar band -->
-  <path d="M14 36 Q28 41.5 42 36 L40.5 40 Q28 45.5 15.5 40 Z"
+  <!-- CAPA -->
+  <path d="M16 42 Q10 52 13 57 Q21 52 23 45" fill="#0D1929"/>
+  <path d="M48 42 Q54 52 51 57 Q43 52 41 45" fill="#0D1929"/>
+  <!-- Colarinho teal -->
+  <path d="M16 40 Q32 47 48 40 L46 44.5 Q32 51.5 18 44.5 Z"
     fill="#1B2A4A" stroke="#4DD9C0" stroke-width="1.2" stroke-opacity="0.9"/>
-  <path d="M14 36 Q28 41.5 42 36"
-    fill="none" stroke="#4DD9C0" stroke-width="2" stroke-linecap="round"/>
+  <path d="M16 40 Q32 47 48 40" fill="none" stroke="#4DD9C0" stroke-width="2.5" stroke-linecap="round"/>
 
-  <!-- BODY — bigger circle -->
-  <ellipse cx="28" cy="41" rx="15" ry="10" fill="#1B2A4A"/>
-  <!-- Chest diamond -->
-  <path d="M28 36.5 L30.5 40.5 L28 44.5 L25.5 40.5 Z"
-    fill="#F5C842" stroke="#C88A00" stroke-width="0.8"/>
+  <!-- Glow teal -->
+  <ellipse cx="32" cy="36" rx="22" ry="22" fill="url(#glow)"/>
 
-  <!-- FACE — fills most of the icon -->
-  <ellipse cx="28" cy="26" rx="13" ry="13.5" fill="url(#face-g)" stroke="#1B2A4A" stroke-width="1.2"/>
+  <!-- ROSTO: grande, ocupa o centro do ícone -->
+  <ellipse cx="32" cy="30" rx="20" ry="22" fill="url(#face-g)"/>
+  <ellipse cx="32" cy="30" rx="20" ry="22" fill="url(#face-shadow)"/>
+  <!-- Highlight facial -->
+  <ellipse cx="26" cy="22" rx="8" ry="5" fill="white" fill-opacity="0.08" transform="rotate(-15 26 22)"/>
 
-  <!-- Ears -->
-  <ellipse cx="15.2" cy="26" rx="3" ry="4" fill="#2D4A7A" stroke="#1B2A4A" stroke-width="0.8"/>
-  <ellipse cx="40.8" cy="26" rx="3" ry="4" fill="#2D4A7A" stroke="#1B2A4A" stroke-width="0.8"/>
+  <!-- ORELHAS -->
+  <ellipse cx="12" cy="30" rx="3.5" ry="5" fill="#2D4A7A" stroke="#1B2A4A" stroke-width="0.8"/>
+  <ellipse cx="52" cy="30" rx="3.5" ry="5" fill="#2D4A7A" stroke="#1B2A4A" stroke-width="0.8"/>
 
-  <!-- EYES — big, happy arcs, very readable -->
-  <path d="M20 26.5 Q23.5 22.5 27 26.5" stroke="white" stroke-width="3" fill="none" stroke-linecap="round"/>
-  <path d="M29 26.5 Q32.5 22.5 36 26.5" stroke="white" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- SOBRANCELHAS douradas, expressivas -->
+  <path d="M16 22 Q22 18 27 21" stroke="#F5C842" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <path d="M37 21 Q42 18 48 22" stroke="#F5C842" stroke-width="3.5" fill="none" stroke-linecap="round"/>
 
-  <!-- SMILE — wide, white, unmistakable -->
-  <path d="M21 31 Q28 37.5 35 31" fill="#1B2A4A" stroke="#1B2A4A" stroke-width="1"/>
-  <path d="M22 31.5 Q28 37 34 31.5" fill="white"/>
-  <!-- Tongue -->
-  <ellipse cx="28" cy="35" rx="4.5" ry="3" fill="#E8709A" fill-opacity="0.85"/>
+  <!-- OLHOS: arcos brancos grandes -->
+  <path d="M17.5 29 Q21.5 24 25.5 29" stroke="white" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+  <path d="M38.5 29 Q42.5 24 46.5 29" stroke="white" stroke-width="3.2" fill="none" stroke-linecap="round"/>
 
-  <!-- CROWN — bold, sits on top of face -->
-  <!-- Band -->
-  <rect x="18.5" y="14.5" width="19" height="6" rx="3" fill="#F5C842" stroke="#C88A00" stroke-width="1"/>
-  <!-- 3 points -->
-  <path d="M21 14.5 L21 8.5 L24.5 12 L28 6 L31.5 12 L35 8.5 L35 14.5 Z"
-    fill="#F5C842" stroke="#C88A00" stroke-width="1" stroke-linejoin="round"/>
-  <!-- Center jewel (teal) -->
-  <circle cx="28" cy="12" r="3" fill="#4DD9C0" stroke="#2AB09A" stroke-width="0.8"/>
-  <!-- Side jewels (pink) -->
-  <circle cx="21.5" cy="16" r="2" fill="#E8709A" stroke="#B84A78" stroke-width="0.7"/>
-  <circle cx="34.5" cy="16" r="2" fill="#E8709A" stroke="#B84A78" stroke-width="0.7"/>
-  <!-- Crown shine -->
-  <path d="M25 10 L26.5 8 L26 11" fill="none" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-opacity="0.7"/>
+  <!-- Bochechas rosa -->
+  <ellipse cx="20" cy="34" rx="4" ry="2.5" fill="#FF9FB8" fill-opacity="0.5"/>
+  <ellipse cx="44" cy="34" rx="4" ry="2.5" fill="#FF9FB8" fill-opacity="0.5"/>
+
+  <!-- SORRISO: largo, branco, com língua -->
+  <path d="M19 36 Q32 46 45 36" fill="#1B3060"/>
+  <path d="M20.5 36.5 Q32 45 43.5 36.5" fill="white"/>
+  <!-- Língua rosa grande -->
+  <ellipse cx="32" cy="42" rx="6" ry="4" fill="#FF6B9D" fill-opacity="0.9"/>
+  <!-- Highlight sorriso -->
+  <path d="M23 38 Q27 44 32 44" stroke="white" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-opacity="0.3"/>
+
+  <!-- COROA: grande, dourada, flutuando acima -->
+  <!-- Sombra coroa -->
+  <path d="M13 15 L13 6 L19.5 11 L32 3 L44.5 11 L51 6 L51 15 Z"
+    fill="#9A6800" fill-opacity="0.3" transform="translate(0 3)"/>
+  <!-- Banda da coroa -->
+  <rect x="12" y="14" width="40" height="9" rx="4.5" fill="#F5C842" stroke="#C88A00" stroke-width="1.2"/>
+  <!-- 3 pontas -->
+  <path d="M13 14 L13 5 L19.5 10 L32 2 L44.5 10 L51 5 L51 14 Z"
+    fill="#F5C842" stroke="#C88A00" stroke-width="1.2" stroke-linejoin="round"/>
+  <!-- Jewel central: teal grande -->
+  <circle cx="32" cy="8" r="4" fill="#4DD9C0" stroke="#2AB09A" stroke-width="1"/>
+  <!-- Highlight jewel -->
+  <circle cx="31" cy="7" r="1.5" fill="white" fill-opacity="0.55"/>
+  <!-- Jewels laterais: rosa -->
+  <circle cx="16" cy="15.5" r="3" fill="#FF6B9D" stroke="#C84070" stroke-width="0.8"/>
+  <circle cx="48" cy="15.5" r="3" fill="#FF6B9D" stroke="#C84070" stroke-width="0.8"/>
+  <circle cx="16" cy="15" r="1.2" fill="white" fill-opacity="0.45"/>
+  <circle cx="48" cy="15" r="1.2" fill="white" fill-opacity="0.45"/>
+  <!-- Highlight banda -->
+  <path d="M16 16 L48 16" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.2"/>
 </svg>

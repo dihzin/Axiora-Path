@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import GameSession, GameType, UserGameProfile
+from app.models import GameSession, GameType, UserGameProfile, UserLearningStatus
 from app.services.achievement_engine import evaluate_achievements_after_game
+from app.services.axion_intelligence_v2 import apply_axion_decisions, compute_behavior_metrics
 
 XP_PER_LEVEL = 100
 MAX_XP_PER_DAY = 200
@@ -70,6 +71,16 @@ def _apply_xp(
     return granted
 
 
+def _resolve_axion_xp_multiplier(db: Session, *, user_id: int) -> float:
+    row = db.scalar(select(UserLearningStatus).where(UserLearningStatus.user_id == user_id))
+    if row is None:
+        return 1.0
+    now = datetime.now(UTC)
+    if row.event_boost_expires_at is None or row.event_boost_expires_at <= now:
+        return 1.0
+    return max(1.0, float(row.event_boost_multiplier))
+
+
 def addXP(
     db: Session,
     *,
@@ -78,10 +89,12 @@ def addXP(
     target_date: date | None = None,
     max_xp_per_day: int = MAX_XP_PER_DAY,
 ) -> UserGameProfile:
+    multiplier = _resolve_axion_xp_multiplier(db, user_id=user_id)
+    effective_amount = max(0, int(round(xp_amount * multiplier)))
     profile = _get_or_create_profile(db, user_id=user_id)
     _apply_xp(
         profile,
-        amount=xp_amount,
+        amount=effective_amount,
         target_date=target_date or date.today(),
         max_xp_per_day=max_xp_per_day,
     )
@@ -119,9 +132,17 @@ def registerGameSession(
     target_date: date | None = None,
     max_xp_per_day: int = MAX_XP_PER_DAY,
 ) -> RegisterGameSessionResult:
+    apply_axion_decisions(
+        db,
+        user_id=user_id,
+        context="before_game",
+        tenant_id=None,
+    )
     session_date = target_date or date.today()
     safe_score = max(0, score)
-    requested_xp = max(0, xp if xp is not None else calculate_xp_from_score(safe_score))
+    base_requested_xp = max(0, xp if xp is not None else calculate_xp_from_score(safe_score))
+    xp_multiplier = _resolve_axion_xp_multiplier(db, user_id=user_id)
+    requested_xp = max(0, int(round(base_requested_xp * xp_multiplier)))
     requested_coins = max(0, coins if coins is not None else calculate_coins_from_score(safe_score))
 
     profile = _get_or_create_profile(db, user_id=user_id)
@@ -158,6 +179,7 @@ def registerGameSession(
         game_type=game_type,
         score=safe_score,
     )
+    compute_behavior_metrics(db, user_id=user_id)
 
     remaining_after = max(0, effective_max_xp_per_day - profile.daily_xp)
     return RegisterGameSessionResult(

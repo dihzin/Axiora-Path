@@ -7,6 +7,7 @@ import {
   createAxionStudioTemplate,
   getApiErrorMessage,
   getAxionStudioAudit,
+  getAxionStudioImpact,
   getAxionStudioMe,
   getAxionStudioPolicies,
   getAxionStudioPolicyVersions,
@@ -22,6 +23,7 @@ import {
   toggleAxionStudioTemplate,
   logout,
   type AxionStudioAudit,
+  type AxionImpactResponse,
   type AxionStudioMe,
   type AxionStudioPolicy,
   type AxionStudioPreviewResponse,
@@ -31,7 +33,7 @@ import {
 } from "@/lib/api/client";
 import { clearTenantSlug, clearTokens } from "@/lib/api/session";
 
-type Tab = "policies" | "messages" | "preview" | "audit";
+type Tab = "policies" | "messages" | "preview" | "audit" | "impact";
 
 const CONTEXTS = ["child_tab", "before_learning", "after_learning", "games_tab", "wallet_tab"] as const;
 const TONES = ["CALM", "ENCOURAGE", "CHALLENGE", "CELEBRATE", "SUPPORT"] as const;
@@ -141,6 +143,9 @@ export default function AxionStudioPage() {
   const [previewUserId, setPreviewUserId] = useState<number | null>(null);
   const [previewContext, setPreviewContext] = useState("child_tab");
   const [previewResult, setPreviewResult] = useState<AxionStudioPreviewResponse | null>(null);
+  const [impactUserId, setImpactUserId] = useState<number | null>(null);
+  const [impactDays, setImpactDays] = useState<number>(7);
+  const [impactResult, setImpactResult] = useState<AxionImpactResponse | null>(null);
   const [versions, setVersions] = useState<AxionStudioVersion[]>([]);
   const [versionsTitle, setVersionsTitle] = useState("");
   const [versionsTarget, setVersionsTarget] = useState<{ type: "RULE" | "TEMPLATE"; id: number } | null>(null);
@@ -174,6 +179,7 @@ export default function AxionStudioPage() {
       if (usersResult.status === "fulfilled") {
         setUsers(usersResult.value);
         if (!previewUserId && usersResult.value.length > 0) setPreviewUserId(usersResult.value[0].userId);
+        if (!impactUserId && usersResult.value.length > 0) setImpactUserId(usersResult.value[0].userId);
       }
 
       const firstFailure =
@@ -284,6 +290,20 @@ export default function AxionStudioPage() {
     }
   };
 
+  const runImpact = async () => {
+    if (!impactUserId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await getAxionStudioImpact({ userId: impactUserId, days: impactDays });
+      setImpactResult(result);
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Falha ao calcular impacto do Axion."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loadPolicyVersions = async (policyId: number) => {
     const rows = await getAxionStudioPolicyVersions(policyId);
     setVersions(rows);
@@ -333,6 +353,7 @@ export default function AxionStudioPage() {
             { id: "messages", label: "Mensagens" },
             { id: "preview", label: "Prévia" },
             { id: "audit", label: "Auditoria" },
+            { id: "impact", label: "Impacto" },
           ].map((item) => (
             <button
               key={item.id}
@@ -633,6 +654,59 @@ export default function AxionStudioPage() {
                 ))}
               </div>
             </div>
+          </section>
+        ) : null}
+
+        {tab === "impact" ? (
+          <section className="mt-5 rounded-2xl border border-[#C9D8EF] p-4">
+            <div className="mb-3 flex flex-wrap gap-2">
+              <select className="min-w-[260px] flex-1 rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setImpactUserId(Number(e.target.value))} value={impactUserId ?? ""}>
+                {users.map((u) => (
+                  <option key={u.userId} value={u.userId}>
+                    {u.name} (#{u.userId})
+                  </option>
+                ))}
+              </select>
+              <select className="min-w-[140px] rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setImpactDays(Number(e.target.value) || 7)} value={impactDays}>
+                <option value={7}>7 dias</option>
+                <option value={14}>14 dias</option>
+                <option value={30}>30 dias</option>
+              </select>
+              <button className="rounded-xl bg-[#2ABBA3] px-3 py-2 text-sm font-black text-white" onClick={() => void runImpact()} type="button">
+                Calcular impacto
+              </button>
+            </div>
+
+            {impactResult ? (
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-xl border border-[#DCE6F7] bg-[#F7FAFF] p-3">
+                  <p className="text-[11px] font-bold uppercase text-[#6B87AC]">Decisões com melhora</p>
+                  <p className="text-lg font-black text-[#24456F]">{impactResult.improvementRatePercent.toFixed(1)}%</p>
+                  <p className="text-xs text-[#5E7DA6]">{impactResult.decisionsTotal} decisões avaliadas</p>
+                </div>
+                <div className="rounded-xl border border-[#DCE6F7] bg-[#F7FAFF] p-3">
+                  <p className="text-[11px] font-bold uppercase text-[#6B87AC]">XP após BOOST</p>
+                  <p className="text-lg font-black text-[#24456F]">{impactResult.avgXpDeltaAfterBoost >= 0 ? "+" : ""}{impactResult.avgXpDeltaAfterBoost.toFixed(1)}</p>
+                  <p className="text-xs text-[#5E7DA6]">delta médio real</p>
+                </div>
+                <div className="rounded-xl border border-[#DCE6F7] bg-[#F7FAFF] p-3">
+                  <p className="text-[11px] font-bold uppercase text-[#6B87AC]">Queda de frustração</p>
+                  <p className="text-lg font-black text-[#24456F]">{impactResult.avgFrustrationDeltaAfterDifficultyCap.toFixed(3)}</p>
+                  <p className="text-xs text-[#5E7DA6]">após ajuste de dificuldade</p>
+                </div>
+                <div className="rounded-xl border border-[#DCE6F7] bg-[#F7FAFF] p-3">
+                  <p className="text-[11px] font-bold uppercase text-[#6B87AC]">Redução de risco</p>
+                  <p className="text-lg font-black text-[#24456F]">{impactResult.avgDropoutRiskDelta.toFixed(3)}</p>
+                  <p className="text-xs text-[#5E7DA6]">evasão em tendência</p>
+                </div>
+                <div className="rounded-xl border border-[#DCE6F7] bg-[#F7FAFF] p-3 md:col-span-2 xl:col-span-4">
+                  <p className="text-[11px] font-bold uppercase text-[#6B87AC]">Crescimento de mastery (proxy)</p>
+                  <p className="text-lg font-black text-[#24456F]">{impactResult.masteryGrowthProxy >= 0 ? "+" : ""}{impactResult.masteryGrowthProxy.toFixed(4)}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm font-semibold text-[#6B87AC]">Selecione um aluno e rode o cálculo para ver correlações reais de resultado.</p>
+            )}
           </section>
         ) : null}
       </div>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Axiora — Ícones v3 Duolingo</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: #F0F4FF;
+    font-family: 'Nunito', sans-serif;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 48px 24px 80px; gap: 48px;
+  }
+
+  h1 { font-size: 1.7rem; font-weight: 900; color: #1B2A4A; letter-spacing: -0.02em; text-align: center; }
+  .sub { color: #8A9BBD; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 6px; text-align: center; }
+
+  section { width: 100%; max-width: 680px; }
+  .label { font-size: 10px; font-weight: 900; color: #4DD9C0; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 18px; }
+
+  /* ICON GRID */
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .icon-wrap {
+    width: 72px; height: 72px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .icon-wrap:hover { transform: scale(1.2) translateY(-6px); }
+  .icon-wrap:active { transform: scale(0.92); }
+  .icon-wrap img { width: 64px; height: 64px; }
+  .cell-label { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.08em; color: #8A9BBD; }
+
+  /* PHONE NAVBAR */
+  .phone {
+    width: 390px;
+    background: #EEF3FB;
+    border-radius: 36px;
+    overflow: hidden;
+    box-shadow: 0 0 0 2px #D0DCF0, 0 24px 64px rgba(27,42,74,0.16);
+    margin: 0 auto;
+  }
+  .fake-screen {
+    height: 100px;
+    background: linear-gradient(180deg, #F4F7FF, #EEF3FB);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fake-screen span { font-size: 11px; font-weight: 800; color: #C0CCDC; letter-spacing: 0.12em; text-transform: uppercase; }
+  .navbar {
+    background: rgba(255,255,255,0.98);
+    border-top: 1.5px solid rgba(77,217,192,0.15);
+    display: flex; justify-content: space-around; align-items: flex-end;
+    padding: 12px 8px 24px;
+  }
+  .nav-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    cursor: pointer; padding: 4px 6px; border-radius: 14px;
+    transition: background 0.15s;
+    position: relative;
+  }
+  .nav-btn:hover { background: rgba(77,217,192,0.08); }
+  .nav-btn img {
+    width: 42px; height: 42px;
+    transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+    filter: saturate(0.7) brightness(0.85);
+  }
+  .nav-btn:hover img, .nav-btn.active img {
+    transform: scale(1.22) translateY(-5px);
+    filter: saturate(1) brightness(1);
+  }
+  .nav-btn span {
+    font-size: 9.5px; font-weight: 900; color: #B8C8DC;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .nav-btn.active span { color: #22C4AA; }
+  /* active underline -->
+  .nav-btn.active::after {
+    content: '';
+    position: absolute; bottom: -4px; left: 50%;
+    transform: translateX(-50%);
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #4DD9C0;
+  }
+
+  /* SIZES */
+  .sizes { display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; background: white; border-radius: 18px; padding: 24px; box-shadow: 0 4px 24px rgba(27,42,74,0.08); }
+  .sz { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .sz span { font-size: 10px; font-weight: 800; color: #8A9BBD; text-transform: uppercase; letter-spacing: 0.08em; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ Ícones v3 — Estilo Duolingo</h1>
+  <p class="sub">Sem fundo circular · Ilustrativos · Sombra interna 3D</p>
+</header>
+
+<!-- GRID 72px -->
+<section>
+  <p class="label">Vitrine — 64px (tamanho real)</p>
+  <div class="grid">
+    <div class="cell">
+      <div class="icon-wrap"><img src="inicio.svg"/></div>
+      <span class="cell-label">Início</span>
+    </div>
+    <div class="cell">
+      <div class="icon-wrap"><img src="aprender.svg"/></div>
+      <span class="cell-label">Aprender</span>
+    </div>
+    <div class="cell">
+      <div class="icon-wrap"><img src="figurinhas.svg"/></div>
+      <span class="cell-label">Figurinhas</span>
+    </div>
+    <div class="cell">
+      <div class="icon-wrap"><img src="jogos.svg"/></div>
+      <span class="cell-label">Jogos</span>
+    </div>
+    <div class="cell">
+      <div class="icon-wrap"><img src="loja.svg"/></div>
+      <span class="cell-label">Loja</span>
+    </div>
+    <div class="cell">
+      <div class="icon-wrap"><img src="axion.svg"/></div>
+      <span class="cell-label">Axion</span>
+    </div>
+  </div>
+</section>
+
+<!-- NAVBAR SIMULATION -->
+<section>
+  <p class="label">Simulação navbar — clique nos ícones</p>
+  <div class="phone">
+    <div class="fake-screen"><span>✦ conteúdo do app ✦</span></div>
+    <div class="navbar">
+      <div class="nav-btn active" onclick="activate(this)">
+        <img src="inicio.svg"/><span>Início</span>
+      </div>
+      <div class="nav-btn" onclick="activate(this)">
+        <img src="aprender.svg"/><span>Aprender</span>
+      </div>
+      <div class="nav-btn" onclick="activate(this)">
+        <img src="figurinhas.svg"/><span>Figurinhas</span>
+      </div>
+      <div class="nav-btn" onclick="activate(this)">
+        <img src="jogos.svg"/><span>Jogos</span>
+      </div>
+      <div class="nav-btn" onclick="activate(this)">
+        <img src="loja.svg"/><span>Loja</span>
+      </div>
+      <div class="nav-btn" onclick="activate(this)">
+        <img src="axion.svg"/><span>Axion</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SIZES -->
+<section>
+  <p class="label">Legibilidade em escala</p>
+  <div class="sizes">
+    <div class="sz"><img src="axion.svg" width="64"/><span>64px</span></div>
+    <div class="sz"><img src="inicio.svg" width="48"/><span>48px</span></div>
+    <div class="sz"><img src="jogos.svg" width="40"/><span>40px</span></div>
+    <div class="sz"><img src="loja.svg" width="32"/><span>32px</span></div>
+    <div class="sz"><img src="aprender.svg" width="24"/><span>24px</span></div>
+    <div class="sz"><img src="figurinhas.svg" width="18"/><span>18px</span></div>
+  </div>
+</section>
+
+<script>
+  function activate(btn) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

@@ -1,41 +1,62 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- CASA estilo Duolingo: amarela, telhado vermelho, sombra interna -->
+
+  <!-- Telhado: vermelho com sombra interna -->
+  <path d="M8 30 L32 8 L56 30 Z" fill="#FF4B3E"/>
+  <!-- Sombra interna telhado (parte inferior mais escura) -->
+  <path d="M8 30 L32 8 L56 30 Z" fill="url(#roof-shadow)"/>
+  <!-- Highlight telhado -->
+  <path d="M32 10 L20 22" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.35"/>
+
+  <!-- Chaminé -->
+  <rect x="40" y="14" width="7" height="12" rx="2" fill="#CC3028"/>
+  <rect x="40" y="12" width="9" height="4" rx="1.5" fill="#FF4B3E"/>
+
+  <!-- Corpo da casa: amarelo -->
+  <rect x="13" y="28" width="38" height="28" rx="3" fill="#FFC800"/>
+  <!-- Sombra interna casa (base) -->
+  <rect x="13" y="44" width="38" height="12" rx="3" fill="#E6A800"/>
+  <rect x="13" y="28" width="38" height="28" rx="3" fill="url(#house-shadow)"/>
+
+  <!-- Porta: marrom arredondada -->
+  <rect x="24" y="38" width="16" height="18" rx="8" fill="#A0522D"/>
+  <!-- Porta sombra base -->
+  <rect x="24" y="48" width="16" height="8" rx="0" fill="#7A3B1E"/>
+  <rect x="24" y="38" width="16" height="18" rx="8" fill="url(#door-shadow)"/>
+  <!-- Maçaneta -->
+  <circle cx="37" cy="47" r="1.8" fill="#C8860A"/>
+
+  <!-- Janela esquerda -->
+  <rect x="15" y="33" width="10" height="9" rx="2" fill="#7DD8F8"/>
+  <rect x="15" y="38" width="10" height="4" rx="0" fill="#5BBEE0"/>
+  <rect x="15" y="33" width="10" height="9" rx="2" fill="url(#win-shadow)"/>
+  <!-- Cruz da janela -->
+  <line x1="20" y1="33" x2="20" y2="42" stroke="white" stroke-width="1.2" stroke-opacity="0.6"/>
+  <line x1="15" y1="37.5" x2="25" y2="37.5" stroke="white" stroke-width="1.2" stroke-opacity="0.6"/>
+
+  <!-- Janela direita -->
+  <rect x="39" y="33" width="10" height="9" rx="2" fill="#7DD8F8"/>
+  <rect x="39" y="38" width="10" height="4" rx="0" fill="#5BBEE0"/>
+  <rect x="39" y="33" width="10" height="9" rx="2" fill="url(#win-shadow)"/>
+  <line x1="44" y1="33" x2="44" y2="42" stroke="white" stroke-width="1.2" stroke-opacity="0.6"/>
+  <line x1="39" y1="37.5" x2="49" y2="37.5" stroke="white" stroke-width="1.2" stroke-opacity="0.6"/>
+
   <defs>
-    <linearGradient id="bg" x1="28" y1="4" x2="28" y2="52" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#5DE8D4"/>
-      <stop offset="100%" stop-color="#22C4AA"/>
+    <linearGradient id="roof-shadow" x1="32" y1="8" x2="32" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#CC3028" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#CC3028" stop-opacity="0.4"/>
     </linearGradient>
-    <!-- Inner shadow at bottom for 3D depth -->
-    <linearGradient id="inner-shadow" x1="28" y1="4" x2="28" y2="52" gradientUnits="userSpaceOnUse">
-      <stop offset="60%" stop-color="transparent"/>
-      <stop offset="100%" stop-color="#0E8A78" stop-opacity="0.35"/>
+    <linearGradient id="house-shadow" x1="32" y1="28" x2="32" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="60%" stop-color="#C88A00" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#C88A00" stop-opacity="0.5"/>
     </linearGradient>
-    <!-- Top highlight -->
-    <linearGradient id="highlight" x1="28" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="white" stop-opacity="0.32"/>
-      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    <linearGradient id="door-shadow" x1="32" y1="38" x2="32" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="50%" stop-color="#5A2010" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#5A2010" stop-opacity="0.45"/>
+    </linearGradient>
+    <linearGradient id="win-shadow" x1="20" y1="33" x2="20" y2="42" gradientUnits="userSpaceOnUse">
+      <stop offset="50%" stop-color="#3A8AAA" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#3A8AAA" stop-opacity="0.5"/>
     </linearGradient>
   </defs>
-
-  <!-- Outer border ring (3D base) -->
-  <circle cx="28" cy="29" r="23" fill="#0E8A78"/>
-  <!-- Main disc -->
-  <circle cx="28" cy="27" r="23" fill="url(#bg)"/>
-  <!-- Inner shadow overlay -->
-  <circle cx="28" cy="27" r="23" fill="url(#inner-shadow)"/>
-  <!-- Top highlight -->
-  <circle cx="28" cy="27" r="23" fill="url(#highlight)"/>
-
-  <!-- HOUSE: big, bold, centered -->
-  <!-- Roof: thick filled triangle -->
-  <path d="M10 28 L28 13 L46 28 L43 28 L28 16 L13 28 Z" fill="white"/>
-  <!-- Wall body -->
-  <rect x="15" y="27" width="26" height="16" rx="2" fill="white"/>
-  <!-- Door: colored cutout -->
-  <rect x="23" y="32" width="10" height="11" rx="3" fill="#22C4AA"/>
-  <!-- Left window -->
-  <rect x="17" y="29" width="5" height="5" rx="1.5" fill="#22C4AA"/>
-  <!-- Right window -->
-  <rect x="34" y="29" width="5" height="5" rx="1.5" fill="#22C4AA"/>
-  <!-- Roof cap (chimney) -->
-  <rect x="33" y="16" width="4" height="7" rx="1.5" fill="white"/>
 </svg>

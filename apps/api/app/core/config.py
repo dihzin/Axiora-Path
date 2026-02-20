@@ -1,3 +1,4 @@
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,6 +23,19 @@ class Settings(BaseSettings):
     account_lock_max_attempts: int = 5
     account_lock_minutes: int = 15
     coin_conversion_coins_per_real: int = 10
+    platform_admin_emails: str = ""
+    llm_provider_key: str = Field(
+        default="noop",
+        validation_alias=AliasChoices("LLM_PROVIDER_KEY", "AXIORA_LLM_PROVIDER_KEY"),
+    )
+    llm_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("LLM_API_KEY", "AXIORA_LLM_API_KEY"),
+    )
+    llm_model: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("LLM_MODEL", "AXIORA_LLM_MODEL"),
+    )
 
 
 settings = Settings()

@@ -1,47 +1,69 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <defs>
-    <linearGradient id="bg" x1="28" y1="4" x2="28" y2="52" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#60A5FA"/>
-      <stop offset="100%" stop-color="#1D4ED8"/>
+    <linearGradient id="ctrl-body" x1="32" y1="10" x2="32" y2="54" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6BBFFF"/>
+      <stop offset="100%" stop-color="#2878E8"/>
     </linearGradient>
-    <linearGradient id="inner-shadow" x1="28" y1="4" x2="28" y2="52" gradientUnits="userSpaceOnUse">
-      <stop offset="60%" stop-color="transparent"/>
-      <stop offset="100%" stop-color="#1232A0" stop-opacity="0.38"/>
-    </linearGradient>
-    <linearGradient id="highlight" x1="28" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="white" stop-opacity="0.30"/>
-      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    <linearGradient id="ctrl-shadow" x1="32" y1="10" x2="32" y2="54" gradientUnits="userSpaceOnUse">
+      <stop offset="55%" stop-color="#1050C0" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#1050C0" stop-opacity="0.5"/>
     </linearGradient>
   </defs>
 
-  <!-- 3D base -->
-  <circle cx="28" cy="29" r="23" fill="#1232A0"/>
-  <circle cx="28" cy="27" r="23" fill="url(#bg)"/>
-  <circle cx="28" cy="27" r="23" fill="url(#inner-shadow)"/>
-  <circle cx="28" cy="27" r="23" fill="url(#highlight)"/>
+  <!-- Sombra base do controle -->
+  <path d="M10 28 Q10 20 15 18 L20 17 L32 14 L44 17 L49 18 Q54 20 54 28 L53 38 Q52 45 47 46 L44 46.5 Q40 47 38 44 L36 41 L28 41 L26 44 Q24 47 20 46.5 L17 46 Q12 45 11 38 Z"
+    fill="#0A40A0" fill-opacity="0.35" transform="translate(0 3)"/>
 
-  <!-- CONTROLLER — simplified fat silhouette -->
-  <!-- Main body -->
-  <path d="M11 24.5 Q11 20.5 15 20 L20 19.5 L28 17.5 L36 19.5 L41 20 Q45 20.5 45 24.5 L44 32 Q44 37 40 37 L37.5 37 Q34.5 37.5 33 35 L31.5 33 L24.5 33 L23 35 Q21.5 37.5 18.5 37 L16 37 Q12 37 12 32 Z"
-    fill="white" fill-opacity="0.95"/>
+  <!-- Corpo do controle -->
+  <path d="M10 28 Q10 20 15 18 L20 17 L32 14 L44 17 L49 18 Q54 20 54 28 L53 38 Q52 45 47 46 L44 46.5 Q40 47 38 44 L36 41 L28 41 L26 44 Q24 47 20 46.5 L17 46 Q12 45 11 38 Z"
+    fill="url(#ctrl-body)"/>
+  <path d="M10 28 Q10 20 15 18 L20 17 L32 14 L44 17 L49 18 Q54 20 54 28 L53 38 Q52 45 47 46 L44 46.5 Q40 47 38 44 L36 41 L28 41 L26 44 Q24 47 20 46.5 L17 46 Q12 45 11 38 Z"
+    fill="url(#ctrl-shadow)"/>
 
-  <!-- D-pad: cross shape, big and clear -->
+  <!-- Highlight topo -->
+  <path d="M20 17 Q32 13 44 17" stroke="white" stroke-width="2" stroke-linecap="round" fill="none" stroke-opacity="0.35"/>
+
+  <!-- D-PAD esquerdo: cruz branca -->
   <!-- Vertical -->
-  <rect x="18" y="22" width="4" height="11" rx="2" fill="#1D4ED8"/>
+  <rect x="18" y="22" width="5" height="14" rx="2.5" fill="white" fill-opacity="0.9"/>
   <!-- Horizontal -->
-  <rect x="14" y="25.5" width="12" height="4" rx="2" fill="#1D4ED8"/>
+  <rect x="13" y="27" width="15" height="5" rx="2.5" fill="white" fill-opacity="0.9"/>
+  <!-- Centro cruz (highlight) -->
+  <circle cx="20.5" cy="29.5" r="3" fill="white" fill-opacity="0.15"/>
 
-  <!-- Right buttons: 4 circles, colored -->
-  <!-- Top (Y/triangle) -->
-  <circle cx="34" cy="23" r="3.2" fill="#4DD9C0"/>
-  <!-- Right (B/circle) -->
-  <circle cx="38.5" cy="27.5" r="3.2" fill="#E8709A"/>
-  <!-- Bottom (A/cross) -->
-  <circle cx="34" cy="32" r="3.2" fill="#F5C842"/>
-  <!-- Left (X/square) -->
-  <circle cx="29.5" cy="27.5" r="3.2" fill="#A78BFA"/>
+  <!-- BOTÕES direita: 4 círculos coloridos -->
+  <!-- Cima - verde/teal -->
+  <circle cx="43" cy="22" r="4.5" fill="#4DD9C0"/>
+  <circle cx="43" cy="22" r="4.5" fill="url(#btn-shadow-1)" fill-opacity="0"/>
+  <circle cx="43" cy="22" r="3" fill="#4DD9C0"/>
+  <ellipse cx="42" cy="21" rx="1.5" ry="1" fill="white" fill-opacity="0.4"/>
+  <!-- Símbolo ▲ -->
+  <path d="M43 19.5 L45 23 L41 23 Z" fill="white" fill-opacity="0.9"/>
 
-  <!-- Center select buttons -->
-  <rect x="23" y="25" width="5" height="2.5" rx="1.25" fill="#1D4ED8" fill-opacity="0.3"/>
-  <rect x="23" y="29" width="5" height="2.5" rx="1.25" fill="#1D4ED8" fill-opacity="0.3"/>
+  <!-- Direita - rosa -->
+  <circle cx="49" cy="29" r="4.5" fill="#FF6B9D"/>
+  <ellipse cx="48" cy="28" rx="1.5" ry="1" fill="white" fill-opacity="0.4"/>
+  <!-- Símbolo ● -->
+  <circle cx="49" cy="29" r="2" fill="white" fill-opacity="0.85"/>
+
+  <!-- Baixo - amarelo -->
+  <circle cx="43" cy="36" r="4.5" fill="#F5C842"/>
+  <ellipse cx="42" cy="35" rx="1.5" ry="1" fill="white" fill-opacity="0.4"/>
+  <!-- Símbolo ✕ -->
+  <path d="M41 34 L45 38 M45 34 L41 38" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.9"/>
+
+  <!-- Esquerda - roxo -->
+  <circle cx="37" cy="29" r="4.5" fill="#A78BFA"/>
+  <ellipse cx="36" cy="28" rx="1.5" ry="1" fill="white" fill-opacity="0.4"/>
+  <!-- Símbolo ■ -->
+  <rect x="35.5" y="27.5" width="3" height="3" rx="0.5" fill="white" fill-opacity="0.85"/>
+
+  <!-- Botões select/start (centro) -->
+  <rect x="26" y="27" width="5" height="3" rx="1.5" fill="white" fill-opacity="0.35"/>
+  <rect x="33" y="27" width="5" height="3" rx="1.5" fill="white" fill-opacity="0.35"/>
+
+  <!-- Alça esquerda -->
+  <ellipse cx="14" cy="36" rx="5" ry="7" fill="#2878E8" fill-opacity="0.6"/>
+  <!-- Alça direita -->
+  <ellipse cx="50" cy="36" rx="5" ry="7" fill="#2878E8" fill-opacity="0.6"/>
 </svg>

@@ -1,42 +1,52 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <defs>
-    <linearGradient id="bg" x1="28" y1="4" x2="28" y2="52" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#FBBF24"/>
-      <stop offset="100%" stop-color="#D97706"/>
+    <linearGradient id="bag-body" x1="32" y1="20" x2="32" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF9F43"/>
+      <stop offset="100%" stop-color="#F07800"/>
     </linearGradient>
-    <linearGradient id="inner-shadow" x1="28" y1="4" x2="28" y2="52" gradientUnits="userSpaceOnUse">
-      <stop offset="60%" stop-color="transparent"/>
-      <stop offset="100%" stop-color="#92400E" stop-opacity="0.40"/>
+    <linearGradient id="bag-shadow" x1="32" y1="20" x2="32" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="55%" stop-color="#B85000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#B85000" stop-opacity="0.5"/>
     </linearGradient>
-    <linearGradient id="highlight" x1="28" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="white" stop-opacity="0.35"/>
-      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    <linearGradient id="bag-front" x1="32" y1="20" x2="32" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFB84A"/>
+      <stop offset="100%" stop-color="#FF8A00"/>
     </linearGradient>
   </defs>
 
-  <!-- 3D base -->
-  <circle cx="28" cy="29" r="23" fill="#92400E"/>
-  <circle cx="28" cy="27" r="23" fill="url(#bg)"/>
-  <circle cx="28" cy="27" r="23" fill="url(#inner-shadow)"/>
-  <circle cx="28" cy="27" r="23" fill="url(#highlight)"/>
+  <!-- Sombra base -->
+  <path d="M12 28 L14 56 Q14 58.5 17 58.5 L47 58.5 Q50 58.5 50 56 L52 28 Q52 26 50 26 L14 26 Q12 26 12 28 Z"
+    fill="#B85000" fill-opacity="0.3" transform="translate(0 2.5)"/>
 
-  <!-- BAG BODY — big, centered, white -->
-  <path d="M14 26 L16 41 Q16 43 18 43 L38 43 Q40 43 40 41 L42 26 Q42 24 40 24 L16 24 Q14 24 14 26 Z"
-    fill="white" fill-opacity="0.95"/>
+  <!-- CORPO DA SACOLA -->
+  <path d="M12 28 L14 56 Q14 58.5 17 58.5 L47 58.5 Q50 58.5 50 56 L52 28 Q52 26 50 26 L14 26 Q12 26 12 28 Z"
+    fill="url(#bag-body)"/>
+  <path d="M12 28 L14 56 Q14 58.5 17 58.5 L47 58.5 Q50 58.5 50 56 L52 28 Q52 26 50 26 L14 26 Q12 26 12 28 Z"
+    fill="url(#bag-shadow)"/>
 
-  <!-- Bag straps -->
-  <path d="M21 24 L21 19.5 Q21 14.5 28 14.5 Q35 14.5 35 19.5 L35 24"
-    fill="none" stroke="#D97706" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Dobra da sacola (linha horizontal) -->
+  <path d="M12.5 34 L51.5 34" stroke="#D06800" stroke-width="1.5" stroke-opacity="0.5"/>
 
-  <!-- Horizontal crease (bag fold) -->
-  <path d="M14.5 31 L41.5 31" stroke="rgba(0,0,0,0.08)" stroke-width="1.2"/>
+  <!-- Highlight topo -->
+  <path d="M16 27 L48 27" stroke="white" stroke-width="2" stroke-linecap="round" stroke-opacity="0.3"/>
 
-  <!-- Axion diamond logo on bag - large, centered -->
-  <path d="M28 34 L32 39.5 L28 45 L24 39.5 Z"
-    fill="#FBBF24" stroke="#D97706" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- Inner diamond -->
-  <path d="M28 36 L30.5 39.5 L28 43 L25.5 39.5 Z" fill="white" fill-opacity="0.6"/>
+  <!-- ALÇAS: marrom, arredondadas e grossas -->
+  <!-- Alça esquerda -->
+  <path d="M19 26 L19 18 Q19 10 27 10 Q35 10 35 18 L35 26"
+    fill="none" stroke="#C86400" stroke-width="5" stroke-linecap="round"/>
+  <!-- Highlight alça esq -->
+  <path d="M21 24 L21 18 Q21 13 27 13"
+    fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.3"/>
 
-  <!-- Price tag accent -->
-  <circle cx="28" cy="28" r="4" fill="none" stroke="#D97706" stroke-width="1.5" stroke-opacity="0.35"/>
+  <!-- Alça direita -->
+  <path d="M29 26 L29 18 Q29 10 37 10 Q45 10 45 18 L45 26"
+    fill="none" stroke="#C86400" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Símbolo Axion na sacola: diamante dourado centralizado -->
+  <path d="M32 37 L37 44 L32 51 L27 44 Z"
+    fill="#F5C842" stroke="#C88A00" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Brilho interno -->
+  <path d="M32 39 L35.5 44 L32 49 L28.5 44 Z" fill="white" fill-opacity="0.3"/>
+  <!-- Sparkle no diamante -->
+  <path d="M32 37 L32.6 35 L33 37" fill="none" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-opacity="0.7"/>
 </svg>

@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Axiora Path — Trilha Melhorada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --navy: #1B2A4A;
+    --teal: #4DD9C0;
+    --gold: #F5C842;
+    --orange: #FF7A45;
+    --pink: #E8709A;
+    --purple: #7C3AED;
+    --blue: #2563EB;
+    --bg: #EEF3FB;
+    --card: rgba(255,255,255,0.92);
+    --muted: #8A9BBD;
+    --trail: #C8D8F0;
+    --trail-done: #4DD9C0;
+  }
+
+  body {
+    background: var(--bg);
+    font-family: 'Nunito', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 40px;
+    padding: 40px 24px 100px;
+    flex-wrap: wrap;
+  }
+
+  /* ═══ PHONE WRAPPER ═══ */
+  .phone {
+    width: 390px;
+    min-height: 844px;
+    background: var(--bg);
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 0 2px #C8D8F0, 0 32px 80px rgba(27,42,74,0.18);
+    flex-shrink: 0;
+  }
+
+  .scroll-area {
+    height: 844px;
+    overflow-y: auto;
+    padding-bottom: 100px;
+    scrollbar-width: none;
+  }
+  .scroll-area::-webkit-scrollbar { display: none; }
+
+  /* ═══ UNIT HEADER ═══ */
+  .unit-header {
+    margin: 16px 16px 0;
+    background: var(--navy);
+    border-radius: 20px;
+    padding: 18px 20px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .unit-header::before {
+    content: '';
+    position: absolute;
+    top: -20px; right: -20px;
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: var(--teal);
+    opacity: 0.12;
+  }
+  .unit-header::after {
+    content: '';
+    position: absolute;
+    bottom: -30px; right: 20px;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: var(--gold);
+    opacity: 0.1;
+  }
+  .unit-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(77,217,192,0.2);
+    border: 1px solid rgba(77,217,192,0.35);
+    border-radius: 20px;
+    padding: 4px 12px;
+    margin-bottom: 10px;
+  }
+  .unit-badge span { font-size: 11px; font-weight: 800; color: var(--teal); letter-spacing: 0.08em; text-transform: uppercase; }
+  .unit-title { font-size: 17px; font-weight: 900; color: white; margin-bottom: 5px; line-height: 1.2; }
+  .unit-desc { font-size: 12px; color: rgba(255,255,255,0.55); font-weight: 600; line-height: 1.5; margin-bottom: 14px; }
+
+  /* Progress bar -->
+  .progress-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .progress-label { font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.5); }
+  .progress-pct { font-size: 11px; font-weight: 900; color: var(--teal); }
+  .prog-track { height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--teal), #2BB09A); transition: width 0.6s; }
+
+  /* Stars row -->
+  .stars-row { display: flex; gap: 4px; margin-top: 10px; }
+  .star { width: 22px; height: 22px; }
+  .star svg { width: 100%; height: 100%; }
+
+  /* ═══ TRAIL AREA ═══ */
+  .trail-area {
+    position: relative;
+    padding: 0 20px;
+    margin-top: 0;
+  }
+
+  /* SVG path -->
+  .trail-svg {
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%;
+    pointer-events: none;
+  }
+
+  /* Node wrapper -->
+  .node-row {
+    display: flex;
+    align-items: center;
+    position: relative;
+    height: 110px;
+  }
+  .node-row.left { justify-content: flex-start; padding-left: 40px; }
+  .node-row.right { justify-content: flex-end; padding-right: 40px; }
+  .node-row.center { justify-content: center; }
+
+  /* ── NODE BUTTON ── */
+  .node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+  }
+  .node-btn {
+    width: 68px; height: 68px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+    cursor: pointer;
+  }
+  .node-btn:hover { transform: scale(1.12) translateY(-4px); }
+  .node-btn:active { transform: scale(0.95); }
+
+  /* States -->
+  .node-btn.done {
+    background: linear-gradient(145deg, #5DE8D4, #22C4AA);
+    box-shadow: 0 4px 0 #0E8A78, 0 6px 20px rgba(77,217,192,0.35);
+  }
+  .node-btn.active {
+    background: linear-gradient(145deg, #FFD700, #F5A623);
+    box-shadow: 0 4px 0 #C88A00, 0 6px 24px rgba(245,166,35,0.45);
+    animation: pulse-active 2s ease-in-out infinite;
+  }
+  .node-btn.locked {
+    background: linear-gradient(145deg, #D4DFF0, #BCC8E0);
+    box-shadow: 0 4px 0 #8A9BBD, 0 4px 12px rgba(27,42,74,0.12);
+  }
+  .node-btn.lesson-done {
+    background: linear-gradient(145deg, #FF9870, #E85525);
+    box-shadow: 0 4px 0 #9E2A00, 0 6px 20px rgba(232,85,37,0.3);
+  }
+  .node-btn.lesson-available {
+    background: white;
+    box-shadow: 0 4px 0 #D0DCEE, 0 4px 16px rgba(27,42,74,0.12);
+    border: 2.5px solid #FF7A45;
+  }
+  .node-btn.checkpoint {
+    background: linear-gradient(145deg, #A78BFA, #7C3AED);
+    box-shadow: 0 4px 0 #4A1DA0, 0 6px 20px rgba(124,58,237,0.3);
+  }
+  .node-btn.boss {
+    background: linear-gradient(145deg, #FF6B6B, #CC2200);
+    box-shadow: 0 4px 0 #880000, 0 6px 24px rgba(204,34,0,0.35);
+  }
+  .node-btn.chest {
+    background: linear-gradient(145deg, #FBBF24, #D97706);
+    box-shadow: 0 4px 0 #92400E, 0 6px 20px rgba(245,188,36,0.35);
+  }
+  .node-btn.portal {
+    background: linear-gradient(145deg, #1B2A4A, #0D1929);
+    box-shadow: 0 4px 0 #050D18, 0 6px 24px rgba(77,217,192,0.2);
+    border: 2px solid rgba(77,217,192,0.5);
+  }
+
+  @keyframes pulse-active {
+    0%, 100% { box-shadow: 0 4px 0 #C88A00, 0 6px 24px rgba(245,166,35,0.45); transform: scale(1); }
+    50% { box-shadow: 0 4px 0 #C88A00, 0 8px 32px rgba(245,166,35,0.65); transform: scale(1.04) translateY(-2px); }
+  }
+
+  .node-icon { font-size: 26px; line-height: 1; }
+  .node-icon svg { width: 28px; height: 28px; }
+
+  /* Check badge on done -->
+  .check-badge {
+    position: absolute;
+    bottom: -2px; right: -2px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #22C4AA;
+    border: 2px solid white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+  }
+  .star-badge {
+    position: absolute;
+    top: -6px; right: -6px;
+    background: var(--gold);
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: 900;
+    color: var(--navy);
+    border: 2px solid white;
+  }
+  .new-badge {
+    position: absolute;
+    top: -8px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--pink);
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 900;
+    color: white;
+    border: 2px solid white;
+    white-space: nowrap;
+  }
+
+  /* Node label -->
+  .node-label {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: var(--navy);
+    text-align: center;
+    max-width: 80px;
+    line-height: 1.2;
+  }
+  .node-sublabel {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* Mini XP tag -->
+  .xp-tag {
+    background: rgba(77,217,192,0.15);
+    border: 1px solid rgba(77,217,192,0.3);
+    border-radius: 8px;
+    padding: 1px 6px;
+    font-size: 9px;
+    font-weight: 900;
+    color: #22C4AA;
+  }
+
+  /* ── AXION BUBBLE (mid-trail encouragement) ── */
+  .axion-bubble {
+    margin: 8px 20px;
+    background: var(--navy);
+    border-radius: 18px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 20px rgba(27,42,74,0.15);
+    position: relative;
+    z-index: 3;
+  }
+  .axion-avatar {
+    width: 48px; height: 48px; flex-shrink: 0;
+  }
+  .bubble-text { flex: 1; }
+  .bubble-text p { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.9); line-height: 1.4; }
+  .bubble-text p strong { color: var(--teal); }
+  .bubble-tail {
+    position: absolute;
+    left: 64px; bottom: -8px;
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid var(--navy);
+  }
+
+  /* ── STREAK BANNER ── */
+  .streak-banner {
+    margin: 0 16px 8px;
+    background: linear-gradient(135deg, #FF7A45, #E85525);
+    border-radius: 14px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 16px rgba(232,85,37,0.25);
+  }
+  .streak-banner .fire { font-size: 24px; }
+  .streak-banner p { font-size: 13px; font-weight: 800; color: white; }
+  .streak-banner span { font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 600; }
+
+  /* ── SECTION DIVIDER (between units) ── */
+  .section-div {
+    margin: 8px 16px 16px;
+    background: white;
+    border-radius: 16px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 12px rgba(27,42,74,0.07);
+    border: 1px solid rgba(27,42,74,0.06);
+  }
+  .section-div-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    background: linear-gradient(135deg, #EEF3FF, #E0ECFF);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .section-div-text h3 { font-size: 14px; font-weight: 900; color: var(--navy); }
+  .section-div-text p { font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+  .expand-btn {
+    margin-left: auto;
+    background: var(--teal);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    flex-shrink: 0;
+  }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(16px);
+    border-top: 1.5px solid rgba(77,217,192,0.15);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 8px 4px 20px;
+  }
+  .nav-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    cursor: pointer; padding: 4px 6px; border-radius: 12px;
+  }
+  .nav-btn img { width: 38px; height: 38px; }
+  .nav-btn span { font-size: 9px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .nav-btn.active span { color: var(--teal); }
+
+  /* ═══ ANNOTATION PANEL (right side) ═══ */
+  .annotations {
+    max-width: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 8px;
+  }
+  .anno-title {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--navy);
+    margin-bottom: 4px;
+  }
+  .anno-sub { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+
+  .anno-card {
+    background: white;
+    border-radius: 16px;
+    padding: 16px 18px;
+    box-shadow: 0 2px 16px rgba(27,42,74,0.08);
+    border-left: 4px solid var(--teal);
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .anno-card.gold { border-left-color: var(--gold); }
+  .anno-card.orange { border-left-color: var(--orange); }
+  .anno-card.purple { border-left-color: var(--purple); }
+  .anno-card.pink { border-left-color: var(--pink); }
+  .anno-card.navy { border-left-color: var(--navy); }
+
+  .anno-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--teal); color: white;
+    font-size: 13px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .anno-card.gold .anno-num { background: var(--gold); color: var(--navy); }
+  .anno-card.orange .anno-num { background: var(--orange); }
+  .anno-card.purple .anno-num { background: var(--purple); }
+  .anno-card.pink .anno-num { background: var(--pink); }
+  .anno-card.navy .anno-num { background: var(--navy); }
+
+  .anno-body h4 { font-size: 13px; font-weight: 900; color: var(--navy); margin-bottom: 4px; }
+  .anno-body p { font-size: 12px; color: #5A7090; font-weight: 600; line-height: 1.5; }
+  .anno-body .tag {
+    display: inline-block;
+    background: #EEF3FF;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--navy);
+    margin-top: 6px;
+    letter-spacing: 0.04em;
+  }
+
+  /* Diff chip */
+  .diff {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 800;
+  }
+  .diff.easy { background: rgba(77,217,192,0.15); color: #22C4AA; }
+  .diff.med { background: rgba(255,122,69,0.15); color: #E85525; }
+  .diff.hard { background: rgba(124,58,237,0.15); color: #7C3AED; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ PHONE ═══════════ -->
+<div class="phone">
+  <div class="scroll-area">
+
+    <!-- STREAK BANNER -->
+    <div style="height:16px"></div>
+    <div class="streak-banner">
+      <span class="fire">🔥</span>
+      <div>
+        <p>Sequência de 5 dias!</p>
+        <span>Continue assim — amanhã você ganha um bônus especial</span>
+      </div>
+    </div>
+
+    <!-- UNIT HEADER -->
+    <div class="unit-header">
+      <div class="unit-badge">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M6 1L7.5 4.5L11 5L8.5 7.5L9 11L6 9.5L3 11L3.5 7.5L1 5L4.5 4.5Z" fill="#4DD9C0"/>
+        </svg>
+        <span>Unidade 1</span>
+      </div>
+      <div class="unit-title">Fundamentos Numéricos</div>
+      <div class="unit-desc">Matemática para faixa 6–8. Foco em fundamentos com aplicações reais e positivas.</div>
+      <div class="progress-row">
+        <span class="progress-label">Progresso da unidade</span>
+        <span class="progress-pct">40%</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" style="width:40%"></div></div>
+      <!-- Stars earned -->
+      <div class="stars-row">
+        <svg class="star" viewBox="0 0 22 22"><path d="M11 2L13.5 8.5L20.5 9L15.5 13.5L17 20.5L11 17L5 20.5L6.5 13.5L1.5 9L8.5 8.5Z" fill="#F5C842" stroke="#C88A00" stroke-width="1"/></svg>
+        <svg class="star" viewBox="0 0 22 22"><path d="M11 2L13.5 8.5L20.5 9L15.5 13.5L17 20.5L11 17L5 20.5L6.5 13.5L1.5 9L8.5 8.5Z" fill="#F5C842" stroke="#C88A00" stroke-width="1"/></svg>
+        <svg class="star" viewBox="0 0 22 22"><path d="M11 2L13.5 8.5L20.5 9L15.5 13.5L17 20.5L11 17L5 20.5L6.5 13.5L1.5 9L8.5 8.5Z" fill="#D4DFF0" stroke="#BCC8E0" stroke-width="1"/></svg>
+        <svg class="star" viewBox="0 0 22 22"><path d="M11 2L13.5 8.5L20.5 9L15.5 13.5L17 20.5L11 17L5 20.5L6.5 13.5L1.5 9L8.5 8.5Z" fill="#D4DFF0" stroke="#BCC8E0" stroke-width="1"/></svg>
+        <svg class="star" viewBox="0 0 22 22"><path d="M11 2L13.5 8.5L20.5 9L15.5 13.5L17 20.5L11 17L5 20.5L6.5 13.5L1.5 9L8.5 8.5Z" fill="#D4DFF0" stroke="#BCC8E0" stroke-width="1"/></svg>
+        <span style="font-size:11px;color:rgba(255,255,255,0.4);font-weight:700;align-self:center;margin-left:4px">2/5 estrelas</span>
+      </div>
+    </div>
+
+    <!-- TRAIL SVG BACKGROUND -->
+    <div class="trail-area">
+      <svg class="trail-svg" viewBox="0 0 350 770" preserveAspectRatio="none" style="height:770px">
+        <!-- Done segments: teal -->
+        <path d="M260 55 Q195 55 195 110 Q195 165 130 165 Q65 165 65 220" stroke="#4DD9C0" stroke-width="18" fill="none" stroke-linecap="round" stroke-dasharray="1 0"/>
+        <!-- Current/ahead: grey -->
+        <path d="M65 220 Q65 275 195 275 Q325 275 325 330 Q325 385 195 385 Q65 385 65 440 Q65 495 195 495 Q325 495 325 550 Q325 605 195 605 Q65 605 65 660 Q65 715 195 715" stroke="#C8D8F0" stroke-width="18" fill="none" stroke-linecap="round"/>
+        <!-- Completed overlay shine -->
+        <path d="M260 55 Q195 55 195 110 Q195 165 130 165 Q65 165 65 220" stroke="white" stroke-width="5" fill="none" stroke-linecap="round" stroke-opacity="0.3"/>
+      </svg>
+
+      <!-- NODE 1: Turbo (done) -->
+      <div class="node-row right">
+        <div class="node">
+          <div class="node-btn done">
+            <span class="node-icon">⚡</span>
+            <div class="check-badge">✓</div>
+            <div class="star-badge">★3</div>
+          </div>
+          <span class="node-label">Turbo</span>
+          <span class="node-sublabel">Bônus</span>
+        </div>
+      </div>
+
+      <!-- NODE 2: Lição 1 (done) -->
+      <div class="node-row center">
+        <div class="node">
+          <div class="node-btn done">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M4 7 Q4 5 6 5 L13 5 L13 22 Q8 20.5 4 22 Z" fill="white" fill-opacity="0.9"/><path d="M24 7 Q24 5 22 5 L15 5 L15 22 Q20 20.5 24 22 Z" fill="white" fill-opacity="0.9"/><path d="M14 5 L14 22" stroke="rgba(0,0,0,0.15)" stroke-width="1.5"/></svg>
+            <div class="check-badge">✓</div>
+          </div>
+          <span class="node-label">Lição 1</span>
+          <div class="xp-tag">+15 XP</div>
+        </div>
+      </div>
+
+      <!-- NODE 3: Lição 2 (ACTIVE — current) -->
+      <div class="node-row left">
+        <div class="node">
+          <div class="node-btn active">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M4 7 Q4 5 6 5 L13 5 L13 22 Q8 20.5 4 22 Z" fill="white" fill-opacity="0.9"/><path d="M24 7 Q24 5 22 5 L15 5 L15 22 Q20 20.5 24 22 Z" fill="white" fill-opacity="0.9"/><path d="M14 5 L14 22" stroke="rgba(0,0,0,0.15)" stroke-width="1.5"/></svg>
+            <div class="new-badge">JOGAR</div>
+          </div>
+          <span class="node-label">Lição 2</span>
+          <div style="display:flex;gap:4px;align-items:center">
+            <div class="diff easy">Fácil</div>
+            <div class="xp-tag">+15 XP</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NODE 4: Checkpoint (locked) -->
+      <div class="node-row right">
+        <div class="node">
+          <div class="node-btn checkpoint" style="opacity:0.5;filter:grayscale(0.4)">
+            <span class="node-icon">🚩</span>
+          </div>
+          <span class="node-label">Checkpoint</span>
+          <span class="node-sublabel">🔒 Bloqueado</span>
+        </div>
+      </div>
+
+      <!-- AXION ENCOURAGEMENT BUBBLE -->
+      <div class="axion-bubble" style="margin:4px 20px 0;position:relative;z-index:3;">
+        <!-- Mini Axion SVG -->
+        <svg class="axion-avatar" viewBox="0 0 96 96" fill="none" overflow="visible">
+          <ellipse cx="48" cy="56" rx="38" ry="40" fill="#4DD9C0" fill-opacity="0.18"/>
+          <path d="M22 62 Q14 76 17 85 Q28 78 34 68" fill="#0F1C30"/>
+          <path d="M74 62 Q82 76 79 85 Q68 78 62 68" fill="#0F1C30"/>
+          <path d="M23 58 Q48 66 73 58 L71 66 Q48 74 25 66Z" fill="#1B2A4A" stroke="#4DD9C0" stroke-width="1.5" stroke-opacity="0.8"/>
+          <path d="M23 58 Q48 66 73 58" fill="none" stroke="#4DD9C0" stroke-width="2" stroke-linecap="round"/>
+          <ellipse cx="48" cy="62" rx="28" ry="30" fill="#1B2A4A"/>
+          <path d="M48 54 L52 60 L48 66 L44 60Z" fill="#F5C842" fill-opacity="0.9"/>
+          <ellipse cx="48" cy="44" rx="26" ry="28" fill="#2D4A7A"/>
+          <ellipse cx="22" cy="44" rx="4" ry="5.5" fill="#2D4A7A"/>
+          <ellipse cx="74" cy="44" rx="4" ry="5.5" fill="#2D4A7A"/>
+          <path d="M29 42 Q36 34 43 42" stroke="#1B2A4A" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+          <path d="M53 42 Q60 34 67 42" stroke="#1B2A4A" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+          <path d="M33 53 Q48 67 63 53" fill="#1B2A4A"/><path d="M35 54 Q48 65 61 54" fill="white"/>
+          <ellipse cx="48" cy="61" rx="8" ry="5" fill="#E8709A" fill-opacity="0.75"/>
+          <rect x="30" y="18" width="36" height="8" rx="4" fill="#F5C842" stroke="#C8990A" stroke-width="1"/>
+          <path d="M33 18 L33 9 L39 15 L48 6 L57 15 L63 9 L63 18Z" fill="#F5C842" stroke="#C8990A" stroke-width="1"/>
+          <ellipse cx="48" cy="13" rx="3.5" ry="3.5" fill="#4DD9C0"/>
+          <ellipse cx="36" cy="17" rx="2.5" ry="2.5" fill="#E8709A"/>
+          <ellipse cx="60" cy="17" rx="2.5" ry="2.5" fill="#E8709A"/>
+        </svg>
+        <div class="bubble-text">
+          <p>Você está arrasando! 🔥<br>Só mais <strong>1 lição</strong> para o Checkpoint. Vamos lá!</p>
+        </div>
+        <div class="bubble-tail"></div>
+      </div>
+
+      <!-- NODE 5: Lição 3 (locked) -->
+      <div class="node-row center" style="margin-top:0">
+        <div class="node">
+          <div class="node-btn locked">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 7 Q4 5 6 5 L11 5 L11 19 Q7 17.5 4 19 Z" fill="#8A9BBD" fill-opacity="0.6"/><path d="M20 7 Q20 5 18 5 L13 5 L13 19 Q17 17.5 20 19 Z" fill="#8A9BBD" fill-opacity="0.6"/><path d="M12 5 L12 19" stroke="#8A9BBD" stroke-width="1.2"/></svg>
+          </div>
+          <span class="node-label">Lição 3</span>
+          <div class="diff med">Média</div>
+        </div>
+      </div>
+
+      <!-- NODE 6: Baú (locked) -->
+      <div class="node-row left">
+        <div class="node">
+          <div class="node-btn chest" style="opacity:0.45;filter:grayscale(0.5)">
+            <span class="node-icon">🎁</span>
+          </div>
+          <span class="node-label">Baú</span>
+          <span class="node-sublabel">Recompensa</span>
+        </div>
+      </div>
+
+      <!-- NODE 7: Mini-Boss (locked) -->
+      <div class="node-row right">
+        <div class="node">
+          <div class="node-btn boss" style="opacity:0.4;filter:grayscale(0.5)">
+            <span class="node-icon">⚔️</span>
+          </div>
+          <span class="node-label">Mini-Boss</span>
+          <div class="diff hard">Difícil</div>
+        </div>
+      </div>
+
+      <!-- NODE 8: Portal (locked) -->
+      <div class="node-row center">
+        <div class="node">
+          <div class="node-btn portal" style="opacity:0.4">
+            <span style="font-size:24px">🔐</span>
+          </div>
+          <span class="node-label">Portal</span>
+          <span class="node-sublabel">Próxima unidade</span>
+        </div>
+      </div>
+
+      <div style="height:30px"></div>
+    </div>
+
+    <!-- NEXT UNIT TEASER -->
+    <div class="section-div">
+      <div class="section-div-icon">🧮</div>
+      <div class="section-div-text">
+        <h3>Unidade 2: Operações</h3>
+        <p>Desbloqueie após completar a Unidade 1</p>
+      </div>
+      <button class="expand-btn" style="opacity:0.4;cursor:default">🔒</button>
+    </div>
+
+  </div><!-- end scroll -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <div class="nav-btn">
+      <img src="../icons-v2/inicio.svg"/>
+      <span>Início</span>
+    </div>
+    <div class="nav-btn active">
+      <img src="../icons-v2/aprender.svg"/>
+      <span style="color:var(--teal)">Aprender</span>
+    </div>
+    <div class="nav-btn">
+      <img src="../icons-v2/figurinhas.svg"/>
+      <span>Figurinhas</span>
+    </div>
+    <div class="nav-btn">
+      <img src="../icons-v2/jogos.svg"/>
+      <span>Jogos</span>
+    </div>
+    <div class="nav-btn">
+      <img src="../icons-v2/loja.svg"/>
+      <span>Loja</span>
+    </div>
+    <div class="nav-btn">
+      <img src="../icons-v2/axion.svg"/>
+      <span>Axion</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ ANNOTATIONS ═══════════ -->
+<div class="annotations">
+  <div>
+    <div class="anno-title">💡 Sugestões de melhoria</div>
+    <div class="anno-sub">Comparado à trilha atual — o que muda e por quê</div>
+  </div>
+
+  <div class="anno-card">
+    <div class="anno-num">1</div>
+    <div class="anno-body">
+      <h4>Trilha com estados visuais claros</h4>
+      <p>Cada nó tem 4 estados distintos: <b>concluído</b> (teal + ✓), <b>ativo</b> (dourado pulsando), <b>bloqueado</b> (cinza opaco) e <b>disponível</b>. Hoje todos parecem iguais.</p>
+      <span class="tag">↑ Clareza de progresso</span>
+    </div>
+  </div>
+
+  <div class="anno-card gold">
+    <div class="anno-num" style="background:#F5C842;color:#1B2A4A">2</div>
+    <div class="anno-body">
+      <h4>Trilha colorida por progresso</h4>
+      <p>O caminho já percorrido fica <b>teal/verde</b> e brilhante. O trecho futuro fica <b>cinza claro</b>. Cria sensação de avanço real, como o Duolingo faz.</p>
+      <span class="tag">↑ Motivação visual</span>
+    </div>
+  </div>
+
+  <div class="anno-card orange">
+    <div class="anno-num" style="background:#FF7A45">3</div>
+    <div class="anno-body">
+      <h4>Dificuldade visível em cada nó</h4>
+      <p>Chips de <b>Fácil / Média / Difícil</b> embaixo de cada lição. A criança e os pais conseguem planejar antes de entrar.</p>
+      <span class="tag">↑ Transparência pedagógica</span>
+    </div>
+  </div>
+
+  <div class="anno-card" style="border-left-color:#E8709A">
+    <div class="anno-num" style="background:#E8709A">4</div>
+    <div class="anno-body">
+      <h4>Axion como coach na trilha</h4>
+      <p>Uma bolha de diálogo do Axion aparece <b>no meio da trilha</b> com mensagem contextual (ex: "1 lição para o checkpoint!"). Reforça o vínculo com o mascote.</p>
+      <span class="tag">↑ Engajamento emocional</span>
+    </div>
+  </div>
+
+  <div class="anno-card purple">
+    <div class="anno-num" style="background:#7C3AED">5</div>
+    <div class="anno-body">
+      <h4>Estrelas por unidade</h4>
+      <p>O header da unidade mostra <b>quantas estrelas</b> foram conquistadas (ex: 2/5). Cria meta clara de perfeição por unidade — loop de rejogo.</p>
+      <span class="tag">↑ Retenção / rejogo</span>
+    </div>
+  </div>
+
+  <div class="anno-card navy">
+    <div class="anno-num">6</div>
+    <div class="anno-body">
+      <h4>XP visível em cada nó</h4>
+      <p>Tag "+15 XP" embaixo da lição. A criança sabe quanto vai ganhar <b>antes</b> de clicar. Incentiva completar nós de maior XP.</p>
+      <span class="tag">↑ Motivação por recompensa</span>
+    </div>
+  </div>
+
+  <div class="anno-card" style="border-left-color:#FF7A45">
+    <div class="anno-num" style="background:#FF7A45">7</div>
+    <div class="anno-body">
+      <h4>Banner de sequência no topo</h4>
+      <p>Mostra o <b>streak de dias</b> com cor quente. Se a criança está em risco de perder a sequência, o banner muda para alerta.</p>
+      <span class="tag">↑ Hábito diário</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

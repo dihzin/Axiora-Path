@@ -21,6 +21,7 @@ import {
   ApiError,
   completeDailyMission,
   getDailyMission,
+  getAxionBrief,
   getApiErrorMessage,
   getMe,
   getAxionState,
@@ -178,6 +179,10 @@ export default function ChildPage() {
   const celebrationTimerRef = useRef<number | null>(null);
   const previousGoalRef = useRef<{ id: number; isLocked: boolean } | null>(null);
   const todayIso = new Date().toISOString().slice(0, 10);
+
+  useEffect(() => {
+    void getAxionBrief({ context: "child_tab" }).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const rawChildId = localStorage.getItem("axiora_child_id");

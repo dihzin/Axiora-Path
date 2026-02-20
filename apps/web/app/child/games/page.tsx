@@ -9,7 +9,7 @@ import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { getAchievements, getLevels, getStoreItems, type AchievementItem, type LevelResponse } from "@/lib/api/client";
+import { getAchievements, getAxionBrief, getLevels, getStoreItems, type AchievementItem, type LevelResponse } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 
 type GameItem = {
@@ -66,6 +66,10 @@ export default function ChildGamesPage() {
   const [levelData, setLevelData] = useState<LevelResponse | null>(null);
   const [achievements, setAchievements] = useState<AchievementItem[]>([]);
   const [axionCoins, setAxionCoins] = useState(0);
+
+  useEffect(() => {
+    void getAxionBrief({ context: "games_tab" }).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const raw = localStorage.getItem("axiora_child_id");

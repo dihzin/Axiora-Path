@@ -189,6 +189,65 @@ class WeeklyMissionType(str, Enum):
     MINI_BOSS_WINS = "MINI_BOSS_WINS"
 
 
+class AxionSignalType(str, Enum):
+    LESSON_COMPLETED = "LESSON_COMPLETED"
+    LESSON_FAILED = "LESSON_FAILED"
+    GAME_PLAYED = "GAME_PLAYED"
+    TASK_APPROVED = "TASK_APPROVED"
+    TASK_REJECTED = "TASK_REJECTED"
+    COIN_CONVERTED = "COIN_CONVERTED"
+    INACTIVE_DAY = "INACTIVE_DAY"
+
+
+class AxionDecisionContext(str, Enum):
+    CHILD_TAB = "child_tab"
+    BEFORE_LEARNING = "before_learning"
+    AFTER_LEARNING = "after_learning"
+    GAMES_TAB = "games_tab"
+    WALLET_TAB = "wallet_tab"
+
+
+class AxionMessageTone(str, Enum):
+    CALM = "CALM"
+    ENCOURAGE = "ENCOURAGE"
+    CHALLENGE = "CHALLENGE"
+    CELEBRATE = "CELEBRATE"
+    SUPPORT = "SUPPORT"
+
+
+class AxionRiskStatus(str, Enum):
+    HEALTHY = "HEALTHY"
+    AT_RISK = "AT_RISK"
+
+
+class TemporaryBoostType(str, Enum):
+    XP_MULTIPLIER = "XP_MULTIPLIER"
+    DIFFICULTY_CAP = "DIFFICULTY_CAP"
+    ENERGY_DISCOUNT = "ENERGY_DISCOUNT"
+
+
+class AxionOutcomeMetricType(str, Enum):
+    XP_GAIN = "XP_GAIN"
+    SESSION_COMPLETED = "SESSION_COMPLETED"
+    STREAK_MAINTAINED = "STREAK_MAINTAINED"
+    REVIEW_DONE = "REVIEW_DONE"
+
+
+class LLMUseCase(str, Enum):
+    REWRITE_MESSAGE = "REWRITE_MESSAGE"
+    EXPLAIN_MISTAKE = "EXPLAIN_MISTAKE"
+    GENERATE_VARIANTS = "GENERATE_VARIANTS"
+    PARENT_INSIGHT = "PARENT_INSIGHT"
+
+
+class LLMUsageStatus(str, Enum):
+    HIT = "HIT"
+    MISS = "MISS"
+    BLOCKED = "BLOCKED"
+    FAILED = "FAILED"
+    FALLBACK = "FALLBACK"
+
+
 class Tenant(Base):
     __tablename__ = "tenants"
 
@@ -1345,6 +1404,379 @@ class UserPathEvent(Base):
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     reward_granted: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+
+
+class UserBehaviorMetrics(Base):
+    __tablename__ = "user_behavior_metrics"
+    __table_args__ = (
+        UniqueConstraint("user_id", name="uq_user_behavior_metrics_user_id"),
+        Index("ix_user_behavior_metrics_user_id", "user_id"),
+        Index("ix_user_behavior_metrics_updated_at", "updated_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    rhythm_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False, server_default="0")
+    frustration_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False, server_default="0")
+    confidence_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False, server_default="0")
+    dropout_risk: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False, server_default="0")
+    learning_momentum: Mapped[float] = mapped_column(Numeric(8, 4), nullable=False, server_default="0")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class AxionDecisionLog(Base):
+    __tablename__ = "axion_decision_logs"
+    __table_args__ = (
+        Index("ix_axion_decision_logs_user_id", "user_id"),
+        Index("ix_axion_decision_logs_created_at", "created_at"),
+        Index("ix_axion_decision_logs_decision_type", "decision_type"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    decision_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    context: Mapped[str] = mapped_column(Text, nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AxionMessageTemplate(Base):
+    __tablename__ = "axion_message_templates"
+    __table_args__ = (
+        Index("ix_axion_message_templates_context", "context"),
+        Index("ix_axion_message_templates_tone", "tone"),
+        Index("ix_axion_message_templates_enabled", "enabled"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    context: Mapped[str] = mapped_column(String(80), nullable=False)
+    tone: Mapped[AxionMessageTone] = mapped_column(
+        SqlEnum(AxionMessageTone, name="axion_message_tone"),
+        nullable=False,
+        server_default=text("'ENCOURAGE'"),
+    )
+    tags: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, server_default=text("'{}'::text[]"))
+    conditions: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
+    message_text: Mapped[str] = mapped_column("text", Text, nullable=False)
+    weight: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AxionMessageHistory(Base):
+    __tablename__ = "axion_message_history"
+    __table_args__ = (
+        Index("ix_axion_message_history_user_used_at", "user_id", "used_at"),
+        Index("ix_axion_message_history_template_id", "template_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    template_id: Mapped[int] = mapped_column(ForeignKey("axion_message_templates.id"), nullable=False)
+    context: Mapped[str] = mapped_column(String(80), nullable=False)
+    used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AxionPersona(Base):
+    __tablename__ = "axion_personas"
+    __table_args__ = (
+        UniqueConstraint("name", name="uq_axion_personas_name"),
+        Index("ix_axion_personas_name", "name"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    tone_bias: Mapped[str] = mapped_column(String(32), nullable=False)
+    reward_bias: Mapped[float] = mapped_column(Numeric(4, 2), nullable=False, server_default="1.00")
+    challenge_bias: Mapped[float] = mapped_column(Numeric(4, 2), nullable=False, server_default="1.00")
+    message_style_key: Mapped[str] = mapped_column(String(80), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class UserPersonaState(Base):
+    __tablename__ = "user_persona_state"
+    __table_args__ = (
+        Index("ix_user_persona_state_active_persona", "active_persona_id"),
+    )
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    active_persona_id: Mapped[int] = mapped_column(ForeignKey("axion_personas.id"), nullable=False)
+    auto_switch_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    last_switch_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AxionUserState(Base):
+    __tablename__ = "axion_user_state"
+    __table_args__ = (
+        UniqueConstraint("user_id", name="uq_axion_user_state_user_id"),
+        Index("ix_axion_user_state_user_id", "user_id"),
+        Index("ix_axion_user_state_updated_at", "updated_at"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        nullable=False,
+        server_default=text("gen_random_uuid()"),
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    rhythm_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False, server_default="0")
+    frustration_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False, server_default="0")
+    confidence_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False, server_default="0")
+    dropout_risk_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False, server_default="0")
+    learning_momentum: Mapped[float] = mapped_column(Numeric(8, 4), nullable=False, server_default="0")
+    risk_status: Mapped[AxionRiskStatus] = mapped_column(
+        SqlEnum(AxionRiskStatus, name="axion_risk_status", values_callable=_enum_values),
+        nullable=False,
+        server_default=text("'HEALTHY'"),
+    )
+    last_active_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class AxionSignal(Base):
+    __tablename__ = "axion_signals"
+    __table_args__ = (
+        Index("ix_axion_signals_user_id", "user_id"),
+        Index("ix_axion_signals_type_created_at", "type", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        nullable=False,
+        server_default=text("gen_random_uuid()"),
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    type: Mapped[AxionSignalType] = mapped_column(
+        SqlEnum(AxionSignalType, name="axion_signal_type"),
+        nullable=False,
+    )
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AxionDecision(Base):
+    __tablename__ = "axion_decisions"
+    __table_args__ = (
+        Index("ix_axion_decisions_user_context_created_at", "user_id", "context", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        nullable=False,
+        server_default=text("gen_random_uuid()"),
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    context: Mapped[AxionDecisionContext] = mapped_column(
+        SqlEnum(AxionDecisionContext, name="axion_decision_context", values_callable=_enum_values),
+        nullable=False,
+    )
+    decisions: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'[]'::jsonb"),
+    )
+    primary_message_key: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    debug: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AxionPolicyRule(Base):
+    __tablename__ = "axion_policy_rules"
+    __table_args__ = (
+        Index("ix_axion_policy_rules_context_priority", "context", "priority"),
+        Index("ix_axion_policy_rules_enabled", "enabled"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(140), nullable=False)
+    context: Mapped[AxionDecisionContext] = mapped_column(
+        SqlEnum(AxionDecisionContext, name="axion_decision_context", values_callable=_enum_values),
+        nullable=False,
+    )
+    condition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
+    actions: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'[]'::jsonb"),
+    )
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, server_default="100")
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class UserTemporaryBoost(Base):
+    __tablename__ = "user_temporary_boosts"
+    __table_args__ = (
+        Index("ix_user_temporary_boosts_user_type_expires", "user_id", "type", "expires_at"),
+        Index("ix_user_temporary_boosts_expires_at", "expires_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    type: Mapped[TemporaryBoostType] = mapped_column(
+        SqlEnum(TemporaryBoostType, name="temporary_boost_type"),
+        nullable=False,
+    )
+    value: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AxionPolicyRuleVersion(Base):
+    __tablename__ = "axion_policy_rule_versions"
+    __table_args__ = (
+        UniqueConstraint("rule_id", "version", name="uq_axion_policy_rule_versions_rule_version"),
+        Index("ix_axion_policy_rule_versions_rule_id", "rule_id"),
+        Index("ix_axion_policy_rule_versions_created_at", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        nullable=False,
+        server_default=text("gen_random_uuid()"),
+    )
+    rule_id: Mapped[int] = mapped_column(ForeignKey("axion_policy_rules.id", ondelete="CASCADE"), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    snapshot: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
+    created_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AxionMessageTemplateVersion(Base):
+    __tablename__ = "axion_message_template_versions"
+    __table_args__ = (
+        UniqueConstraint("template_id", "version", name="uq_axion_message_template_versions_template_version"),
+        Index("ix_axion_message_template_versions_template_id", "template_id"),
+        Index("ix_axion_message_template_versions_created_at", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        nullable=False,
+        server_default=text("gen_random_uuid()"),
+    )
+    template_id: Mapped[int] = mapped_column(ForeignKey("axion_message_templates.id", ondelete="CASCADE"), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    snapshot: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
+    created_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AxionStudioAuditLog(Base):
+    __tablename__ = "axion_studio_audit_logs"
+    __table_args__ = (
+        Index("ix_axion_studio_audit_logs_actor_user_id", "actor_user_id"),
+        Index("ix_axion_studio_audit_logs_entity", "entity_type", "entity_id"),
+        Index("ix_axion_studio_audit_logs_created_at", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    actor_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    action: Mapped[str] = mapped_column(String(40), nullable=False)
+    entity_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    entity_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    diff: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AxionOutcomeMetric(Base):
+    __tablename__ = "axion_outcome_metrics"
+    __table_args__ = (
+        UniqueConstraint("decision_id", "metric_type", "measured_at", name="uq_axion_outcome_metric_once"),
+        Index("ix_axion_outcome_metrics_user_measured_at", "user_id", "measured_at"),
+        Index("ix_axion_outcome_metrics_decision_id", "decision_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    decision_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("axion_decisions.id", ondelete="CASCADE"), nullable=False)
+    metric_type: Mapped[AxionOutcomeMetricType] = mapped_column(
+        SqlEnum(AxionOutcomeMetricType, name="axion_outcome_metric_type", values_callable=_enum_values),
+        nullable=False,
+    )
+    value_before: Mapped[float] = mapped_column(Numeric(12, 4), nullable=False, server_default="0")
+    value_after: Mapped[float] = mapped_column(Numeric(12, 4), nullable=False, server_default="0")
+    delta: Mapped[float] = mapped_column(Numeric(12, 4), nullable=False, server_default="0")
+    measured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class LLMSettings(Base):
+    __tablename__ = "llm_settings"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", name="uq_llm_settings_tenant_id"),
+        Index("ix_llm_settings_tenant_id", "tenant_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    provider_key: Mapped[str] = mapped_column(String(80), nullable=False, server_default=text("'noop'"))
+    daily_token_budget: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    per_user_daily_limit: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    allowed_use_cases: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class LLMUsageLog(Base):
+    __tablename__ = "llm_usage_logs"
+    __table_args__ = (
+        Index("ix_llm_usage_logs_tenant_created_at", "tenant_id", "created_at"),
+        Index("ix_llm_usage_logs_user_created_at", "user_id", "created_at"),
+        Index("ix_llm_usage_logs_use_case", "use_case"),
+        Index("ix_llm_usage_logs_status", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    use_case: Mapped[LLMUseCase] = mapped_column(
+        SqlEnum(LLMUseCase, name="llm_use_case", values_callable=_enum_values),
+        nullable=False,
+    )
+    prompt_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    cache_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    tokens_estimated: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    latency_ms: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    status: Mapped[LLMUsageStatus] = mapped_column(
+        SqlEnum(LLMUsageStatus, name="llm_usage_status", values_callable=_enum_values),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class LLMCache(Base):
+    __tablename__ = "llm_cache"
+    __table_args__ = (
+        UniqueConstraint("cache_key", name="uq_llm_cache_cache_key"),
+        Index("ix_llm_cache_expires_at", "expires_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    cache_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
 DEFAULT_FAMILY_TASKS: list[dict[str, str | int | TaskDifficulty]] = [

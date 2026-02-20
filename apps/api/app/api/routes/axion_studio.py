@@ -21,6 +21,7 @@ from app.models import (
     User,
 )
 from app.schemas.axion_studio import (
+    AxionImpactResponse,
     AxionMessageTemplateCreate,
     AxionMessageTemplateOut,
     AxionMessageTemplatePatch,
@@ -34,6 +35,7 @@ from app.schemas.axion_studio import (
     AxionStudioUserOption,
     AxionVersionOut,
 )
+from app.services.axion_impact import computeAxionImpact
 from app.services.axion_core_v2 import computeAxionState, evaluate_policies
 from app.services.axion_facts import buildAxionFacts
 from app.services.axion_messaging import generate_axion_message
@@ -594,6 +596,27 @@ def preview_users(
     return list(dedup.values())
 
 
+@router.get("/api/platform-admin/axion/impact", response_model=AxionImpactResponse)
+def axion_impact(
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+    userId: int = Query(...),
+    days: int = Query(default=7),
+) -> AxionImpactResponse:
+    _require_platform_admin(user)
+    summary = computeAxionImpact(db, userId=userId, days=max(1, days))
+    return AxionImpactResponse(
+        userId=userId,
+        days=max(1, days),
+        decisionsTotal=int(summary["decisionsTotal"]),
+        improvementRatePercent=float(summary["improvementRatePercent"]),
+        avgXpDeltaAfterBoost=float(summary["avgXpDeltaAfterBoost"]),
+        avgFrustrationDeltaAfterDifficultyCap=float(summary["avgFrustrationDeltaAfterDifficultyCap"]),
+        avgDropoutRiskDelta=float(summary["avgDropoutRiskDelta"]),
+        masteryGrowthProxy=float(summary["masteryGrowthProxy"]),
+    )
+
+
 @router.post("/api/platform-admin/axion/preview", response_model=AxionPreviewResponse)
 async def preview_axion(
     payload: AxionPreviewRequest,
@@ -618,6 +641,7 @@ async def preview_axion(
             "recentApproved": int((facts.get("recentApprovals") or {}).get("approved", 0)),
             "recentRejected": int((facts.get("recentApprovals") or {}).get("rejected", 0)),
         },
+        user_id=payload.userId,
     )
     message_facts = dict(facts)
     message_facts["energy"] = int((facts.get("energy") or {}).get("current", 0))

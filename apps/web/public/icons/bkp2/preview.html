@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Axiora — Ícones v2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap');
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: #0C1220;
+    font-family: 'Nunito', sans-serif;
+    color: white;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px 72px;
+    gap: 52px;
+  }
+
+  h1 { font-size: 1.7rem; font-weight: 900; color: #F5C842; letter-spacing: -0.02em; }
+  .sub { color: #4A6080; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 6px; }
+
+  section { width: 100%; max-width: 680px; }
+  .sec-label {
+    font-size: 10px; font-weight: 900;
+    color: #4DD9C0; letter-spacing: 0.2em; text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  /* Grid showcase */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+  }
+
+  .cell {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    cursor: pointer;
+  }
+  .icon-wrap {
+    width: 72px; height: 72px;
+    transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1);
+    cursor: pointer;
+  }
+  .icon-wrap:hover { transform: scale(1.18) translateY(-5px); }
+  .icon-wrap:active { transform: scale(0.93); }
+  .icon-wrap img { width: 100%; height: 100%; }
+  .cell-label {
+    font-size: 10px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.08em; color: #4A6080;
+  }
+
+  /* Phone nav sim */
+  .phone {
+    background: #EEF3FB;
+    border-radius: 32px;
+    overflow: hidden;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 0 0 2px #1E2A40, 0 24px 64px rgba(0,0,0,0.55);
+    margin: 0 auto;
+  }
+  .fake-screen {
+    height: 90px;
+    background: linear-gradient(180deg, #F4F7FF, #EEF3FB);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fake-screen span {
+    font-size: 11px; font-weight: 800; color: #C0CCDC;
+    letter-spacing: 0.15em; text-transform: uppercase;
+  }
+
+  .navbar {
+    background: rgba(255,255,255,0.97);
+    border-top: 1.5px solid rgba(77,217,192,0.18);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 10px 4px 20px;
+  }
+  .nav-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    cursor: pointer; padding: 6px 8px; border-radius: 14px;
+    transition: background 0.15s;
+  }
+  .nav-btn:hover { background: rgba(77,217,192,0.08); }
+  .nav-btn img {
+    width: 40px; height: 40px;
+    transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .nav-btn:hover img { transform: scale(1.2) translateY(-4px); }
+  .nav-btn.active img { transform: scale(1.15) translateY(-3px); }
+  .nav-btn span {
+    font-size: 9.5px; font-weight: 800;
+    color: #B8C8DC; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .nav-btn.active span { color: #22C4AA; }
+
+  /* Sizes row */
+  .sizes {
+    background: #131C2E;
+    border: 1px solid rgba(77,217,192,0.1);
+    border-radius: 18px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .sz { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .sz span { font-size: 9px; font-weight: 800; color: #4A6080; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  /* Light bg sizes -->
+  .sizes-light {
+    background: white;
+    border-radius: 18px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    flex-wrap: wrap;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+  }
+  .sizes-light .sz span { color: #9BACC0; }
+</style>
+</head>
+<body>
+
+<header style="text-align:center">
+  <h1>⚡ Ícones v2 — Refinados</h1>
+  <p class="sub">Axiora Path · Mais bold · Mais legível · Mais Duolingo</p>
+</header>
+
+<!-- BIG GRID -->
+<section>
+  <p class="sec-label">Vitrine — 72px</p>
+  <div class="grid">
+    <div class="cell">
+      <div class="icon-wrap"><img src="inicio.svg"/></div>
+      <span class="cell-label">Início</span>
+    </div>
+    <div class="cell">
+      <div class="icon-wrap"><img src="aprender.svg"/></div>
+      <span class="cell-label">Aprender</span>
+    </div>
+    <div class="cell">
+      <div class="icon-wrap"><img src="figurinhas.svg"/></div>
+      <span class="cell-label">Figurinhas</span>
+    </div>
+    <div class="cell">
+      <div class="icon-wrap"><img src="jogos.svg"/></div>
+      <span class="cell-label">Jogos</span>
+    </div>
+    <div class="cell">
+      <div class="icon-wrap"><img src="loja.svg"/></div>
+      <span class="cell-label">Loja</span>
+    </div>
+    <div class="cell">
+      <div class="icon-wrap"><img src="axion.svg"/></div>
+      <span class="cell-label">Axion</span>
+    </div>
+  </div>
+</section>
+
+<!-- PHONE NAVBAR -->
+<section>
+  <p class="sec-label">Simulação — navbar real (clicável)</p>
+  <div class="phone">
+    <div class="fake-screen"><span>✦ conteúdo do app ✦</span></div>
+    <div class="navbar">
+      <div class="nav-btn active" onclick="setActive(this)">
+        <img src="inicio.svg"/><span>Início</span>
+      </div>
+      <div class="nav-btn" onclick="setActive(this)">
+        <img src="aprender.svg"/><span>Aprender</span>
+      </div>
+      <div class="nav-btn" onclick="setActive(this)">
+        <img src="figurinhas.svg"/><span>Figurinhas</span>
+      </div>
+      <div class="nav-btn" onclick="setActive(this)">
+        <img src="jogos.svg"/><span>Jogos</span>
+      </div>
+      <div class="nav-btn" onclick="setActive(this)">
+        <img src="loja.svg"/><span>Loja</span>
+      </div>
+      <div class="nav-btn" onclick="setActive(this)">
+        <img src="axion.svg"/><span>Axion</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SIZE SCALE — dark -->
+<section>
+  <p class="sec-label">Legibilidade em escala — fundo escuro</p>
+  <div class="sizes">
+    <div class="sz"><img src="axion.svg" width="64" height="64"/><span>64px</span></div>
+    <div class="sz"><img src="aprender.svg" width="48" height="48"/><span>48px</span></div>
+    <div class="sz"><img src="jogos.svg" width="40" height="40"/><span>40px</span></div>
+    <div class="sz"><img src="figurinhas.svg" width="32" height="32"/><span>32px</span></div>
+    <div class="sz"><img src="loja.svg" width="24" height="24"/><span>24px</span></div>
+    <div class="sz"><img src="inicio.svg" width="18" height="18"/><span>18px</span></div>
+  </div>
+</section>
+
+<!-- SIZE SCALE — light -->
+<section>
+  <p class="sec-label">Legibilidade em escala — fundo claro (app)</p>
+  <div class="sizes-light">
+    <div class="sz"><img src="inicio.svg" width="64" height="64"/><span style="color:#9BACC0">64px</span></div>
+    <div class="sz"><img src="figurinhas.svg" width="48" height="48"/><span style="color:#9BACC0">48px</span></div>
+    <div class="sz"><img src="axion.svg" width="40" height="40"/><span style="color:#9BACC0">40px</span></div>
+    <div class="sz"><img src="jogos.svg" width="32" height="32"/><span style="color:#9BACC0">32px</span></div>
+    <div class="sz"><img src="aprender.svg" width="24" height="24"/><span style="color:#9BACC0">24px</span></div>
+    <div class="sz"><img src="loja.svg" width="18" height="18"/><span style="color:#9BACC0">18px</span></div>
+  </div>
+</section>
+
+<script>
+  function setActive(btn) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

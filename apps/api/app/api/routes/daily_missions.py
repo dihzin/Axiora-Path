@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import DBSession, EventSvc, get_current_tenant, get_current_user, require_role
 from app.models import (
@@ -49,7 +50,21 @@ def get_or_generate_daily_mission(
     if child is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
 
-    mission = generate_daily_mission(db, child, current_tenant_id=tenant.id)
+    try:
+        mission = generate_daily_mission(db, child, current_tenant_id=tenant.id)
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Daily mission service unavailable. Try again in a moment.",
+        ) from exc
+    except Exception as exc:
+        db.rollback()
+        logger.exception("daily_mission_generation_failed", extra={"tenant_id": tenant.id, "child_id": child_id})
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Daily mission service unavailable. Try again in a moment.",
+        ) from exc
     return DailyMissionResponse(
         id=str(mission.id),
         date=mission.date,

@@ -10,11 +10,13 @@ from sqlalchemy.orm import Session
 from app.models import (
     ChildProfile,
     SeasonEvent,
+    Skill,
     Subject,
     SubjectAgeGroup,
     UserCalendarActivity,
     UserLearningStreak,
     UserMissionProgress,
+    UserSkillMastery,
     WeeklyMission,
     WeeklyMissionType,
 )
@@ -322,6 +324,131 @@ def ensure_weekly_missions_for_user(
 
     _ensure_progress_rows(db, user_id=user_id, missions=current)
     return current
+
+
+def inject_axion_micro_mission(
+    db: Session,
+    *,
+    user_id: int,
+    tenant_id: int | None,
+    title: str | None = None,
+    description: str | None = None,
+    mission_kind: str | None = None,
+) -> WeeklyMission:
+    def _normalize_kind(value: str | None) -> str:
+        allowed = {"QUICK_REVIEW", "EASY_WIN", "MINI_GAME", "WEAKEST_SKILL_BURST"}
+        normalized = (value or "").strip().upper()
+        return normalized if normalized in allowed else ""
+
+    def _weakest_skill_hint() -> tuple[str | None, int | None]:
+        row = db.execute(
+            select(Skill.name, Skill.subject_id)
+            .select_from(UserSkillMastery)
+            .join(Skill, Skill.id == UserSkillMastery.skill_id)
+            .where(UserSkillMastery.user_id == user_id)
+            .order_by(UserSkillMastery.mastery.asc(), UserSkillMastery.updated_at.asc())
+            .limit(1)
+        ).first()
+        if row is None:
+            return None, None
+        return str(row[0]), int(row[1]) if row[1] is not None else None
+
+    def _pick_kind(today_value: date, fallback: str) -> str:
+        forced = _normalize_kind(mission_kind)
+        if forced:
+            return forced
+        kinds = ("QUICK_REVIEW", "EASY_WIN", "MINI_GAME", "WEAKEST_SKILL_BURST")
+        idx = (int(user_id) + today_value.toordinal()) % len(kinds)
+        if fallback and fallback in kinds:
+            return fallback
+        return kinds[idx]
+
+    def _blueprint(kind: str, weakest_skill: str | None, fallback_subject_id: int | None) -> dict[str, object]:
+        skill_label = weakest_skill or "seu foco de hoje"
+        if kind == "QUICK_REVIEW":
+            return {
+                "title": "Micro Missao: Revisao Relampago",
+                "description": "3 perguntas rapidas para aquecer e ganhar confianca.",
+                "mission_type": WeeklyMissionType.XP_GAINED,
+                "target_value": 18,
+                "xp_reward": 22,
+                "coin_reward": 7,
+                "subject_id": fallback_subject_id,
+            }
+        if kind == "MINI_GAME":
+            return {
+                "title": "Micro Missao: Jogo Inteligente",
+                "description": "Jogue 1 mini jogo curto e acumule XP extra.",
+                "mission_type": WeeklyMissionType.XP_GAINED,
+                "target_value": 12,
+                "xp_reward": 20,
+                "coin_reward": 8,
+                "subject_id": fallback_subject_id,
+            }
+        if kind == "WEAKEST_SKILL_BURST":
+            return {
+                "title": "Micro Missao: Foco no Ponto Fraco",
+                "description": f"Explosao de treino em {skill_label}: sessao curta e vitoria rapida.",
+                "mission_type": WeeklyMissionType.XP_GAINED,
+                "target_value": 16,
+                "xp_reward": 24,
+                "coin_reward": 9,
+                "subject_id": fallback_subject_id,
+            }
+        return {
+            "title": "Micro Missao: Vitoria Facil",
+            "description": "Complete 1 licao curtinha para entrar no ritmo com sucesso.",
+            "mission_type": WeeklyMissionType.LESSONS_COMPLETED,
+            "target_value": 1,
+            "xp_reward": 25,
+            "coin_reward": 8,
+            "subject_id": fallback_subject_id,
+        }
+
+    today = date.today()
+    start_date, end_date = _week_bounds(today)
+    age_group = _resolve_user_age_group(db, user_id=user_id, tenant_id=tenant_id)
+    weakest_skill_name, weakest_skill_subject_id = _weakest_skill_hint()
+    subject_id = weakest_skill_subject_id or _pick_subject_for_age_group(db, age_group=age_group)
+    kind = _pick_kind(today, fallback="EASY_WIN" if title and description else "")
+    payload = _blueprint(kind, weakest_skill_name, subject_id)
+
+    if title and description:
+        payload["title"] = title
+        payload["description"] = description
+    theme_key = f"axion_micro_{user_id}_{today.strftime('%Y%m%d')}_{kind.lower()}"
+
+    existing = db.scalar(
+        select(WeeklyMission).where(
+            WeeklyMission.age_group == age_group,
+            WeeklyMission.start_date == start_date,
+            WeeklyMission.end_date == end_date,
+            WeeklyMission.theme_key == theme_key,
+            WeeklyMission.is_seasonal.is_(True),
+        )
+    )
+    if existing is not None:
+        _ensure_progress_rows(db, user_id=user_id, missions=[existing])
+        return existing
+
+    mission = WeeklyMission(
+        title=str(payload["title"]),
+        description=str(payload["description"]),
+        age_group=age_group,
+        subject_id=subject_id,
+        mission_type=payload["mission_type"],
+        target_value=int(payload["target_value"]),
+        xp_reward=int(payload["xp_reward"]),
+        coin_reward=int(payload["coin_reward"]),
+        start_date=start_date,
+        end_date=end_date,
+        is_seasonal=True,
+        theme_key=theme_key,
+    )
+    db.add(mission)
+    db.flush()
+    _ensure_progress_rows(db, user_id=user_id, missions=[mission])
+    return mission
 
 
 def _mission_delta_value(mission_type: WeeklyMissionType, delta: MissionDelta) -> int:

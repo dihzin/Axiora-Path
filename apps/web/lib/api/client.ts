@@ -326,6 +326,15 @@ export type AxionBriefResponse = {
     dueReviews: number;
     energy: number;
   };
+  debug?: {
+    state: Record<string, unknown>;
+    triggeredRules: number[];
+    evaluatedRules: Array<Record<string, unknown>>;
+    decisions: Array<Record<string, unknown>>;
+    factsUsed: Record<string, unknown>;
+    temporaryBoosts: Array<Record<string, unknown>>;
+    templateChosen: number | null;
+  } | null;
 };
 
 export type AxionStudioPolicy = {
@@ -390,6 +399,17 @@ export type AxionStudioPreviewResponse = {
   cta: Record<string, unknown>;
   chosenRuleIds: number[];
   chosenTemplateId: number | null;
+};
+
+export type AxionImpactResponse = {
+  userId: number;
+  days: number;
+  decisionsTotal: number;
+  improvementRatePercent: number;
+  avgXpDeltaAfterBoost: number;
+  avgFrustrationDeltaAfterDifficultyCap: number;
+  avgDropoutRiskDelta: number;
+  masteryGrowthProxy: number;
 };
 
 export type CoachResponse = {
@@ -560,6 +580,7 @@ export type LearningAnswerResponse = {
   streakWrong: number;
   nextReviewAt: string | null;
   retryRecommended: boolean;
+  remediationText?: string | null;
 };
 
 export type LearningPathEventType = "CHEST" | "CHECKPOINT" | "MINI_BOSS" | "STORY_STOP" | "BOOST" | "REVIEW_GATE";
@@ -1040,8 +1061,12 @@ export async function getAxionState(childId: number): Promise<AxionStateResponse
   });
 }
 
-export async function getAxionBrief(): Promise<AxionBriefResponse> {
-  return apiRequest<AxionBriefResponse>("/api/axion/brief", {
+export async function getAxionBrief(params?: { context?: string; axionDebug?: boolean }): Promise<AxionBriefResponse> {
+  const query = new URLSearchParams();
+  if (params?.context) query.set("context", params.context);
+  if (params?.axionDebug) query.set("axionDebug", "true");
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<AxionBriefResponse>(`/api/axion/brief${suffix}`, {
     method: "GET",
     requireAuth: true,
     includeTenant: true,
@@ -1211,6 +1236,7 @@ export async function submitAdaptiveLearningAnswer(payload: {
   templateId?: string | null;
   generatedVariantId?: string | null;
   variantId?: string | null;
+  wrongAnswer?: string | null;
   result: LearningAnswerResult;
   timeMs: number;
 }): Promise<LearningAnswerResponse> {
@@ -1496,6 +1522,17 @@ export async function previewAxionStudio(payload: { userId: number; context: str
   return apiRequest<AxionStudioPreviewResponse>("/api/platform-admin/axion/preview", {
     method: "POST",
     body: payload,
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
+export async function getAxionStudioImpact(params: { userId: number; days?: number }): Promise<AxionImpactResponse> {
+  const query = new URLSearchParams();
+  query.set("userId", String(params.userId));
+  if (params.days) query.set("days", String(params.days));
+  return apiRequest<AxionImpactResponse>(`/api/platform-admin/axion/impact?${query.toString()}`, {
+    method: "GET",
     requireAuth: true,
     includeTenant: false,
   });

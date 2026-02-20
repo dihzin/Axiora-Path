@@ -71,6 +71,7 @@ class LearningAnswerRequest(BaseModel):
     template_id: str | None = Field(default=None, alias="templateId")
     generated_variant_id: str | None = Field(default=None, alias="generatedVariantId")
     variant_id: str | None = Field(default=None, alias="variantId")
+    wrong_answer: str | None = Field(default=None, alias="wrongAnswer")
     result: QuestionResult
     time_ms: int = Field(alias="timeMs", ge=0)
 
@@ -88,6 +89,7 @@ class LearningAnswerResponse(BaseModel):
     streak_wrong: int = Field(alias="streakWrong")
     next_review_at: datetime | None = Field(default=None, alias="nextReviewAt")
     retry_recommended: bool = Field(alias="retryRecommended")
+    remediation_text: str | None = Field(default=None, alias="remediationText")
 
 
 class LearningSessionStartRequest(BaseModel):

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="28" y1="0" x2="28" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="14" y1="8" x2="38" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="bag" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#FFF0C8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shadow -->
+  <circle cx="28" cy="30" r="24" fill="#B45309"/>
+
+  <!-- Background -->
+  <circle cx="28" cy="27" r="24" fill="url(#bg)"/>
+  <circle cx="28" cy="27" r="24" fill="url(#shine)"/>
+
+  <!-- Bag body -->
+  <path d="M16 25 L18 39 Q18 40.5 19.5 40.5 L36.5 40.5 Q38 40.5 38 39 L40 25 Q40 23.5 38.5 23.5 L17.5 23.5 Q16 23.5 16 25 Z"
+    fill="url(#bag)" stroke="rgba(0,0,0,0.08)" stroke-width="0.5"/>
+
+  <!-- Bag straps -->
+  <path d="M22 23.5 L22 19 Q22 15 28 15 Q34 15 34 19 L34 23.5"
+    fill="none" stroke="#D97706" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Bag flap crease -->
+  <path d="M17 29.5 L39 29.5" stroke="rgba(0,0,0,0.07)" stroke-width="1"/>
+
+  <!-- Diamond tag -->
+  <path d="M28 32 L31 36 L28 40 L25 36 Z"
+    fill="#F5C842" stroke="#C8990A" stroke-width="1.2" stroke-linejoin="round"/>
+
+  <!-- Store label lines on bag -->
+  <path d="M20 34 L25 34" stroke="#D97706" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.5"/>
+  <path d="M20 37 L24 37" stroke="#D97706" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.5"/>
+
+  <!-- Sparkle -->
+  <path d="M40 14 L40.8 16.5 L43.5 17 L40.8 17.5 L40 20 L39.2 17.5 L36.5 17 L39.2 16.5 Z"
+    fill="white" fill-opacity="0.85"/>
+  <circle cx="17" cy="19" r="1.5" fill="white" fill-opacity="0.6"/>
+</svg>

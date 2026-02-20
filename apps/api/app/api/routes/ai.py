@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from typing import Annotated
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import DBSession, EventSvc, get_current_tenant, get_current_user, require_role
 from app.models import (
@@ -32,6 +34,7 @@ from app.services.daily_mission_service import generate_daily_mission
 from app.services.features import is_feature_enabled
 
 router = APIRouter(prefix="/ai", tags=["ai"])
+logger = logging.getLogger("axiora.api.ai")
 
 MISSION_RARITY_INTRO = {
     DailyMissionRarity.NORMAL: "Missão do dia pronta. Vamos com foco e constancia.",
@@ -53,7 +56,7 @@ def ai_coach(
     events: EventSvc,
     tenant: Annotated[Tenant, Depends(get_current_tenant)],
     user: Annotated[User, Depends(get_current_user)],
-    _: Annotated[Membership, Depends(require_role(["PARENT", "TEACHER"]))],
+    _: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> CoachResponse:
     child = db.scalar(
         select(ChildProfile).where(
@@ -120,14 +123,20 @@ def ai_coach(
     first_login_context = (payload.message or "").strip() == "context:first_login"
     mission_intro: str | None = None
     if first_login_context and daily_missions_enabled:
-        mission = generate_daily_mission(db, child, current_tenant_id=tenant.id)
-        if mission.status == DailyMissionStatus.PENDING:
-            mission_intro = MISSION_RARITY_INTRO[mission.rarity]
+        try:
+            mission = generate_daily_mission(db, child, current_tenant_id=tenant.id)
+            if mission.status == DailyMissionStatus.PENDING:
+                mission_intro = MISSION_RARITY_INTRO[mission.rarity]
+        except SQLAlchemyError:
+            db.rollback()
+        except Exception:
+            db.rollback()
 
     mission_completed_reaction: str | None = None
     latest_mission_completed_event = next((item for item in recent_events if item.type == "mission_completed"), None)
     if latest_mission_completed_event is not None:
-        rarity_raw = latest_mission_completed_event.payload.get("rarity")
+        payload_data = latest_mission_completed_event.payload if isinstance(latest_mission_completed_event.payload, dict) else {}
+        rarity_raw = payload_data.get("rarity")
         if isinstance(rarity_raw, str):
             try:
                 mission_completed_reaction = MISSION_COMPLETED_REACTION[DailyMissionRarity(rarity_raw)]
@@ -138,20 +147,27 @@ def ai_coach(
 
     ai_coach_v2_enabled = is_feature_enabled("ai_coach_v2", db, tenant_id=tenant.id)
     adapter = get_coach_adapter("rule_based")
-    result = adapter.generate(
-        CoachContext(
-            mode=payload.mode,
-            message=payload.message,
-            events=recent_events,
-            recommendations=active_recommendations,
-            last_mood=latest_mood.mood if latest_mood is not None else None,
-            streak_current=streak.current if streak is not None else 0,
-            freeze_used_today=streak.freeze_used_today if streak is not None else False,
-            weekly_completion_rate=weekly_completion_rate,
-            active_saving_goals_count=len(active_goals),
-            personality=generate_personality_from_seed(axion_profile.personality_seed),
-        ),
-    )
+    try:
+        result = adapter.generate(
+            CoachContext(
+                mode=payload.mode,
+                message=payload.message,
+                events=recent_events,
+                recommendations=active_recommendations,
+                last_mood=latest_mood.mood if latest_mood is not None else None,
+                streak_current=streak.current if streak is not None else 0,
+                freeze_used_today=streak.freeze_used_today if streak is not None else False,
+                weekly_completion_rate=weekly_completion_rate,
+                active_saving_goals_count=len(active_goals),
+                personality=generate_personality_from_seed(axion_profile.personality_seed),
+            ),
+        )
+    except Exception as exc:
+        logger.exception("ai_coach_adapter_error", extra={"tenant_id": tenant.id, "child_id": payload.child_id})
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI coach temporarily unavailable",
+        ) from exc
 
     events.emit(
         type="ai.coach.used",

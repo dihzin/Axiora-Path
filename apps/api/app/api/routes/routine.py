@@ -311,8 +311,9 @@ def get_routine_week(
     tenant: Annotated[Tenant, Depends(get_current_tenant)],
     _: Annotated[Membership, Depends(require_role(["PARENT", "TEACHER"]))],
 ) -> RoutineWeekResponse:
-    if date_value > date.today():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Future dates are not allowed")
+    # Accept slight client/server timezone drift by clamping to the server "today".
+    max_allowed_date = max(date.today(), datetime.now(UTC).date())
+    effective_date = min(date_value, max_allowed_date)
 
     child = db.scalar(
         select(ChildProfile).where(
@@ -324,7 +325,7 @@ def get_routine_week(
     if child is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
 
-    start_date = date_value - timedelta(days=date_value.weekday())
+    start_date = effective_date - timedelta(days=effective_date.weekday())
     end_date = start_date + timedelta(days=6)
 
     rows = db.execute(

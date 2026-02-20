@@ -113,7 +113,7 @@ def get_energy_snapshot(db: Session, *, user_id: int) -> EnergySnapshot:
     )
 
 
-def consume_wrong_answer_energy(db: Session, *, user_id: int) -> EnergySnapshot:
+def consume_wrong_answer_energy(db: Session, *, user_id: int, cost: int = 1) -> EnergySnapshot:
     now = _now_utc()
     status = _get_or_create_status(db, user_id=user_id)
     _apply_regen(status, now=now)
@@ -131,7 +131,9 @@ def consume_wrong_answer_energy(db: Session, *, user_id: int) -> EnergySnapshot:
             axion_coins=profile.axion_coins,
         )
 
-    status.energy -= 1
+    safe_cost = max(0, int(cost))
+    if safe_cost > 0:
+        status.energy = max(0, status.energy - safe_cost)
     status.last_energy_update = now
     db.flush()
     return EnergySnapshot(

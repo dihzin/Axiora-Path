@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="28" y1="4" x2="28" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+    <linearGradient id="inner-shadow" x1="28" y1="4" x2="28" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="60%" stop-color="transparent"/>
+      <stop offset="100%" stop-color="#92400E" stop-opacity="0.40"/>
+    </linearGradient>
+    <linearGradient id="highlight" x1="28" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="white" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 3D base -->
+  <circle cx="28" cy="29" r="23" fill="#92400E"/>
+  <circle cx="28" cy="27" r="23" fill="url(#bg)"/>
+  <circle cx="28" cy="27" r="23" fill="url(#inner-shadow)"/>
+  <circle cx="28" cy="27" r="23" fill="url(#highlight)"/>
+
+  <!-- BAG BODY — big, centered, white -->
+  <path d="M14 26 L16 41 Q16 43 18 43 L38 43 Q40 43 40 41 L42 26 Q42 24 40 24 L16 24 Q14 24 14 26 Z"
+    fill="white" fill-opacity="0.95"/>
+
+  <!-- Bag straps -->
+  <path d="M21 24 L21 19.5 Q21 14.5 28 14.5 Q35 14.5 35 19.5 L35 24"
+    fill="none" stroke="#D97706" stroke-width="3.5" stroke-linecap="round"/>
+
+  <!-- Horizontal crease (bag fold) -->
+  <path d="M14.5 31 L41.5 31" stroke="rgba(0,0,0,0.08)" stroke-width="1.2"/>
+
+  <!-- Axion diamond logo on bag - large, centered -->
+  <path d="M28 34 L32 39.5 L28 45 L24 39.5 Z"
+    fill="#FBBF24" stroke="#D97706" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Inner diamond -->
+  <path d="M28 36 L30.5 39.5 L28 43 L25.5 39.5 Z" fill="white" fill-opacity="0.6"/>
+
+  <!-- Price tag accent -->
+  <circle cx="28" cy="28" r="4" fill="none" stroke="#D97706" stroke-width="1.5" stroke-opacity="0.35"/>
+</svg>

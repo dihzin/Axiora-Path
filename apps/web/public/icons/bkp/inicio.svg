@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="28" y1="0" x2="28" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5DE8D4"/>
+      <stop offset="100%" stop-color="#2ABBA3"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="16" y1="8" x2="40" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shadow (bottom offset) -->
+  <circle cx="28" cy="30" r="24" fill="#1A9482"/>
+
+  <!-- Main pill background -->
+  <circle cx="28" cy="27" r="24" fill="url(#bg)"/>
+
+  <!-- Shine highlight -->
+  <circle cx="28" cy="27" r="24" fill="url(#shine)"/>
+
+  <!-- House icon: white, clean, bold -->
+  <!-- Roof -->
+  <path d="M14 27.5 L28 15 L42 27.5" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Chimney -->
+  <rect x="33" y="17" width="4" height="6" rx="1" fill="white"/>
+  <!-- Wall -->
+  <path d="M18 26.5 L18 39 Q18 40 19 40 L24 40 L24 33 Q24 32 25 32 L31 32 Q32 32 32 33 L32 40 L37 40 Q38 40 38 39 L38 26.5" fill="white"/>
+  <!-- Door detail line -->
+  <path d="M28 40 L28 34" stroke="#2ABBA3" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Window left -->
+  <rect x="19" y="29" width="5" height="4.5" rx="1" fill="#2ABBA3"/>
+  <!-- Window right -->
+  <rect x="32" y="29" width="5" height="4.5" rx="1" fill="#2ABBA3"/>
+</svg>

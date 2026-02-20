@@ -45,6 +45,7 @@ from app.services.adaptive_learning import (
 )
 from app.services.learning_insights import get_learning_insights
 from app.services.learning_path_events import build_learning_path, complete_path_event, start_path_event
+from app.services.learning_remediation import maybe_enrich_wrong_answer_explanation
 
 router = APIRouter(prefix="/api/learning", tags=["learning"])
 
@@ -267,6 +268,7 @@ def submit_learning_answer(
     user: Annotated[User, Depends(get_current_user)],
     __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> LearningAnswerResponse:
+    remediation_text: str | None = None
     try:
         result = track_question_answer(
             db,
@@ -279,6 +281,17 @@ def submit_learning_answer(
             time_ms=payload.time_ms,
             tenant_id=tenant.id,
         )
+        if payload.result == QuestionResult.WRONG:
+            remediation_text = maybe_enrich_wrong_answer_explanation(
+                db,
+                tenant_id=tenant.id,
+                user_id=user.id,
+                question_id=payload.question_id,
+                template_id=payload.template_id,
+                generated_variant_id=payload.generated_variant_id,
+                variant_id=payload.variant_id,
+                wrong_answer=payload.wrong_answer,
+            )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
@@ -295,6 +308,7 @@ def submit_learning_answer(
         streakWrong=result.mastery.streak_wrong,
         nextReviewAt=result.mastery.next_review_at,
         retryRecommended=payload.result == QuestionResult.WRONG,
+        remediationText=remediation_text,
     )
 
 
@@ -340,6 +354,7 @@ def start_session(
         subject_id=subject_id,
         unit_id=unit_id,
         lesson_id=lesson_id,
+        tenant_id=tenant.id,
     )
     db.commit()
     db.refresh(session)
