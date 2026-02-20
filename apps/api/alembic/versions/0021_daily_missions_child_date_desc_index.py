@@ -19,6 +19,12 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.execute(
         """
+        ALTER TABLE alembic_version
+        ALTER COLUMN version_num TYPE VARCHAR(255);
+        """
+    )
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS idx_daily_missions_child_date
         ON daily_missions (child_id, date DESC);
         """
