@@ -10,9 +10,12 @@ import {
   setRefreshToken,
 } from "@/lib/api/session";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-if (!API_URL) {
-  throw new Error("NEXT_PUBLIC_API_URL is not defined");
+function resolveApiUrl(): string {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) {
+    throw new Error("NEXT_PUBLIC_API_URL is not defined");
+  }
+  return apiUrl;
 }
 export type ThemeName = "default" | "space" | "jungle" | "ocean" | "soccer" | "capybara" | "dinos" | "princess" | "heroes";
 
@@ -66,6 +69,7 @@ async function parseJsonSafe(response: Response): Promise<unknown> {
 }
 
 async function refreshAccessToken(): Promise<string | null> {
+  const apiUrl = resolveApiUrl();
   const refreshToken = getRefreshToken();
   const tenantSlug = getTenantSlug();
   if (!refreshToken || !tenantSlug) {
@@ -77,7 +81,7 @@ async function refreshAccessToken(): Promise<string | null> {
 
   let response: Response;
   try {
-    response = await fetch(`${API_URL}/auth/refresh`, {
+    response = await fetch(`${apiUrl}/auth/refresh`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -107,6 +111,7 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const apiUrl = resolveApiUrl();
   const method = options.method ?? "GET";
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -126,7 +131,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   const makeRequest = async (): Promise<Response> => {
     try {
-      return await fetch(`${API_URL}${path}`, {
+      return await fetch(`${apiUrl}${path}`, {
         method,
         headers,
         body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
