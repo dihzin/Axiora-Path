@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  ApiError,
   createAxionStudioPolicy,
   createAxionStudioTemplate,
   getApiErrorMessage,
@@ -31,7 +32,7 @@ import {
   type AxionStudioTemplate,
   type AxionStudioVersion,
 } from "@/lib/api/client";
-import { clearTenantSlug, clearTokens } from "@/lib/api/session";
+import { clearTenantSlug, clearTokens, getAccessToken, getRefreshToken } from "@/lib/api/session";
 
 type Tab = "policies" | "messages" | "preview" | "audit" | "impact";
 
@@ -91,8 +92,9 @@ function toneLabel(value: string): string {
 
 export default function AxionStudioPage() {
   const [tab, setTab] = useState<Tab>("policies");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   const [me, setMe] = useState<AxionStudioMe | null>(null);
   const [policies, setPolicies] = useState<AxionStudioPolicy[]>([]);
@@ -152,6 +154,15 @@ export default function AxionStudioPage() {
 
   const templateCharCount = useMemo(() => templateDraft.text.trim().length, [templateDraft.text]);
 
+  const redirectToLogin = () => {
+    clearTokens();
+    clearTenantSlug();
+    const next = encodeURIComponent(`${window.location.pathname}${window.location.search}`);
+    window.location.assign(`/login?next=${next}`);
+  };
+
+  const isAuthError = (err: unknown): boolean => err instanceof ApiError && (err.status === 401 || err.status === 403);
+
   const loadBase = async () => {
     setLoading(true);
     setError(null);
@@ -190,9 +201,17 @@ export default function AxionStudioPage() {
         (usersResult.status === "rejected" && usersResult.reason) ||
         null;
       if (firstFailure) {
+        if (isAuthError(firstFailure)) {
+          redirectToLogin();
+          return;
+        }
         setError(getApiErrorMessage(firstFailure, "Não foi possível carregar todos os dados do Axion Studio."));
       }
     } catch (err) {
+      if (isAuthError(err)) {
+        redirectToLogin();
+        return;
+      }
       setError(getApiErrorMessage(err, "Não foi possível carregar o Axion Studio."));
     } finally {
       setLoading(false);
@@ -200,6 +219,13 @@ export default function AxionStudioPage() {
   };
 
   useEffect(() => {
+    const hasAccess = Boolean(getAccessToken());
+    const hasRefresh = Boolean(getRefreshToken());
+    if (!hasAccess && !hasRefresh) {
+      redirectToLogin();
+      return;
+    }
+    setAuthChecked(true);
     void loadBase();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -216,6 +242,16 @@ export default function AxionStudioPage() {
       window.location.assign("/login");
     }
   };
+
+  if (!authChecked) {
+    return (
+      <main className="min-h-screen w-full px-4 py-6 md:px-8 xl:px-14 2xl:px-20">
+        <div className="rounded-3xl border border-[#BFD3EE] bg-white p-6 text-sm font-semibold text-[#5F80AA] shadow-[0_14px_40px_rgba(16,48,90,0.08)]">
+          Validando sessão...
+        </div>
+      </main>
+    );
+  }
 
   const savePolicy = async (previewAfterSave: boolean) => {
     setLoading(true);
