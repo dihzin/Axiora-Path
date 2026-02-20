@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { platformLogin } from "@/lib/api/client";
+import { getApiErrorMessage, platformLogin } from "@/lib/api/client";
 import { setAccessToken, setTenantSlug } from "@/lib/api/session";
 
 export default function PlatformAdminLoginPage() {
@@ -31,8 +31,8 @@ export default function PlatformAdminLoginPage() {
       setTenantSlug("platform-admin");
       setAccessToken(tokens.access_token);
       router.push(nextPath);
-    } catch {
-      setError("Não foi possível autenticar. Verifique e-mail e senha.");
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Não foi possível autenticar. Verifique e-mail e senha."));
     } finally {
       setLoading(false);
     }
