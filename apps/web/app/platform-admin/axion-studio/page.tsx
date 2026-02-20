@@ -161,7 +161,7 @@ export default function AxionStudioPage() {
     window.location.assign(`/login?tenant=platform-admin&next=${next}`);
   };
 
-  const isAuthError = (err: unknown): boolean => err instanceof ApiError && (err.status === 401 || err.status === 403);
+  const isAuthError = (err: unknown): boolean => err instanceof ApiError && err.status === 401;
 
   const loadBase = async () => {
     setLoading(true);
