@@ -34,7 +34,7 @@ export default function ParentPinPage() {
   };
 
   return (
-    <main className="safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md items-center p-4 md:p-6">
+    <main className="safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md items-center overflow-x-clip p-4 md:p-6">
       <Card className="w-full">
         <CardHeader>
           <CardTitle>PIN dos pais</CardTitle>

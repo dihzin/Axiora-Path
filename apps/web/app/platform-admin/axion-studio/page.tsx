@@ -6,6 +6,7 @@ import {
   ApiError,
   changePassword,
   createPlatformTenant,
+  deletePlatformTenant,
   createAxionStudioPolicy,
   createAxionStudioTemplate,
   getApiErrorMessage,
@@ -13,6 +14,7 @@ import {
   getAxionStudioImpact,
   getAxionStudioMe,
   getPlatformTenants,
+  getPlatformTenantDetail,
   getAxionStudioPolicies,
   getAxionStudioPolicyVersions,
   getAxionStudioPreviewUsers,
@@ -35,11 +37,13 @@ import {
   type AxionStudioTemplate,
   type AxionStudioVersion,
   type PlatformTenantCreateResponse,
+  type PlatformTenantDetail,
   type PlatformTenantSummary,
 } from "@/lib/api/client";
 import { clearTenantSlug, clearTokens, getAccessToken, getTenantSlug } from "@/lib/api/session";
 
 type Tab = "policies" | "messages" | "preview" | "audit" | "impact" | "orgs";
+type OrgViewTab = "clients" | "admin";
 type TenantFieldKey = "name" | "slug" | "type" | "adminName" | "adminEmail" | "adminPassword" | "testChildName" | "testChildBirthYear";
 
 const CONTEXTS = ["child_tab", "before_learning", "after_learning", "games_tab", "wallet_tab"] as const;
@@ -181,6 +185,10 @@ export default function AxionStudioPage() {
   const [audit, setAudit] = useState<AxionStudioAudit[]>([]);
   const [users, setUsers] = useState<AxionStudioPreviewUser[]>([]);
   const [tenants, setTenants] = useState<PlatformTenantSummary[]>([]);
+  const [orgViewTab, setOrgViewTab] = useState<OrgViewTab>("clients");
+  const [selectedTenantDetail, setSelectedTenantDetail] = useState<PlatformTenantDetail | null>(null);
+  const [deleteTargetTenant, setDeleteTargetTenant] = useState<PlatformTenantSummary | null>(null);
+  const [deleteConfirmSlug, setDeleteConfirmSlug] = useState("");
   const [tenantSearch, setTenantSearch] = useState("");
   const [tenantTypeFilter, setTenantTypeFilter] = useState<"" | "FAMILY" | "SCHOOL">("");
   const [tenantCreateResult, setTenantCreateResult] = useState<PlatformTenantCreateResponse | null>(null);
@@ -253,6 +261,8 @@ export default function AxionStudioPage() {
   const [passwordFeedback, setPasswordFeedback] = useState<string | null>(null);
 
   const templateCharCount = useMemo(() => templateDraft.text.trim().length, [templateDraft.text]);
+  const clientTenants = useMemo(() => tenants.filter((tenant) => tenant.slug !== "platform-admin"), [tenants]);
+  const adminTenants = useMemo(() => tenants.filter((tenant) => tenant.slug === "platform-admin"), [tenants]);
 
   const redirectToLogin = () => {
     clearTokens();
@@ -273,7 +283,7 @@ export default function AxionStudioPage() {
         getAxionStudioTemplates(),
         getAxionStudioAudit(),
         getAxionStudioPreviewUsers(),
-        getPlatformTenants({ q: tenantSearch || undefined, tenantType: tenantTypeFilter }),
+        getPlatformTenants({ q: tenantSearch || undefined, tenantType: orgViewTab === "admin" ? "" : tenantTypeFilter }),
       ]);
 
       if (meResult.status === "fulfilled") {
@@ -335,6 +345,15 @@ export default function AxionStudioPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!authChecked || tab !== "orgs") return;
+    if (orgViewTab === "admin" && tenantTypeFilter !== "") {
+      setTenantTypeFilter("");
+    }
+    void loadBase();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgViewTab, tab]);
+
   const handleLogout = async () => {
     setLoading(true);
     try {
@@ -369,7 +388,7 @@ export default function AxionStudioPage() {
 
   if (!authChecked) {
     return (
-      <main className="min-h-screen w-full px-4 py-6 md:px-8 xl:px-14 2xl:px-20">
+      <main className="min-h-screen w-full overflow-x-clip px-4 py-6 md:px-8 xl:px-14 2xl:px-20">
         <div className="rounded-3xl border border-[#BFD3EE] bg-white p-6 text-sm font-semibold text-[#5F80AA] shadow-[0_14px_40px_rgba(16,48,90,0.08)]">
           Validando sessão...
         </div>
@@ -517,6 +536,40 @@ export default function AxionStudioPage() {
     }
   };
 
+  const openTenantDetail = async (tenantId: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const detail = await getPlatformTenantDetail(tenantId);
+      setSelectedTenantDetail(detail);
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Falha ao carregar detalhes da organização."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmDeleteTenant = async () => {
+    if (!deleteTargetTenant) return;
+    if (deleteConfirmSlug.trim().toLowerCase() !== deleteTargetTenant.slug) {
+      setError("Confirmação inválida. Digite o slug exato da organização.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await deletePlatformTenant(deleteTargetTenant.id, deleteConfirmSlug.trim().toLowerCase());
+      setDeleteTargetTenant(null);
+      setDeleteConfirmSlug("");
+      setSelectedTenantDetail(null);
+      await loadBase();
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Falha ao excluir organização."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loadPolicyVersions = async (policyId: number) => {
     const rows = await getAxionStudioPolicyVersions(policyId);
     setVersions(rows);
@@ -535,7 +588,7 @@ export default function AxionStudioPage() {
 
   return (
     <main
-      className="min-h-screen w-full bg-[#f6f6f3] bg-cover bg-center bg-no-repeat px-4 py-6 md:px-8 xl:px-14 2xl:px-20"
+      className="min-h-screen w-full overflow-x-clip bg-[#f6f6f3] bg-cover bg-center bg-no-repeat px-4 py-6 md:px-8 xl:px-14 2xl:px-20"
       style={{ backgroundImage: "url('/axiora/home/login-background.svg')" }}
     >
       <div className="rounded-3xl border border-[#BFD3EE] bg-white/95 p-5 shadow-[0_14px_40px_rgba(16,48,90,0.18)] md:p-7">
@@ -601,8 +654,8 @@ export default function AxionStudioPage() {
           <section className="mt-5 grid gap-5 2xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
             <div className="rounded-2xl border border-[#C9D8EF] p-3">
               <div className="mb-3 flex flex-wrap gap-2">
-                <input className="min-w-[220px] flex-1 rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setPolicySearch(e.target.value)} placeholder="Buscar regra..." value={policySearch} />
-                <select className="min-w-[200px] rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setPolicyContext(e.target.value)} value={policyContext}>
+                <input className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[220px] sm:flex-1" onChange={(e) => setPolicySearch(e.target.value)} placeholder="Buscar regra..." value={policySearch} />
+                <select className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[200px] sm:w-auto" onChange={(e) => setPolicyContext(e.target.value)} value={policyContext}>
                   <option value="">Todos os contextos</option>
                   {CONTEXTS.map((ctx) => (
                     <option key={ctx} value={ctx}>
@@ -805,14 +858,14 @@ export default function AxionStudioPage() {
         {tab === "preview" ? (
           <section className="mt-5 rounded-2xl border border-[#C9D8EF] p-4">
             <div className="mb-3 flex flex-wrap gap-2">
-              <select className="min-w-[260px] flex-1 rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setPreviewUserId(Number(e.target.value))} value={previewUserId ?? ""}>
+              <select className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[260px] sm:flex-1" onChange={(e) => setPreviewUserId(Number(e.target.value))} value={previewUserId ?? ""}>
                 {users.map((u) => (
                   <option key={u.userId} value={u.userId}>
                     {u.name} (#{u.userId})
                   </option>
                 ))}
               </select>
-              <select className="min-w-[200px] rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setPreviewContext(e.target.value)} value={previewContext}>
+              <select className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[200px] sm:w-auto" onChange={(e) => setPreviewContext(e.target.value)} value={previewContext}>
                 {CONTEXTS.map((ctx) => (
                   <option key={ctx} value={ctx}>
                     {contextLabel(ctx)}
@@ -887,14 +940,14 @@ export default function AxionStudioPage() {
         {tab === "impact" ? (
           <section className="mt-5 rounded-2xl border border-[#C9D8EF] p-4">
             <div className="mb-3 flex flex-wrap gap-2">
-              <select className="min-w-[260px] flex-1 rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setImpactUserId(Number(e.target.value))} value={impactUserId ?? ""}>
+              <select className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[260px] sm:flex-1" onChange={(e) => setImpactUserId(Number(e.target.value))} value={impactUserId ?? ""}>
                 {users.map((u) => (
                   <option key={u.userId} value={u.userId}>
                     {u.name} (#{u.userId})
                   </option>
                 ))}
               </select>
-              <select className="min-w-[140px] rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setImpactDays(Number(e.target.value) || 7)} value={impactDays}>
+              <select className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[140px] sm:w-auto" onChange={(e) => setImpactDays(Number(e.target.value) || 7)} value={impactDays}>
                 <option value={7}>7 dias</option>
                 <option value={14}>14 dias</option>
                 <option value={30}>30 dias</option>
@@ -941,15 +994,32 @@ export default function AxionStudioPage() {
           <section className="mt-5 grid gap-5 2xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
             <div className="rounded-2xl border border-[#C9D8EF] p-3">
               <div className="mb-3 flex flex-wrap gap-2">
+                <button
+                  className={`rounded-xl px-3 py-2 text-sm font-black ${orgViewTab === "clients" ? "bg-[#24B6A9] text-white shadow-[0_5px_0_rgba(13,122,114,0.35)]" : "border border-[#BCD1EE] bg-white text-[#2F527D]"}`}
+                  onClick={() => setOrgViewTab("clients")}
+                  type="button"
+                >
+                  Clientes
+                </button>
+                <button
+                  className={`rounded-xl px-3 py-2 text-sm font-black ${orgViewTab === "admin" ? "bg-[#24B6A9] text-white shadow-[0_5px_0_rgba(13,122,114,0.35)]" : "border border-[#BCD1EE] bg-white text-[#2F527D]"}`}
+                  onClick={() => setOrgViewTab("admin")}
+                  type="button"
+                >
+                  Administrador
+                </button>
+              </div>
+              <div className="mb-3 flex flex-wrap gap-2">
                 <input
-                  className="min-w-[220px] flex-1 rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[220px] sm:flex-1"
                   onChange={(e) => setTenantSearch(e.target.value)}
                   placeholder="Buscar organização por nome ou slug..."
                   value={tenantSearch}
                 />
                 <select
-                  className="min-w-[180px] rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[180px] sm:w-auto"
                   onChange={(e) => setTenantTypeFilter(e.target.value as "" | "FAMILY" | "SCHOOL")}
+                  disabled={orgViewTab === "admin"}
                   value={tenantTypeFilter}
                 >
                   <option value="">Todos os tipos</option>
@@ -971,24 +1041,56 @@ export default function AxionStudioPage() {
                         <th className="px-3 py-2">Consentimento</th>
                         <th className="px-3 py-2">Onboarding</th>
                         <th className="px-3 py-2">Criada em</th>
+                        <th className="px-3 py-2">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {tenants.length === 0 ? (
+                      {(orgViewTab === "admin" ? adminTenants : clientTenants).length === 0 ? (
                         <tr>
-                          <td className="px-3 py-6 text-center text-sm font-semibold text-[#6B87AC]" colSpan={6}>
+                          <td className="px-3 py-6 text-center text-sm font-semibold text-[#6B87AC]" colSpan={7}>
                             Nenhuma organização encontrada com os filtros atuais.
                           </td>
                         </tr>
                       ) : null}
-                      {tenants.map((tenant) => (
+                      {(orgViewTab === "admin" ? adminTenants : clientTenants).map((tenant) => (
                         <tr key={tenant.id} className="border-t border-[#E2EAF8]">
+                          {(() => {
+                            const isPlatformTenant = tenant.slug === "platform-admin";
+                            const consentLabel = isPlatformTenant ? "N/A" : tenant.type === "SCHOOL" ? "N/A" : tenant.consentCompleted ? "Sim" : "Não";
+                            const onboardingLabel = isPlatformTenant ? "N/A" : tenant.onboardingCompleted ? "Concluído" : "Pendente";
+                            return (
+                              <>
                           <td className="px-3 py-2 font-semibold text-[#223F68]">{tenant.name}</td>
                           <td className="px-3 py-2 font-mono text-xs text-[#35567F]">{tenant.slug}</td>
                           <td className="px-3 py-2">{tenant.type === "FAMILY" ? "Família" : tenant.type === "SCHOOL" ? "Escola" : tenant.type}</td>
-                          <td className="px-3 py-2">{tenant.type === "SCHOOL" ? "N/A" : tenant.consentCompleted ? "Sim" : "Não"}</td>
-                          <td className="px-3 py-2">{tenant.onboardingCompleted ? "Concluído" : "Pendente"}</td>
+                          <td className="px-3 py-2">{consentLabel}</td>
+                          <td className="px-3 py-2">{onboardingLabel}</td>
                           <td className="px-3 py-2">{new Date(tenant.createdAt).toLocaleString("pt-BR")}</td>
+                          <td className="px-3 py-2">
+                            <div className="flex flex-wrap gap-1">
+                              <button
+                                className="rounded-lg border border-[#BCD1EE] px-2 py-1 text-xs font-bold text-[#2F527D]"
+                                onClick={() => void openTenantDetail(tenant.id)}
+                                type="button"
+                              >
+                                Detalhes
+                              </button>
+                              <button
+                                className="rounded-lg border border-[#F5B2A9] px-2 py-1 text-xs font-bold text-[#B8574B] disabled:cursor-not-allowed disabled:opacity-50"
+                                disabled={tenant.slug === "platform-admin"}
+                                onClick={() => {
+                                  setDeleteTargetTenant(tenant);
+                                  setDeleteConfirmSlug("");
+                                }}
+                                type="button"
+                              >
+                                Excluir
+                              </button>
+                            </div>
+                          </td>
+                              </>
+                            );
+                          })()}
                         </tr>
                       ))}
                     </tbody>
@@ -998,11 +1100,20 @@ export default function AxionStudioPage() {
             </div>
 
             <div className="rounded-2xl border border-[#C9D8EF] p-3 xl:sticky xl:top-4 xl:self-start">
-              <h3 className="mb-2 text-sm font-black text-[#1E3B65]">Nova organização de teste</h3>
-              <div className="mb-3 rounded-xl border border-[#D7E2F4] bg-[#F7FAFF] px-3 py-2 text-xs font-semibold text-[#35567F]">
-                <p>Campos obrigatórios: nome da organização, slug, tipo, nome do administrador, e-mail e senha inicial.</p>
-                <p className="mt-1">Padrões: slug em minúsculas com hífen (`familia-silva`) e senha com pelo menos 10 caracteres.</p>
-              </div>
+              {orgViewTab === "clients" ? <h3 className="mb-2 text-sm font-black text-[#1E3B65]">Nova organização de teste</h3> : <h3 className="mb-2 text-sm font-black text-[#1E3B65]">Administrador da plataforma</h3>}
+              {orgViewTab === "clients" ? (
+                <div className="mb-3 rounded-xl border border-[#D7E2F4] bg-[#F7FAFF] px-3 py-2 text-xs font-semibold text-[#35567F]">
+                  <p>Campos obrigatórios: nome da organização, slug, tipo, nome do administrador, e-mail e senha inicial.</p>
+                  <p className="mt-1">Padrões: slug em minúsculas com hífen (`familia-silva`) e senha com pelo menos 10 caracteres.</p>
+                </div>
+              ) : (
+                <div className="mb-3 rounded-xl border border-[#D7E2F4] bg-[#F7FAFF] px-3 py-2 text-xs font-semibold text-[#35567F]">
+                  <p>Aba exclusiva para visualizar e auditar a organização `platform-admin`.</p>
+                  <p className="mt-1">A criação de novas organizações fica disponível na aba `Clientes`.</p>
+                </div>
+              )}
+              {orgViewTab === "clients" ? (
+                <>
               <input
                 className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${tenantFieldErrors.name ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
                 onChange={(e) => {
@@ -1135,10 +1246,108 @@ export default function AxionStudioPage() {
                   <p>Filho teste: {tenantCreateResult.testChildCreated ? "sim" : "não"}</p>
                 </div>
               ) : null}
+                </>
+              ) : (
+                <div className="rounded-xl border border-[#D7E2F4] bg-white px-3 py-3 text-sm font-semibold text-[#35567F]">
+                  {adminTenants.length > 0 ? (
+                    <p>
+                      Organização admin encontrada: <span className="font-black">{adminTenants[0].name}</span> ({adminTenants[0].slug})
+                    </p>
+                  ) : (
+                    <p>Nenhuma organização administrativa localizada.</p>
+                  )}
+                </div>
+              )}
             </div>
           </section>
         ) : null}
       </div>
+      {selectedTenantDetail ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A1930]/45 px-4">
+          <div className="w-full max-w-2xl rounded-3xl border border-[#BFD3EE] bg-white p-5 shadow-[0_14px_40px_rgba(16,48,90,0.2)]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-black text-[#17345E]">Detalhes da organização</h3>
+                <p className="text-sm font-semibold text-[#5A7AA4]">{selectedTenantDetail.tenant.name} ({selectedTenantDetail.tenant.slug})</p>
+              </div>
+              <button
+                className="rounded-xl border border-[#BCD1EE] bg-white px-3 py-2 text-sm font-black text-[#2F527D]"
+                onClick={() => setSelectedTenantDetail(null)}
+                type="button"
+              >
+                Fechar
+              </button>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border border-[#DCE6F7] bg-[#F7FAFF] p-3">
+                <p className="text-[11px] font-bold uppercase text-[#6B87AC]">Tipo</p>
+                <p className="text-sm font-black text-[#24456F]">{selectedTenantDetail.tenant.type === "FAMILY" ? "Família" : selectedTenantDetail.tenant.type === "SCHOOL" ? "Escola" : selectedTenantDetail.tenant.type}</p>
+              </div>
+              <div className="rounded-xl border border-[#DCE6F7] bg-[#F7FAFF] p-3">
+                <p className="text-[11px] font-bold uppercase text-[#6B87AC]">Crianças ativas</p>
+                <p className="text-sm font-black text-[#24456F]">{selectedTenantDetail.activeChildrenCount} / {selectedTenantDetail.childrenCount}</p>
+              </div>
+              <div className="rounded-xl border border-[#DCE6F7] bg-[#F7FAFF] p-3">
+                <p className="text-[11px] font-bold uppercase text-[#6B87AC]">Membros</p>
+                <p className="text-sm font-black text-[#24456F]">{selectedTenantDetail.membershipsCount}</p>
+              </div>
+            </div>
+            <div className="mt-4 rounded-xl border border-[#D7E2F4]">
+              <div className="border-b border-[#E6EDF8] bg-[#F7FAFF] px-3 py-2 text-sm font-black text-[#22456F]">Administradores vinculados</div>
+              <div className="max-h-52 overflow-auto">
+                {selectedTenantDetail.adminMembers.length === 0 ? (
+                  <p className="px-3 py-3 text-sm font-semibold text-[#6B87AC]">Nenhum administrador vinculado.</p>
+                ) : (
+                  <ul className="divide-y divide-[#E6EDF8]">
+                    {selectedTenantDetail.adminMembers.map((member) => (
+                      <li key={`${member.userId}-${member.role}`} className="px-3 py-2 text-sm font-semibold text-[#2E517C]">
+                        {member.name} ({member.email}) - {member.role}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {deleteTargetTenant ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A1930]/45 px-4">
+          <div className="w-full max-w-lg rounded-3xl border border-[#F2B9B3] bg-white p-5 shadow-[0_14px_40px_rgba(16,48,90,0.2)]">
+            <h3 className="text-lg font-black text-[#8A2F2A]">Excluir organização</h3>
+            <p className="mt-2 text-sm font-semibold text-[#5A7AA4]">
+              Esta ação desativa a organização <span className="font-black text-[#1F4F5D]">{deleteTargetTenant.name}</span> e remove o acesso dos usuários vinculados.
+            </p>
+            <p className="mt-2 text-sm font-semibold text-[#B54C47]">Para confirmar, digite o slug exato: <span className="font-black">{deleteTargetTenant.slug}</span></p>
+            <input
+              className="mt-3 w-full rounded-xl border border-[#F2B9B3] px-3 py-2 text-sm font-mono"
+              onChange={(e) => setDeleteConfirmSlug(e.target.value)}
+              placeholder="Digite o slug para confirmar"
+              value={deleteConfirmSlug}
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                className="rounded-xl border border-[#BCD1EE] bg-white px-3 py-2 text-sm font-black text-[#2F527D]"
+                onClick={() => {
+                  setDeleteTargetTenant(null);
+                  setDeleteConfirmSlug("");
+                }}
+                type="button"
+              >
+                Cancelar
+              </button>
+              <button
+                className="rounded-xl border border-[#F5B2A9] bg-[#FFF3F1] px-3 py-2 text-sm font-black text-[#B8574B] disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={loading || deleteConfirmSlug.trim().toLowerCase() !== deleteTargetTenant.slug}
+                onClick={() => void confirmDeleteTenant()}
+                type="button"
+              >
+                Excluir agora
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {showPasswordModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A1930]/45 px-4">
           <div className="w-full max-w-md rounded-3xl border border-[#BFD3EE] bg-white p-5 shadow-[0_14px_40px_rgba(16,48,90,0.2)]">

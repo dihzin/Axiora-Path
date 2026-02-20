@@ -8,6 +8,8 @@ import {
   Baby,
   Building2,
   CheckCircle2,
+  ChevronDown,
+  ImagePlus,
   LogOut,
   Pencil,
   Plus,
@@ -24,6 +26,7 @@ import { StatusNotice } from "@/components/ui/status-notice";
 import {
   createChild,
   createTask,
+  deleteChild,
   decideRoutine,
   deleteTask,
   getApiErrorMessage,
@@ -44,6 +47,7 @@ import {
 } from "@/lib/api/client";
 import { clearTenantSlug, clearTokens } from "@/lib/api/session";
 import { getSoundEnabled as getChildSoundEnabled, setSoundEnabled as setChildSoundEnabled } from "@/lib/sound-manager";
+import { ChildAvatar } from "@/components/child-avatar";
 
 const THEME_OPTIONS: ThemeName[] = ["default", "space", "jungle", "ocean", "soccer", "capybara", "dinos", "princess", "heroes"];
 const DIFFICULTY_OPTIONS: TaskOut["difficulty"][] = ["EASY", "MEDIUM", "HARD", "LEGENDARY"];
@@ -84,6 +88,40 @@ function formatBRL(valueCents: number): string {
   }).format(valueCents / 100);
 }
 
+function CollapsibleCard({
+  title,
+  summary,
+  collapsed,
+  onToggle,
+  children,
+}: {
+  title: string;
+  summary?: string;
+  collapsed: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-3 text-left"
+          onClick={onToggle}
+          aria-expanded={!collapsed}
+        >
+          <div>
+            <CardTitle className="text-base">{title}</CardTitle>
+            {summary ? <p className="mt-1 text-xs font-medium text-muted-foreground">{summary}</p> : null}
+          </div>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition ${collapsed ? "" : "rotate-180"}`} />
+        </button>
+      </CardHeader>
+      {!collapsed ? <CardContent className="space-y-2 text-sm">{children}</CardContent> : null}
+    </Card>
+  );
+}
+
 export default function ParentPage() {
   const router = useRouter();
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
@@ -106,6 +144,7 @@ export default function ParentPage() {
   const [newChildName, setNewChildName] = useState("");
   const [newChildBirthYear, setNewChildBirthYear] = useState("");
   const [newChildTheme, setNewChildTheme] = useState<ThemeName>("default");
+  const [newChildAvatarKey, setNewChildAvatarKey] = useState<string | null>(null);
   const [childActionError, setChildActionError] = useState<string | null>(null);
   const [creatingChild, setCreatingChild] = useState(false);
 
@@ -113,7 +152,11 @@ export default function ParentPage() {
   const [editingChildName, setEditingChildName] = useState("");
   const [editingChildBirthYear, setEditingChildBirthYear] = useState("");
   const [editingChildTheme, setEditingChildTheme] = useState<ThemeName>("default");
+  const [editingChildAvatarKey, setEditingChildAvatarKey] = useState<string | null>(null);
   const [savingChild, setSavingChild] = useState(false);
+  const [childToDelete, setChildToDelete] = useState<ChildProfileSummary | null>(null);
+  const [deleteChildPin, setDeleteChildPin] = useState("");
+  const [deletingChild, setDeletingChild] = useState(false);
 
   const [tasks, setTasks] = useState<TaskOut[]>([]);
   const [taskActionError, setTaskActionError] = useState<string | null>(null);
@@ -128,6 +171,13 @@ export default function ParentPage() {
   const [editingTaskWeight, setEditingTaskWeight] = useState("10");
   const [editingTaskActive, setEditingTaskActive] = useState(true);
   const [savingTask, setSavingTask] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState({
+    children: true,
+    approvals: true,
+    wallet: true,
+    weekly: true,
+    tasks: true,
+  });
 
   const clearLocalSession = (options?: { keepOrganization?: boolean }) => {
     clearTokens();
@@ -315,6 +365,31 @@ export default function ParentPage() {
     return Math.floor(parsed);
   };
 
+  const onAvatarFileChange = (file: File | null, target: "new" | "edit") => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setChildActionError("Selecione um arquivo de imagem válido.");
+      return;
+    }
+    if (file.size > 1_000_000) {
+      setChildActionError("A foto deve ter até 1MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : null;
+      if (!result || !result.startsWith("data:image/")) {
+        setChildActionError("Não foi possível processar a foto.");
+        return;
+      }
+      if (target === "new") setNewChildAvatarKey(result);
+      if (target === "edit") setEditingChildAvatarKey(result);
+      setChildActionError(null);
+    };
+    reader.onerror = () => setChildActionError("Falha ao carregar a foto selecionada.");
+    reader.readAsDataURL(file);
+  };
+
   const onCreateChild = async () => {
     setChildActionError(null);
     if (!newChildName.trim()) {
@@ -327,10 +402,12 @@ export default function ParentPage() {
         display_name: newChildName.trim(),
         birth_year: parseBirthYear(newChildBirthYear),
         theme: newChildTheme,
+        avatar_key: newChildAvatarKey,
       });
       setNewChildName("");
       setNewChildBirthYear("");
       setNewChildTheme("default");
+      setNewChildAvatarKey(null);
       await loadChildrenAndContext();
     } catch (err) {
       setChildActionError(getApiErrorMessage(err, "Não foi possível criar perfil infantil."));
@@ -344,6 +421,7 @@ export default function ParentPage() {
     setEditingChildName(child.display_name);
     setEditingChildBirthYear(child.birth_year ? String(child.birth_year) : "");
     setEditingChildTheme(child.theme);
+    setEditingChildAvatarKey(child.avatar_key ?? null);
     setChildActionError(null);
   };
 
@@ -360,6 +438,7 @@ export default function ParentPage() {
         display_name: editingChildName.trim(),
         birth_year: parseBirthYear(editingChildBirthYear),
         theme: editingChildTheme,
+        avatar_key: editingChildAvatarKey,
       });
       setChildren((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       if (selectedChildId === updated.id) {
@@ -370,6 +449,26 @@ export default function ParentPage() {
       setChildActionError(getApiErrorMessage(err, "Não foi possível salvar alterações da criança."));
     } finally {
       setSavingChild(false);
+    }
+  };
+
+  const onDeleteChild = async () => {
+    if (!childToDelete) return;
+    setChildActionError(null);
+    if (!/^\d{4,6}$/.test(deleteChildPin)) {
+      setChildActionError("Informe o PIN dos pais com 4 a 6 números para confirmar.");
+      return;
+    }
+    setDeletingChild(true);
+    try {
+      await deleteChild(childToDelete.id, deleteChildPin);
+      setChildToDelete(null);
+      setDeleteChildPin("");
+      await loadChildrenAndContext();
+    } catch (err) {
+      setChildActionError(getApiErrorMessage(err, "Não foi possível excluir a criança."));
+    } finally {
+      setDeletingChild(false);
     }
   };
 
@@ -453,12 +552,15 @@ export default function ParentPage() {
   }
 
   const selectedChild = children.find((child) => child.id === selectedChildId) ?? null;
+  const toggleSection = (key: keyof typeof collapsedSections) => {
+    setCollapsedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 md:p-6">
+    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 md:p-6">
       <header className="mb-3 flex items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold">Área dos pais</h1>
-        <div className="flex items-center gap-2">
+        <h1 className="min-w-0 flex-1 truncate text-lg font-semibold">Área dos pais</h1>
+        <div className="flex shrink-0 items-center gap-2">
           <Button type="button" size="sm" variant="outline" onClick={onGoChildMode}>
             <Baby className="mr-1 h-4 w-4" />
             Ver modo criança
@@ -504,18 +606,21 @@ export default function ParentPage() {
 
       {selectedChild ? (
         <div className="mb-3">
-          <StatusNotice tone="info">
-            Perfil ativo: <strong className="ml-1">{selectedChild.display_name}</strong>
+          <StatusNotice tone="info" className="min-w-0">
+            <span className="min-w-0 truncate">
+              Perfil ativo: <strong className="ml-1">{selectedChild.display_name}</strong>
+            </span>
           </StatusNotice>
         </div>
       ) : null}
 
       <section className="space-y-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Crianças vinculadas</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+        <CollapsibleCard
+          title="Crianças vinculadas"
+          summary={`${children.length} criança(s) • ativa: ${selectedChild?.display_name ?? "nenhuma"}`}
+          collapsed={collapsedSections.children}
+          onToggle={() => toggleSection("children")}
+        >
             {children.length === 0 ? <StatusNotice tone="warning">Nenhuma criança cadastrada ainda.</StatusNotice> : null}
             {children.map((child) => (
               <div
@@ -523,7 +628,9 @@ export default function ParentPage() {
                 className={`rounded-md border px-2 py-2 ${selectedChildId === child.id ? "border-secondary bg-secondary/10" : "border-border"}`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <div>
+                  <div className="flex items-center gap-2">
+                    <ChildAvatar name={child.display_name} avatarKey={child.avatar_key} size={42} />
+                    <div>
                     <p className="font-medium">
                       {child.display_name}
                       {selectedChildId === child.id ? <span className="ml-2 text-xs text-secondary">ativa</span> : null}
@@ -531,6 +638,7 @@ export default function ParentPage() {
                     <p className="text-xs text-muted-foreground">
                       Ano nascimento: {child.birth_year ?? "Não informado"} • Tema: {THEME_LABELS[child.theme]}
                     </p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-1">
                     <Button size="sm" variant="outline" onClick={() => void onSelectChild(child)}>
@@ -538,6 +646,19 @@ export default function ParentPage() {
                     </Button>
                     <Button size="sm" variant="outline" className="duo-icon-button h-9 w-9 border-0 p-0" onClick={() => startEditChild(child)}>
                       <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="duo-icon-button h-9 w-9 border-0 p-0"
+                      onClick={() => {
+                        setChildActionError(null);
+                        setDeleteChildPin("");
+                        setChildToDelete(child);
+                      }}
+                      aria-label={`Excluir ${child.display_name}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                     {selectedChildId === child.id ? <CheckCircle2 className="h-4 w-4 text-secondary" /> : null}
                   </div>
@@ -549,6 +670,32 @@ export default function ParentPage() {
               <div className="rounded-md border border-border p-2">
                 <p className="mb-2 text-xs font-semibold text-muted-foreground">Editar criança</p>
                 <div className="grid grid-cols-1 gap-2">
+                  <div className="flex items-center gap-3 rounded-md border border-border p-2">
+                    <ChildAvatar name={editingChildName || "Criança"} avatarKey={editingChildAvatarKey} size={54} />
+                    <div className="space-y-1">
+                      <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-[#2F527D]">
+                        <ImagePlus className="h-3.5 w-3.5" />
+                        Trocar foto
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => onAvatarFileChange(e.target.files?.[0] ?? null, "edit")}
+                        />
+                      </label>
+                      {editingChildAvatarKey ? (
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-[#B8574B]"
+                          onClick={() => setEditingChildAvatarKey(null)}
+                        >
+                          Remover foto
+                        </button>
+                      ) : (
+                        <p className="text-[11px] font-semibold text-muted-foreground">Sem foto: usamos avatar amigável.</p>
+                      )}
+                    </div>
+                  </div>
                   <Input placeholder="Nome da criança" value={editingChildName} onChange={(e) => setEditingChildName(e.target.value)} />
                   <Input
                     placeholder="Ano de nascimento (opcional)"
@@ -579,6 +726,32 @@ export default function ParentPage() {
             <div className="rounded-md border border-border p-2">
               <p className="mb-2 text-xs font-semibold text-muted-foreground">Adicionar nova criança</p>
               <div className="grid grid-cols-1 gap-2">
+                <div className="flex items-center gap-3 rounded-md border border-border p-2">
+                  <ChildAvatar name={newChildName || "Criança"} avatarKey={newChildAvatarKey} size={54} />
+                  <div className="space-y-1">
+                    <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-[#2F527D]">
+                      <ImagePlus className="h-3.5 w-3.5" />
+                      Enviar foto
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => onAvatarFileChange(e.target.files?.[0] ?? null, "new")}
+                      />
+                    </label>
+                    {newChildAvatarKey ? (
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-[#B8574B]"
+                        onClick={() => setNewChildAvatarKey(null)}
+                      >
+                        Remover foto
+                      </button>
+                    ) : (
+                      <p className="text-[11px] font-semibold text-muted-foreground">Opcional. Sem foto, aplicamos avatar amigável.</p>
+                    )}
+                  </div>
+                </div>
                 <Input placeholder="Nome da criança" value={newChildName} onChange={(e) => setNewChildName(e.target.value)} />
                 <Input
                   placeholder="Ano de nascimento (opcional)"
@@ -600,14 +773,14 @@ export default function ParentPage() {
               </div>
             </div>
             {childActionError ? <StatusNotice tone="error">{childActionError}</StatusNotice> : null}
-          </CardContent>
-        </Card>
+        </CollapsibleCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Aprovações pendentes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+        <CollapsibleCard
+          title="Aprovações pendentes"
+          summary={`Pendentes: ${pendingLogs.length} • Som: ${soundEnabled ? "ligado" : "desligado"}`}
+          collapsed={collapsedSections.approvals}
+          onToggle={() => toggleSection("approvals")}
+        >
             <div className="flex items-center justify-between">
               <p className="text-muted-foreground">Pendentes: {pendingLogs.length}</p>
               <button
@@ -633,26 +806,28 @@ export default function ParentPage() {
               <StatusNotice tone="info">Sem pendências de aprovação para a criança ativa.</StatusNotice>
             ) : null}
             {dashboardError ? <StatusNotice tone="error">{dashboardError}</StatusNotice> : null}
-          </CardContent>
-        </Card>
+        </CollapsibleCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Resumo da carteira</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1 text-sm">
+        <CollapsibleCard
+          title="Resumo da carteira"
+          summary={`Total: ${wallet ? formatBRL(wallet.total_balance_cents) : "—"}`}
+          collapsed={collapsedSections.wallet}
+          onToggle={() => toggleSection("wallet")}
+        >
             <p>Total: {wallet ? formatBRL(wallet.total_balance_cents) : "—"}</p>
             <p className="text-muted-foreground">Gastar: {wallet ? formatBRL(wallet.pot_balances_cents.SPEND) : "—"}</p>
             <p className="text-muted-foreground">Guardar: {wallet ? formatBRL(wallet.pot_balances_cents.SAVE) : "—"}</p>
             <p className="text-muted-foreground">Doar: {wallet ? formatBRL(wallet.pot_balances_cents.DONATE) : "—"}</p>
-          </CardContent>
-        </Card>
+        </CollapsibleCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Resumo semanal</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+        <CollapsibleCard
+          title="Resumo semanal"
+          summary={`Conclusão ${trend ? `${trend.completion_delta_percent >= 0 ? "+" : ""}${trend.completion_delta_percent.toFixed(1)}%` : "—"} • Ganhos ${
+            trend ? `${trend.earnings_delta_percent >= 0 ? "+" : ""}${trend.earnings_delta_percent.toFixed(1)}%` : "—"
+          }`}
+          collapsed={collapsedSections.weekly}
+          onToggle={() => toggleSection("weekly")}
+        >
             <div className="flex items-center justify-between">
               <span>Conclusão</span>
               <TrendIndicator value={trend?.completion_delta_percent ?? 0} />
@@ -661,14 +836,14 @@ export default function ParentPage() {
               <span>Ganhos</span>
               <TrendIndicator value={trend?.earnings_delta_percent ?? 0} />
             </div>
-          </CardContent>
-        </Card>
+        </CollapsibleCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Cadastro de tarefas</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+        <CollapsibleCard
+          title="Cadastro de tarefas"
+          summary={`${tasks.length} tarefa(s) cadastrada(s)`}
+          collapsed={collapsedSections.tasks}
+          onToggle={() => toggleSection("tasks")}
+        >
             <div className="rounded-md border border-border p-2">
               <p className="mb-2 text-xs font-semibold text-muted-foreground">Criar tarefa</p>
               <div className="grid grid-cols-1 gap-2">
@@ -741,9 +916,46 @@ export default function ParentPage() {
 
             {tasks.length === 0 ? <StatusNotice tone="info">Nenhuma tarefa cadastrada ainda.</StatusNotice> : null}
             {taskActionError ? <StatusNotice tone="error">{taskActionError}</StatusNotice> : null}
-          </CardContent>
-        </Card>
+        </CollapsibleCard>
       </section>
+
+      {childToDelete ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#0A1930]/45 px-4">
+          <div className="w-full max-w-sm rounded-3xl border border-[#BFD3EE] bg-white p-5 shadow-[0_14px_40px_rgba(16,48,90,0.2)]">
+            <h3 className="text-lg font-black text-[#17345E]">Excluir criança</h3>
+            <p className="mt-1 text-sm font-semibold text-[#5A7AA4]">
+              Você está prestes a excluir <strong>{childToDelete.display_name}</strong>. Esta ação exige confirmação com PIN.
+            </p>
+            <div className="mt-3 space-y-2">
+              <Input
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="PIN dos pais (4 a 6 números)"
+                value={deleteChildPin}
+                onChange={(e) => setDeleteChildPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              />
+              <p className="text-xs text-muted-foreground">Apenas números. Exemplo: 1234</p>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setChildToDelete(null);
+                  setDeleteChildPin("");
+                }}
+                disabled={deletingChild}
+              >
+                Cancelar
+              </Button>
+              <Button type="button" className="bg-destructive text-white hover:bg-destructive/90" onClick={() => void onDeleteChild()} disabled={deletingChild}>
+                {deletingChild ? "Excluindo..." : "Confirmar exclusão"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

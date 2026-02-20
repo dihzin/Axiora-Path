@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 
 import { useTheme } from "@/components/theme-provider";
+import { ChildAvatar } from "@/components/child-avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ThemeName } from "@/lib/api/client";
@@ -63,7 +64,7 @@ export default function SelectChildPage() {
       className="min-h-screen bg-[#f6f6f3] bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: "url('/axiora/home/login-background.svg')" }}
     >
-      <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md p-4 md:p-6">
+      <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 md:p-6">
         <Card>
           <CardHeader>
             <CardTitle>Selecionar perfil</CardTitle>
@@ -82,8 +83,11 @@ export default function SelectChildPage() {
                 onClick={() => chooseChild(child)}
                 disabled={selectingChildId !== null}
               >
-                <div className="flex items-center justify-between">
-                  <span>{child.display_name}</span>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <ChildAvatar name={child.display_name} avatarKey={child.avatar_key} size={36} />
+                    <span>{child.display_name}</span>
+                  </div>
                   <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                     {selectingChildId === child.id ? <CheckCircle2 className="h-3.5 w-3.5 text-secondary" /> : null}
                     {selectingChildId === child.id ? "Abrindo..." : THEME_LABELS[child.theme]}

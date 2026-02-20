@@ -26,6 +26,23 @@ body {
   transition:
     background-color 240ms ease,
     background-image 240ms ease;
+  max-width: 100%;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+html {
+  max-width: 100%;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
 }
 
 h1 {

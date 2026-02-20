@@ -9,6 +9,7 @@ import { MoodSelector } from "@/components/axiora/MoodSelector";
 import { AxionCharacter } from "@/components/axion-character";
 import { AxionDialogue } from "@/components/axion-dialogue";
 import { AvatarEvolution } from "@/components/avatar-evolution";
+import { ChildAvatar } from "@/components/child-avatar";
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { LevelUpOverlay } from "@/components/level-up-overlay";
 import { useTheme } from "@/components/theme-provider";
@@ -158,6 +159,7 @@ export default function ChildPage() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [levelUpOverlayLevel, setLevelUpOverlayLevel] = useState<number | null>(null);
   const [avatarStage, setAvatarStage] = useState(1);
+  const [childAvatarKey, setChildAvatarKey] = useState<string | null>(null);
   const [taskView, setTaskView] = useState<"list" | "journey">("list");
   const [showDailyWelcome, setShowDailyWelcome] = useState(false);
   const [dailyMission, setDailyMission] = useState<DailyMissionResponse | null>(null);
@@ -239,6 +241,7 @@ export default function ChildPage() {
           setChildName(fallbackChild.display_name);
           setTheme(fallbackChild.theme);
           setAvatarStage(fallbackChild.avatar_stage);
+          setChildAvatarKey(fallbackChild.avatar_key ?? null);
           return;
         }
         if (child) {
@@ -246,6 +249,7 @@ export default function ChildPage() {
           setChildName(child.display_name);
           setTheme(child.theme);
           setAvatarStage(child.avatar_stage);
+          setChildAvatarKey(child.avatar_key ?? null);
         }
       })
       .catch(() => {
@@ -717,16 +721,16 @@ export default function ChildPage() {
       ) : null}
       <main
         className={cn(
-          "safe-px safe-pb mx-auto flex min-h-screen w-full flex-col p-4 pb-52 pt-5 md:p-6 md:pb-40",
+          "safe-px safe-pb mx-auto flex min-h-screen w-full flex-col overflow-x-clip p-4 pb-52 pt-5 md:p-6 md:pb-40",
           isSchoolTenant ? "max-w-md md:max-w-3xl" : "max-w-md md:max-w-2xl",
         )}
       >
         <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-medium text-muted-foreground">{childName ? `Perfil: ${childName}` : "Perfil infantil"}</p>
+          <p className="min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground">{childName ? `Perfil: ${childName}` : "Perfil infantil"}</p>
           <button
             type="button"
             aria-label="Abrir modo pais"
-            className="inline-flex items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
             onClick={() => router.push("/parent-pin")}
           >
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-muted">
@@ -909,7 +913,14 @@ export default function ChildPage() {
                 />
                 <div className="rounded-xl border border-border bg-card p-5 shadow-sm md:p-6">
                   <p className="mb-2 text-sm font-semibold text-foreground">Avatar</p>
-                  <AvatarEvolution stage={avatarStage} />
+                  {childAvatarKey ? (
+                    <div className="mx-auto w-fit rounded-xl border border-border bg-card p-3">
+                      <ChildAvatar name={childName || "Criança"} avatarKey={childAvatarKey} size={96} />
+                      <p className="mt-2 text-center text-sm font-medium text-muted-foreground">Foto do perfil</p>
+                    </div>
+                  ) : (
+                    <AvatarEvolution stage={avatarStage} />
+                  )}
                 </div>
               </div>
               <div className="rounded-xl border border-border bg-card p-5 shadow-sm md:p-6">

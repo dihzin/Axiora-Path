@@ -112,7 +112,7 @@ export default function LoginPage() {
       className="min-h-screen bg-[#f6f6f3] bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: "url('/axiora/home/login-background.svg')" }}
     >
-      <main className="safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md p-4 md:p-6">
+      <main className="safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md overflow-x-clip p-4 md:p-6">
         <div className="relative min-h-[calc(100vh-2rem)] w-full md:min-h-[calc(100vh-3rem)]">
           <div className="pointer-events-none absolute left-0 right-0 top-12 md:top-16">
             <AxionMascot />
