@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { login } from "@/lib/api/client";
-import { getTenantSlug, setAccessToken, setRefreshToken, setTenantSlug } from "@/lib/api/session";
+import { getTenantSlug, setAccessToken, setTenantSlug } from "@/lib/api/session";
 
 function AxionMascot() {
   return (
@@ -95,7 +95,6 @@ export default function LoginPage() {
       setTenantSlug(tenantSlug);
       const tokens = await login(email, password);
       setAccessToken(tokens.access_token);
-      setRefreshToken(tokens.refresh_token);
       if (nextPath) {
         router.push(nextPath);
       } else {

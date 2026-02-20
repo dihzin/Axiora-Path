@@ -4,10 +4,8 @@ import {
   clearTenantSlug,
   clearTokens,
   getAccessToken,
-  getRefreshToken,
   getTenantSlug,
   setAccessToken,
-  setRefreshToken,
 } from "@/lib/api/session";
 
 function resolveApiUrl(): string {
@@ -60,6 +58,16 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function getCsrfTokenFromCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const raw = document.cookie
+    .split("; ")
+    .find((item) => item.startsWith("axiora_csrf_token="));
+  if (!raw) return null;
+  const value = raw.split("=")[1];
+  return value ? decodeURIComponent(value) : null;
+}
+
 async function parseJsonSafe(response: Response): Promise<unknown> {
   try {
     return await response.json();
@@ -70,9 +78,8 @@ async function parseJsonSafe(response: Response): Promise<unknown> {
 
 async function refreshAccessToken(): Promise<string | null> {
   const apiUrl = resolveApiUrl();
-  const refreshToken = getRefreshToken();
   const tenantSlug = getTenantSlug();
-  if (!refreshToken || !tenantSlug) {
+  if (!tenantSlug) {
     clearTokens();
     clearTenantSlug();
     redirectToLoginIfBrowser();
@@ -81,13 +88,20 @@ async function refreshAccessToken(): Promise<string | null> {
 
   let response: Response;
   try {
+    const csrfToken = getCsrfTokenFromCookie();
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "X-Tenant-Slug": tenantSlug,
+    };
+    if (csrfToken) {
+      headers["X-CSRF-Token"] = csrfToken;
+    }
+
     response = await fetch(`${apiUrl}/auth/refresh`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Tenant-Slug": tenantSlug,
-      },
-      body: JSON.stringify({ refresh_token: refreshToken }),
+      headers,
+      credentials: "include",
+      body: JSON.stringify({}),
     });
   } catch {
     clearTokens();
@@ -104,9 +118,8 @@ async function refreshAccessToken(): Promise<string | null> {
     }
     return null;
   }
-  const data = (await response.json()) as { access_token: string; refresh_token: string };
+  const data = (await response.json()) as { access_token: string };
   setAccessToken(data.access_token);
-  setRefreshToken(data.refresh_token);
   return data.access_token;
 }
 
@@ -116,6 +129,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
+  const csrfToken = getCsrfTokenFromCookie();
 
   if (options.includeTenant !== false) {
     const tenantSlug = getTenantSlug();
@@ -131,9 +145,13 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   const makeRequest = async (): Promise<Response> => {
     try {
+      if (path === "/auth/logout" && csrfToken) {
+        headers["X-CSRF-Token"] = csrfToken;
+      }
       return await fetch(`${apiUrl}${path}`, {
         method,
         headers,
+        credentials: "include",
         body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
       });
     } catch {

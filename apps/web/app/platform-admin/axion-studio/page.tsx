@@ -37,7 +37,7 @@ import {
   type PlatformTenantCreateResponse,
   type PlatformTenantSummary,
 } from "@/lib/api/client";
-import { clearTenantSlug, clearTokens, getAccessToken, getRefreshToken } from "@/lib/api/session";
+import { clearTenantSlug, clearTokens, getAccessToken, getTenantSlug } from "@/lib/api/session";
 
 type Tab = "policies" | "messages" | "preview" | "audit" | "impact" | "orgs";
 
@@ -250,8 +250,8 @@ export default function AxionStudioPage() {
 
   useEffect(() => {
     const hasAccess = Boolean(getAccessToken());
-    const hasRefresh = Boolean(getRefreshToken());
-    if (!hasAccess && !hasRefresh) {
+    const hasTenant = Boolean(getTenantSlug());
+    if (!hasAccess && !hasTenant) {
       redirectToLogin();
       return;
     }

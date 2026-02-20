@@ -37,13 +37,21 @@ from app.schemas.auth import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _cookie_samesite() -> str:
+    value = settings.auth_cookie_samesite.strip().lower()
+    if value not in {"strict", "lax", "none"}:
+        return "lax"
+    return value
+
+
 def _set_auth_cookies(response: Response, refresh_token: str, csrf_token: str) -> None:
+    samesite = _cookie_samesite()
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
         value=refresh_token,
         httponly=True,
         secure=settings.auth_cookie_secure,
-        samesite="strict",
+        samesite=samesite,
         max_age=int(timedelta(days=7).total_seconds()),
         path="/auth",
         domain=settings.auth_cookie_domain,
@@ -53,7 +61,7 @@ def _set_auth_cookies(response: Response, refresh_token: str, csrf_token: str) -
         value=csrf_token,
         httponly=False,
         secure=settings.auth_cookie_secure,
-        samesite="strict",
+        samesite=samesite,
         max_age=int(timedelta(days=7).total_seconds()),
         path="/",
         domain=settings.auth_cookie_domain,
@@ -283,19 +291,20 @@ def platform_login(payload: LoginRequest, db: DBSession, response: Response) -> 
 
 @router.post("/logout", response_model=MessageResponse)
 def logout(response: Response) -> MessageResponse:
+    samesite = _cookie_samesite()
     response.delete_cookie(
         key=REFRESH_COOKIE_NAME,
         path="/auth",
         domain=settings.auth_cookie_domain,
         secure=settings.auth_cookie_secure,
-        samesite="strict",
+        samesite=samesite,
     )
     response.delete_cookie(
         key=CSRF_COOKIE_NAME,
         path="/",
         domain=settings.auth_cookie_domain,
         secure=settings.auth_cookie_secure,
-        samesite="strict",
+        samesite=samesite,
     )
     return MessageResponse(message="Logged out")
 

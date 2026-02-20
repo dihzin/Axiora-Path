@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { platformLogin } from "@/lib/api/client";
-import { setAccessToken, setRefreshToken, setTenantSlug } from "@/lib/api/session";
+import { setAccessToken, setTenantSlug } from "@/lib/api/session";
 
 export default function PlatformAdminLoginPage() {
   const router = useRouter();
@@ -30,7 +30,6 @@ export default function PlatformAdminLoginPage() {
       const tokens = await platformLogin(email, password);
       setTenantSlug("platform-admin");
       setAccessToken(tokens.access_token);
-      setRefreshToken(tokens.refresh_token);
       router.push(nextPath);
     } catch {
       setError("Não foi possível autenticar. Verifique e-mail e senha.");
