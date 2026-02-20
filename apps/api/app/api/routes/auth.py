@@ -59,6 +59,11 @@ def _set_auth_cookies(response: Response, refresh_token: str, csrf_token: str) -
     )
 
 
+def _is_platform_admin_email(email: str) -> bool:
+    allowlist = {item.strip().lower() for item in settings.platform_admin_emails.split(",") if item.strip()}
+    return email.strip().lower() in allowlist
+
+
 @router.post("/signup", response_model=AuthTokens, status_code=status.HTTP_201_CREATED)
 def signup(payload: SignupRequest, db: DBSession, response: Response) -> AuthTokens:
     existing_user = db.scalar(select(User).where(User.email == payload.email))
@@ -217,6 +222,61 @@ def refresh(
         role=membership.role.value,
     )
     _set_auth_cookies(response, refresh_token, generate_csrf_token())
+    return AuthTokens(access_token=access_token, refresh_token=refresh_token)
+
+
+@router.post("/platform-login", response_model=AuthTokens)
+def platform_login(payload: LoginRequest, db: DBSession, response: Response) -> AuthTokens:
+    user = db.scalar(select(User).where(User.email == payload.email))
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    if user.locked_until is not None and user.locked_until > datetime.now(UTC):
+        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail="Account temporarily locked")
+
+    if not verify_password(payload.password, user.password_hash):
+        user.failed_login_attempts += 1
+        if user.failed_login_attempts >= settings.account_lock_max_attempts:
+            user.locked_until = datetime.now(UTC) + timedelta(minutes=settings.account_lock_minutes)
+            user.failed_login_attempts = 0
+            db.commit()
+            raise HTTPException(status_code=status.HTTP_423_LOCKED, detail="Account temporarily locked")
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    if not _is_platform_admin_email(user.email):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only platform admins can login here")
+
+    platform_tenant = db.scalar(select(Tenant).where(Tenant.slug == "platform-admin", Tenant.deleted_at.is_(None)))
+    if platform_tenant is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform admin tenant not found")
+
+    membership = db.scalar(
+        select(Membership).where(
+            Membership.user_id == user.id,
+            Membership.tenant_id == platform_tenant.id,
+        ),
+    )
+    if membership is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not in platform admin tenant")
+
+    if membership.role == MembershipRole.CHILD:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Children cannot login in platform admin")
+
+    access_token = create_access_token(
+        user_id=user.id,
+        tenant_id=platform_tenant.id,
+        role=membership.role.value,
+    )
+    refresh_token = create_refresh_token(
+        user_id=user.id,
+        tenant_id=platform_tenant.id,
+        role=membership.role.value,
+    )
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    _set_auth_cookies(response, refresh_token, generate_csrf_token())
+    db.commit()
     return AuthTokens(access_token=access_token, refresh_token=refresh_token)
 
 

@@ -802,6 +802,15 @@ export async function login(email: string, password: string): Promise<AuthTokens
   });
 }
 
+export async function platformLogin(email: string, password: string): Promise<AuthTokens> {
+  return apiRequest<AuthTokens>("/auth/platform-login", {
+    method: "POST",
+    body: { email, password },
+    requireAuth: false,
+    includeTenant: false,
+  });
+}
+
 export async function getMe(): Promise<AuthMeResponse> {
   return apiRequest<AuthMeResponse>("/auth/me", { method: "GET", requireAuth: true, includeTenant: true });
 }
