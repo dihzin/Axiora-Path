@@ -22,6 +22,7 @@ from app.core.security import (
 from app.models import ChildProfile, Membership, MembershipRole, Tenant, TenantType, User
 from app.schemas.auth import (
     AuthTokens,
+    ChangePasswordRequest,
     ChildProfileOut,
     LoginRequest,
     MembershipOut,
@@ -297,6 +298,26 @@ def logout(response: Response) -> MessageResponse:
         samesite="strict",
     )
     return MessageResponse(message="Logged out")
+
+
+@router.post("/change-password", response_model=MessageResponse)
+def change_password(
+    payload: ChangePasswordRequest,
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> MessageResponse:
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Current password is invalid")
+
+    password_error = validate_password_strength(payload.new_password)
+    if password_error is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=password_error)
+
+    user.password_hash = hash_password(payload.new_password)
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    db.commit()
+    return MessageResponse(message="Password updated successfully")
 
 
 @router.get("/me", response_model=MeResponse)

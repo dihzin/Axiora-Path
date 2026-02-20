@@ -40,8 +40,11 @@ export default function PlatformAdminLoginPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-8">
-      <div className="w-full rounded-3xl border border-[#BFD3EE] bg-white p-6 shadow-[0_14px_40px_rgba(16,48,90,0.12)]">
+    <main
+      className="mx-auto flex min-h-screen w-full items-center justify-center bg-[#f6f6f3] bg-cover bg-center bg-no-repeat px-4 py-8"
+      style={{ backgroundImage: "url('/axiora/home/login-background.svg')" }}
+    >
+      <div className="w-full max-w-md rounded-3xl border border-white/60 bg-white/95 p-6 shadow-[0_-4px_40px_rgba(13,25,41,0.25),0_8px_32px_rgba(0,0,0,0.15)]">
         <h1 className="text-2xl font-black text-[#17345E]">Platform Admin</h1>
         <p className="mt-1 text-sm font-semibold text-[#5A7AA4]">Acesso administrativo do Axion Studio.</p>
 
@@ -66,7 +69,7 @@ export default function PlatformAdminLoginPage() {
           />
           {error ? <p className="text-sm font-semibold text-[#B54C47]">{error}</p> : null}
           <button
-            className="w-full rounded-xl bg-[#2ABBA3] px-3 py-2 text-sm font-black text-white disabled:opacity-60"
+            className="w-full rounded-xl bg-[#FF6B3D] px-3 py-2 text-sm font-black text-white shadow-[0_5px_0_rgba(190,89,52,0.45)] disabled:opacity-60"
             type="submit"
             disabled={loading}
           >
@@ -77,4 +80,3 @@ export default function PlatformAdminLoginPage() {
     </main>
   );
 }
-

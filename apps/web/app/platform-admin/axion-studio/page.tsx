@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   ApiError,
+  changePassword,
   createAxionStudioPolicy,
   createAxionStudioTemplate,
   getApiErrorMessage,
@@ -151,6 +152,10 @@ export default function AxionStudioPage() {
   const [versions, setVersions] = useState<AxionStudioVersion[]>([]);
   const [versionsTitle, setVersionsTitle] = useState("");
   const [versionsTarget, setVersionsTarget] = useState<{ type: "RULE" | "TEMPLATE"; id: number } | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordFeedback, setPasswordFeedback] = useState<string | null>(null);
 
   const templateCharCount = useMemo(() => templateDraft.text.trim().length, [templateDraft.text]);
 
@@ -240,6 +245,25 @@ export default function AxionStudioPage() {
       clearTokens();
       clearTenantSlug();
       window.location.assign("/platform-admin/login");
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword.trim() || !newPassword.trim()) {
+      setPasswordFeedback("Preencha senha atual e nova senha.");
+      return;
+    }
+    setLoading(true);
+    setPasswordFeedback(null);
+    try {
+      await changePassword(currentPassword, newPassword);
+      setPasswordFeedback("Senha atualizada com sucesso.");
+      setCurrentPassword("");
+      setNewPassword("");
+    } catch (err) {
+      setPasswordFeedback(getApiErrorMessage(err, "Não foi possível atualizar a senha."));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -357,27 +381,40 @@ export default function AxionStudioPage() {
   };
 
   return (
-    <main className="min-h-screen w-full px-4 py-6 md:px-8 xl:px-14 2xl:px-20">
-      <div className="rounded-3xl border border-[#BFD3EE] bg-white p-5 shadow-[0_14px_40px_rgba(16,48,90,0.08)] md:p-7">
+    <main
+      className="min-h-screen w-full bg-[#f6f6f3] bg-cover bg-center bg-no-repeat px-4 py-6 md:px-8 xl:px-14 2xl:px-20"
+      style={{ backgroundImage: "url('/axiora/home/login-background.svg')" }}
+    >
+      <div className="rounded-3xl border border-[#BFD3EE] bg-white/95 p-5 shadow-[0_14px_40px_rgba(16,48,90,0.18)] md:p-7">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-3xl font-black text-[#17345E]">Axion Studio</h1>
             <p className="mt-1 text-sm font-semibold text-[#5A7AA4]">Gerencie políticas e mensagens do Axion sem deploy de código.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="rounded-2xl border border-[#C9D8EF] bg-[#F6FAFF] px-4 py-2 text-right">
+          <div className="rounded-2xl border border-[#C9D8EF] bg-[#F6FAFF] px-4 py-2 text-right">
+            <div>
               <p className="text-[11px] font-bold uppercase tracking-wide text-[#6A86AA]">Sessão</p>
               <p className="text-sm font-black text-[#1E3B65]">{me?.name ?? "Não identificado"}</p>
               <p className="text-xs font-semibold text-[#5F7EA6]">{me?.email ?? "sem e-mail na sessão"}</p>
             </div>
-            <button
-              className="rounded-2xl border border-[#F5B2A9] bg-[#FFF3F1] px-4 py-3 text-sm font-black text-[#B8574B] transition hover:bg-[#FFE7E2]"
-              disabled={loading}
-              onClick={() => void handleLogout()}
-              type="button"
-            >
-              Sair
-            </button>
+            <div className="mt-2 flex items-center justify-end gap-2">
+              <button
+                className="rounded-xl border border-[#BCD1EE] bg-white px-3 py-2 text-xs font-black text-[#2F527D] transition hover:bg-[#F0F6FF]"
+                disabled={loading}
+                onClick={() => setShowPasswordModal(true)}
+                type="button"
+              >
+                Redefinir senha
+              </button>
+              <button
+                className="rounded-xl border border-[#F5B2A9] bg-[#FFF3F1] px-3 py-2 text-xs font-black text-[#B8574B] transition hover:bg-[#FFE7E2]"
+                disabled={loading}
+                onClick={() => void handleLogout()}
+                type="button"
+              >
+                Sair
+              </button>
+            </div>
           </div>
         </div>
 
@@ -746,6 +783,55 @@ export default function AxionStudioPage() {
           </section>
         ) : null}
       </div>
+      {showPasswordModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A1930]/45 px-4">
+          <div className="w-full max-w-md rounded-3xl border border-[#BFD3EE] bg-white p-5 shadow-[0_14px_40px_rgba(16,48,90,0.2)]">
+            <h3 className="text-lg font-black text-[#17345E]">Redefinir senha</h3>
+            <p className="mt-1 text-sm font-semibold text-[#5A7AA4]">Atualize sua senha de acesso ao menu da plataforma.</p>
+            <div className="mt-4 space-y-2">
+              <input
+                className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                type="password"
+                placeholder="Senha atual"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+              <input
+                className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                type="password"
+                placeholder="Nova senha"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+            {passwordFeedback ? <p className="mt-2 text-sm font-semibold text-[#2F527D]">{passwordFeedback}</p> : null}
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                className="rounded-xl border border-[#BCD1EE] bg-white px-3 py-2 text-sm font-black text-[#2F527D]"
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setPasswordFeedback(null);
+                  setCurrentPassword("");
+                  setNewPassword("");
+                }}
+                type="button"
+              >
+                Fechar
+              </button>
+              <button
+                className="rounded-xl bg-[#2ABBA3] px-3 py-2 text-sm font-black text-white disabled:opacity-60"
+                onClick={() => void handleChangePassword()}
+                type="button"
+                disabled={loading}
+              >
+                Salvar senha
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

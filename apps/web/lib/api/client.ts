@@ -819,6 +819,15 @@ export async function logout(): Promise<{ message: string }> {
   return apiRequest<{ message: string }>("/auth/logout", { method: "POST", requireAuth: false, includeTenant: false });
 }
 
+export async function changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>("/auth/change-password", {
+    method: "POST",
+    body: { current_password: currentPassword, new_password: newPassword },
+    requireAuth: true,
+    includeTenant: false,
+  });
+}
+
 export async function listMemberships(): Promise<OrganizationMembership[]> {
   return apiRequest<OrganizationMembership[]>("/auth/memberships", { method: "GET", requireAuth: true, includeTenant: false });
 }
