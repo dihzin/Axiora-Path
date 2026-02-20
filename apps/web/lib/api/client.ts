@@ -42,6 +42,26 @@ type ApiErrorPayload = {
   details?: unknown;
 };
 
+let parentalConsentBlocked = false;
+
+function isParentalConsentCode(payload: unknown): boolean {
+  if (!payload || typeof payload !== "object") return false;
+  const code = (payload as { code?: unknown }).code;
+  return typeof code === "string" && code.trim().toUpperCase() === "PARENTAL_CONSENT_REQUIRED";
+}
+
+function isConsentExemptPath(path: string): boolean {
+  return (
+    path === "/legal" ||
+    path.startsWith("/legal") ||
+    path.startsWith("/auth/") ||
+    path === "/health" ||
+    path.startsWith("/docs") ||
+    path.startsWith("/openapi") ||
+    path.startsWith("/api/platform-admin/")
+  );
+}
+
 function redirectToLoginIfBrowser(): void {
   if (typeof window === "undefined") return;
   if (window.location.pathname === "/login") return;
@@ -51,6 +71,9 @@ function redirectToLoginIfBrowser(): void {
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError) {
     const payload = error.payload as ApiErrorPayload | null;
+    if (payload && typeof payload.code === "string" && payload.code.toUpperCase() === "PARENTAL_CONSENT_REQUIRED") {
+      return "Consentimento parental pendente. Peça para um responsável aceitar os termos para continuar.";
+    }
     if (payload && typeof payload.message === "string" && payload.message.trim().length > 0) {
       return payload.message;
     }
@@ -126,6 +149,12 @@ async function refreshAccessToken(): Promise<string | null> {
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const apiUrl = resolveApiUrl();
   const method = options.method ?? "GET";
+  if (parentalConsentBlocked && !isConsentExemptPath(path)) {
+    throw new ApiError("Blocked by parental consent policy", 403, {
+      code: "PARENTAL_CONSENT_REQUIRED",
+      message: "Parental consent required",
+    });
+  }
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -173,12 +202,19 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   if (!response.ok) {
     const payload = await parseJsonSafe(response);
+    if (isParentalConsentCode(payload)) {
+      parentalConsentBlocked = true;
+    }
     if (options.requireAuth !== false && response.status === 401) {
       clearTokens();
       clearTenantSlug();
       redirectToLoginIfBrowser();
     }
     throw new ApiError("API request failed", response.status, payload);
+  }
+
+  if (path.startsWith("/legal")) {
+    parentalConsentBlocked = false;
   }
 
   return (await parseJsonSafe(response)) as T;
@@ -831,21 +867,25 @@ export type UserUXSettings = {
 };
 
 export async function login(email: string, password: string): Promise<AuthTokens> {
-  return apiRequest<AuthTokens>("/auth/login", {
+  const response = await apiRequest<AuthTokens>("/auth/login", {
     method: "POST",
     body: { email, password },
     requireAuth: false,
     includeTenant: true,
   });
+  parentalConsentBlocked = false;
+  return response;
 }
 
 export async function platformLogin(email: string, password: string): Promise<AuthTokens> {
-  return apiRequest<AuthTokens>("/auth/platform-login", {
+  const response = await apiRequest<AuthTokens>("/auth/platform-login", {
     method: "POST",
     body: { email, password },
     requireAuth: false,
     includeTenant: false,
   });
+  parentalConsentBlocked = false;
+  return response;
 }
 
 export async function getMe(): Promise<AuthMeResponse> {
@@ -853,7 +893,9 @@ export async function getMe(): Promise<AuthMeResponse> {
 }
 
 export async function logout(): Promise<{ message: string }> {
-  return apiRequest<{ message: string }>("/auth/logout", { method: "POST", requireAuth: false, includeTenant: false });
+  const response = await apiRequest<{ message: string }>("/auth/logout", { method: "POST", requireAuth: false, includeTenant: false });
+  parentalConsentBlocked = false;
+  return response;
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
@@ -979,7 +1021,7 @@ export async function acceptLegal(dataRetentionPolicyVersion = "v1"): Promise<{
   accepted_privacy_at: string;
   data_retention_policy_version: string;
 }> {
-  return apiRequest<{
+  const response = await apiRequest<{
     accepted: boolean;
     accepted_terms_at: string;
     accepted_privacy_at: string;
@@ -990,6 +1032,8 @@ export async function acceptLegal(dataRetentionPolicyVersion = "v1"): Promise<{
     requireAuth: true,
     includeTenant: true,
   });
+  parentalConsentBlocked = false;
+  return response;
 }
 
 export async function getStreak(childId: number): Promise<StreakResponse> {

@@ -7,7 +7,7 @@ import { ArrowLeft, Sparkles } from "lucide-react";
 import { AxioraAvatar } from "@/components/axiora/AxioraAvatar";
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getAchievements, type AchievementItem } from "@/lib/api/client";
+import { ApiError, getAchievements, getApiErrorMessage, type AchievementItem } from "@/lib/api/client";
 import type { Mood } from "@/lib/types/mood";
 
 const ICON_MAP: Record<string, Mood> = {
@@ -24,12 +24,22 @@ export default function StickerGalleryPage() {
   const [childId, setChildId] = useState<number | null>(null);
   const [items, setItems] = useState<AchievementItem[]>([]);
   const [newlyUnlocked, setNewlyUnlocked] = useState<Set<number>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     const rawChildId = localStorage.getItem("axiora_child_id");
-    if (!rawChildId) return;
+    if (!rawChildId) {
+      setLoading(false);
+      return;
+    }
     const parsedChildId = Number(rawChildId);
-    if (!Number.isFinite(parsedChildId)) return;
+    if (!Number.isFinite(parsedChildId)) {
+      setLoading(false);
+      return;
+    }
     setChildId(parsedChildId);
 
     getAchievements(parsedChildId)
@@ -43,8 +53,16 @@ export default function StickerGalleryPage() {
         setItems(data.achievements);
         localStorage.setItem(storageKey, JSON.stringify(currentUnlocked));
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         setItems([]);
+        if (err instanceof ApiError && err.status === 403) {
+          setError(getApiErrorMessage(err, "Acesso bloqueado no momento. Peça para um responsável concluir o consentimento."));
+          return;
+        }
+        setError(getApiErrorMessage(err, "Não foi possível carregar as figurinhas agora."));
+      })
+      .finally(() => {
+        setLoading(false);
       });
   }, []);
 
@@ -68,6 +86,13 @@ export default function StickerGalleryPage() {
         </CardHeader>
         <CardContent>
           {childId === null ? <p className="text-sm text-muted-foreground">Selecione uma criança primeiro.</p> : null}
+          {loading ? <p className="mb-3 text-sm text-muted-foreground">Carregando figurinhas...</p> : null}
+          {error ? (
+            <div className="mb-3 rounded-xl border border-[#F4C5C2] bg-[#FFF2F1] px-3 py-2 text-sm font-semibold text-[#B54C47]">
+              {error}
+            </div>
+          ) : null}
+          {!loading && !error && childId !== null && items.length === 0 ? <p className="mb-3 text-sm text-muted-foreground">Nenhuma figurinha disponível para este perfil ainda.</p> : null}
 
           <div className="grid grid-cols-3 gap-3">
             {items.map((item) => {

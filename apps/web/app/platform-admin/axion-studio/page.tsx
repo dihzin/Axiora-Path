@@ -40,9 +40,12 @@ import {
 import { clearTenantSlug, clearTokens, getAccessToken, getTenantSlug } from "@/lib/api/session";
 
 type Tab = "policies" | "messages" | "preview" | "audit" | "impact" | "orgs";
+type TenantFieldKey = "name" | "slug" | "type" | "adminName" | "adminEmail" | "adminPassword" | "testChildName" | "testChildBirthYear";
 
 const CONTEXTS = ["child_tab", "before_learning", "after_learning", "games_tab", "wallet_tab"] as const;
 const TONES = ["CALM", "ENCOURAGE", "CHALLENGE", "CELEBRATE", "SUPPORT"] as const;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const CONTEXT_LABELS: Record<string, string> = {
   child_tab: "Aba da criança",
@@ -95,6 +98,77 @@ function toneLabel(value: string): string {
   return TONE_LABELS[value] ?? value;
 }
 
+function validateTenantDraft(draft: {
+  name: string;
+  slug: string;
+  type: "FAMILY" | "SCHOOL";
+  adminEmail: string;
+  adminName: string;
+  adminPassword: string;
+  createTestChild: boolean;
+  testChildName: string;
+  testChildBirthYear: string;
+}): Partial<Record<TenantFieldKey, string>> {
+  const errors: Partial<Record<TenantFieldKey, string>> = {};
+  const currentYear = new Date().getFullYear();
+
+  if (draft.name.trim().length < 2) errors.name = "Informe um nome com pelo menos 2 caracteres.";
+  if (!SLUG_REGEX.test(draft.slug.trim().toLowerCase())) {
+    errors.slug = "Use apenas letras minúsculas, números e hífen (ex.: familia-silva).";
+  }
+  if (draft.adminName.trim().length < 2) errors.adminName = "Informe o nome do administrador (mínimo 2 caracteres).";
+  if (!EMAIL_REGEX.test(draft.adminEmail.trim().toLowerCase())) errors.adminEmail = "Informe um e-mail válido.";
+  if (draft.adminPassword.length < 10) errors.adminPassword = "A senha inicial deve ter no mínimo 10 caracteres.";
+
+  if (draft.type === "FAMILY" && draft.createTestChild && draft.testChildName.trim().length < 2) {
+    errors.testChildName = "Informe o nome da criança com pelo menos 2 caracteres.";
+  }
+  if (draft.testChildBirthYear.trim().length > 0) {
+    const birthYear = Number(draft.testChildBirthYear);
+    if (!Number.isInteger(birthYear) || birthYear < 1900 || birthYear > currentYear) {
+      errors.testChildBirthYear = "Ano inválido. Use um valor entre 1900 e o ano atual.";
+    }
+  }
+
+  return errors;
+}
+
+function mapTenant422Errors(payload: unknown): Partial<Record<TenantFieldKey, string>> {
+  const mapped: Partial<Record<TenantFieldKey, string>> = {};
+  if (!payload || typeof payload !== "object") return mapped;
+  const detail = (payload as { detail?: unknown }).detail;
+  if (!Array.isArray(detail)) return mapped;
+
+  for (const item of detail) {
+    if (!item || typeof item !== "object") continue;
+    const loc = Array.isArray((item as { loc?: unknown[] }).loc) ? (item as { loc: unknown[] }).loc : [];
+    const rawField = String(loc[loc.length - 1] ?? "");
+    const message = String((item as { msg?: unknown }).msg ?? "Valor inválido.");
+
+    const fieldMap: Record<string, TenantFieldKey> = {
+      name: "name",
+      slug: "slug",
+      type: "type",
+      adminName: "adminName",
+      admin_name: "adminName",
+      adminEmail: "adminEmail",
+      admin_email: "adminEmail",
+      adminPassword: "adminPassword",
+      admin_password: "adminPassword",
+      testChildName: "testChildName",
+      test_child_name: "testChildName",
+      testChildBirthYear: "testChildBirthYear",
+      test_child_birth_year: "testChildBirthYear",
+    };
+    const mappedField = fieldMap[rawField];
+    if (mappedField && !mapped[mappedField]) {
+      mapped[mappedField] = message;
+    }
+  }
+
+  return mapped;
+}
+
 export default function AxionStudioPage() {
   const [tab, setTab] = useState<Tab>("policies");
   const [loading, setLoading] = useState(true);
@@ -110,6 +184,7 @@ export default function AxionStudioPage() {
   const [tenantSearch, setTenantSearch] = useState("");
   const [tenantTypeFilter, setTenantTypeFilter] = useState<"" | "FAMILY" | "SCHOOL">("");
   const [tenantCreateResult, setTenantCreateResult] = useState<PlatformTenantCreateResponse | null>(null);
+  const [tenantFieldErrors, setTenantFieldErrors] = useState<Partial<Record<TenantFieldKey, string>>>({});
   const [tenantDraft, setTenantDraft] = useState({
     name: "",
     slug: "",
@@ -390,9 +465,17 @@ export default function AxionStudioPage() {
   };
 
   const saveTenant = async () => {
+    const localErrors = validateTenantDraft(tenantDraft);
+    if (Object.keys(localErrors).length > 0) {
+      setTenantFieldErrors(localErrors);
+      setError("Revise os campos obrigatórios e os formatos informados.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setTenantCreateResult(null);
+    setTenantFieldErrors({});
     try {
       const payload = {
         name: tenantDraft.name.trim(),
@@ -417,8 +500,18 @@ export default function AxionStudioPage() {
         adminName: "",
         adminPassword: "",
       }));
+      setTenantFieldErrors({});
     } catch (err) {
-      setError(getApiErrorMessage(err, "Falha ao criar organização."));
+      if (err instanceof ApiError && err.status === 422) {
+        const mapped = mapTenant422Errors(err.payload);
+        if (Object.keys(mapped).length > 0) {
+          setTenantFieldErrors(mapped);
+        }
+        setError("Alguns campos não passaram na validação. Revise os itens destacados.");
+      } else {
+        setTenantFieldErrors({});
+        setError(getApiErrorMessage(err, "Falha ao criar organização."));
+      }
     } finally {
       setLoading(false);
     }
@@ -904,46 +997,80 @@ export default function AxionStudioPage() {
 
             <div className="rounded-2xl border border-[#C9D8EF] p-3 xl:sticky xl:top-4 xl:self-start">
               <h3 className="mb-2 text-sm font-black text-[#1E3B65]">Nova organização de teste</h3>
+              <div className="mb-3 rounded-xl border border-[#D7E2F4] bg-[#F7FAFF] px-3 py-2 text-xs font-semibold text-[#35567F]">
+                <p>Campos obrigatórios: nome da organização, slug, tipo, nome do administrador, e-mail e senha inicial.</p>
+                <p className="mt-1">Padrões: slug em minúsculas com hífen (`familia-silva`) e senha com pelo menos 10 caracteres.</p>
+              </div>
               <input
-                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
-                onChange={(e) => setTenantDraft((d) => ({ ...d, name: e.target.value }))}
-                placeholder="Nome da organização"
+                className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${tenantFieldErrors.name ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setTenantDraft((d) => ({ ...d, name: next }));
+                  setTenantFieldErrors((prev) => ({ ...prev, name: undefined }));
+                }}
+                placeholder="Nome da organização *"
                 value={tenantDraft.name}
               />
+              {tenantFieldErrors.name ? <p className="mb-2 text-xs font-semibold text-[#B54C47]">{tenantFieldErrors.name}</p> : null}
               <input
-                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm font-mono"
-                onChange={(e) => setTenantDraft((d) => ({ ...d, slug: e.target.value.toLowerCase() }))}
-                placeholder="Slug (ex.: familia-silva)"
+                className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm font-mono ${tenantFieldErrors.slug ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
+                onChange={(e) => {
+                  const next = e.target.value.toLowerCase();
+                  setTenantDraft((d) => ({ ...d, slug: next }));
+                  setTenantFieldErrors((prev) => ({ ...prev, slug: undefined }));
+                }}
+                placeholder="Slug * (ex.: familia-silva)"
                 value={tenantDraft.slug}
               />
+              {tenantFieldErrors.slug ? <p className="mb-2 text-xs font-semibold text-[#B54C47]">{tenantFieldErrors.slug}</p> : <p className="mb-2 text-xs font-semibold text-[#6B87AC]">Use apenas `a-z`, `0-9` e `-`.</p>}
               <select
-                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
-                onChange={(e) => setTenantDraft((d) => ({ ...d, type: e.target.value as "FAMILY" | "SCHOOL" }))}
+                className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${tenantFieldErrors.type ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
+                onChange={(e) => {
+                  setTenantDraft((d) => ({ ...d, type: e.target.value as "FAMILY" | "SCHOOL" }));
+                  setTenantFieldErrors((prev) => ({ ...prev, type: undefined }));
+                }}
                 value={tenantDraft.type}
               >
                 <option value="FAMILY">Família (pais)</option>
                 <option value="SCHOOL">Escola</option>
               </select>
+              {tenantFieldErrors.type ? <p className="mb-2 text-xs font-semibold text-[#B54C47]">{tenantFieldErrors.type}</p> : <div className="mb-2" />}
               <input
-                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
-                onChange={(e) => setTenantDraft((d) => ({ ...d, adminName: e.target.value }))}
-                placeholder="Nome do administrador"
+                className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${tenantFieldErrors.adminName ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
+                onChange={(e) => {
+                  setTenantDraft((d) => ({ ...d, adminName: e.target.value }));
+                  setTenantFieldErrors((prev) => ({ ...prev, adminName: undefined }));
+                }}
+                placeholder="Nome do administrador *"
                 value={tenantDraft.adminName}
               />
+              {tenantFieldErrors.adminName ? <p className="mb-2 text-xs font-semibold text-[#B54C47]">{tenantFieldErrors.adminName}</p> : null}
               <input
-                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
-                onChange={(e) => setTenantDraft((d) => ({ ...d, adminEmail: e.target.value }))}
-                placeholder="E-mail do administrador"
+                className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${tenantFieldErrors.adminEmail ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
+                onChange={(e) => {
+                  setTenantDraft((d) => ({ ...d, adminEmail: e.target.value }));
+                  setTenantFieldErrors((prev) => ({ ...prev, adminEmail: undefined }));
+                }}
+                placeholder="E-mail do administrador *"
                 type="email"
                 value={tenantDraft.adminEmail}
               />
+              {tenantFieldErrors.adminEmail ? <p className="mb-2 text-xs font-semibold text-[#B54C47]">{tenantFieldErrors.adminEmail}</p> : null}
               <input
-                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
-                onChange={(e) => setTenantDraft((d) => ({ ...d, adminPassword: e.target.value }))}
-                placeholder="Senha inicial do administrador"
+                className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${tenantFieldErrors.adminPassword ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
+                onChange={(e) => {
+                  setTenantDraft((d) => ({ ...d, adminPassword: e.target.value }));
+                  setTenantFieldErrors((prev) => ({ ...prev, adminPassword: undefined }));
+                }}
+                placeholder="Senha inicial do administrador *"
                 type="password"
                 value={tenantDraft.adminPassword}
               />
+              {tenantFieldErrors.adminPassword ? (
+                <p className="mb-2 text-xs font-semibold text-[#B54C47]">{tenantFieldErrors.adminPassword}</p>
+              ) : (
+                <p className="mb-2 text-xs font-semibold text-[#6B87AC]">Mínimo: 10 caracteres.</p>
+              )}
 
               {tenantDraft.type === "FAMILY" ? (
                 <>
@@ -958,18 +1085,26 @@ export default function AxionStudioPage() {
                   {tenantDraft.createTestChild ? (
                     <>
                       <input
-                        className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
-                        onChange={(e) => setTenantDraft((d) => ({ ...d, testChildName: e.target.value }))}
+                        className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${tenantFieldErrors.testChildName ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
+                        onChange={(e) => {
+                          setTenantDraft((d) => ({ ...d, testChildName: e.target.value }));
+                          setTenantFieldErrors((prev) => ({ ...prev, testChildName: undefined }));
+                        }}
                         placeholder="Nome da criança"
                         value={tenantDraft.testChildName}
                       />
+                      {tenantFieldErrors.testChildName ? <p className="mb-2 text-xs font-semibold text-[#B54C47]">{tenantFieldErrors.testChildName}</p> : null}
                       <input
-                        className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
-                        onChange={(e) => setTenantDraft((d) => ({ ...d, testChildBirthYear: e.target.value }))}
+                        className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${tenantFieldErrors.testChildBirthYear ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
+                        onChange={(e) => {
+                          setTenantDraft((d) => ({ ...d, testChildBirthYear: e.target.value }));
+                          setTenantFieldErrors((prev) => ({ ...prev, testChildBirthYear: undefined }));
+                        }}
                         placeholder="Ano de nascimento (opcional)"
                         type="number"
                         value={tenantDraft.testChildBirthYear}
                       />
+                      {tenantFieldErrors.testChildBirthYear ? <p className="mb-2 text-xs font-semibold text-[#B54C47]">{tenantFieldErrors.testChildBirthYear}</p> : null}
                     </>
                   ) : null}
                 </>
