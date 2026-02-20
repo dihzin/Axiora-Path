@@ -65,6 +65,11 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search);
     const tenantFromQuery = params.get("tenant");
     const nextFromQuery = params.get("next");
+    if ((tenantFromQuery ?? "").trim().toLowerCase() === "platform-admin") {
+      const suffix = nextFromQuery && nextFromQuery.startsWith("/") ? `?next=${encodeURIComponent(nextFromQuery)}` : "";
+      router.replace(`/platform-admin/login${suffix}`);
+      return;
+    }
     if (nextFromQuery && nextFromQuery.startsWith("/")) {
       setNextPath(nextFromQuery);
     }
@@ -76,7 +81,7 @@ export default function LoginPage() {
     if (savedTenantSlug) {
       setTenantSlugValue(savedTenantSlug);
     }
-  }, []);
+  }, [router]);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
