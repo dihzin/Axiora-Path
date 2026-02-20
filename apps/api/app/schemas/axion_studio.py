@@ -128,6 +128,7 @@ class AxionTenantSummaryOut(BaseModel):
     slug: str
     type: str
     onboardingCompleted: bool
+    consentCompleted: bool
     createdAt: datetime
 
 

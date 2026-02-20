@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
-import { getApiErrorMessage, getMe, listMemberships, type OrganizationMembership } from "@/lib/api/client";
+import { getApiErrorMessage, getLegalStatus, getMe, listMemberships, type OrganizationMembership } from "@/lib/api/client";
 import { getTenantSlug, setTenantSlug } from "@/lib/api/session";
 
 export default function SelectTenantPage() {
@@ -30,6 +30,13 @@ export default function SelectTenantPage() {
     setTenantSlug(selectedSlug);
     try {
       const me = await getMe();
+      if (me.membership.tenant_type === "FAMILY") {
+        const legal = await getLegalStatus();
+        if (legal.consent_required) {
+          router.push("/onboarding");
+          return;
+        }
+      }
       if (!me.membership.onboarding_completed) {
         router.push("/onboarding");
         return;

@@ -20,6 +20,7 @@ from app.models import (
     ChildProfile,
     Membership,
     MembershipRole,
+    ParentalConsent,
     Tenant,
     TenantType,
     User,
@@ -228,13 +229,16 @@ def _template_out(db: DBSession, template: AxionMessageTemplate) -> AxionMessage
     )
 
 
-def _tenant_out(tenant: Tenant) -> AxionTenantSummaryOut:
+def _tenant_out(tenant: Tenant, *, consent_completed: bool) -> AxionTenantSummaryOut:
+    is_family = tenant.type == TenantType.FAMILY if isinstance(tenant.type, TenantType) else str(tenant.type).upper() == "FAMILY"
+    effective_onboarding = bool(tenant.onboarding_completed) and (consent_completed if is_family else True)
     return AxionTenantSummaryOut(
         id=tenant.id,
         name=tenant.name,
         slug=tenant.slug,
         type=tenant.type.value if isinstance(tenant.type, TenantType) else str(tenant.type),
-        onboardingCompleted=bool(tenant.onboarding_completed),
+        onboardingCompleted=effective_onboarding,
+        consentCompleted=consent_completed if is_family else True,
         createdAt=tenant.created_at,
     )
 
@@ -307,7 +311,18 @@ def list_tenants(
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Tipo de organização inválido")
         stmt = stmt.where(Tenant.type == normalized_type)
     rows = db.scalars(stmt.order_by(Tenant.created_at.desc(), Tenant.id.desc()).limit(300)).all()
-    return [_tenant_out(tenant) for tenant in rows]
+    family_tenant_ids = [tenant.id for tenant in rows if tenant.type == TenantType.FAMILY]
+    consent_done_ids: set[int] = set()
+    if family_tenant_ids:
+        consent_rows = db.scalars(
+            select(ParentalConsent).where(
+                ParentalConsent.tenant_id.in_(family_tenant_ids),
+                ParentalConsent.accepted_terms_at.is_not(None),
+                ParentalConsent.accepted_privacy_at.is_not(None),
+            )
+        ).all()
+        consent_done_ids = {row.tenant_id for row in consent_rows}
+    return [_tenant_out(tenant, consent_completed=tenant.id in consent_done_ids) for tenant in rows]
 
 
 @router.post("/api/platform-admin/tenants", response_model=AxionTenantCreateResponse, status_code=status.HTTP_201_CREATED)
@@ -341,7 +356,7 @@ def create_tenant(
         type=tenant_type,
         name=payload.name.strip(),
         slug=slug,
-        onboarding_completed=True,
+        onboarding_completed=tenant_type != TenantType.FAMILY,
     )
     db.add(tenant)
     db.flush()
@@ -417,7 +432,10 @@ def create_tenant(
     db.refresh(tenant)
 
     return AxionTenantCreateResponse(
-        tenant=_tenant_out(tenant),
+        tenant=_tenant_out(
+            tenant,
+            consent_completed=False if tenant.type == TenantType.FAMILY else True,
+        ),
         adminUserId=existing_user.id,
         adminEmail=existing_user.email,
         adminRole=admin_role.value,

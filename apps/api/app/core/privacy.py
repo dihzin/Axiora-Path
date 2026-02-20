@@ -7,7 +7,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.responses import Response
 
 from app.db.session import SessionLocal
-from app.models import ParentalConsent, Tenant
+from app.models import ParentalConsent, Tenant, TenantType
 
 _ALLOWED_PREFIXES = (
     "/health",
@@ -38,6 +38,8 @@ class PrivacyConsentMiddleware(BaseHTTPMiddleware):
         try:
             tenant = db.scalar(select(Tenant).where(Tenant.slug == tenant_slug, Tenant.deleted_at.is_(None)))
             if tenant is None:
+                return await call_next(request)
+            if tenant.type != TenantType.FAMILY:
                 return await call_next(request)
 
             consent = db.get(ParentalConsent, tenant.id)

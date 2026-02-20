@@ -968,6 +968,7 @@ export default function AxionStudioPage() {
                         <th className="px-3 py-2">Nome</th>
                         <th className="px-3 py-2">Slug</th>
                         <th className="px-3 py-2">Tipo</th>
+                        <th className="px-3 py-2">Consentimento</th>
                         <th className="px-3 py-2">Onboarding</th>
                         <th className="px-3 py-2">Criada em</th>
                       </tr>
@@ -975,7 +976,7 @@ export default function AxionStudioPage() {
                     <tbody>
                       {tenants.length === 0 ? (
                         <tr>
-                          <td className="px-3 py-6 text-center text-sm font-semibold text-[#6B87AC]" colSpan={5}>
+                          <td className="px-3 py-6 text-center text-sm font-semibold text-[#6B87AC]" colSpan={6}>
                             Nenhuma organização encontrada com os filtros atuais.
                           </td>
                         </tr>
@@ -985,6 +986,7 @@ export default function AxionStudioPage() {
                           <td className="px-3 py-2 font-semibold text-[#223F68]">{tenant.name}</td>
                           <td className="px-3 py-2 font-mono text-xs text-[#35567F]">{tenant.slug}</td>
                           <td className="px-3 py-2">{tenant.type === "FAMILY" ? "Família" : tenant.type === "SCHOOL" ? "Escola" : tenant.type}</td>
+                          <td className="px-3 py-2">{tenant.type === "SCHOOL" ? "N/A" : tenant.consentCompleted ? "Sim" : "Não"}</td>
                           <td className="px-3 py-2">{tenant.onboardingCompleted ? "Concluído" : "Pendente"}</td>
                           <td className="px-3 py-2">{new Date(tenant.createdAt).toLocaleString("pt-BR")}</td>
                         </tr>

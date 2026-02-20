@@ -458,6 +458,7 @@ export type PlatformTenantSummary = {
   slug: string;
   type: "FAMILY" | "SCHOOL" | string;
   onboardingCompleted: boolean;
+  consentCompleted: boolean;
   createdAt: string;
 };
 
@@ -856,6 +857,15 @@ export type CalendarActivityResponse = {
   days: CalendarActivityDay[];
 };
 
+export type LegalStatusResponse = {
+  tenant_id: number;
+  consent_required: boolean;
+  accepted_terms_at: string | null;
+  accepted_privacy_at: string | null;
+  data_retention_policy_version: string | null;
+  coppa_ready: boolean;
+};
+
 export type UserUXSettings = {
   id: number;
   userId: number;
@@ -1010,6 +1020,14 @@ export async function verifyParentPin(pin: string): Promise<{ verified: boolean 
   return apiRequest<{ verified: boolean }>("/onboarding/verify-pin", {
     method: "POST",
     body: { pin },
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getLegalStatus(): Promise<LegalStatusResponse> {
+  return apiRequest<LegalStatusResponse>("/legal", {
+    method: "GET",
     requireAuth: true,
     includeTenant: true,
   });
