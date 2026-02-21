@@ -27,6 +27,7 @@ type GameItem = {
   id: string;
   href: string;
   templateId?: string;
+  playable?: boolean;
   title: string;
   description: string;
   skill: string;
@@ -73,11 +74,11 @@ const GAMES: GameItem[] = [
 ];
 
 function mapCatalogGameToRoute(item: GameCatalogItem): string | null {
-  const subject = item.subject.toLowerCase();
   const engineKey = item.engineKey.toUpperCase();
-  if (subject.includes("financeira") || engineKey === "SIMULATION") return "/child/games/finance-sim";
-  if (engineKey === "DRAG_DROP" || subject.includes("portugu")) return "/child/games/wordsearch";
-  if (engineKey === "QUIZ" || subject.includes("matem")) return "/child/games/tictactoe";
+  if (engineKey === "QUIZ") return "/child/games/quiz";
+  if (engineKey === "SIMULATION") return "/child/games/finance-sim";
+  if (engineKey === "DRAG_DROP" || engineKey === "MEMORY") return "/child/games/wordsearch";
+  if (engineKey === "STRATEGY") return "/child/games/tictactoe";
   return null;
 }
 
@@ -93,6 +94,8 @@ function iconForGame(item: GameCatalogItem): ComponentType<{ className?: string 
   if (subject.includes("financeira")) return PiggyBank;
   if (subject.includes("portugu")) return Search;
   if (subject.includes("matem")) return Grid2x2;
+  if (item.engineKey.toUpperCase() === "STRATEGY") return Grid2x2;
+  if (item.engineKey.toUpperCase() === "MEMORY") return Search;
   if (item.engineKey.toUpperCase() === "SIMULATION") return PiggyBank;
   if (item.engineKey.toUpperCase() === "DRAG_DROP") return Search;
   return Grid2x2;
@@ -148,11 +151,11 @@ export default function ChildGamesPage() {
         if (!active) return;
         const mapped = response.items.reduce<GameItem[]>((acc, item) => {
           const href = mapCatalogGameToRoute(item);
-          if (!href) return acc;
           acc.push({
             id: item.templateId,
-            href,
+            href: href ?? "#",
             templateId: item.templateId,
+            playable: href !== null,
             title: item.title,
             description: `Motor ${item.engineKey}: experiência adaptativa focada em ${item.subject.toLowerCase()}.`,
             skill: item.tags.length > 0 ? item.tags.slice(0, 2).join(" • ") : item.subject,
@@ -316,8 +319,9 @@ export default function ChildGamesPage() {
                     <Button
                       className="games-play-button mt-3 w-full"
                       size="sm"
-                      disabled={startingId === game.id}
+                      disabled={startingId === game.id || game.playable === false}
                       onClick={async () => {
+                        if (game.playable === false) return;
                         if (!game.templateId) {
                           router.push(game.href);
                           return;
@@ -343,7 +347,7 @@ export default function ChildGamesPage() {
                         }
                       }}
                     >
-                      Jogar
+                      {game.playable === false ? "Em breve" : "Jogar"}
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </div>
