@@ -317,12 +317,10 @@ export default function ChildGamesPage() {
           setCatalogState("fallback");
           return;
         }
-        const existingTitles = new Set(mapped.map((game) => game.title.toLowerCase()));
-        const enriched = mapped.length < 6
-          ? [...mapped, ...GAMES.filter((game) => !existingTitles.has(game.title.toLowerCase()))]
-          : mapped;
-        const normalized = enriched.filter((game) => !isTicTacToeGame(game));
-        const remoteTicTacToe = enriched.find((game) => isTicTacToeGame(game) && game.playable !== false);
+        const remoteByTitle = new Set(mapped.map((game) => game.title.toLowerCase()));
+        const merged = [...mapped, ...GAMES.filter((game) => !remoteByTitle.has(game.title.toLowerCase()))];
+        const normalized = merged.filter((game) => !isTicTacToeGame(game));
+        const remoteTicTacToe = merged.find((game) => isTicTacToeGame(game) && game.playable !== false);
         const tictactoe = remoteTicTacToe
           ? { ...remoteTicTacToe, href: "/child/games/tictactoe", playable: true as const }
           : LOCAL_TICTACTOE_GAME;
