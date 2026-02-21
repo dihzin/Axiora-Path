@@ -115,6 +115,7 @@ export default function ChildGamesPage() {
   const [catalogGames, setCatalogGames] = useState<GameItem[]>([]);
   const [loadingGames, setLoadingGames] = useState(true);
   const [startingId, setStartingId] = useState<string | null>(null);
+  const [usingCatalog, setUsingCatalog] = useState(false);
 
   useEffect(() => {
     void getAxionBrief({ context: "games_tab" }).catch(() => undefined);
@@ -163,10 +164,12 @@ export default function ChildGamesPage() {
           return acc;
         }, []);
         setCatalogGames(mapped);
+        setUsingCatalog(mapped.length > 0);
       })
       .catch(() => {
         if (!active) return;
         setCatalogGames([]);
+        setUsingCatalog(false);
       })
       .finally(() => {
         if (!active) return;
@@ -177,7 +180,7 @@ export default function ChildGamesPage() {
     };
   }, []);
 
-  const games = catalogGames.length > 0 ? catalogGames : GAMES;
+  const games = usingCatalog && catalogGames.length > 0 ? catalogGames : GAMES;
 
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const dailyXp = useMemo(() => {
@@ -283,11 +286,9 @@ export default function ChildGamesPage() {
       </section>
 
       <section className="space-y-3 pb-24">
-        {loadingGames ? (
-          <article className="games-gradient-shell games-gradient-shell--teal">
-            <div className="games-gradient-shell__inner py-6">
-              <p className="text-sm text-muted-foreground">Carregando catálogo de jogos...</p>
-            </div>
+        {!loadingGames && !usingCatalog ? (
+          <article className="rounded-2xl border border-border bg-white/85 p-3 text-xs text-muted-foreground">
+            Catálogo online indisponível no momento. Exibindo jogos locais para você continuar.
           </article>
         ) : null}
         {games.map((game) => {
