@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Heart, Sparkles, Timer, Zap } from "lucide-react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { PageShell } from "@/components/layout/page-shell";
@@ -46,6 +46,11 @@ export default function QuizGamePage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [title, setTitle] = useState("Corrida da Soma");
   const [reward, setReward] = useState<GameSessionRegisterResponse | null>(null);
+  const [combo, setCombo] = useState(0);
+  const [bestCombo, setBestCombo] = useState(0);
+  const [lives, setLives] = useState(3);
+  const [timeLeft, setTimeLeft] = useState(12);
+  const [feedback, setFeedback] = useState<string>("Escolha uma resposta para continuar.");
 
   useEffect(() => {
     const generated = Array.from({ length: 8 }, (_, i) => buildQuestion(i + 1));
@@ -66,11 +71,41 @@ export default function QuizGamePage() {
   const current = questions[index];
   const progress = useMemo(() => (questions.length === 0 ? 0 : Math.round((index / questions.length) * 100)), [index, questions.length]);
 
+  useEffect(() => {
+    if (done || selected !== null || submitting) return;
+    if (timeLeft <= 0) {
+      setFeedback("Tempo esgotado! Vamos para a próxima.");
+      setSelected(Number.NaN);
+      setCombo(0);
+      setLives((prev) => Math.max(0, prev - 1));
+      return;
+    }
+    const timer = setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [done, selected, submitting, timeLeft]);
+
+  useEffect(() => {
+    if (lives > 0 || done) return;
+    setDone(true);
+  }, [done, lives]);
+
   async function onSelect(answer: number) {
     if (!current || selected !== null || submitting) return;
     setSelected(answer);
     const isCorrect = answer === current.correct;
-    if (isCorrect) setCorrectCount((prev) => prev + 1);
+    if (isCorrect) {
+      setCorrectCount((prev) => prev + 1);
+      setCombo((prev) => {
+        const next = prev + 1;
+        setBestCombo((best) => Math.max(best, next));
+        return next;
+      });
+      setFeedback(combo + 1 >= 2 ? "Boa sequência! Você está voando." : "Acertou! Continue nesse ritmo.");
+    } else {
+      setCombo(0);
+      setLives((prev) => Math.max(0, prev - 1));
+      setFeedback(`Quase! A resposta certa era ${current.correct}.`);
+    }
     if (sessionId) {
       void submitGameEngineAnswer(sessionId, {
         stepId: current.id,
@@ -82,9 +117,15 @@ export default function QuizGamePage() {
 
   async function onNext() {
     if (selected === null || submitting) return;
+    if (lives <= 0 && !done) {
+      setDone(true);
+      return;
+    }
     if (index < questions.length - 1) {
       setIndex((prev) => prev + 1);
       setSelected(null);
+      setTimeLeft(12);
+      setFeedback("Escolha uma resposta para continuar.");
       return;
     }
     setSubmitting(true);
@@ -92,7 +133,10 @@ export default function QuizGamePage() {
       if (sessionId) {
         void finishGameEngineSession(sessionId).catch(() => undefined);
       }
-      const score = Math.round((correctCount / Math.max(1, questions.length)) * 100);
+      const accuracyScore = Math.round((correctCount / Math.max(1, questions.length)) * 100);
+      const comboBonus = Math.min(12, bestCombo) * 2;
+      const livesBonus = lives * 5;
+      const score = Math.min(100, accuracyScore + comboBonus + livesBonus);
       const reg = await registerGameSession({ gameType: "CROSSWORD", score });
       setReward(reg);
     } catch {
@@ -109,6 +153,11 @@ export default function QuizGamePage() {
     setIndex(0);
     setCorrectCount(0);
     setSelected(null);
+    setCombo(0);
+    setBestCombo(0);
+    setLives(3);
+    setTimeLeft(12);
+    setFeedback("Escolha uma resposta para continuar.");
     setDone(false);
     setReward(null);
   }
@@ -127,12 +176,36 @@ export default function QuizGamePage() {
           <CardTitle className="mt-2 text-lg">{title}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="grid grid-cols-3 gap-2 rounded-2xl border border-border bg-white/80 p-2 text-xs">
+            <div className="rounded-xl border border-border/70 bg-white px-2 py-1">
+              <p className="text-muted-foreground">Tempo</p>
+              <p className="inline-flex items-center gap-1 font-bold text-primary">
+                <Timer className="h-3.5 w-3.5" />
+                {timeLeft}s
+              </p>
+            </div>
+            <div className="rounded-xl border border-border/70 bg-white px-2 py-1">
+              <p className="text-muted-foreground">Combo</p>
+              <p className="inline-flex items-center gap-1 font-bold text-secondary">
+                <Zap className="h-3.5 w-3.5" />
+                x{Math.max(1, combo)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-border/70 bg-white px-2 py-1">
+              <p className="text-muted-foreground">Vidas</p>
+              <p className="inline-flex items-center gap-1 font-bold text-accent-foreground">
+                <Heart className="h-3.5 w-3.5" />
+                {lives}/3
+              </p>
+            </div>
+          </div>
           {done ? (
             <div className="space-y-3 rounded-2xl border border-border bg-white/90 p-4 text-sm">
               <p className="text-base font-bold">Sessão concluída</p>
               <p>
                 Você acertou <strong>{correctCount}</strong> de <strong>{questions.length}</strong> questões.
               </p>
+              <p>Melhor combo: {bestCombo}</p>
               <p>XP aplicado: {reward?.dailyLimit.grantedXp ?? 0}</p>
               <p>Moedas: {reward?.session.coinsEarned ?? 0}</p>
               <Button className="w-full" onClick={onRestart}>
@@ -173,19 +246,19 @@ export default function QuizGamePage() {
                 })}
               </div>
               <div className="rounded-xl border border-border bg-white/90 p-3 text-sm">
-                {selected === null ? (
-                  <p className="text-muted-foreground">Escolha uma resposta para continuar.</p>
-                ) : selected === current?.correct ? (
+                {selected !== null && selected === current?.correct ? (
                   <p className="font-semibold text-secondary inline-flex items-center gap-2">
                     <Sparkles className="h-4 w-4" />
-                    Boa! Você acertou.
+                    {feedback}
                   </p>
+                ) : selected !== null ? (
+                  <p className="font-semibold text-foreground">{feedback}</p>
                 ) : (
-                  <p className="font-semibold text-foreground">Quase! A resposta correta é {current?.correct}.</p>
+                  <p className="text-muted-foreground">{feedback}</p>
                 )}
               </div>
               <Button className="w-full" onClick={onNext} disabled={selected === null || submitting}>
-                {index < questions.length - 1 ? "Próxima questão" : "Concluir"}
+                {lives <= 0 ? "Ver resultado" : index < questions.length - 1 ? "Próxima questão" : "Concluir"}
               </Button>
             </>
           )}

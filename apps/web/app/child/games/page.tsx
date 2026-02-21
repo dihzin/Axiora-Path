@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Coins, Crown, Flame, Grid2x2, PiggyBank, Search, Sparkles, Trophy } from "lucide-react";
+import { ArrowRight, Calculator, Coins, Crown, Flame, Grid2x2, MapPinned, PiggyBank, Search, Sparkles, Trophy } from "lucide-react";
 import type { ComponentType } from "react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
@@ -82,6 +82,9 @@ function difficultyLabel(difficulty: string): "Fácil" | "Médio" | "Difícil" {
 }
 
 function iconForGame(item: GameCatalogItem): ComponentType<{ className?: string }> {
+  const title = item.title.trim().toLowerCase();
+  if (title === "corrida da soma") return Calculator;
+  if (title === "mapa de capitais") return MapPinned;
   const subject = item.subject.toLowerCase();
   if (subject.includes("financeira")) return PiggyBank;
   if (subject.includes("portugu")) return Search;
