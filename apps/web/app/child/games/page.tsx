@@ -10,12 +10,23 @@ import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { getAchievements, getAxionBrief, getLevels, getStoreItems, type AchievementItem, type LevelResponse } from "@/lib/api/client";
+import {
+  getAchievements,
+  getAxionBrief,
+  getGamesCatalog,
+  getLevels,
+  getStoreItems,
+  startGameEngineSession,
+  type AchievementItem,
+  type GameCatalogItem,
+  type LevelResponse,
+} from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 
 type GameItem = {
   id: string;
   href: string;
+  templateId?: string;
   title: string;
   description: string;
   skill: string;
@@ -61,12 +72,49 @@ const GAMES: GameItem[] = [
   },
 ];
 
+function mapCatalogGameToRoute(item: GameCatalogItem): string | null {
+  const subject = item.subject.toLowerCase();
+  const engineKey = item.engineKey.toUpperCase();
+  if (subject.includes("financeira") || engineKey === "SIMULATION") return "/child/games/finance-sim";
+  if (engineKey === "DRAG_DROP" || subject.includes("portugu")) return "/child/games/wordsearch";
+  if (engineKey === "QUIZ" || subject.includes("matem")) return "/child/games/tictactoe";
+  return null;
+}
+
+function difficultyLabel(difficulty: string): "Fácil" | "Médio" | "Difícil" {
+  const value = difficulty.toUpperCase();
+  if (value === "EASY") return "Fácil";
+  if (value === "HARD") return "Difícil";
+  return "Médio";
+}
+
+function iconForGame(item: GameCatalogItem): ComponentType<{ className?: string }> {
+  const subject = item.subject.toLowerCase();
+  if (subject.includes("financeira")) return PiggyBank;
+  if (subject.includes("portugu")) return Search;
+  if (subject.includes("matem")) return Grid2x2;
+  if (item.engineKey.toUpperCase() === "SIMULATION") return PiggyBank;
+  if (item.engineKey.toUpperCase() === "DRAG_DROP") return Search;
+  return Grid2x2;
+}
+
+function borderClassForEngine(engineKey: string): string {
+  const key = engineKey.toUpperCase();
+  if (key === "QUIZ") return "games-gradient-shell--orange";
+  if (key === "SIMULATION") return "games-gradient-shell--teal";
+  if (key === "DRAG_DROP") return "games-gradient-shell--teal";
+  return "games-gradient-shell--orange";
+}
+
 export default function ChildGamesPage() {
   const router = useRouter();
   const [childId, setChildId] = useState<number | null>(null);
   const [levelData, setLevelData] = useState<LevelResponse | null>(null);
   const [achievements, setAchievements] = useState<AchievementItem[]>([]);
   const [axionCoins, setAxionCoins] = useState(0);
+  const [catalogGames, setCatalogGames] = useState<GameItem[]>([]);
+  const [loadingGames, setLoadingGames] = useState(true);
+  const [startingId, setStartingId] = useState<string | null>(null);
 
   useEffect(() => {
     void getAxionBrief({ context: "games_tab" }).catch(() => undefined);
@@ -90,6 +138,46 @@ export default function ChildGamesPage() {
       .then((data) => setAxionCoins(data.coins))
       .catch(() => setAxionCoins(0));
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    setLoadingGames(true);
+    void getGamesCatalog({ limit: 12 })
+      .then((response) => {
+        if (!active) return;
+        const mapped = response.items.reduce<GameItem[]>((acc, item) => {
+          const href = mapCatalogGameToRoute(item);
+          if (!href) return acc;
+          acc.push({
+            id: item.templateId,
+            href,
+            templateId: item.templateId,
+            title: item.title,
+            description: `Motor ${item.engineKey}: experiência adaptativa focada em ${item.subject.toLowerCase()}.`,
+            skill: item.tags.length > 0 ? item.tags.slice(0, 2).join(" • ") : item.subject,
+            difficulty: difficultyLabel(item.difficulty),
+            xpReward: item.xpReward,
+            icon: iconForGame(item),
+            borderClassName: borderClassForEngine(item.engineKey),
+          });
+          return acc;
+        }, []);
+        setCatalogGames(mapped);
+      })
+      .catch(() => {
+        if (!active) return;
+        setCatalogGames([]);
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoadingGames(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const games = catalogGames.length > 0 ? catalogGames : GAMES;
 
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const dailyXp = useMemo(() => {
@@ -195,7 +283,14 @@ export default function ChildGamesPage() {
       </section>
 
       <section className="space-y-3 pb-24">
-        {GAMES.map((game) => {
+        {loadingGames ? (
+          <article className="games-gradient-shell games-gradient-shell--teal">
+            <div className="games-gradient-shell__inner py-6">
+              <p className="text-sm text-muted-foreground">Carregando catálogo de jogos...</p>
+            </div>
+          </article>
+        ) : null}
+        {games.map((game) => {
           const Icon = game.icon;
           return (
             <article key={game.id} className={cn("games-gradient-shell", game.borderClassName)}>
@@ -217,7 +312,36 @@ export default function ChildGamesPage() {
                       </span>
                       <span className="truncate text-[11px] font-medium text-foreground/80">{game.skill}</span>
                     </div>
-                    <Button className="games-play-button mt-3 w-full" size="sm" onClick={() => router.push(game.href)}>
+                    <Button
+                      className="games-play-button mt-3 w-full"
+                      size="sm"
+                      disabled={startingId === game.id}
+                      onClick={async () => {
+                        if (!game.templateId) {
+                          router.push(game.href);
+                          return;
+                        }
+                        try {
+                          setStartingId(game.id);
+                          const started = await startGameEngineSession({ templateId: game.templateId });
+                          localStorage.setItem(
+                            "axiora_active_game_engine_session",
+                            JSON.stringify({
+                              sessionId: started.sessionId,
+                              templateId: game.templateId,
+                              title: game.title,
+                              href: game.href,
+                              startedAt: new Date().toISOString(),
+                            }),
+                          );
+                        } catch {
+                          // fallback: mantém navegação para a rota de jogo legada
+                        } finally {
+                          setStartingId(null);
+                          router.push(game.href);
+                        }
+                      }}
+                    >
                       Jogar
                       <ArrowRight className="h-4 w-4" />
                     </Button>
