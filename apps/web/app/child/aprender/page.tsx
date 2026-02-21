@@ -46,6 +46,7 @@ import {
   type AprenderSubjectOption,
   type LearningEventCompleteResponse,
   type LearningPathEventNode,
+  type LearningPathLessonNode,
   type LearningPathNode,
   type LearningPathResponse,
   type LearningPathUnit,
