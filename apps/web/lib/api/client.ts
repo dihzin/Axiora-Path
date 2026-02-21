@@ -16,6 +16,7 @@ function resolveApiUrl(): string {
   return apiUrl;
 }
 export type ThemeName = "default" | "space" | "jungle" | "ocean" | "soccer" | "capybara" | "dinos" | "princess" | "heroes";
+export type MultiplayerSessionStatus = "WAITING" | "IN_PROGRESS" | "FINISHED" | "CANCELLED";
 
 type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -1370,6 +1371,80 @@ export async function submitGameEngineAnswer(
 export async function finishGameEngineSession(sessionId: string): Promise<FinishGameSessionResponse> {
   return apiRequest<FinishGameSessionResponse>(`/api/games/session/${sessionId}/finish`, {
     method: "POST",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export type MultiplayerCreateResponse = {
+  sessionId: string;
+  joinCode: string;
+  joinToken: string;
+  joinUrl: string;
+  status: MultiplayerSessionStatus;
+  expiresAt: string;
+};
+
+export type MultiplayerStateResponse = {
+  sessionId: string;
+  status: MultiplayerSessionStatus;
+  multiplayerMode: "PVP_PRIVATE";
+  board: Array<"X" | "O" | null>;
+  participants: Array<{ userId: number; isHost: boolean; playerRole: "X" | "O" }>;
+  moves: Array<{ moveIndex: number; userId: number; cellIndex: number; playerRole: "X" | "O"; createdAt: string }>;
+  nextTurn: "X" | "O" | null;
+  winner: "X" | "O" | "DRAW" | null;
+  canPlay: boolean;
+  expiresAt: string | null;
+};
+
+export async function createMultiplayerSession(payload?: {
+  gameType?: "TICTACTOE";
+  mode?: "PVP_PRIVATE";
+  joinMethod?: "QR_CODE" | "SHORT_CODE";
+  ttlMinutes?: number;
+}): Promise<MultiplayerCreateResponse> {
+  return apiRequest<MultiplayerCreateResponse>("/api/games/multiplayer/session/create", {
+    method: "POST",
+    body: payload ?? { gameType: "TICTACTOE", mode: "PVP_PRIVATE", joinMethod: "QR_CODE", ttlMinutes: 30 },
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function joinMultiplayerSession(payload: {
+  joinCode?: string;
+  joinToken?: string;
+}): Promise<MultiplayerStateResponse> {
+  return apiRequest<MultiplayerStateResponse>("/api/games/multiplayer/session/join", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getMultiplayerSession(sessionId: string): Promise<MultiplayerStateResponse> {
+  return apiRequest<MultiplayerStateResponse>(`/api/games/multiplayer/session/${sessionId}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function postMultiplayerMove(sessionId: string, cellIndex: number): Promise<MultiplayerStateResponse> {
+  return apiRequest<MultiplayerStateResponse>(`/api/games/multiplayer/session/${sessionId}/move`, {
+    method: "POST",
+    body: { cellIndex },
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function closeMultiplayerSession(sessionId: string, reason?: string): Promise<MultiplayerStateResponse> {
+  return apiRequest<MultiplayerStateResponse>(`/api/games/multiplayer/session/${sessionId}/close`, {
+    method: "POST",
+    body: { reason: reason ?? null },
     requireAuth: true,
     includeTenant: true,
   });
