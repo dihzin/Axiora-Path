@@ -11,8 +11,10 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     LearningSession,
+    LessonDifficulty,
     Lesson,
     LessonProgress,
+    LessonType,
     PathEvent,
     PathEventType,
     QuestionDifficulty,
@@ -101,6 +103,67 @@ class EventCompleteSnapshot:
     needs_retry: bool
 
 
+def _bootstrap_minimum_learning_path(db: Session) -> None:
+    # Seed de segurança para ambientes sem shell/seed manual (idempotente).
+    existing_subject = db.scalar(select(Subject.id).limit(1))
+    if existing_subject is not None:
+        return
+
+    subject = Subject(
+        name="Matemática",
+        age_group=SubjectAgeGroup.AGE_9_12,
+        icon="book-open",
+        color="#4DD9C0",
+        order=1,
+    )
+    db.add(subject)
+    db.flush()
+
+    unit_1 = Unit(
+        subject_id=subject.id,
+        title="Unidade 1: Fundamentos Numéricos",
+        description="Primeiros desafios com números, sequências e comparações.",
+        order=1,
+        required_level=1,
+    )
+    unit_2 = Unit(
+        subject_id=subject.id,
+        title="Unidade 2: Operações Inteligentes",
+        description="Soma, subtração e problemas rápidos do dia a dia.",
+        order=2,
+        required_level=1,
+    )
+    db.add_all([unit_1, unit_2])
+    db.flush()
+
+    lessons_blueprint = [
+        (unit_1.id, 1, "Lição 1: Missão Números", 25, LessonType.STORY, LessonDifficulty.EASY),
+        (unit_1.id, 2, "Lição 2: Comparar e Escolher", 27, LessonType.MULTIPLE_CHOICE, LessonDifficulty.EASY),
+        (unit_1.id, 3, "Lição 3: Sequência Curta", 29, LessonType.INTERACTIVE, LessonDifficulty.EASY),
+        (unit_1.id, 4, "Lição 4: Mini Desafio", 31, LessonType.QUIZ, LessonDifficulty.MEDIUM),
+        (unit_1.id, 5, "Lição 5: Fechamento da Região", 33, LessonType.DRAG_DROP, LessonDifficulty.MEDIUM),
+        (unit_2.id, 1, "Lição 1: Soma Rápida", 30, LessonType.MULTIPLE_CHOICE, LessonDifficulty.EASY),
+        (unit_2.id, 2, "Lição 2: Subtração no Dia a Dia", 32, LessonType.QUIZ, LessonDifficulty.EASY),
+        (unit_2.id, 3, "Lição 3: Operações Mistas", 34, LessonType.INTERACTIVE, LessonDifficulty.MEDIUM),
+        (unit_2.id, 4, "Lição 4: Estratégia de Resolução", 36, LessonType.STORY, LessonDifficulty.MEDIUM),
+        (unit_2.id, 5, "Lição 5: Missão Final", 38, LessonType.DRAG_DROP, LessonDifficulty.MEDIUM),
+    ]
+    db.add_all(
+        [
+            Lesson(
+                unit_id=unit_id,
+                order=order,
+                title=title,
+                xp_reward=xp_reward,
+                type=lesson_type,
+                difficulty=difficulty,
+            )
+            for unit_id, order, title, xp_reward, lesson_type, difficulty in lessons_blueprint
+        ]
+    )
+    db.flush()
+
+
 def _resolve_subject(db: Session, *, subject_id: int | None) -> Subject:
     if subject_id is not None:
         subject = db.get(Subject, subject_id)
@@ -108,6 +171,13 @@ def _resolve_subject(db: Session, *, subject_id: int | None) -> Subject:
             raise ValueError("Subject not found")
         return subject
     subject = db.scalar(select(Subject).order_by(Subject.age_group.asc(), Subject.order.asc()))
+    if subject is None:
+        try:
+            _bootstrap_minimum_learning_path(db)
+            subject = db.scalar(select(Subject).order_by(Subject.age_group.asc(), Subject.order.asc()))
+        except SQLAlchemyError:
+            db.rollback()
+            subject = None
     if subject is None:
         raise ValueError("No subject available")
     return subject
