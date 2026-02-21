@@ -1,0 +1,232 @@
+openapi: 3.0.3
+info:
+  title: Axiora Games API
+  version: 1.0.0
+  description: Contratos base para catálogo, execução e métricas de Game Engines.
+servers:
+  - url: https://axiora-api.onrender.com
+tags:
+  - name: Games Catalog
+  - name: Game Session
+  - name: Game Metrics
+paths:
+  /api/games/catalog:
+    get:
+      tags: [Games Catalog]
+      summary: Lista jogos disponíveis por tenant/idade/matéria
+      parameters:
+        - in: query
+          name: ageGroup
+          schema: { type: string, enum: ["6-8", "9-12", "13-15"] }
+        - in: query
+          name: subject
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        "200":
+          description: Catálogo retornado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/GameCatalogItem"
+  /api/games/session/start:
+    post:
+      tags: [Game Session]
+      summary: Inicia sessão de jogo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartGameSessionRequest"
+      responses:
+        "200":
+          description: Sessão iniciada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StartGameSessionResponse"
+  /api/games/session/{sessionId}/answer:
+    post:
+      tags: [Game Session]
+      summary: Envia resposta/interação de rodada
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GameAnswerRequest"
+      responses:
+        "200":
+          description: Resposta processada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameAnswerResponse"
+  /api/games/session/{sessionId}/finish:
+    post:
+      tags: [Game Session]
+      summary: Finaliza sessão de jogo
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Sessão finalizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinishGameSessionResponse"
+  /api/games/metrics/skills:
+    get:
+      tags: [Game Metrics]
+      summary: Retorna métricas por habilidade
+      parameters:
+        - in: query
+          name: userId
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Métricas consolidadas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SkillMetricItem"
+components:
+  schemas:
+    GameCatalogItem:
+      type: object
+      properties:
+        templateId: { type: string, format: uuid }
+        title: { type: string }
+        subject: { type: string }
+        ageGroup: { type: string }
+        engineKey: { type: string }
+        difficulty: { type: string, enum: ["EASY", "MEDIUM", "HARD"] }
+        estimatedMinutes: { type: integer }
+        xpReward: { type: integer }
+        coinsReward: { type: integer }
+        tags:
+          type: array
+          items: { type: string }
+      required: [templateId, title, subject, ageGroup, engineKey, difficulty]
+
+    StartGameSessionRequest:
+      type: object
+      properties:
+        templateId: { type: string, format: uuid }
+        variationId: { type: string, format: uuid, nullable: true }
+        levelId: { type: string, format: uuid, nullable: true }
+        context:
+          type: object
+          additionalProperties: true
+      required: [templateId]
+
+    StartGameSessionResponse:
+      type: object
+      properties:
+        sessionId: { type: string, format: uuid }
+        game:
+          type: object
+          properties:
+            engineKey: { type: string }
+            runtimeConfig:
+              type: object
+              additionalProperties: true
+            initialPayload:
+              type: object
+              additionalProperties: true
+        axion:
+          type: object
+          properties:
+            difficultyMix:
+              type: object
+              additionalProperties: true
+            activeBoosts:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+      required: [sessionId, game]
+
+    GameAnswerRequest:
+      type: object
+      properties:
+        stepId: { type: string }
+        answer:
+          type: object
+          additionalProperties: true
+        elapsedMs: { type: integer, minimum: 0 }
+        hintsUsed: { type: integer, minimum: 0, default: 0 }
+      required: [stepId, answer, elapsedMs]
+
+    GameAnswerResponse:
+      type: object
+      properties:
+        correct: { type: boolean }
+        scoreDelta: { type: integer }
+        feedback: { type: string }
+        cognitiveSignals:
+          type: array
+          items:
+            $ref: "#/components/schemas/CognitiveSignalItem"
+        nextStep:
+          type: object
+          nullable: true
+          additionalProperties: true
+      required: [correct, scoreDelta, feedback]
+
+    FinishGameSessionResponse:
+      type: object
+      properties:
+        sessionId: { type: string, format: uuid }
+        totalScore: { type: integer }
+        accuracy: { type: number, format: float }
+        timeSpentMs: { type: integer }
+        xpEarned: { type: integer }
+        coinsEarned: { type: integer }
+        updatedSkills:
+          type: array
+          items:
+            $ref: "#/components/schemas/SkillMetricItem"
+      required: [sessionId, totalScore, accuracy, timeSpentMs, xpEarned, coinsEarned]
+
+    SkillMetricItem:
+      type: object
+      properties:
+        skillKey: { type: string }
+        mastery: { type: number, format: float }
+        confidence: { type: number, format: float }
+        velocity: { type: number, format: float }
+        updatedAt: { type: string, format: date-time }
+      required: [skillKey, mastery, confidence, velocity]
+
+    CognitiveSignalItem:
+      type: object
+      properties:
+        signalType: { type: string }
+        value: { type: number, format: float }
+        payload:
+          type: object
+          additionalProperties: true
+      required: [signalType, value]
+
