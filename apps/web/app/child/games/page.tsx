@@ -37,6 +37,10 @@ type GameItem = {
   estimatedMinutes?: number;
 };
 
+function isTicTacToeGame(game: Pick<GameItem, "href" | "title">): boolean {
+  return game.href === "/child/games/tictactoe" || game.title.trim().toLowerCase() === "jogo da velha";
+}
+
 const GAMES: GameItem[] = [
   {
     id: "local-corrida-soma",
@@ -286,6 +290,7 @@ export default function ChildGamesPage() {
   useEffect(() => {
     let active = true;
     setCatalogState("loading");
+    setCatalogGames([]);
     void getGamesCatalog({ limit: 12 })
       .then((response) => {
         if (!active) return;
@@ -316,15 +321,18 @@ export default function ChildGamesPage() {
         const enriched = mapped.length < 6
           ? [...mapped, ...GAMES.filter((game) => !existingTitles.has(game.title.toLowerCase()))]
           : mapped;
-        const hasTicTacToe = enriched.some(
-          (game) =>
-            (game.href === "/child/games/tictactoe" || game.title.trim().toLowerCase() === "jogo da velha") &&
-            game.playable !== false,
+        const normalized = enriched.filter((game) => !isTicTacToeGame(game));
+        const remoteTicTacToe = enriched.find((game) => isTicTacToeGame(game) && game.playable !== false);
+        const tictactoe = remoteTicTacToe
+          ? { ...remoteTicTacToe, href: "/child/games/tictactoe", playable: true as const }
+          : LOCAL_TICTACTOE_GAME;
+        const withTicTacToe = [tictactoe, ...normalized];
+        const deduped = withTicTacToe.filter(
+          (game, index, list) =>
+            list.findIndex((candidate) => candidate.id === game.id || (candidate.title === game.title && candidate.href === game.href)) ===
+            index,
         );
-        const withTicTacToe = hasTicTacToe
-          ? enriched
-          : [LOCAL_TICTACTOE_GAME, ...enriched];
-        setCatalogGames(withTicTacToe);
+        setCatalogGames(deduped);
         setCatalogState("remote");
       })
       .catch(() => {
