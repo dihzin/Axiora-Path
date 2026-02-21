@@ -405,14 +405,80 @@ class GameSession(Base):
         nullable=False,
         server_default=text("gen_random_uuid()"),
     )
+    tenant_id: Mapped[int | None] = mapped_column(ForeignKey("tenants.id"), nullable=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     game_type: Mapped[GameType] = mapped_column(
         SqlEnum(GameType, name="game_type"),
         nullable=False,
     )
+    session_status: Mapped[str] = mapped_column(String(24), nullable=False, server_default="COMPLETED")
+    multiplayer_mode: Mapped[str] = mapped_column(String(24), nullable=False, server_default="SOLO")
+    join_token: Mapped[str | None] = mapped_column(String(96), nullable=True)
+    join_code: Mapped[str | None] = mapped_column(String(12), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    metadata_payload: Mapped[dict[str, Any]] = mapped_column(
+        "metadata",
+        JSONB,
+        nullable=False,
+        server_default=text("'{}'::jsonb"),
+    )
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     xp_earned: Mapped[int] = mapped_column(Integer, nullable=False)
     coins_earned: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class GameParticipant(Base):
+    __tablename__ = "game_participants"
+    __table_args__ = (
+        UniqueConstraint("session_id", "user_id", name="uq_game_participants_session_user"),
+        UniqueConstraint("session_id", "player_role", name="uq_game_participants_session_role"),
+        Index("ix_game_participants_session_id", "session_id"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        nullable=False,
+        server_default=text("gen_random_uuid()"),
+    )
+    session_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("game_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    is_host: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    player_role: Mapped[str] = mapped_column(String(8), nullable=False)
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class GameMove(Base):
+    __tablename__ = "game_moves"
+    __table_args__ = (
+        UniqueConstraint("session_id", "move_index", name="uq_game_moves_session_move_index"),
+        Index("ix_game_moves_session_id", "session_id"),
+        Index("ix_game_moves_user_id_created_at", "user_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        nullable=False,
+        server_default=text("gen_random_uuid()"),
+    )
+    session_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("game_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    move_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    move_payload: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'{}'::jsonb"),
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
