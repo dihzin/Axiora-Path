@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Lock, ShoppingBag, Sparkles } from "lucide-react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
+import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { equipStoreItem, getApiErrorMessage, getStoreItems, purchaseStoreItem, type StoreCatalogItem } from "@/lib/api/client";
@@ -121,7 +122,12 @@ export default function ChildStorePage() {
               </div>
 
               <div className="mb-2 flex h-16 items-center justify-center rounded-xl border border-border bg-muted/40">
-                {item.imageUrl ? <img src={item.imageUrl} alt={item.name} className="h-10 w-10" /> : <Sparkles className="h-5 w-5 text-muted-foreground" />}
+                {item.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.imageUrl} alt={item.name} className="h-10 w-10" />
+                ) : (
+                  <Sparkles className="h-5 w-5 text-muted-foreground" />
+                )}
               </div>
 
               <div className="flex items-center justify-between gap-2">
@@ -153,7 +159,7 @@ export default function ChildStorePage() {
   );
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 pb-52 md:max-w-4xl md:p-6 md:pb-40 xl:max-w-5xl">
+    <PageShell tone="child" width="content">
       <div className="mb-3">
         <Link
           className="inline-flex items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted"
@@ -166,7 +172,7 @@ export default function ChildStorePage() {
         </Link>
       </div>
 
-      <Card className="mb-3">
+      <Card className="mb-3" variant="emphasis">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5 text-secondary" />
@@ -187,6 +193,6 @@ export default function ChildStorePage() {
       {renderSection("Molduras de Badge", grouped.frame)}
 
       <ChildBottomNav />
-    </main>
+    </PageShell>
   );
 }

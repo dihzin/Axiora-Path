@@ -6,6 +6,7 @@ import { CheckCircle2 } from "lucide-react";
 
 import { useTheme } from "@/components/theme-provider";
 import { ChildAvatar } from "@/components/child-avatar";
+import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ThemeName } from "@/lib/api/client";
@@ -64,7 +65,7 @@ export default function SelectChildPage() {
       className="min-h-screen bg-[#f6f6f3] bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: "url('/axiora/home/login-background.svg')" }}
     >
-      <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 md:max-w-4xl md:p-6 xl:max-w-5xl">
+      <PageShell width="content">
         <Card>
           <CardHeader>
             <CardTitle>Selecionar perfil</CardTitle>
@@ -100,7 +101,7 @@ export default function SelectChildPage() {
             </Button>
           </CardContent>
         </Card>
-      </main>
+      </PageShell>
     </div>
   );
 }

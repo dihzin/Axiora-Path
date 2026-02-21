@@ -234,12 +234,12 @@ export default function OnboardingPage() {
     >
       <Card className={isFocusStep ? "w-full shadow-[0_12px_32px_rgba(16,48,90,0.14)]" : "w-full"}>
         <CardHeader>
-          <CardTitle className="text-base">Configuração inicial {step}/{TOTAL_STEPS}</CardTitle>
+          <CardTitle className="break-words text-base leading-tight [overflow-wrap:anywhere]">Configuração inicial {step}/{TOTAL_STEPS}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           {step === 1 ? (
             <div className="space-y-2">
-              <p>Passo 1: Criar perfil infantil</p>
+              <p className="break-words font-semibold leading-snug">Passo 1: Criar perfil infantil</p>
               <div className="flex items-center gap-3 rounded-xl border border-border bg-white p-2">
                 <ChildAvatar name={childName || "Criança"} avatarKey={childAvatarKey} size={56} />
                 <div className="space-y-1">
@@ -253,7 +253,7 @@ export default function OnboardingPage() {
                       Remover foto
                     </button>
                   ) : (
-                    <p className="text-[11px] font-semibold text-muted-foreground">Opcional. Sem foto, usamos avatar amigável.</p>
+                    <p className="break-words text-[11px] font-semibold text-muted-foreground [overflow-wrap:anywhere]">Opcional. Sem foto, usamos avatar amigável.</p>
                   )}
                 </div>
               </div>
@@ -263,19 +263,19 @@ export default function OnboardingPage() {
 
           {step === 2 ? (
             <div className="space-y-2">
-              <p>Passo 2: Definir divisão de recompensas</p>
+              <p className="break-words font-semibold leading-snug">Passo 2: Definir divisão de recompensas</p>
               <div className="grid grid-cols-3 gap-2">
                 <Input type="number" value={splitSpend} onChange={(e) => setSplitSpend(Number(e.target.value) || 0)} />
                 <Input type="number" value={splitSave} onChange={(e) => setSplitSave(Number(e.target.value) || 0)} />
                 <Input type="number" value={splitDonate} onChange={(e) => setSplitDonate(Number(e.target.value) || 0)} />
               </div>
-              <p className="text-xs text-muted-foreground">GASTAR / GUARDAR / DOAR (total {splitTotal})</p>
+              <p className="break-words text-xs text-muted-foreground">GASTAR / GUARDAR / DOAR (total {splitTotal})</p>
             </div>
           ) : null}
 
           {step === 3 ? (
             <div className="space-y-2">
-              <p>Passo 3: Revisar tarefas padrão</p>
+              <p className="break-words font-semibold leading-snug">Passo 3: Revisar tarefas padrão</p>
               {tasksLoading ? <p className="text-xs text-muted-foreground">Carregando tarefas...</p> : null}
               {tasksError ? (
                 <div className="rounded-md border border-[#F4C5C2] bg-[#FFF2F1] p-2 text-xs text-[#B54C47]">
@@ -293,7 +293,7 @@ export default function OnboardingPage() {
               {!tasksLoading && tasks.length > 0 ? (
                 <div className="space-y-1">
                   {tasks.map((task) => (
-                    <div key={task.id} className="rounded-md border border-border px-2 py-1 text-xs">
+                    <div key={task.id} className="rounded-md border border-border px-2 py-1 text-xs break-words [overflow-wrap:anywhere]">
                       {task.title} • {task.difficulty} • w{task.weight}
                     </div>
                   ))}
@@ -304,7 +304,7 @@ export default function OnboardingPage() {
 
           {step === 4 ? (
             <div className="space-y-2">
-              <p>Passo 4: Definir mesada mensal</p>
+              <p className="break-words font-semibold leading-snug">Passo 4: Definir mesada mensal</p>
               <div className="flex items-center gap-2 rounded-xl border border-border bg-white px-3">
                 <span className="text-sm font-bold text-[#34557F]">R$</span>
                 <Input
@@ -315,8 +315,8 @@ export default function OnboardingPage() {
                   placeholder="100,00"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">Digite o valor mensal em reais. Exemplo: 100,00</p>
-              <p className="text-xs font-semibold text-[#35567F]">
+              <p className="break-words text-xs text-muted-foreground">Digite o valor mensal em reais. Exemplo: 100,00</p>
+              <p className="break-words text-xs font-semibold text-[#35567F]">
                 Valor informado: {parseBrlToCents(allowance) !== null ? formatCentsToBrl(parseBrlToCents(allowance) ?? 0) : "—"}
               </p>
             </div>
@@ -325,7 +325,7 @@ export default function OnboardingPage() {
           {step === 5 ? (
             <div className="space-y-4">
               <div className="rounded-xl border border-[#CFE0F7] bg-[#F7FBFF] p-3">
-                <p className="text-base font-black text-[#16345D]">Passo 5: Termos e Privacidade</p>
+                <p className="break-words text-base font-black leading-tight text-[#16345D]">Passo 5: Termos e Privacidade</p>
                 <p className="mt-1 text-sm leading-relaxed text-[#3B5D87]">
                   Antes de continuar, confirme o aceite dos termos para uso da plataforma no contexto familiar.
                 </p>
@@ -351,7 +351,7 @@ export default function OnboardingPage() {
           {step === 6 ? (
             <div className="space-y-3">
               <div className="rounded-xl border border-[#CFE0F7] bg-[#F7FBFF] p-3">
-                <p className="text-base font-black text-[#16345D]">Passo 6: Definir PIN dos pais</p>
+                <p className="break-words text-base font-black leading-tight text-[#16345D]">Passo 6: Definir PIN dos pais</p>
                 <p className="mt-1 text-sm leading-relaxed text-[#3B5D87]">Esse PIN protege ações sensíveis no app dos responsáveis.</p>
               </div>
               <Input
@@ -372,7 +372,7 @@ export default function OnboardingPage() {
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" disabled={step === 1 || loading} onClick={() => setStep((s) => s - 1)}>
               Voltar
             </Button>

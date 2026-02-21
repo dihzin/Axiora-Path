@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   BookOpen,
   CheckCircle2,
@@ -21,6 +22,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
+import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -90,6 +92,14 @@ function buildCoachTip(params: { streakDays: number; dueReviews: number; complet
   if (streakDays >= 5) return `Que constância linda! Continue em ${subjectName ?? "Aprender"} para manter o ritmo.`;
   if (streakDays === 0) return "Vamos reacender sua sequência com uma lição curtinha hoje?";
   return "Cada lição concluída deixa sua trilha mais forte. Continue nesse ritmo.";
+}
+
+function normalizePathErrorMessage(message: string): string {
+  const value = (message ?? "").trim().toLowerCase();
+  if (!value) return "Não foi possível carregar a trilha.";
+  if (value.includes("no subject available")) return "Nenhuma matéria disponível para este perfil no momento.";
+  if (value.includes("subject not available")) return "Nenhuma matéria disponível para este perfil no momento.";
+  return message;
 }
 
 function LearningPathSkeleton() {
@@ -530,8 +540,8 @@ function UnitPath({
                 >
                   <span
                     className={cn(
-                      "inline-block max-w-[110px] align-top sm:max-w-[118px]",
-                      isEventNode ? "whitespace-normal leading-tight" : "overflow-hidden text-ellipsis whitespace-nowrap",
+                      "inline-block max-w-[110px] break-words align-top leading-tight [overflow-wrap:anywhere] sm:max-w-[118px]",
+                      isEventNode ? "whitespace-normal" : "whitespace-normal",
                     )}
                     title={lesson ? lesson.title : event?.title ?? ""}
                   >
@@ -598,6 +608,30 @@ export default function ChildAprenderPage() {
   const [collapsedUnits, setCollapsedUnits] = useState<Record<number, boolean>>({});
 
   const reducedMotion = effectiveReducedMotion(uxSettings);
+  const highlightNotices = useMemo(() => {
+    const currentSeason = seasonal?.active[0] ?? null;
+    const items: Array<{ key: string; tone: "accent" | "primary" | "secondary"; text: string }> = [];
+    if (missions?.almostThere) {
+      items.push({ key: "almost", tone: "accent", text: "Missão quase lá! Continue com esse ritmo." });
+    } else if (missions?.showNudge && missions.nudgeMessage) {
+      items.push({ key: "nudge", tone: "primary", text: missions.nudgeMessage });
+    }
+    if (missions?.upcomingSeasonalEvent) {
+      items.push({
+        key: "upcoming",
+        tone: "secondary",
+        text: `Próximo evento: ${missions.upcomingSeasonalEvent.name} em ${Math.max(0, missions.upcomingSeasonalEvent.startsInDays)} dia(s).`,
+      });
+    }
+    if (currentSeason) {
+      items.push({
+        key: "active-season",
+        tone: "secondary",
+        text: `Temporada ativa: ${currentSeason.name} · XP x${currentSeason.bonusXpMultiplier.toFixed(2)} · moedas x${currentSeason.bonusCoinMultiplier.toFixed(2)}`,
+      });
+    }
+    return items.slice(0, 2);
+  }, [missions, seasonal]);
 
   const loadPath = async () => {
     try {
@@ -607,7 +641,7 @@ export default function ChildAprenderPage() {
       setError(null);
     } catch (err: unknown) {
       const message = err instanceof ApiError ? getApiErrorMessage(err, "Não foi possível carregar a trilha.") : "Não foi possível carregar a trilha.";
-      setError(message);
+      setError(normalizePathErrorMessage(message));
     } finally {
       setLoading(false);
     }
@@ -869,8 +903,8 @@ export default function ChildAprenderPage() {
 
   return (
     <>
-      <main className={cn("safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 pb-52 md:max-w-5xl md:p-6 md:pb-40 xl:max-w-6xl", activeSeason?.themeKey === "halloween" ? "bg-[radial-gradient(circle_at_88%_2%,rgba(120,53,15,0.2),transparent_44%)]" : "")}>
-        <Card className="mb-4 overflow-hidden border-border bg-[radial-gradient(circle_at_82%_14%,rgba(45,212,191,0.22),transparent_46%),linear-gradient(180deg,#ffffff_0%,#f3fbff_100%)] shadow-[0_2px_0_rgba(184,200,239,0.7),0_14px_28px_rgba(34,63,107,0.12)]">
+      <PageShell tone="child" width="wide" className={cn(activeSeason?.themeKey === "halloween" ? "bg-[radial-gradient(circle_at_88%_2%,rgba(120,53,15,0.2),transparent_44%)]" : "")}>
+        <Card variant="emphasis" className="mb-4 overflow-hidden border-border">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Aprender - Mapa de Aventura</CardTitle>
@@ -881,7 +915,7 @@ export default function ChildAprenderPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1.5">
               <Button size="sm" variant="secondary" className="h-8 px-2.5 text-xs" onClick={() => void updateUx({ soundEnabled: !uxSettings.soundEnabled })}>
                 {uxSettings.soundEnabled ? <Volume2 className="mr-1 h-3.5 w-3.5" /> : <VolumeX className="mr-1 h-3.5 w-3.5" />}
                 Som
@@ -893,7 +927,7 @@ export default function ChildAprenderPage() {
                 Movimento {uxSettings.reducedMotion ? "reduzido" : "normal"}
               </Button>
             </div>
-            <p className="text-muted-foreground">Explore regiões, cumpra eventos e avance na trilha do tesouro.</p>
+            <p className="break-words text-muted-foreground [overflow-wrap:anywhere]">Explore regiões, cumpra eventos e avance na trilha do tesouro.</p>
             <div className="rounded-2xl border border-border bg-white/90 p-3">
               <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
                 <span>Progresso total</span>
@@ -912,25 +946,22 @@ export default function ChildAprenderPage() {
               </div>
               <div className="rounded-xl border border-border bg-white/90 p-2 text-center">
                 <p className="text-[11px] text-muted-foreground">Matéria</p>
-                <p className="text-sm font-bold text-foreground">{path?.subjectName ?? "--"}</p>
+                <p className="break-words text-sm font-bold leading-tight text-foreground [overflow-wrap:anywhere]">{path?.subjectName ?? "--"}</p>
               </div>
             </div>
-            {missions?.almostThere ? (
-              <div className="rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent-foreground">Missão quase lá! Continue com esse ritmo.</div>
-            ) : null}
-            {missions?.showNudge && !missions.almostThere ? (
-              <div className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary">{missions.nudgeMessage}</div>
-            ) : null}
-            {missions?.upcomingSeasonalEvent ? (
-              <div className="rounded-xl border border-secondary/30 bg-secondary/10 px-3 py-2 text-xs text-secondary">
-                Próximo evento: <span className="font-semibold">{missions.upcomingSeasonalEvent.name}</span> em {Math.max(0, missions.upcomingSeasonalEvent.startsInDays)} dia(s).
+            {highlightNotices.map((notice) => (
+              <div
+                key={notice.key}
+                className={cn(
+                  "rounded-xl border px-3 py-2 text-xs",
+                  notice.tone === "accent" && "border-accent/30 bg-accent/10 font-semibold text-accent-foreground",
+                  notice.tone === "primary" && "border-primary/30 bg-primary/10 text-primary",
+                  notice.tone === "secondary" && "border-secondary/30 bg-secondary/10 text-secondary",
+                )}
+              >
+                {notice.text}
               </div>
-            ) : null}
-            {activeSeason ? (
-              <div className="rounded-xl border border-secondary/30 bg-secondary/10 px-3 py-2 text-xs text-secondary">
-                Temporada ativa: <span className="font-semibold">{activeSeason.name}</span> · XP x{activeSeason.bonusXpMultiplier.toFixed(2)} · moedas x{activeSeason.bonusCoinMultiplier.toFixed(2)}
-              </div>
-            ) : null}
+            ))}
           </CardContent>
         </Card>
 
@@ -954,18 +985,18 @@ export default function ChildAprenderPage() {
         </div>
 
         <div className="mb-4 grid gap-3 md:grid-cols-2">
-          <Card className="border-border bg-white/95">
+          <Card variant="subtle" className="border-border">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Missões da Semana</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {(missions?.missions ?? []).slice(0, 5).map((mission) => (
                 <div key={mission.missionId} className="rounded-xl border border-border bg-muted/40 p-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold text-foreground">{mission.title}</p>
-                    <span className="text-[10px] text-muted-foreground">{missionTypeLabel(mission.missionType)}</span>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="min-w-0 break-words text-xs font-semibold text-foreground [overflow-wrap:anywhere]">{mission.title}</p>
+                    <span className="shrink-0 text-[10px] text-muted-foreground">{missionTypeLabel(mission.missionType)}</span>
                   </div>
-                  <p className="mt-1 text-[11px] text-muted-foreground">{mission.description}</p>
+                  <p className="mt-1 break-words text-[11px] text-muted-foreground [overflow-wrap:anywhere]">{mission.description}</p>
                   <div className="mt-2">
                     <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
                       <span>
@@ -1001,12 +1032,12 @@ export default function ChildAprenderPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-border bg-white/95">
+          <Card variant="subtle" className="border-border">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Calendário de Constância</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-1 text-xs text-muted-foreground">
                 <span>Atual: {calendar?.currentStreak ?? 0} dias</span>
                 <span>Recorde: {calendar?.longestStreak ?? 0}</span>
               </div>
@@ -1043,9 +1074,9 @@ export default function ChildAprenderPage() {
 
         {loading ? <LearningPathSkeleton /> : null}
         {error && !path ? (
-          <Card>
+          <Card variant="flat">
             <CardContent className="flex items-center justify-between gap-3 p-4 text-sm text-muted-foreground">
-              <span>{error}</span>
+              <span className="min-w-0 break-words [overflow-wrap:anywhere]">{error}</span>
               <Button size="sm" variant="secondary" onClick={() => void loadPath()}>
                 Tentar novamente
               </Button>
@@ -1057,7 +1088,7 @@ export default function ChildAprenderPage() {
         ) : null}
 
         <div className="mb-4 flex items-center gap-3 rounded-2xl border border-primary/25 bg-[linear-gradient(120deg,rgba(27,42,74,0.92),rgba(23,36,62,0.9))] px-3 py-2.5 shadow-[0_10px_22px_rgba(16,29,51,0.25)]">
-          <img src="/icons/axion.svg" alt="" aria-hidden className="h-10 w-10 shrink-0 rounded-full object-contain" draggable={false} />
+          <Image src="/icons/axion.svg" alt="" aria-hidden className="h-10 w-10 shrink-0 rounded-full object-contain" draggable={false} width={40} height={40} />
           <p className="text-xs font-semibold leading-relaxed text-white/90">
             <span className="font-extrabold text-[#4DD9C0]">Dica do Axion:</span> {coachTip}
           </p>
@@ -1094,7 +1125,7 @@ export default function ChildAprenderPage() {
         </section>
 
         <ChildBottomNav />
-      </main>
+      </PageShell>
 
       {unlockToast ? (
         <div className="pointer-events-none fixed bottom-24 left-1/2 z-[60] -translate-x-1/2 rounded-full border border-secondary/30 bg-secondary px-3 py-1 text-xs font-bold text-white shadow-[0_8px_20px_rgba(14,165,164,0.34)]">
@@ -1155,7 +1186,7 @@ export default function ChildAprenderPage() {
               <Button className="w-full" disabled={modalLoading !== null || selectedNode.event.status === "LOCKED"} onClick={() => void onStartEvent()}>
                 {modalLoading === "start" ? "Iniciando..." : "Iniciar"}
               </Button>
-              <Button className="w-full" disabled title="Conclua a atividade para liberar esta badge.">
+              <Button className="w-full" disabled title="Conclua a atividade para liberar esta badge." onClick={() => void onCompleteEvent()}>
                 Concluir
               </Button>
             </div>

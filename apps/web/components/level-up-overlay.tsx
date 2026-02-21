@@ -35,7 +35,7 @@ export function LevelUpOverlay({ level, unlockedReward, onDismiss }: LevelUpOver
         size: 4 + Math.random() * 5,
         drift: (Math.random() - 0.5) * 80,
       })),
-    [level],
+    [],
   );
 
   return (

@@ -6,6 +6,7 @@ import { ArrowLeft, Sparkles } from "lucide-react";
 
 import { AxioraAvatar } from "@/components/axiora/AxioraAvatar";
 import { ChildBottomNav } from "@/components/child-bottom-nav";
+import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiError, getAchievements, getApiErrorMessage, type AchievementItem } from "@/lib/api/client";
 import type { Mood } from "@/lib/types/mood";
@@ -67,7 +68,7 @@ export default function StickerGalleryPage() {
   }, []);
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 pb-52 md:max-w-4xl md:p-6 md:pb-40 xl:max-w-5xl">
+    <PageShell tone="child" width="content">
       <div className="mb-3">
         <Link
           className="inline-flex items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted"
@@ -80,7 +81,7 @@ export default function StickerGalleryPage() {
         </Link>
       </div>
 
-      <Card>
+      <Card variant="emphasis">
         <CardHeader>
           <CardTitle>Galeria de figurinhas</CardTitle>
         </CardHeader>
@@ -123,6 +124,6 @@ export default function StickerGalleryPage() {
         </CardContent>
       </Card>
       <ChildBottomNav />
-    </main>
+    </PageShell>
   );
 }

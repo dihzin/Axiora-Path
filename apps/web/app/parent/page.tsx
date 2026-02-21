@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -20,6 +20,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageShell } from "@/components/layout/page-shell";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { StatusNotice } from "@/components/ui/status-notice";
@@ -106,15 +107,17 @@ function CollapsibleCard({
       <CardHeader className="pb-3">
         <button
           type="button"
-          className="flex w-full items-center justify-between gap-3 text-left"
+          className="flex w-full items-start justify-between gap-3 text-left"
           onClick={onToggle}
           aria-expanded={!collapsed}
         >
-          <div>
-            <CardTitle className="text-base">{title}</CardTitle>
-            {summary ? <p className="mt-1 text-xs font-medium text-muted-foreground">{summary}</p> : null}
+          <div className="min-w-0 flex-1">
+            <CardTitle className="break-words text-base leading-tight">{title}</CardTitle>
+            {summary ? (
+              <p className="mt-1 break-words text-xs font-medium leading-snug text-muted-foreground [overflow-wrap:anywhere]">{summary}</p>
+            ) : null}
           </div>
-          <ChevronDown className={`h-4 w-4 text-muted-foreground transition ${collapsed ? "" : "rotate-180"}`} />
+          <ChevronDown className={`mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition ${collapsed ? "" : "rotate-180"}`} />
         </button>
       </CardHeader>
       {!collapsed ? <CardContent className="space-y-2 text-sm">{children}</CardContent> : null}
@@ -189,7 +192,7 @@ export default function ParentPage() {
     sessionStorage.removeItem("axiora_parent_pin_ok");
   };
 
-  const loadChildDashboard = async (childId: number) => {
+  const loadChildDashboard = useCallback(async (childId: number) => {
     const today = new Date().toISOString().slice(0, 10);
     try {
       const [routine, walletData, trendData] = await Promise.all([
@@ -207,9 +210,9 @@ export default function ParentPage() {
       setTrend(null);
       setDashboardError("Não foi possível carregar os dados da criança selecionada.");
     }
-  };
+  }, []);
 
-  const loadChildrenAndContext = async () => {
+  const loadChildrenAndContext = useCallback(async () => {
     const profiles = await listChildren();
     setChildren(profiles);
 
@@ -232,9 +235,9 @@ export default function ParentPage() {
     localStorage.setItem("axiora_child_name", child.display_name);
     setSoundEnabled(getChildSoundEnabled(child.id));
     await loadChildDashboard(child.id);
-  };
+  }, [loadChildDashboard]);
 
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     try {
       setTasks(await getTasks());
       setTaskActionError(null);
@@ -242,7 +245,7 @@ export default function ParentPage() {
       setTasks([]);
       setTaskActionError(getApiErrorMessage(err, "Não foi possível carregar tarefas."));
     }
-  };
+  }, []);
 
   useEffect(() => {
     const ok = sessionStorage.getItem("axiora_parent_pin_ok");
@@ -284,7 +287,7 @@ export default function ParentPage() {
       }
     };
     void init();
-  }, [allowed]);
+  }, [allowed, loadChildrenAndContext, loadTasks]);
 
   const onGoChildMode = () => {
     if (selectedChildId === null) {
@@ -557,11 +560,11 @@ export default function ParentPage() {
   };
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 md:max-w-5xl md:p-6 xl:max-w-6xl">
-      <header className="mb-3 flex items-center justify-between gap-2">
-        <h1 className="min-w-0 flex-1 truncate text-lg font-semibold">Área dos pais</h1>
-        <div className="flex shrink-0 items-center gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={onGoChildMode}>
+    <PageShell tone="parent" width="wide">
+      <header className="mb-3 flex flex-wrap items-center gap-2 sm:flex-nowrap sm:justify-between">
+        <h1 className="order-2 min-w-0 flex-1 basis-full break-words text-lg font-semibold leading-tight sm:order-1 sm:basis-auto">Área dos pais</h1>
+        <div className="order-1 ml-auto flex shrink-0 items-center gap-2 sm:order-2 sm:ml-0">
+          <Button type="button" size="sm" variant="outline" className="whitespace-nowrap px-2 text-xs sm:px-3 sm:text-sm" onClick={onGoChildMode}>
             <Baby className="mr-1 h-4 w-4" />
             Ver modo criança
           </Button>
@@ -607,8 +610,8 @@ export default function ParentPage() {
       {selectedChild ? (
         <div className="mb-3">
           <StatusNotice tone="info" className="min-w-0">
-            <span className="min-w-0 truncate">
-              Perfil ativo: <strong className="ml-1">{selectedChild.display_name}</strong>
+            <span className="block min-w-0 break-words leading-snug [overflow-wrap:anywhere]">
+              Perfil ativo: <strong className="ml-1 inline">{selectedChild.display_name}</strong>
             </span>
           </StatusNotice>
         </div>
@@ -627,20 +630,25 @@ export default function ParentPage() {
                 key={child.id}
                 className={`rounded-md border px-2 py-2 ${selectedChildId === child.id ? "border-secondary bg-secondary/10" : "border-border"}`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
                     <ChildAvatar name={child.display_name} avatarKey={child.avatar_key} size={42} />
-                    <div>
-                    <p className="font-medium">
-                      {child.display_name}
-                      {selectedChildId === child.id ? <span className="ml-2 text-xs text-secondary">ativa</span> : null}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Ano nascimento: {child.birth_year ?? "Não informado"} • Tema: {THEME_LABELS[child.theme]}
-                    </p>
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-sm font-medium leading-tight [overflow-wrap:anywhere]">
+                        {child.display_name}
+                        {selectedChildId === child.id ? <span className="ml-2 text-xs text-secondary">ativa</span> : null}
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+                        <span className="rounded-full border border-border/80 bg-white/80 px-2 py-0.5">
+                          Nascimento: {child.birth_year ?? "Não informado"}
+                        </span>
+                        <span className="rounded-full border border-border/80 bg-white/80 px-2 py-0.5">
+                          Tema: {THEME_LABELS[child.theme]}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="ml-auto flex w-full shrink-0 flex-wrap items-center justify-end gap-1 sm:w-auto">
                     <Button size="sm" variant="outline" onClick={() => void onSelectChild(child)}>
                       Selecionar
                     </Button>
@@ -691,11 +699,13 @@ export default function ParentPage() {
                         >
                           Remover foto
                         </button>
-                      ) : (
-                        <p className="text-[11px] font-semibold text-muted-foreground">Sem foto: usamos avatar amigável.</p>
-                      )}
-                    </div>
+                    ) : (
+                      <p className="max-w-[17rem] break-words text-[11px] font-semibold leading-snug text-muted-foreground [overflow-wrap:anywhere]">
+                        Sem foto, usamos um avatar amigável.
+                      </p>
+                    )}
                   </div>
+                </div>
                   <Input placeholder="Nome da criança" value={editingChildName} onChange={(e) => setEditingChildName(e.target.value)} />
                   <Input
                     placeholder="Ano de nascimento (opcional)"
@@ -748,7 +758,9 @@ export default function ParentPage() {
                         Remover foto
                       </button>
                     ) : (
-                      <p className="text-[11px] font-semibold text-muted-foreground">Opcional. Sem foto, aplicamos avatar amigável.</p>
+                      <p className="max-w-[17rem] break-words text-[11px] font-semibold leading-snug text-muted-foreground [overflow-wrap:anywhere]">
+                        Opcional. Sem foto, aplicamos um avatar amigável.
+                      </p>
                     )}
                   </div>
                 </div>
@@ -956,6 +968,6 @@ export default function ParentPage() {
           </div>
         </div>
       ) : null}
-    </main>
+    </PageShell>
   );
 }

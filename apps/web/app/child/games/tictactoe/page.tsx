@@ -7,6 +7,7 @@ import { ArrowLeft, Sparkles } from "lucide-react";
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { ConfettiBurst } from "@/components/confetti-burst";
 import { LevelUpOverlay } from "@/components/level-up-overlay";
+import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { registerGameSession, type GameSessionRegisterResponse } from "@/lib/api/client";
@@ -379,7 +380,7 @@ export default function TicTacToePage() {
         onClose={() => setRewardOpen(false)}
       />
 
-      <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 pb-52 md:max-w-4xl md:p-6 md:pb-40 xl:max-w-5xl">
+      <PageShell tone="child" width="content">
         <div className="mb-3">
           <Link
             className="inline-flex items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted"
@@ -451,7 +452,7 @@ export default function TicTacToePage() {
         </Card>
 
         <ChildBottomNav />
-      </main>
+      </PageShell>
     </>
   );
 }

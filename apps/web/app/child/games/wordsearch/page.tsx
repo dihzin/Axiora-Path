@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CheckCircle2, Search, Sparkles } from "lucide-react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { ConfettiBurst } from "@/components/confetti-burst";
 import { LevelUpOverlay } from "@/components/level-up-overlay";
+import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { registerGameSession, type GameSessionRegisterResponse } from "@/lib/api/client";
@@ -238,19 +239,19 @@ export default function WordSearchPage() {
   const baseXp = foundWords.size * WORD_XP;
   const completed = placements.length > 0 && foundWords.size === placements.length;
 
-  const persistLevel = (next: number) => {
+  const persistLevel = useCallback((next: number) => {
     if (childId === null) return;
     localStorage.setItem(`axiora_game_level_${childId}`, String(next));
-  };
+  }, [childId]);
 
-  const getStoredLevel = (): number => {
+  const getStoredLevel = useCallback((): number => {
     if (childId === null) return 0;
     const raw = localStorage.getItem(`axiora_game_level_${childId}`);
     const parsed = Number(raw ?? "0");
     return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
-  };
+  }, [childId]);
 
-  const persistEarnedXp = (earnedXp: number) => {
+  const persistEarnedXp = useCallback((earnedXp: number) => {
     if (childId === null || earnedXp <= 0) return;
     const dailyKey = `axiora_game_daily_xp_${childId}_${todayIsoDate()}`;
     const currentDaily = Number(localStorage.getItem(dailyKey) ?? "0");
@@ -272,9 +273,9 @@ export default function WordSearchPage() {
       }
     }
     localStorage.setItem(weeklyKey, JSON.stringify({ weekStart, xp: weeklyXp + earnedXp }));
-  };
+  }, [childId]);
 
-  const registerSession = async () => {
+  const registerSession = useCallback(async () => {
     const totalXp = baseXp + COMPLETE_BONUS_XP;
     try {
       const response = await registerGameSession({
@@ -295,12 +296,12 @@ export default function WordSearchPage() {
       setRewardOpen(true);
       setConfettiTrigger((prev) => prev + 1);
     }
-  };
+  }, [baseXp, getStoredLevel, persistEarnedXp, persistLevel]);
 
   useEffect(() => {
     if (!completed || rewardOpen) return;
     void registerSession();
-  }, [completed]);
+  }, [completed, registerSession, rewardOpen]);
 
   const evaluatePath = (path: Pos[]) => {
     if (path.length < 2) return;
@@ -380,7 +381,7 @@ export default function WordSearchPage() {
         onClose={() => setRewardOpen(false)}
       />
 
-      <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 pb-52 md:max-w-4xl md:p-6 md:pb-40 xl:max-w-5xl">
+      <PageShell tone="child" width="content">
         <div className="mb-3 flex items-center justify-between gap-2">
           <Link
             className="inline-flex items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted"
@@ -500,7 +501,7 @@ export default function WordSearchPage() {
         </Card>
 
         <ChildBottomNav />
-      </main>
+      </PageShell>
     </>
   );
 }

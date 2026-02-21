@@ -13,7 +13,7 @@ export function ConfettiBurst({ trigger }: ConfettiBurstProps) {
   const [active, setActive] = useState(false);
   const reducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const baseAngle = useMemo(() => 70 + Math.random() * 40, [trigger]);
+  const baseAngle = useMemo(() => 70 + Math.random() * 40, []);
   const pieces = useMemo(
     () =>
       Array.from({ length: PIECES_COUNT }).map((_, index) => {

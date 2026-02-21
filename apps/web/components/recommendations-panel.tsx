@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +24,7 @@ export function RecommendationsPanel({ childId }: RecommendationsPanelProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [dismissingId, setDismissingId] = useState<number | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
@@ -36,11 +36,11 @@ export function RecommendationsPanel({ childId }: RecommendationsPanelProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [childId]);
 
   useEffect(() => {
     void load();
-  }, [childId]);
+  }, [load]);
 
   const onDismiss = async (id: number) => {
     setDismissError(null);

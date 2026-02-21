@@ -2,10 +2,11 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CheckCircle2, Coins, Flame, Lightbulb, Star, Volume2, VolumeX, Zap } from "lucide-react";
+import { ArrowLeft, Coins, Flame, Lightbulb, Star, Volume2, VolumeX, Zap } from "lucide-react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { ConfettiBurst } from "@/components/confetti-burst";
+import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -688,7 +689,7 @@ export default function AdaptiveLessonSessionPage() {
   const canSubmitDragDrop = pairs.length > 0 && Object.keys(dragAssignments).length >= pairs.length;
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 pb-52 md:max-w-4xl md:p-6 md:pb-40 xl:max-w-5xl">
+    <PageShell tone="child" width="content">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -1095,7 +1096,7 @@ export default function AdaptiveLessonSessionPage() {
           }
         }
       `}</style>
-    </main>
+    </PageShell>
   );
 }
 

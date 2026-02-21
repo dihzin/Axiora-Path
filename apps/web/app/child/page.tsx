@@ -1,8 +1,9 @@
 "use client";
+/* eslint-disable react-hooks/exhaustive-deps */
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Coins, Flame, Lock, Snowflake, Sparkles, X } from "lucide-react";
+import { CheckCircle2, Coins, Flame, Lock, Snowflake, Sparkles, Volume2, VolumeX, X } from "lucide-react";
 
 import { ActionFeedback, type ActionFeedbackState } from "@/components/action-feedback";
 import { MoodSelector } from "@/components/axiora/MoodSelector";
@@ -11,6 +12,7 @@ import { AxionDialogue } from "@/components/axion-dialogue";
 import { AvatarEvolution } from "@/components/avatar-evolution";
 import { ChildAvatar } from "@/components/child-avatar";
 import { ChildBottomNav } from "@/components/child-bottom-nav";
+import { PageShell } from "@/components/layout/page-shell";
 import { LevelUpOverlay } from "@/components/level-up-overlay";
 import { useTheme } from "@/components/theme-provider";
 import { PiggyJar } from "@/components/piggy-jar";
@@ -66,8 +68,10 @@ function getFlameIntensityClass(streakCount: number): string {
 }
 
 function moodToAxionMoodState(mood: MoodType): string {
-  if (mood === "HAPPY") return "CELEBRATING";
-  if (mood === "SAD" || mood === "ANGRY") return "CONCERNED";
+  if (mood === "HAPPY") return "HAPPY";
+  if (mood === "SAD") return "SAD";
+  if (mood === "ANGRY") return "ANGRY";
+  if (mood === "TIRED") return "TIRED";
   return "NEUTRAL";
 }
 
@@ -129,11 +133,33 @@ function taskDifficultyLabel(value: string): string {
 
 function axionMoodStateLabel(value: string): string {
   if (value === "NEUTRAL") return "Neutro";
+  if (value === "HAPPY") return "Feliz";
+  if (value === "SAD") return "Triste";
+  if (value === "ANGRY") return "Bravo";
+  if (value === "TIRED") return "Cansado";
   if (value === "CELEBRATING") return "Comemorando";
   if (value === "CONCERNED") return "Atento";
   if (value === "EXCITED") return "Animado";
   if (value === "PROUD") return "Orgulhoso";
   return value;
+}
+
+function childMoodLabel(value: Mood | null): string | null {
+  if (value === "happy") return "Feliz";
+  if (value === "neutral") return "Neutro";
+  if (value === "sad") return "Triste";
+  if (value === "angry") return "Bravo";
+  if (value === "tired") return "Cansado";
+  return null;
+}
+
+function moodToAxionVisualState(value: Mood | null): string | null {
+  if (value === "happy") return "HAPPY";
+  if (value === "neutral") return "NEUTRAL";
+  if (value === "sad") return "SAD";
+  if (value === "angry") return "ANGRY";
+  if (value === "tired") return "TIRED";
+  return null;
 }
 
 export default function ChildPage() {
@@ -182,10 +208,12 @@ export default function ChildPage() {
   const previousGoalRef = useRef<{ id: number; isLocked: boolean } | null>(null);
   const todayIso = new Date().toISOString().slice(0, 10);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     void getAxionBrief({ context: "child_tab" }).catch(() => undefined);
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const rawChildId = localStorage.getItem("axiora_child_id");
     if (!rawChildId) {
@@ -312,6 +340,7 @@ export default function ChildPage() {
       });
   }, [router, setTheme, todayIso]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (childId === null) return;
 
@@ -336,6 +365,7 @@ export default function ChildPage() {
     return () => window.clearInterval(interval);
   }, [childId]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (childId === null || streak === null) return;
     const previous = lastKnownStreakRef.current;
@@ -355,11 +385,13 @@ export default function ChildPage() {
     lastKnownStreakRef.current = current;
   }, [childId, soundEnabled, streak?.current, theme]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (childId === null || levelUpOverlayLevel === null || !soundEnabled) return;
     playSound("level_up", { childId, theme });
   }, [childId, levelUpOverlayLevel, soundEnabled, theme]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (childId === null || levelUpOverlayLevel === null) return;
     triggerAxionCelebration("level_up");
@@ -454,6 +486,7 @@ export default function ChildPage() {
   const savePercent = nextGoal && nextGoal > 0 ? (currentSave / nextGoal) * 100 : 0;
   const goalLocked = activeGoal?.is_locked ?? false;
   const streakCount = streak?.current ?? 0;
+  const effectiveAxionMoodState = moodToAxionVisualState(todayMood) ?? (axionState?.mood_state ?? "NEUTRAL");
   const flameClassName = getFlameIntensityClass(streakCount);
 
   useEffect(() => {
@@ -554,10 +587,7 @@ export default function ChildPage() {
   };
 
   const onQuickMood = async (mood: Mood) => {
-    const success = await onSelectMood(mood);
-    if (success) {
-      dismissDailyWelcome();
-    }
+    await onSelectMood(mood);
   };
 
   const onMarkTask = async (taskId: number) => {
@@ -719,18 +749,21 @@ export default function ChildPage() {
       {levelUpOverlayLevel !== null ? (
         <LevelUpOverlay level={levelUpOverlayLevel} onDismiss={() => setLevelUpOverlayLevel(null)} />
       ) : null}
-      <main
+      <PageShell
+        tone="child"
+        width={isSchoolTenant ? "wide" : "content"}
         className={cn(
-          "safe-px safe-pb mx-auto flex min-h-screen w-full flex-col overflow-x-clip p-4 pb-52 pt-5 md:p-6 md:pb-40",
-          isSchoolTenant ? "max-w-md md:max-w-5xl xl:max-w-6xl" : "max-w-md md:max-w-4xl xl:max-w-6xl",
+          "flex flex-col pt-5",
         )}
       >
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground">{childName ? `Perfil: ${childName}` : "Perfil infantil"}</p>
+        <div className="mb-3 flex flex-wrap items-center gap-2 sm:flex-nowrap sm:justify-between">
+          <p className="order-2 min-w-0 flex-1 basis-full truncate text-sm font-medium text-muted-foreground sm:order-1 sm:basis-auto">
+            {childName ? `Perfil: ${childName}` : "Perfil infantil"}
+          </p>
           <button
             type="button"
             aria-label="Abrir modo pais"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+            className="order-1 ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-xs font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 sm:order-2 sm:ml-0 sm:text-sm"
             onClick={() => router.push("/parent-pin")}
           >
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-muted">
@@ -739,7 +772,7 @@ export default function ChildPage() {
             Modo pais
           </button>
         </div>
-        <Card className={cn("mb-4 bg-card", dailyMission ? missionCardClass(dailyMission.status) : "border-border shadow-sm")}>
+        <Card variant="emphasis" className={cn("mb-4", dailyMission ? missionCardClass(dailyMission.status) : "border-border shadow-sm")}>
             <CardHeader className="p-5 pb-2 md:p-6 md:pb-2">
               <div className="flex items-center justify-between gap-2">
                 <CardTitle className="text-lg font-bold tracking-tight">Missão do Dia</CardTitle>
@@ -800,7 +833,7 @@ export default function ChildPage() {
               )}
             </CardContent>
           </Card>
-        <Card
+        <Card variant="subtle"
           className={cn(
             "relative mb-6 overflow-hidden border-border shadow-md",
             isSchoolTenant ? "bg-card" : "axion-card-idle bg-card",
@@ -820,7 +853,7 @@ export default function ChildPage() {
               <div className="rounded-full border border-accent/20 bg-[radial-gradient(circle_at_50%_35%,rgba(30,42,56,0.12),rgba(30,42,56,0.02)_70%)] p-3 shadow-md">
                 <AxionCharacter
                   stage={axionState?.stage ?? 1}
-                  moodState={axionState?.mood_state ?? "NEUTRAL"}
+                  moodState={effectiveAxionMoodState}
                   celebrating={axionCelebration !== null}
                   reducedMotion={isSchoolTenant}
                 />
@@ -835,25 +868,26 @@ export default function ChildPage() {
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <span className="rounded-xl border border-border bg-background px-2 py-1">Estágio {axionState?.stage ?? 1}</span>
               <span className="rounded-xl border border-border bg-background px-2 py-1">
-                {axionMoodStateLabel(axionState?.mood_state ?? "NEUTRAL")}
+                {childMoodLabel(todayMood) ?? axionMoodStateLabel(effectiveAxionMoodState)}
               </span>
             </div>
           </CardContent>
         </Card>
         <section className={cn("space-y-4", isSchoolTenant && "grid gap-4 lg:grid-cols-[1.15fr_1fr] lg:items-start lg:space-y-0")}>
           {showDailyWelcome ? (
-            <Card className="bg-card">
+            <Card variant="subtle">
               <CardHeader className="p-5 md:p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <CardTitle className="text-base">Pronto para a missão de hoje?</CardTitle>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-start justify-between gap-3">
+                  <CardTitle className="min-w-0 break-words text-base leading-tight [overflow-wrap:anywhere]">Pronto para a missão de hoje?</CardTitle>
+                  <div className="flex shrink-0 items-center gap-2">
                     <button
                       type="button"
                       aria-label="Alternar som"
-                      className="text-sm text-muted-foreground underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+                      className="inline-flex h-8 items-center gap-1 rounded-xl border border-border bg-white px-2 text-xs font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
                       onClick={onToggleSound}
                     >
-                      Som: {soundEnabled ? "ligado" : "desligado"}
+                      {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+                      Som {soundEnabled ? "ligado" : "desligado"}
                     </button>
                     <button
                       type="button"
@@ -867,18 +901,20 @@ export default function ChildPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3 p-5 pt-0 text-sm md:p-6 md:pt-0">
-                <div className="flex items-center justify-between">
+                <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2">
                   <span className="text-muted-foreground">Sequência</span>
-                  <span className="font-semibold">{streakCount} dias</span>
+                  <span className="text-right font-semibold">{streakCount} dias</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2">
                   <span className="text-muted-foreground">Meta principal</span>
-                  <span className="text-right font-semibold">
-                    {activeGoal ? `${activeGoal.title} • ${formatBRL(activeGoal.target_cents)}` : "Sem meta"}
-                  </span>
+                  {activeGoal ? (
+                    <span className="text-right font-semibold break-words [overflow-wrap:anywhere]">{`${activeGoal.title} • ${formatBRL(activeGoal.target_cents)}`}</span>
+                  ) : (
+                    <span className="justify-self-end rounded-full border border-border bg-white px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">Definir meta</span>
+                  )}
                 </div>
                 <div>
-                  <p className="mb-2 text-sm text-muted-foreground">Humor rápido</p>
+                  <p className="mb-2 text-sm font-semibold text-muted-foreground">Humor rápido</p>
                   <MoodSelector value={todayMood ?? undefined} onChange={(mood) => void onQuickMood(mood)} />
                   {moodFeedback === "loading" ? <p className="mt-2 text-sm text-muted-foreground">Salvando humor...</p> : null}
                   {moodError ? <p className="mt-2 text-sm text-destructive">{moodError}</p> : null}
@@ -886,7 +922,7 @@ export default function ChildPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="bg-card">
+            <Card variant="flat">
               <CardContent className="flex items-center justify-between gap-2 p-4">
                 <p className="text-sm font-medium text-muted-foreground">Painel da missão recolhido</p>
                 <ActionFeedback
@@ -899,7 +935,7 @@ export default function ChildPage() {
               </CardContent>
             </Card>
           )}
-          <Card className="border-border/80 bg-card">
+          <Card variant="subtle" className="border-border/80">
             <CardHeader className="p-5 pb-2 md:p-6 md:pb-2">
               <CardTitle className="text-lg font-semibold">Progresso</CardTitle>
             </CardHeader>
@@ -935,7 +971,7 @@ export default function ChildPage() {
               <WeeklyBossMeter completionRate={weeklyMetrics?.completion_rate ?? 0} />
             </CardContent>
           </Card>
-          <Card className="bg-card">
+          <Card variant="subtle">
             <CardHeader className="p-5 md:p-6">
               <CardTitle className="text-lg">Lista de tarefas</CardTitle>
             </CardHeader>
@@ -976,17 +1012,14 @@ export default function ChildPage() {
                     const isProcessing = markingTaskIds.includes(task.id);
                     const isMarked = status !== undefined;
                     return (
-                      <div
-                        key={task.id}
-                        className={`flex items-center justify-between gap-2 rounded-xl border px-2 py-2 transition ${taskRowClass(status)}`}
-                      >
+                      <div key={task.id} className={`flex items-center justify-between gap-2 rounded-xl border px-2 py-2 transition ${taskRowClass(status)}`}>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-foreground">{task.title}</p>
                           <p className="text-sm text-muted-foreground">
                             {taskDifficultyLabel(task.difficulty)} • peso {task.weight}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex shrink-0 items-center gap-2">
                           {status ? (
                             <span className={`rounded-xl px-2 py-0.5 text-sm font-semibold ${statusBadgeClass(status)}`}>
                               {routineStatusLabel(status)}
@@ -1060,7 +1093,7 @@ export default function ChildPage() {
             </div>
           </div>
         ) : null}
-      </main>
+      </PageShell>
     </>
   );
 }

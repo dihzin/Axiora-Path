@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Bot, Flame, HelpCircle, Sparkles, Target, Zap } from "lucide-react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
+import { PageShell } from "@/components/layout/page-shell";
 import { getApiErrorMessage, getAxionBrief, type AxionBriefResponse } from "@/lib/api/client";
 
 type CoachCopy = {
@@ -119,7 +120,7 @@ export default function ChildAxionPage() {
   };
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip px-4 pb-48 pt-4 md:max-w-4xl md:px-6 xl:max-w-5xl">
+    <PageShell tone="child" width="content" className="pt-4">
       <section className={`rounded-[30px] border border-[#BFD3EE] bg-gradient-to-br p-5 shadow-[0_8px_24px_rgba(32,88,140,0.08)] ${toneBg}`}>
         <div className="mb-4 flex items-center justify-between">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#BFD3EE] bg-white/85 px-3 py-1 text-xs font-bold text-[#2A456D]">
@@ -272,6 +273,6 @@ export default function ChildAxionPage() {
       ) : null}
 
       <ChildBottomNav />
-    </main>
+    </PageShell>
   );
 }

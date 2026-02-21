@@ -6,6 +6,7 @@ import { ArrowRight, Coins, Crown, Flame, Grid2x2, PiggyBank, Search, Sparkles, 
 import type { ComponentType } from "react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
+import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -119,7 +120,7 @@ export default function ChildGamesPage() {
   }, [childId]);
 
   return (
-    <main className="safe-px safe-pb mx-auto min-h-screen w-full max-w-md overflow-x-clip p-4 pb-52 md:max-w-5xl md:p-6 md:pb-40 xl:max-w-6xl">
+    <PageShell tone="child" width="wide">
       <Card className="mb-4 overflow-hidden border-border bg-[radial-gradient(circle_at_85%_15%,rgba(255,107,61,0.18),transparent_50%),linear-gradient(180deg,#ffffff_0%,#f7fbff_100%)] shadow-[0_2px_0_rgba(184,200,239,0.7),0_14px_28px_rgba(34,63,107,0.12)]">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between gap-2">
@@ -229,6 +230,6 @@ export default function ChildGamesPage() {
       </section>
 
       <ChildBottomNav />
-    </main>
+    </PageShell>
   );
 }
