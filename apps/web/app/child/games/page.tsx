@@ -77,6 +77,7 @@ function mapCatalogGameToRoute(item: GameCatalogItem): string | null {
   const title = item.title.trim().toLowerCase();
   if (title === "corrida da soma") return "/child/games/quiz";
   if (title === "mercado do troco") return "/child/games/finance-sim";
+  if (title === "mapa de capitais") return "/child/games/memory";
   if (title === "jogo da velha") return "/child/games/tictactoe";
   if (title === "caça-palavras") return "/child/games/wordsearch";
   if (title === "mesada inteligente") return "/child/games/finance-sim";
@@ -87,6 +88,7 @@ function qualityDescription(item: GameCatalogItem): string {
   const title = item.title.trim().toLowerCase();
   if (title === "corrida da soma") return "Desafios rápidos de soma com progresso por sessão.";
   if (title === "mercado do troco") return "Simulação prática de decisões financeiras com eventos.";
+  if (title === "mapa de capitais") return "Treine memória ligando capitais às regiões corretas.";
   if (title === "jogo da velha") return "Estratégia em partidas curtas com níveis de dificuldade.";
   if (title === "caça-palavras") return "Foco e vocabulário com tabuleiro dinâmico.";
   if (title === "mesada inteligente") return "Treino de orçamento e escolhas com impacto.";

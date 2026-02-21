@@ -114,7 +114,7 @@ export default function QuizGamePage() {
   }
 
   return (
-    <PageShell tone="child" width="narrow">
+    <PageShell tone="child" width="compact">
       <Card className="mb-3">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -195,4 +195,3 @@ export default function QuizGamePage() {
     </PageShell>
   );
 }
-
