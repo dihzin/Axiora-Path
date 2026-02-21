@@ -99,6 +99,10 @@ class GameType(str, Enum):
     CROSSWORD = "CROSSWORD"
     HANGMAN = "HANGMAN"
     FINANCE_SIM = "FINANCE_SIM"
+    QUIZ_BATTLE = "QUIZ_BATTLE"
+    MATH_CHALLENGE = "MATH_CHALLENGE"
+    PUZZLE_COOP = "PUZZLE_COOP"
+    FINANCE_BATTLE = "FINANCE_BATTLE"
 
 
 class SubjectAgeGroup(str, Enum):

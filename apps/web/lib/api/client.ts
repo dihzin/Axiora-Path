@@ -1381,6 +1381,8 @@ export type MultiplayerCreateResponse = {
   joinCode: string;
   joinToken: string;
   joinUrl: string;
+  gameType: "TICTACTOE" | "QUIZ_BATTLE" | "MATH_CHALLENGE" | "PUZZLE_COOP" | "FINANCE_BATTLE";
+  engineKey: string;
   status: MultiplayerSessionStatus;
   expiresAt: string;
 };
@@ -1388,21 +1390,25 @@ export type MultiplayerCreateResponse = {
 export type MultiplayerStateResponse = {
   sessionId: string;
   status: MultiplayerSessionStatus;
-  multiplayerMode: "PVP_PRIVATE";
-  board: Array<"X" | "O" | null>;
-  participants: Array<{ userId: number; isHost: boolean; playerRole: "X" | "O" }>;
-  moves: Array<{ moveIndex: number; userId: number; cellIndex: number; playerRole: "X" | "O"; createdAt: string }>;
-  nextTurn: "X" | "O" | null;
-  winner: "X" | "O" | "DRAW" | null;
+  multiplayerMode: "PVP_PRIVATE" | "COOP_PRIVATE";
+  gameType: "TICTACTOE" | "QUIZ_BATTLE" | "MATH_CHALLENGE" | "PUZZLE_COOP" | "FINANCE_BATTLE";
+  engineKey: string;
+  board: Array<string | null>;
+  participants: Array<{ userId: number; isHost: boolean; playerRole: string }>;
+  moves: Array<{ moveIndex: number; userId: number; cellIndex: number; playerRole: string; createdAt: string }>;
+  nextTurn: string | null;
+  winner: string | null;
   canPlay: boolean;
   expiresAt: string | null;
+  engineState: Record<string, unknown>;
 };
 
 export async function createMultiplayerSession(payload?: {
-  gameType?: "TICTACTOE";
-  mode?: "PVP_PRIVATE";
+  gameType?: "TICTACTOE" | "QUIZ_BATTLE" | "MATH_CHALLENGE" | "PUZZLE_COOP" | "FINANCE_BATTLE";
+  mode?: "PVP_PRIVATE" | "COOP_PRIVATE";
   joinMethod?: "QR_CODE" | "SHORT_CODE";
   ttlMinutes?: number;
+  config?: Record<string, unknown>;
 }): Promise<MultiplayerCreateResponse> {
   return apiRequest<MultiplayerCreateResponse>("/api/games/multiplayer/session/create", {
     method: "POST",
@@ -1432,10 +1438,14 @@ export async function getMultiplayerSession(sessionId: string): Promise<Multipla
   });
 }
 
-export async function postMultiplayerMove(sessionId: string, cellIndex: number): Promise<MultiplayerStateResponse> {
+export async function postMultiplayerMove(
+  sessionId: string,
+  cellIndex: number,
+  options?: { action?: string; payload?: Record<string, unknown> },
+): Promise<MultiplayerStateResponse> {
   return apiRequest<MultiplayerStateResponse>(`/api/games/multiplayer/session/${sessionId}/move`, {
     method: "POST",
-    body: { cellIndex },
+    body: { cellIndex, action: options?.action, payload: options?.payload },
     requireAuth: true,
     includeTenant: true,
   });

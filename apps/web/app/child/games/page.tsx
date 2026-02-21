@@ -109,6 +109,18 @@ const GAMES: GameItem[] = [
   },
 ];
 
+const LOCAL_TICTACTOE_GAME: GameItem = GAMES.find((game) => game.href === "/child/games/tictactoe") ?? {
+  id: "local-tic-tac-toe",
+  href: "/child/games/tictactoe",
+  title: "Jogo da Velha",
+  description: "Treine lógica, antecipação e tomada de decisão em partidas rápidas.",
+  skill: "Lógica e estratégia",
+  difficulty: "Fácil",
+  xpReward: 50,
+  icon: Grid2x2,
+  estimatedMinutes: 3,
+};
+
 function difficultyLabel(difficulty: string): "Fácil" | "Médio" | "Difícil" {
   const value = difficulty.toUpperCase();
   if (value === "EASY") return "Fácil";
@@ -137,20 +149,20 @@ function resolveCatalogRoute(item: GameCatalogItem): string | null {
   if (templateId.includes("soma") || templateId.includes("quiz")) return "/child/games/quiz";
   if (templateId.includes("troco") || templateId.includes("finance")) return "/child/games/finance-sim";
   if (templateId.includes("palavra") || templateId.includes("drag")) return "/child/games/wordsearch";
-  if (templateId.includes("tictactoe") || templateId.includes("strategy")) return "/child/games/tictactoe";
+  if (templateId.includes("tictactoe")) return "/child/games/tictactoe";
 
   const title = item.title.trim().toLowerCase();
   if (title === "corrida da soma") return "/child/games/quiz";
   if (title === "mapa de capitais") return "/child/games/memory";
   if (title === "mercado do troco") return "/child/games/finance-sim";
   if (title === "caça-palavras") return "/child/games/wordsearch";
+  if (title === "jogo da velha") return "/child/games/tictactoe";
 
   const key = item.engineKey.toUpperCase();
   if (key === "QUIZ") return "/child/games/quiz";
   if (key === "MEMORY") return "/child/games/memory";
   if (key === "SIMULATION") return "/child/games/finance-sim";
   if (key === "DRAG_DROP") return "/child/games/wordsearch";
-  if (key === "STRATEGY") return "/child/games/tictactoe";
 
   return item.playRoute;
 }
@@ -304,7 +316,15 @@ export default function ChildGamesPage() {
         const enriched = mapped.length < 6
           ? [...mapped, ...GAMES.filter((game) => !existingTitles.has(game.title.toLowerCase()))]
           : mapped;
-        setCatalogGames(enriched);
+        const hasTicTacToe = enriched.some(
+          (game) =>
+            (game.href === "/child/games/tictactoe" || game.title.trim().toLowerCase() === "jogo da velha") &&
+            game.playable !== false,
+        );
+        const withTicTacToe = hasTicTacToe
+          ? enriched
+          : [LOCAL_TICTACTOE_GAME, ...enriched];
+        setCatalogGames(withTicTacToe);
         setCatalogState("remote");
       })
       .catch(() => {

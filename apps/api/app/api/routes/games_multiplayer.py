@@ -12,17 +12,16 @@ from sqlalchemy import Select, select
 from app.api.deps import DBSession, get_current_tenant, get_current_user, require_role
 from app.core.security import decode_token
 from app.db.session import SessionLocal
-from app.models import AxionSignalType, GameMove, GameParticipant, GameSession, GameType, Membership, Tenant, User
+from app.models import AxionSignalType, GameMove, GameParticipant, GameSession, Membership, Tenant, User
 from app.schemas.games_multiplayer import (
     MultiplayerCloseRequest,
     MultiplayerCreateRequest,
     MultiplayerCreateResponse,
     MultiplayerJoinRequest,
     MultiplayerMoveRequest,
-    MultiplayerMoveOut,
-    MultiplayerParticipantOut,
     MultiplayerStateResponse,
 )
+from app.services.multiplayer import EngineMoveError, build_state_payload, get_multiplayer_engine
 from app.services.axion_core_v2 import recordAxionSignal
 
 router = APIRouter(prefix="/api/games/multiplayer", tags=["games-multiplayer"])
@@ -73,77 +72,16 @@ def _generate_join_code(length: int = 6) -> str:
     return "".join(random.choice(_JOIN_ALPHABET) for _ in range(length))
 
 
-def _winner_for_board(board: list[str | None]) -> str | None:
-    wins = [
-        (0, 1, 2),
-        (3, 4, 5),
-        (6, 7, 8),
-        (0, 3, 6),
-        (1, 4, 7),
-        (2, 5, 8),
-        (0, 4, 8),
-        (2, 4, 6),
-    ]
-    for a, b, c in wins:
-        if board[a] and board[a] == board[b] == board[c]:
-            return board[a]
-    return None
-
-
 def _participant_role_map(participants: list[GameParticipant]) -> dict[int, str]:
     return {int(item.user_id): str(item.player_role) for item in participants}
 
 
 def _build_state(*, session: GameSession, participants: list[GameParticipant], moves: list[GameMove], user_id: int) -> MultiplayerStateResponse:
-    board: list[str | None] = [None] * 9
-    move_out: list[MultiplayerMoveOut] = []
-    role_map = _participant_role_map(participants)
-
-    for mv in moves:
-        payload = mv.move_payload if isinstance(mv.move_payload, dict) else {}
-        cell = int(payload.get("cell", -1))
-        role = str(payload.get("role", role_map.get(int(mv.user_id), "X")))
-        if 0 <= cell <= 8:
-            board[cell] = role
-        move_out.append(
-            MultiplayerMoveOut(
-                moveIndex=int(mv.move_index),
-                userId=int(mv.user_id),
-                cellIndex=max(0, cell),
-                playerRole=role if role in {"X", "O"} else "X",
-                createdAt=mv.created_at,
-            ),
-        )
-
-    winner = _winner_for_board(board)
-    if winner is None and all(cell is not None for cell in board):
-        winner = "DRAW"
-
-    if winner and session.session_status != "FINISHED":
-        session.session_status = "FINISHED"
-
-    next_turn: str | None = None
-    if winner is None:
-        next_turn = "X" if len(moves) % 2 == 0 else "O"
-
-    user_role = role_map.get(int(user_id))
-    can_play = bool(next_turn and user_role == next_turn and session.session_status == "IN_PROGRESS")
-
-    return MultiplayerStateResponse(
-        sessionId=session.id,
-        status=session.session_status if session.session_status in {"WAITING", "IN_PROGRESS", "FINISHED", "CANCELLED"} else "WAITING",
-        multiplayerMode="PVP_PRIVATE",
-        board=board,
-        participants=[
-            MultiplayerParticipantOut(userId=int(item.user_id), isHost=bool(item.is_host), playerRole="X" if item.player_role == "X" else "O")
-            for item in participants
-        ],
-        moves=move_out,
-        nextTurn=next_turn if next_turn in {"X", "O"} else None,
-        winner=winner if winner in {"X", "O", "DRAW"} else None,
-        canPlay=can_play,
-        expiresAt=session.expires_at,
-    )
+    try:
+        payload = build_state_payload(session=session, participants=participants, moves=moves, user_id=user_id)
+    except EngineMoveError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    return MultiplayerStateResponse.model_validate(payload)
 
 
 def _emit_axion_multiplayer_signals(*, db: DBSession, session: GameSession, state: MultiplayerStateResponse) -> None:
@@ -155,9 +93,13 @@ def _emit_axion_multiplayer_signals(*, db: DBSession, session: GameSession, stat
     if state.winner is None:
         return
     for participant in state.participants:
-        is_winner = state.winner in {"X", "O"} and participant.player_role == state.winner
+        is_winner = bool(state.winner) and state.winner not in {"DRAW"} and (
+            state.winner == "TEAM" or participant.player_role == state.winner
+        )
         payload = {
-            "source": "multiplayer_tictactoe",
+            "source": "multiplayer_engine",
+            "gameType": state.game_type,
+            "engineKey": state.engine_key,
             "sessionId": session.id,
             "winner": state.winner,
             "playerRole": participant.player_role,
@@ -190,7 +132,7 @@ def _session_query(*, tenant_id: int, session_id: str) -> Select[tuple[GameSessi
         .where(
             GameSession.id == session_id,
             GameSession.tenant_id == tenant_id,
-            GameSession.multiplayer_mode == "PVP_PRIVATE",
+            GameSession.multiplayer_mode.in_(["PVP_PRIVATE", "COOP_PRIVATE"]),
         )
         .with_for_update()
     )
@@ -204,8 +146,9 @@ def create_multiplayer_session(
     user: Annotated[User, Depends(get_current_user)],
     __membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> MultiplayerCreateResponse:
-    if payload.game_type != "TICTACTOE":
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Only TICTACTOE is enabled for multiplayer MVP")
+    adapter = get_multiplayer_engine(payload.game_type)
+    if adapter is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unsupported multiplayer game")
 
     expires_at = _now() + timedelta(minutes=payload.ttl_minutes)
     join_token = token_urlsafe(24)
@@ -214,7 +157,7 @@ def create_multiplayer_session(
         conflict = db.scalar(
             select(GameSession.id).where(
                 GameSession.join_code == join_code,
-                GameSession.multiplayer_mode == "PVP_PRIVATE",
+                GameSession.multiplayer_mode == adapter.default_mode,
                 GameSession.expires_at > _now(),
             ),
         )
@@ -225,13 +168,13 @@ def create_multiplayer_session(
     session = GameSession(
         tenant_id=tenant.id,
         user_id=user.id,
-        game_type=GameType.TICTACTOE,
+        game_type=adapter.game_type,
         session_status="WAITING",
-        multiplayer_mode="PVP_PRIVATE",
+        multiplayer_mode=adapter.default_mode,
         join_token=join_token,
         join_code=join_code,
         expires_at=expires_at,
-        metadata_payload={"boardSize": 3, "winLength": 3},
+        metadata_payload={"engineKey": adapter.engine_key, "engineState": adapter.start_session(payload.config)},
         score=0,
         xp_earned=0,
         coins_earned=0,
@@ -244,7 +187,7 @@ def create_multiplayer_session(
             session_id=session.id,
             user_id=user.id,
             is_host=True,
-            player_role="X",
+            player_role=adapter.supported_roles[0],
         ),
     )
     db.commit()
@@ -252,7 +195,9 @@ def create_multiplayer_session(
         sessionId=session.id,
         joinCode=join_code,
         joinToken=join_token,
-        joinUrl=f"/child/games/tictactoe?join={join_code}",
+        joinUrl=f"/join/{join_token}",
+        gameType=adapter.game_type.value,
+        engineKey=adapter.engine_key,
         status="WAITING",
         expiresAt=expires_at,
     )
@@ -273,7 +218,7 @@ def join_multiplayer_session(
 
     filters = [
         GameSession.tenant_id == tenant.id,
-        GameSession.multiplayer_mode == "PVP_PRIVATE",
+        GameSession.multiplayer_mode.in_(["PVP_PRIVATE", "COOP_PRIVATE"]),
         GameSession.expires_at > _now(),
     ]
     if code:
@@ -295,15 +240,23 @@ def join_multiplayer_session(
     if len(participants) >= 2:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Session is full")
 
+    adapter = get_multiplayer_engine(session.game_type)
+    if adapter is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unsupported multiplayer game")
+    used_roles = {str(item.player_role) for item in participants}
+    available_role = next((role for role in adapter.supported_roles if role not in used_roles), adapter.supported_roles[1])
     db.add(
         GameParticipant(
             session_id=session.id,
             user_id=user.id,
             is_host=False,
-            player_role="O",
+            player_role=available_role,
         ),
     )
     session.session_status = "IN_PROGRESS"
+    metadata = dict(session.metadata_payload or {})
+    metadata["engineState"] = adapter.join_session(metadata.get("engineState") or {}, len(participants) + 1)
+    session.metadata_payload = metadata
     db.flush()
     participants = db.scalars(
         select(GameParticipant).where(GameParticipant.session_id == session.id).order_by(GameParticipant.joined_at.asc()),
@@ -327,7 +280,7 @@ def get_multiplayer_session_state(
         select(GameSession).where(
             GameSession.id == session_id,
             GameSession.tenant_id == tenant.id,
-            GameSession.multiplayer_mode == "PVP_PRIVATE",
+            GameSession.multiplayer_mode.in_(["PVP_PRIVATE", "COOP_PRIVATE"]),
         ),
     )
     if session is None:
@@ -373,29 +326,44 @@ def post_multiplayer_move(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Session is not active")
     session.session_status = "IN_PROGRESS"
 
-    moves = db.scalars(select(GameMove).where(GameMove.session_id == session.id).order_by(GameMove.move_index.asc())).all()
-    expected_role = "X" if len(moves) % 2 == 0 else "O"
-    if user_role != expected_role:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="It is not this player's turn")
+    adapter = get_multiplayer_engine(session.game_type)
+    if adapter is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unsupported multiplayer game")
+    engine_state = dict((session.metadata_payload or {}).get("engineState") or {})
+    move_payload: dict[str, object] = {}
+    if payload.cell_index is not None:
+        move_payload["cellIndex"] = payload.cell_index
+    if payload.action:
+        move_payload["action"] = payload.action
+    if payload.payload:
+        move_payload.update(payload.payload)
+    try:
+        applied = adapter.apply_move(
+            state=engine_state,
+            role=user_role,
+            move_payload=move_payload,
+            session_status=session.session_status,
+        )
+    except EngineMoveError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
-    board: list[str | None] = [None] * 9
-    for mv in moves:
-        data = mv.move_payload if isinstance(mv.move_payload, dict) else {}
-        cell = int(data.get("cell", -1))
-        role = str(data.get("role", "X"))
-        if 0 <= cell <= 8:
-            board[cell] = role
-    if board[payload.cell_index] is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cell already occupied")
+    moves = db.scalars(select(GameMove).where(GameMove.session_id == session.id).order_by(GameMove.move_index.asc())).all()
 
     db.add(
         GameMove(
             session_id=session.id,
             user_id=user.id,
             move_index=len(moves) + 1,
-            move_payload={"cell": payload.cell_index, "role": user_role},
+            move_payload=applied.normalized_payload,
         ),
     )
+    metadata = dict(session.metadata_payload or {})
+    metadata["engineState"] = engine_state
+    session.metadata_payload = metadata
+    if applied.winner is not None:
+        session.session_status = "FINISHED"
+    elif session.session_status == "WAITING":
+        session.session_status = "IN_PROGRESS"
     db.flush()
 
     refreshed_moves = db.scalars(select(GameMove).where(GameMove.session_id == session.id).order_by(GameMove.move_index.asc())).all()
@@ -415,7 +383,6 @@ def close_multiplayer_session(
     user: Annotated[User, Depends(get_current_user)],
     __membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> MultiplayerStateResponse:
-    _ = payload
     session = db.scalar(_session_query(tenant_id=tenant.id, session_id=session_id))
     if session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Multiplayer session not found")
@@ -425,6 +392,11 @@ def close_multiplayer_session(
     ).all()
     if not any(int(item.user_id) == int(user.id) for item in participants):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not a participant in this session")
+    adapter = get_multiplayer_engine(session.game_type)
+    if adapter:
+        metadata = dict(session.metadata_payload or {})
+        metadata["engineState"] = adapter.end_session(metadata.get("engineState") or {}, payload.reason)
+        session.metadata_payload = metadata
     session.session_status = "CANCELLED"
     moves = db.scalars(select(GameMove).where(GameMove.session_id == session.id).order_by(GameMove.move_index.asc())).all()
     state = _build_state(session=session, participants=participants, moves=moves, user_id=user.id)
@@ -468,7 +440,7 @@ async def multiplayer_ws(
             select(GameSession).where(
                 GameSession.id == session_id,
                 GameSession.tenant_id == tenant_row.id,
-                GameSession.multiplayer_mode == "PVP_PRIVATE",
+                GameSession.multiplayer_mode.in_(["PVP_PRIVATE", "COOP_PRIVATE"]),
             ),
         )
         if session is None:

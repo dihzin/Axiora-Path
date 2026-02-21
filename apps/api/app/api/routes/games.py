@@ -32,6 +32,21 @@ router = APIRouter(prefix="/api/games", tags=["games"])
 
 _GAME_CATALOG: list[dict[str, object]] = [
     {
+        "template_id": "0f4f06ad-3f7c-4ac3-89b8-3e6af40f7d10",
+        "title": "Jogo da Velha",
+        "subject": "Lógica",
+        "age_group": "6-8",
+        "engine_key": "STRATEGY",
+        "difficulty": "EASY",
+        "status": "AVAILABLE",
+        "description": "Treine lógica, antecipação e tomada de decisão em partidas rápidas.",
+        "play_route": "/child/games/tictactoe",
+        "estimated_minutes": 3,
+        "xp_reward": 50,
+        "coins_reward": 10,
+        "tags": ["lógica", "estratégia"],
+    },
+    {
         "template_id": "7f9d501f-7c56-4690-9da5-bf1b95818801",
         "title": "Corrida da Soma",
         "subject": "Matemática",
