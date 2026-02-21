@@ -733,6 +733,15 @@ export type LearningPathResponse = {
   units: LearningPathUnit[];
 };
 
+export type AprenderSubjectOption = {
+  id: number;
+  name: string;
+  ageGroup: string;
+  icon: string | null;
+  color: string | null;
+  order: number;
+};
+
 export type LearningEventStartResponse = {
   event: LearningPathEventNode;
   payload: Record<string, unknown>;
@@ -1402,6 +1411,20 @@ export async function submitAdaptiveLearningAnswer(payload: {
 export async function getLearningPath(subjectId?: number): Promise<LearningPathResponse> {
   const query = subjectId ? `?subjectId=${subjectId}` : "";
   return apiRequest<LearningPathResponse>(`/api/learning/path${query}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAprenderSubjects(params?: { ageGroup?: string; childId?: number }): Promise<AprenderSubjectOption[]> {
+  const query = new URLSearchParams();
+  if (params?.ageGroup) query.set("ageGroup", params.ageGroup);
+  if (typeof params?.childId === "number" && Number.isFinite(params.childId) && params.childId > 0) {
+    query.set("childId", String(params.childId));
+  }
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<AprenderSubjectOption[]>(`/api/aprender/subjects${suffix}`, {
     method: "GET",
     requireAuth: true,
     includeTenant: true,

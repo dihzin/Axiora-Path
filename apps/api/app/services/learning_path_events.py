@@ -105,66 +105,164 @@ class EventCompleteSnapshot:
 
 def _bootstrap_minimum_learning_path(db: Session) -> None:
     # Seed de segurança para ambientes sem shell/seed manual (idempotente).
-    existing_subject = db.scalar(select(Subject.id).limit(1))
-    if existing_subject is not None:
+    # Gera e mantém currículo amplo para evitar trilha vazia em produção.
+    existing_lesson_count = int(db.scalar(select(func.count(Lesson.id))) or 0)
+    if existing_lesson_count >= 1000:
         return
 
-    subject = Subject(
-        name="Matemática",
-        age_group=SubjectAgeGroup.AGE_9_12,
-        icon="book-open",
-        color="#4DD9C0",
-        order=1,
-    )
-    db.add(subject)
-    db.flush()
-
-    unit_1 = Unit(
-        subject_id=subject.id,
-        title="Unidade 1: Fundamentos Numéricos",
-        description="Primeiros desafios com números, sequências e comparações.",
-        order=1,
-        required_level=1,
-    )
-    unit_2 = Unit(
-        subject_id=subject.id,
-        title="Unidade 2: Operações Inteligentes",
-        description="Soma, subtração e problemas rápidos do dia a dia.",
-        order=2,
-        required_level=1,
-    )
-    db.add_all([unit_1, unit_2])
-    db.flush()
-
-    lessons_blueprint = [
-        (unit_1.id, 1, "Lição 1: Missão Números", 25, LessonType.STORY, LessonDifficulty.EASY),
-        (unit_1.id, 2, "Lição 2: Comparar e Escolher", 27, LessonType.MULTIPLE_CHOICE, LessonDifficulty.EASY),
-        (unit_1.id, 3, "Lição 3: Sequência Curta", 29, LessonType.INTERACTIVE, LessonDifficulty.EASY),
-        (unit_1.id, 4, "Lição 4: Mini Desafio", 31, LessonType.QUIZ, LessonDifficulty.MEDIUM),
-        (unit_1.id, 5, "Lição 5: Fechamento da Região", 33, LessonType.DRAG_DROP, LessonDifficulty.MEDIUM),
-        (unit_2.id, 1, "Lição 1: Soma Rápida", 30, LessonType.MULTIPLE_CHOICE, LessonDifficulty.EASY),
-        (unit_2.id, 2, "Lição 2: Subtração no Dia a Dia", 32, LessonType.QUIZ, LessonDifficulty.EASY),
-        (unit_2.id, 3, "Lição 3: Operações Mistas", 34, LessonType.INTERACTIVE, LessonDifficulty.MEDIUM),
-        (unit_2.id, 4, "Lição 4: Estratégia de Resolução", 36, LessonType.STORY, LessonDifficulty.MEDIUM),
-        (unit_2.id, 5, "Lição 5: Missão Final", 38, LessonType.DRAG_DROP, LessonDifficulty.MEDIUM),
+    age_groups = [
+        SubjectAgeGroup.AGE_6_8,
+        SubjectAgeGroup.AGE_9_12,
+        SubjectAgeGroup.AGE_13_15,
     ]
-    db.add_all(
-        [
-            Lesson(
-                unit_id=unit_id,
-                order=order,
-                title=title,
-                xp_reward=xp_reward,
-                type=lesson_type,
-                difficulty=difficulty,
+    subjects_catalog = [
+        ("Matemática", "calculator", "#4DD9C0"),
+        ("Português", "book-open", "#F6B566"),
+        ("Física", "atom", "#7CA8FF"),
+        ("Química", "flask", "#73D39C"),
+        ("História", "landmark", "#C39BFF"),
+        ("Geografia", "map", "#7CC9C2"),
+        ("Inglês", "languages", "#F18E7A"),
+        ("Ciências", "microscope", "#7FD1A6"),
+    ]
+    unit_tracks = [
+        ("Exploração Inicial", "Comece com base sólida e exemplos práticos do dia a dia."),
+        ("Conexões Essenciais", "Relacione conceitos com situações reais e divertidas."),
+        ("Desafios Guiados", "Resolva desafios progressivos com apoio do Axion."),
+        ("Estratégias em Ação", "Aplique técnicas para pensar com autonomia."),
+        ("Projeto Criativo", "Use criatividade para consolidar o que aprendeu."),
+        ("Missões Avançadas", "Treine consistência com desafios de maior foco."),
+        ("Domínio e Revisão", "Reforce pontos-chave e finalize a região com confiança."),
+    ]
+    lesson_themes = [
+        "Missão de abertura",
+        "Desafio relâmpago",
+        "Oficina prática",
+        "Escolhas inteligentes",
+        "Jornada final",
+        "Reforço campeão",
+    ]
+    lesson_types = [
+        LessonType.STORY,
+        LessonType.MULTIPLE_CHOICE,
+        LessonType.INTERACTIVE,
+        LessonType.QUIZ,
+        LessonType.DRAG_DROP,
+        LessonType.MULTIPLE_CHOICE,
+    ]
+
+    subject_by_key: dict[tuple[SubjectAgeGroup, str], Subject] = {}
+    existing_subjects = db.scalars(select(Subject)).all()
+    for subject in existing_subjects:
+        key = (subject.age_group, subject.name.strip().lower())
+        if key not in subject_by_key:
+            subject_by_key[key] = subject
+
+    max_order_by_age_group: dict[SubjectAgeGroup, int] = {}
+    for age_group in age_groups:
+        max_order_by_age_group[age_group] = int(
+            db.scalar(select(func.max(Subject.order)).where(Subject.age_group == age_group)) or 0
+        )
+
+    created_subjects: list[Subject] = []
+    for age_group in age_groups:
+        for name, icon, color in subjects_catalog:
+            key = (age_group, name.strip().lower())
+            if key in subject_by_key:
+                continue
+            max_order_by_age_group[age_group] += 1
+            subject = Subject(
+                name=name,
+                age_group=age_group,
+                icon=icon,
+                color=color,
+                order=max_order_by_age_group[age_group],
             )
-            for unit_id, order, title, xp_reward, lesson_type, difficulty in lessons_blueprint
-        ]
-    )
-    db.flush()
+            created_subjects.append(subject)
+            subject_by_key[key] = subject
+
+    if created_subjects:
+        db.add_all(created_subjects)
+        db.flush()
+
+    all_subjects = list(subject_by_key.values())
+    all_subject_ids = [item.id for item in all_subjects]
+    if not all_subject_ids:
+        return
+
+    existing_units = db.scalars(select(Unit).where(Unit.subject_id.in_(all_subject_ids))).all()
+    units_by_subject_order: dict[tuple[int, int], Unit] = {
+        (unit.subject_id, unit.order): unit for unit in existing_units
+    }
+
+    created_units: list[Unit] = []
+    for subject in all_subjects:
+        for unit_order, (track_title, track_desc) in enumerate(unit_tracks, start=1):
+            if (subject.id, unit_order) in units_by_subject_order:
+                continue
+            created_units.append(
+                Unit(
+                    subject_id=subject.id,
+                    title=f"Unidade {unit_order}: {subject.name} - {track_title}",
+                    description=f"{track_desc} Faixa {subject.age_group.value}.",
+                    order=unit_order,
+                    required_level=1 + (unit_order - 1) // 2,
+                )
+            )
+
+    if created_units:
+        db.add_all(created_units)
+        db.flush()
+        for unit in created_units:
+            units_by_subject_order[(unit.subject_id, unit.order)] = unit
+
+    unit_by_subject: dict[int, list[Unit]] = {}
+    for unit in units_by_subject_order.values():
+        unit_by_subject.setdefault(unit.subject_id, []).append(unit)
+
+    all_unit_ids: list[int] = [item.id for item in units_by_subject_order.values()]
+    existing_lessons = db.scalars(select(Lesson).where(Lesson.unit_id.in_(all_unit_ids))).all()
+    lesson_keys: set[tuple[int, int]] = {(lesson.unit_id, lesson.order) for lesson in existing_lessons}
+
+    lessons: list[Lesson] = []
+    for subject in all_subjects:
+        ordered_units = sorted(unit_by_subject.get(subject.id, []), key=lambda item: item.order)
+        for unit in ordered_units:
+            for lesson_order in range(1, 7):
+                if (unit.id, lesson_order) in lesson_keys:
+                    continue
+                lesson_idx = lesson_order - 1
+                if unit.order <= 2:
+                    difficulty = LessonDifficulty.EASY
+                elif unit.order <= 5:
+                    difficulty = LessonDifficulty.MEDIUM
+                else:
+                    difficulty = LessonDifficulty.HARD
+                xp_base = 22 if difficulty == LessonDifficulty.EASY else 30 if difficulty == LessonDifficulty.MEDIUM else 40
+                lessons.append(
+                    Lesson(
+                        unit_id=unit.id,
+                        order=lesson_order,
+                        title=(
+                            f"Lição {lesson_order}: {subject.name} - "
+                            f"{lesson_themes[lesson_idx]}"
+                        ),
+                        xp_reward=xp_base + unit.order + lesson_order,
+                        type=lesson_types[lesson_idx],
+                        difficulty=difficulty,
+                    )
+                )
+    if lessons:
+        db.add_all(lessons)
+        db.flush()
 
 
 def _resolve_subject(db: Session, *, subject_id: int | None) -> Subject:
+    try:
+        _bootstrap_minimum_learning_path(db)
+    except SQLAlchemyError:
+        db.rollback()
+
     if subject_id is not None:
         subject = db.get(Subject, subject_id)
         if subject is None:

@@ -3,6 +3,10 @@
 import Image from "next/image";
 import {
   BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
   CheckCircle2,
   Coins,
   Flag,
@@ -19,7 +23,7 @@ import {
   Zap,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { PageShell } from "@/components/layout/page-shell";
@@ -32,12 +36,14 @@ import {
   completeLearningPathEvent,
   getActiveSeasonEvents,
   getApiErrorMessage,
+  getAprenderSubjects,
   getAxionBrief,
   getCalendarActivity,
   getCurrentMissions,
   getLearningPath,
   startLearningPathEvent,
   type ActiveSeasonEventsResponse,
+  type AprenderSubjectOption,
   type LearningEventCompleteResponse,
   type LearningPathEventNode,
   type LearningPathNode,
@@ -83,6 +89,13 @@ function missionTypeLabel(kind: string): string {
   if (kind === "STREAK_DAYS") return "Sequência";
   if (kind === "MINI_BOSS_WINS") return "Mini-boss";
   return kind;
+}
+
+function estimateLessonMinutes(lesson: LearningPathLessonNode): number {
+  const baseByOrder = [2, 2, 3, 3, 4, 4];
+  const base = baseByOrder[Math.max(0, Math.min(baseByOrder.length - 1, lesson.order - 1))] ?? 3;
+  const xpFactor = lesson.xpReward >= 40 ? 1 : lesson.xpReward >= 32 ? 0.5 : 0;
+  return Math.max(2, Math.round(base + xpFactor));
 }
 
 function buildCoachTip(params: { streakDays: number; dueReviews: number; completionPercent: number; subjectName: string | null }): string {
@@ -132,6 +145,12 @@ function daysInMonth(month: number, year: number): number {
 }
 
 const WEEKDAY_SHORT = ["D", "S", "T", "Q", "Q", "S", "S"] as const;
+const APRENDER_SUBJECT_STORAGE_KEY = "axiora_aprender_subject";
+
+function subjectPreferenceKey(childId: number | null): string {
+  if (childId && Number.isFinite(childId) && childId > 0) return `${APRENDER_SUBJECT_STORAGE_KEY}_${childId}`;
+  return APRENDER_SUBJECT_STORAGE_KEY;
+}
 
 function buildSerpentinePoints(count: number): Point[] {
   if (count <= 0) return [];
@@ -502,6 +521,7 @@ function UnitPath({
               <button
                 type="button"
                 aria-label={lesson ? `${compactNodeLabel(node)}${lesson.unlocked ? "" : " (bloqueada)"}` : event ? event.title : "Nó da trilha"}
+                data-path-lesson-id={lesson?.id ?? undefined}
                 className={cn(
                   "node-hover inline-flex h-16 w-16 items-center justify-center rounded-full border-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2",
                   lesson
@@ -609,6 +629,16 @@ export default function ChildAprenderPage() {
   const [retentionError, setRetentionError] = useState<string | null>(null);
   const [missionToast, setMissionToast] = useState<string | null>(null);
   const [collapsedUnits, setCollapsedUnits] = useState<Record<number, boolean>>({});
+  const [availableSubjects, setAvailableSubjects] = useState<AprenderSubjectOption[]>([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  const [subjectPickerOpen, setSubjectPickerOpen] = useState(false);
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const [expandedNoticeKeys, setExpandedNoticeKeys] = useState<Record<string, boolean>>({});
+  const [missionsCollapsed, setMissionsCollapsed] = useState(true);
+  const [calendarCollapsed, setCalendarCollapsed] = useState(true);
+  const [noticeIndex, setNoticeIndex] = useState(0);
+  const [noticePausedUntil, setNoticePausedUntil] = useState(0);
+  const [childId, setChildId] = useState<number | null>(null);
 
   const reducedMotion = effectiveReducedMotion(uxSettings);
   const highlightNotices = useMemo(() => {
@@ -636,11 +666,40 @@ export default function ChildAprenderPage() {
     return items.slice(0, 2);
   }, [missions, seasonal]);
 
-  const loadPath = async () => {
+  const loadSubjects = useCallback(async (ageGroup: string, preferredSubjectId?: number) => {
+    try {
+      const items = await getAprenderSubjects({
+        ageGroup,
+        childId: childId ?? undefined,
+      });
+      const ordered = [...items].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, "pt-BR"));
+      setAvailableSubjects(ordered);
+      if (preferredSubjectId && ordered.some((subject) => subject.id === preferredSubjectId)) {
+        setSelectedSubjectId(preferredSubjectId);
+      } else if (ordered.length > 0) {
+        const raw = typeof window !== "undefined" ? window.localStorage.getItem(subjectPreferenceKey(childId)) : null;
+        const saved = raw ? Number(raw) : NaN;
+        if (Number.isFinite(saved) && ordered.some((subject) => subject.id === saved)) {
+          setSelectedSubjectId(saved);
+        } else {
+          setSelectedSubjectId((prev) => prev ?? ordered[0].id);
+        }
+      }
+    } catch {
+      // Falha em subjects nao bloqueia trilha.
+    }
+  }, [childId]);
+
+  const loadPath = useCallback(async (subjectOverride?: number) => {
     try {
       setLoading(true);
-      const data = await getLearningPath();
+      const data = await getLearningPath(subjectOverride);
       setPath(data);
+      setSelectedSubjectId(data.subjectId);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(subjectPreferenceKey(childId), String(data.subjectId));
+      }
+      void loadSubjects(data.ageGroup, data.subjectId);
       setError(null);
     } catch (err: unknown) {
       const message = err instanceof ApiError ? getApiErrorMessage(err, "Não foi possível carregar a trilha.") : "Não foi possível carregar a trilha.";
@@ -648,7 +707,7 @@ export default function ChildAprenderPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [childId, loadSubjects]);
 
   const loadRetention = async () => {
     setRetentionLoading(true);
@@ -717,10 +776,28 @@ export default function ChildAprenderPage() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = window.localStorage.getItem("axiora_child_id");
+    const parsed = raw ? Number(raw) : NaN;
+    if (Number.isFinite(parsed) && parsed > 0) {
+      setChildId(parsed);
+    }
+  }, []);
+
+  useEffect(() => {
     void loadPath();
     void loadRetention();
     void fetchUXSettings().then(setUxSettings);
-  }, []);
+  }, [loadPath]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || childId === null) return;
+    const raw = window.localStorage.getItem(subjectPreferenceKey(childId));
+    const storedSubjectId = raw ? Number(raw) : NaN;
+    if (!Number.isFinite(storedSubjectId) || storedSubjectId <= 0) return;
+    if (storedSubjectId === selectedSubjectId) return;
+    void loadPath(storedSubjectId);
+  }, [childId, loadPath, selectedSubjectId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -785,6 +862,34 @@ export default function ChildAprenderPage() {
     return () => window.clearTimeout(timer);
   }, [missionToast]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const syncCollapseByViewport = () => {
+      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
+      setMissionsCollapsed(!isDesktop);
+      setCalendarCollapsed(!isDesktop);
+    };
+    syncCollapseByViewport();
+    window.addEventListener("resize", syncCollapseByViewport);
+    return () => window.removeEventListener("resize", syncCollapseByViewport);
+  }, []);
+
+  useEffect(() => {
+    setNoticeIndex((prev) => {
+      if (highlightNotices.length <= 1) return 0;
+      return Math.min(prev, highlightNotices.length - 1);
+    });
+  }, [highlightNotices.length]);
+
+  useEffect(() => {
+    if (highlightNotices.length <= 1) return;
+    const timer = window.setInterval(() => {
+      if (Date.now() < noticePausedUntil) return;
+      setNoticeIndex((prev) => (prev >= highlightNotices.length - 1 ? 0 : prev + 1));
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [highlightNotices.length, noticePausedUntil]);
+
   const lessons = useMemo(
     () =>
       (path?.units ?? [])
@@ -820,6 +925,63 @@ export default function ChildAprenderPage() {
     completionPercent,
     subjectName: path?.subjectName ?? null,
   });
+  const nextLessonNode = useMemo(() => {
+    const units = path?.units ?? [];
+    for (const unit of units) {
+      for (const node of unit.nodes) {
+        if (node.lesson && node.lesson.unlocked && !node.lesson.completed) {
+          return { lesson: node.lesson, unit };
+        }
+      }
+    }
+    return null;
+  }, [path]);
+  const journeyContext = nextLessonNode
+    ? `${nextLessonNode.unit.title} • ${compactNodeLabel({ kind: "LESSON", orderIndex: 0, lesson: nextLessonNode.lesson, event: null })}`
+    : "Todas as lições desta matéria estão concluídas.";
+  const nextGoalHint = useMemo(() => {
+    if (!path || !nextLessonNode) return { text: "Sem meta imediata.", kind: "none" as const };
+    const orderedNodes = path.units.flatMap((unit) => unit.nodes);
+    const currentIndex = orderedNodes.findIndex((node) => node.lesson?.id === nextLessonNode.lesson.id);
+    if (currentIndex < 0) return { text: "Sem meta imediata.", kind: "none" as const };
+
+    let lessonsUntil = 0;
+    for (let index = currentIndex; index < orderedNodes.length; index += 1) {
+      const node = orderedNodes[index];
+      if (node.event && node.event.status !== "COMPLETED" && node.event.status !== "SKIPPED") {
+        const eventName =
+          node.event.type === "CHEST"
+            ? "baú"
+            : node.event.type === "CHECKPOINT"
+              ? "checkpoint"
+              : node.event.type === "MINI_BOSS"
+                ? "mini-boss"
+                : "evento";
+        if (lessonsUntil <= 0) {
+          return { text: `Próximo ${eventName}: agora.`, kind: node.event.type };
+        }
+        return { text: `Faltam ${lessonsUntil} lição(ões) para o próximo ${eventName}.`, kind: node.event.type };
+      }
+      if (index > currentIndex && node.lesson) {
+        lessonsUntil += 1;
+      }
+    }
+    return { text: "Sem eventos pendentes nesta região.", kind: "none" as const };
+  }, [nextLessonNode, path]);
+  const nextLessonEtaText = nextLessonNode ? `${estimateLessonMinutes(nextLessonNode.lesson)} min` : null;
+  const reviewsCount = path?.dueReviewsCount ?? 0;
+  const ctaLabel = !nextLessonNode
+    ? availableSubjects.length > 1
+      ? "Escolher matéria"
+      : "Sem nova lição"
+    : reviewsCount > 0
+      ? `Fazer revisão (${Math.min(5, Math.max(2, reviewsCount))} min)`
+      : "Continuar jornada";
+  const ctaHint = !nextLessonNode
+    ? "Escolha uma matéria para continuar."
+    : reviewsCount > 0
+      ? `${reviewsCount} revisão(ões) pendente(s) para fortalecer sua base.`
+      : "Siga para a próxima lição da trilha.";
 
   const onOpenNode = (node: LearningPathNode) => {
     hapticPress(uxSettings);
@@ -833,6 +995,17 @@ export default function ChildAprenderPage() {
     setEventStartPayload(null);
     setEventComplete(null);
   };
+
+  useEffect(() => {
+    if (!nextLessonNode || completedLessonIdFromQuery !== null) return;
+    const timer = window.setTimeout(() => {
+      const selector = `[data-path-lesson-id="${nextLessonNode.lesson.id}"]`;
+      const element = document.querySelector(selector);
+      if (!(element instanceof HTMLElement)) return;
+      element.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+    }, 220);
+    return () => window.clearTimeout(timer);
+  }, [completedLessonIdFromQuery, nextLessonNode, path?.subjectId, reducedMotion]);
 
   const onStartEvent = async () => {
     if (!selectedNode?.event) return;
@@ -919,18 +1092,19 @@ export default function ChildAprenderPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex flex-wrap items-center gap-1.5">
-              <Button size="sm" variant="secondary" className="h-8 px-2.5 text-xs" onClick={() => void updateUx({ soundEnabled: !uxSettings.soundEnabled })}>
+              <Button size="sm" variant="secondary" className="h-8 px-2.5 text-xs" onClick={() => setPreferencesOpen(true)}>
                 {uxSettings.soundEnabled ? <Volume2 className="mr-1 h-3.5 w-3.5" /> : <VolumeX className="mr-1 h-3.5 w-3.5" />}
-                Som
+                Preferências
               </Button>
-              <Button size="sm" variant="secondary" className="h-8 px-2.5 text-xs" onClick={() => void updateUx({ hapticsEnabled: !uxSettings.hapticsEnabled })}>
-                Haptics {uxSettings.hapticsEnabled ? "on" : "off"}
-              </Button>
-              <Button size="sm" variant="secondary" className="h-8 px-2.5 text-xs" onClick={() => void updateUx({ reducedMotion: !uxSettings.reducedMotion })}>
-                Movimento {uxSettings.reducedMotion ? "reduzido" : "normal"}
-              </Button>
+              <span className="inline-flex items-center rounded-full border border-border bg-white/85 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                Som: {uxSettings.soundEnabled ? "ligado" : "desligado"}
+              </span>
             </div>
             <p className="break-words text-muted-foreground [overflow-wrap:anywhere]">Explore regiões, cumpra eventos e avance na trilha do tesouro.</p>
+            <div className="rounded-xl border border-secondary/25 bg-secondary/10 px-3 py-2 text-xs">
+              <p className="font-semibold text-secondary">Você está aqui</p>
+              <p className="mt-0.5 break-words text-foreground [overflow-wrap:anywhere]">{journeyContext}</p>
+            </div>
             <div className="rounded-2xl border border-border bg-white/90 p-3">
               <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
                 <span>Progresso total</span>
@@ -938,7 +1112,7 @@ export default function ChildAprenderPage() {
               </div>
               <ProgressBar value={completionPercent} tone="secondary" />
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               <div className="rounded-xl border border-border bg-white/90 p-2 text-center">
                 <p className="text-[11px] text-muted-foreground">Revisões</p>
                 <p className="text-sm font-bold text-primary">{path?.dueReviewsCount ?? 0}</p>
@@ -947,24 +1121,176 @@ export default function ChildAprenderPage() {
                 <p className="text-[11px] text-muted-foreground">Mastery médio</p>
                 <p className="text-sm font-bold text-secondary">{Math.round((path?.masteryAverage ?? 0) * 100)}%</p>
               </div>
-              <div className="rounded-xl border border-border bg-white/90 p-2 text-center">
+              <div className="col-span-2 rounded-xl border border-border bg-white/90 p-2 text-center sm:col-span-1">
                 <p className="text-[11px] text-muted-foreground">Matéria</p>
-                <p className="break-words text-sm font-bold leading-tight text-foreground [overflow-wrap:anywhere]">{path?.subjectName ?? "--"}</p>
+                {availableSubjects.length > 1 ? (
+                  <button
+                    type="button"
+                    className="mt-1 inline-flex min-h-8 w-full items-center justify-between rounded-lg border border-border bg-white px-2 py-1 text-xs font-bold text-foreground transition hover:border-secondary/55"
+                    onClick={() => setSubjectPickerOpen(true)}
+                    aria-haspopup="dialog"
+                    aria-expanded={subjectPickerOpen}
+                    aria-label="Abrir seleção de matéria"
+                  >
+                    <span className="break-words text-left leading-tight [overflow-wrap:anywhere]">{path?.subjectName ?? "Selecionar"}</span>
+                    <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  </button>
+                ) : (
+                  <p className="break-words text-sm font-bold leading-tight text-foreground [overflow-wrap:anywhere]">{path?.subjectName ?? "--"}</p>
+                )}
               </div>
             </div>
-            {highlightNotices.map((notice) => (
+            {highlightNotices.length > 0 ? (
               <div
-                key={notice.key}
                 className={cn(
                   "rounded-xl border px-3 py-2 text-xs",
-                  notice.tone === "accent" && "border-accent/30 bg-accent/10 font-semibold text-accent-foreground",
-                  notice.tone === "primary" && "border-primary/30 bg-primary/10 text-primary",
-                  notice.tone === "secondary" && "border-secondary/30 bg-secondary/10 text-secondary",
+                  highlightNotices[noticeIndex]?.tone === "accent" && "border-accent/30 bg-accent/10 font-semibold text-accent-foreground",
+                  highlightNotices[noticeIndex]?.tone === "primary" && "border-primary/30 bg-primary/10 text-primary",
+                  highlightNotices[noticeIndex]?.tone === "secondary" && "border-secondary/30 bg-secondary/10 text-secondary",
                 )}
               >
-                {notice.text}
+                <div className="flex items-start gap-2">
+                  {highlightNotices.length > 1 ? (
+                    <button
+                      type="button"
+                      className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border/60 bg-white/60 text-foreground/80"
+                      aria-label="Aviso anterior"
+                      onClick={() =>
+                        (setNoticePausedUntil(Date.now() + 8000),
+                        setNoticeIndex((prev) =>
+                          prev <= 0 ? highlightNotices.length - 1 : prev - 1,
+                        ))
+                      }
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </button>
+                  ) : null}
+                  <div className="min-w-0 flex-1">
+                <p
+                  style={
+                        expandedNoticeKeys[highlightNotices[noticeIndex].key]
+                      ? undefined
+                      : {
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }
+                  }
+                >
+                      {highlightNotices[noticeIndex].text}
+                </p>
+                    {highlightNotices[noticeIndex].text.length > 86 ? (
+                  <button
+                    type="button"
+                    className="mt-1 text-[11px] font-extrabold underline underline-offset-2"
+                    onClick={() =>
+                      setExpandedNoticeKeys((prev) => ({
+                        ...prev,
+                        [highlightNotices[noticeIndex].key]: !prev[highlightNotices[noticeIndex].key],
+                      }))
+                    }
+                  >
+                        {expandedNoticeKeys[highlightNotices[noticeIndex].key] ? "ver menos" : "ver mais"}
+                  </button>
+                ) : null}
+                  </div>
+                  {highlightNotices.length > 1 ? (
+                    <button
+                      type="button"
+                      className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border/60 bg-white/60 text-foreground/80"
+                      aria-label="Próximo aviso"
+                      onClick={() =>
+                        (setNoticePausedUntil(Date.now() + 8000),
+                        setNoticeIndex((prev) =>
+                          prev >= highlightNotices.length - 1 ? 0 : prev + 1,
+                        ))
+                      }
+                    >
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  ) : null}
+                </div>
+                {highlightNotices.length > 1 ? (
+                  <div className="mt-2 flex items-center justify-center gap-1">
+                    {highlightNotices.map((item, index) => (
+                      <span
+                        key={item.key}
+                        className={cn(
+                          "h-1.5 w-1.5 rounded-full",
+                          index === noticeIndex ? "bg-current opacity-80" : "bg-current opacity-30",
+                        )}
+                      />
+                    ))}
+                  </div>
+                ) : null}
               </div>
-            ))}
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <Card className="sticky top-2 z-20 mb-4 border-secondary/35 bg-[linear-gradient(120deg,rgba(255,255,255,0.98),rgba(220,255,245,0.96))] shadow-[0_8px_20px_rgba(14,165,164,0.18)]">
+          <CardContent className="p-3">
+            {loading ? (
+              <div className="animate-pulse">
+                <div className="h-3 w-24 rounded bg-secondary/20" />
+                <div className="mt-2 h-4 w-3/4 rounded bg-slate-200" />
+                <div className="mt-2 h-3 w-1/2 rounded bg-slate-200" />
+                <div className="mt-2 flex gap-2">
+                  <div className="h-5 w-16 rounded-full bg-slate-200" />
+                  <div className="h-5 w-12 rounded-full bg-slate-200" />
+                  <div className="h-5 w-16 rounded-full bg-slate-200" />
+                </div>
+                <div className="mt-2 h-3 w-5/6 rounded bg-slate-200" />
+                <div className="mt-3 h-9 w-36 rounded-lg bg-slate-200" />
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-secondary">Próxima ação</p>
+                  <p className="truncate text-sm font-extrabold text-foreground">
+                    {nextLessonNode ? nextLessonNode.lesson.title : "Missão concluída por enquanto"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {nextLessonNode ? `+${nextLessonNode.lesson.xpReward} XP • ~${nextLessonEtaText}` : "Escolha outra matéria para continuar"}
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
+                    <span className="inline-flex items-center rounded-full border border-secondary/30 bg-secondary/10 px-2 py-0.5 text-secondary">
+                      +{nextLessonNode?.lesson.xpReward ?? 0} XP
+                    </span>
+                    {nextLessonNode ? (
+                      <span className="inline-flex items-center rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-primary">
+                        ~{nextLessonEtaText}
+                      </span>
+                    ) : null}
+                    <span className="inline-flex items-center rounded-full border border-border bg-white/85 px-2 py-0.5 text-muted-foreground">
+                      {nextGoalHint.kind === "CHEST" ? "Baú" : nextGoalHint.kind === "CHECKPOINT" ? "Checkpoint" : nextGoalHint.kind === "MINI_BOSS" ? "Mini-boss" : "Meta"}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-secondary/85">
+                    {nextGoalHint.kind === "CHEST" ? <Gift className="h-3.5 w-3.5" /> : null}
+                    {nextGoalHint.kind === "CHECKPOINT" ? <Flag className="h-3.5 w-3.5" /> : null}
+                    {nextGoalHint.kind === "MINI_BOSS" ? <Swords className="h-3.5 w-3.5" /> : null}
+                    {nextGoalHint.kind !== "CHEST" && nextGoalHint.kind !== "CHECKPOINT" && nextGoalHint.kind !== "MINI_BOSS" ? <Sparkles className="h-3.5 w-3.5" /> : null}
+                    <span>{nextGoalHint.text}</span>
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">{ctaHint}</p>
+                </div>
+                <Button
+                  className="h-9 shrink-0 px-3 text-xs"
+                  disabled={!nextLessonNode && availableSubjects.length <= 1}
+                  onClick={() => {
+                    if (!nextLessonNode) {
+                      if (availableSubjects.length > 1) setSubjectPickerOpen(true);
+                      return;
+                    }
+                    router.push(`/child/aprender/lesson/${nextLessonNode.lesson.id}`);
+                  }}
+                >
+                  {ctaLabel}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -990,9 +1316,29 @@ export default function ChildAprenderPage() {
         <div className="mb-4 grid gap-3 md:grid-cols-2">
           <Card variant="subtle" className="border-border">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Missões da Semana</CardTitle>
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-base">Missões da Semana</CardTitle>
+                <Button size="sm" variant="secondary" className="h-8 px-2 text-xs" onClick={() => setMissionsCollapsed((prev) => !prev)}>
+                  {missionsCollapsed ? (
+                    <>
+                      Expandir <ChevronDown className="ml-1 h-3.5 w-3.5" />
+                    </>
+                  ) : (
+                    <>
+                      Recolher <ChevronUp className="ml-1 h-3.5 w-3.5" />
+                    </>
+                  )}
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className={cn(missionsCollapsed ? "" : "space-y-2")}>
+              {missionsCollapsed ? (
+                <div className="rounded-xl border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                  {missions?.missions?.length ? `${missions.missions.length} missão(ões) ativa(s)` : "Sem missões ativas agora."}
+                </div>
+              ) : null}
+              {!missionsCollapsed ? (
+                <>
               {(missions?.missions ?? []).slice(0, 5).map((mission) => (
                 <div key={mission.missionId} className="rounded-xl border border-border bg-muted/40 p-2">
                   <div className="flex items-start justify-between gap-2">
@@ -1032,14 +1378,36 @@ export default function ChildAprenderPage() {
                   </Button>
                 </div>
               ) : null}
+                </>
+              ) : null}
             </CardContent>
           </Card>
 
           <Card variant="subtle" className="border-border">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Calendário de Constância</CardTitle>
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-base">Calendário de Constância</CardTitle>
+                <Button size="sm" variant="secondary" className="h-8 px-2 text-xs" onClick={() => setCalendarCollapsed((prev) => !prev)}>
+                  {calendarCollapsed ? (
+                    <>
+                      Expandir <ChevronDown className="ml-1 h-3.5 w-3.5" />
+                    </>
+                  ) : (
+                    <>
+                      Recolher <ChevronUp className="ml-1 h-3.5 w-3.5" />
+                    </>
+                  )}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
+              {calendarCollapsed ? (
+                <div className="rounded-xl border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                  Sequência atual: {calendar?.currentStreak ?? 0} dia(s) • Recorde: {calendar?.longestStreak ?? 0}
+                </div>
+              ) : null}
+              {!calendarCollapsed ? (
+                <>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-1 text-xs text-muted-foreground">
                 <span>Atual: {calendar?.currentStreak ?? 0} dias</span>
                 <span>Recorde: {calendar?.longestStreak ?? 0}</span>
@@ -1071,6 +1439,8 @@ export default function ChildAprenderPage() {
                   );
                 })}
               </div>
+                </>
+              ) : null}
             </CardContent>
           </Card>
         </div>
@@ -1196,6 +1566,103 @@ export default function ChildAprenderPage() {
             <p className="mt-2 text-center text-[11px] text-muted-foreground">
               A badge será concluída depois que a atividade for finalizada.
             </p>
+          </div>
+        </div>
+      ) : null}
+
+      {subjectPickerOpen ? (
+        <div className="fixed inset-0 z-[70] bg-slate-950/45" onClick={() => setSubjectPickerOpen(false)}>
+          <div
+            className="absolute inset-x-0 bottom-0 rounded-t-3xl border border-border bg-white px-4 pb-6 pt-4 shadow-[0_-18px_50px_rgba(15,23,42,0.28)]"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Selecionar matéria"
+          >
+            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-slate-200" />
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-base font-extrabold text-foreground">Escolher matéria</p>
+              <Button size="sm" variant="secondary" className="h-8 px-3 text-xs" onClick={() => setSubjectPickerOpen(false)}>
+                Fechar
+              </Button>
+            </div>
+            <p className="mb-3 text-xs text-muted-foreground">Selecione uma matéria para atualizar a trilha.</p>
+            <div className="grid max-h-[52vh] grid-cols-1 gap-2 overflow-y-auto pr-1">
+              {availableSubjects.map((subject) => {
+                const selected = (selectedSubjectId ?? path?.subjectId) === subject.id;
+                return (
+                  <button
+                    key={subject.id}
+                    type="button"
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition",
+                      selected
+                        ? "border-secondary bg-secondary/10 text-secondary shadow-[0_2px_0_rgba(45,212,191,0.35)]"
+                        : "border-border bg-white text-foreground hover:border-secondary/40",
+                    )}
+                    onClick={() => {
+                      if (!selected) {
+                        setSelectedSubjectId(subject.id);
+                        if (typeof window !== "undefined") {
+                          window.localStorage.setItem(subjectPreferenceKey(childId), String(subject.id));
+                        }
+                        void loadPath(subject.id);
+                      }
+                      setSubjectPickerOpen(false);
+                    }}
+                  >
+                    <span className="text-sm font-bold">{subject.name}</span>
+                    {selected ? <CheckCircle2 className="h-4.5 w-4.5" /> : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {preferencesOpen ? (
+        <div className="fixed inset-0 z-[72] bg-slate-950/45" onClick={() => setPreferencesOpen(false)}>
+          <div
+            className="absolute inset-x-0 bottom-0 rounded-t-3xl border border-border bg-white px-4 pb-6 pt-4 shadow-[0_-18px_50px_rgba(15,23,42,0.28)]"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Preferências de interação"
+          >
+            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-slate-200" />
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-base font-extrabold text-foreground">Preferências</p>
+              <Button size="sm" variant="secondary" className="h-8 px-3 text-xs" onClick={() => setPreferencesOpen(false)}>
+                Fechar
+              </Button>
+            </div>
+            <div className="space-y-2">
+              <Button
+                variant="secondary"
+                className="h-10 w-full justify-between px-3 text-sm"
+                onClick={() => void updateUx({ soundEnabled: !uxSettings.soundEnabled })}
+              >
+                Som
+                <span className="text-xs font-semibold text-muted-foreground">{uxSettings.soundEnabled ? "Ligado" : "Desligado"}</span>
+              </Button>
+              <Button
+                variant="secondary"
+                className="h-10 w-full justify-between px-3 text-sm"
+                onClick={() => void updateUx({ hapticsEnabled: !uxSettings.hapticsEnabled })}
+              >
+                Haptics
+                <span className="text-xs font-semibold text-muted-foreground">{uxSettings.hapticsEnabled ? "Ligado" : "Desligado"}</span>
+              </Button>
+              <Button
+                variant="secondary"
+                className="h-10 w-full justify-between px-3 text-sm"
+                onClick={() => void updateUx({ reducedMotion: !uxSettings.reducedMotion })}
+              >
+                Movimento
+                <span className="text-xs font-semibold text-muted-foreground">{uxSettings.reducedMotion ? "Reduzido" : "Normal"}</span>
+              </Button>
+            </div>
           </div>
         </div>
       ) : null}
