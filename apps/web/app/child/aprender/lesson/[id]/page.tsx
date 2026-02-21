@@ -16,6 +16,7 @@ import {
   finishLearningSession,
   getAdaptiveLearningNext,
   getApiErrorMessage,
+  getLearningPath,
   getAprenderLearningEnergy,
   getAprenderLearningStreak,
   refillAprenderEnergyWithCoins,
@@ -373,6 +374,7 @@ export default function AdaptiveLessonSessionPage() {
   const [correctFxTick, setCorrectFxTick] = useState(0);
   const [microcopyTick, setMicrocopyTick] = useState(0);
   const [backSaving, setBackSaving] = useState(false);
+  const [lessonContextLabel, setLessonContextLabel] = useState<string | null>(null);
   const reducedMotion = effectiveReducedMotion(uxSettings);
 
   const current = queue[index] ?? null;
@@ -407,6 +409,20 @@ export default function AdaptiveLessonSessionPage() {
         setError(null);
         const sessionStart = await startLearningSession({ lessonId });
         setSession(sessionStart);
+        try {
+          const learningPath = await getLearningPath(sessionStart.subjectId);
+          let contextLabel: string | null = null;
+          for (const unit of learningPath.units) {
+            const lessonNode = unit.nodes.find((node) => node.lesson?.id === lessonId);
+            if (lessonNode?.lesson) {
+              contextLabel = `Unidade ${unit.order} • Lição ${lessonNode.lesson.order}`;
+              break;
+            }
+          }
+          setLessonContextLabel(contextLabel);
+        } catch {
+          setLessonContextLabel(null);
+        }
         const firstBatch = await getAdaptiveLearningNext({
           subjectId: sessionStart.subjectId,
           lessonId,
@@ -752,7 +768,10 @@ export default function AdaptiveLessonSessionPage() {
       <Card className="mb-4 overflow-hidden border-border bg-[radial-gradient(circle_at_85%_12%,rgba(45,212,191,0.18),transparent_48%),linear-gradient(180deg,#ffffff_0%,#f3fbff_100%)] shadow-[0_2px_0_rgba(184,200,239,0.7),0_14px_28px_rgba(34,63,107,0.12)]">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-lg">Sessão adaptativa #{Number.isFinite(lessonId) ? lessonId : "--"}</CardTitle>
+            <div>
+              <CardTitle className="text-lg">Sessão adaptativa</CardTitle>
+              <p className="mt-0.5 text-xs font-semibold text-muted-foreground">{lessonContextLabel ?? "Lição em andamento"}</p>
+            </div>
             <span className="inline-flex items-center gap-1 rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-xs font-semibold text-accent-foreground">
               <Flame className="h-3.5 w-3.5 text-accent" />
               {learningStreak?.currentStreak ?? 0}

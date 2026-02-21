@@ -255,20 +255,21 @@ function eventIcon(event: LearningPathEventNode) {
 }
 
 function eventNodeClass(event: LearningPathEventNode): string {
-  if (event.status === "COMPLETED") return "border-[#2BB09A]/60 bg-[#4DD9C0] text-white shadow-[0_10px_22px_rgba(45,212,191,0.35)]";
+  if (event.status === "COMPLETED") return "border-[#2BB09A]/70 bg-[#4DD9C0] text-white shadow-[0_10px_22px_rgba(45,212,191,0.35)]";
   if (event.status === "LOCKED") return "locked-node border-slate-300 bg-slate-300/85 text-slate-600";
-  if (event.type === "MINI_BOSS") return "border-accent/45 bg-accent text-white shadow-[0_14px_30px_rgba(255,107,61,0.48)]";
-  if (event.type === "CHEST") return "border-amber-400/55 bg-amber-500 text-white shadow-[0_10px_24px_rgba(245,158,11,0.38)]";
-  if (event.type === "BOOST") return "border-primary/45 bg-primary text-white shadow-[0_10px_24px_rgba(29,78,216,0.36)]";
-  if (event.type === "REVIEW_GATE") return "border-rose-400/50 bg-rose-500 text-white";
-  return "border-primary/40 bg-primary text-white";
+  if (event.type === "MINI_BOSS") return "border-accent/55 bg-accent text-white shadow-[0_14px_30px_rgba(255,107,61,0.48)]";
+  if (event.type === "CHEST") return "border-amber-300/70 bg-amber-400 text-amber-950 shadow-[0_10px_24px_rgba(245,166,35,0.4)]";
+  if (event.type === "BOOST") return "border-sky-300/70 bg-sky-500 text-white shadow-[0_10px_24px_rgba(56,189,248,0.35)]";
+  if (event.type === "REVIEW_GATE") return "border-rose-400/55 bg-rose-500 text-white";
+  if (event.type === "CHECKPOINT") return "border-indigo-300/65 bg-indigo-500 text-white shadow-[0_10px_24px_rgba(99,102,241,0.33)]";
+  return "border-primary/45 bg-primary text-white";
 }
 
 function lessonNodeClass(completed: boolean, current: boolean, unlocked: boolean): string {
-  if (completed) return "border-[#2BB09A]/60 bg-[#4DD9C0] text-white shadow-[0_10px_22px_rgba(45,212,191,0.35)]";
-  if (current) return "border-amber-300/70 bg-amber-400 text-slate-900 node-current shadow-[0_12px_28px_rgba(245,166,35,0.45)]";
+  if (completed) return "border-[#2BB09A]/70 bg-[#4DD9C0] text-white shadow-[0_10px_22px_rgba(45,212,191,0.35)]";
+  if (current) return "border-amber-300/80 bg-amber-400 text-slate-900 node-current shadow-[0_12px_28px_rgba(245,166,35,0.5)]";
   if (!unlocked) return "locked-node border-slate-300 bg-slate-300/85 text-slate-600";
-  return "border-primary/40 bg-white text-primary shadow-[0_8px_18px_rgba(29,78,216,0.24)]";
+  return "border-primary/45 bg-white text-primary shadow-[0_8px_18px_rgba(29,78,216,0.24)]";
 }
 
 function UnitPath({
@@ -468,16 +469,23 @@ function UnitPath({
             ref={pathRef}
             d={path}
             fill="none"
-            stroke="rgba(184,200,220,0.56)"
-            strokeWidth="2.8"
+            stroke="rgba(184,200,220,0.72)"
+            strokeWidth="4.1"
             strokeLinecap="round"
-            strokeDasharray="0.1 9.2"
           />
           <path
             d={path}
             fill="none"
             stroke={`url(#trail-${unit.id})`}
-            strokeWidth="3.6"
+            strokeWidth="4.6"
+            strokeLinecap="round"
+            strokeDasharray={`${Math.max(0, trailLength * trailProgressRatio)} ${Math.max(1, trailLength)}`}
+          />
+          <path
+            d={path}
+            fill="none"
+            stroke="rgba(255,255,255,0.33)"
+            strokeWidth="1.3"
             strokeLinecap="round"
             strokeDasharray={`${Math.max(0, trailLength * trailProgressRatio)} ${Math.max(1, trailLength)}`}
           />
@@ -508,11 +516,28 @@ function UnitPath({
               : (nextPoint?.x ?? prevPoint?.x ?? 50) >= left
                 ? "left"
                 : "right";
-          const labelOffsetPx = isEventNode ? 112 : 92;
+          const labelOffsetPx = isEventNode ? 116 : 96;
           const isNearLeftEdge = left < 42;
           const isNearRightEdge = left > 58;
           const forceSide: "left" | "right" | null = isNearLeftEdge ? "right" : isNearRightEdge ? "left" : null;
           const safeSide = forceSide ?? labelSide;
+          const lessonCompleted = Boolean(lesson?.completed);
+          const lessonCurrent = Boolean(lesson?.id === currentLessonId);
+          const lessonLocked = Boolean(lesson && !lesson.unlocked);
+          const labelTone = lessonCompleted
+            ? "border-[#2BB09A]/28 bg-[#E8FCF7] text-[#0E766A]"
+            : lessonCurrent
+              ? "border-amber-300/55 bg-amber-50 text-amber-800"
+              : lessonLocked
+                ? "border-slate-300/65 bg-slate-100 text-slate-500"
+                : isEventNode
+                  ? "border-primary/20 bg-[#EFF4FB] text-foreground/90"
+                  : "border-primary/22 bg-white text-foreground";
+          const xpTone = lessonCompleted
+            ? "border-[#2BB09A]/28 bg-[#E8FCF7] text-[#0E766A]"
+            : lessonCurrent
+              ? "border-amber-300/55 bg-amber-50 text-amber-700"
+              : "border-secondary/22 bg-[#EFFAF9] text-secondary/90";
           return (
             <div
               key={`${node.kind}-${node.orderIndex}-${lesson?.id ?? event?.id}`}
@@ -551,20 +576,21 @@ function UnitPath({
               />
               <div
                 className={cn(
-                  "pointer-events-none absolute top-1/2 flex w-[110px] -translate-y-1/2 flex-col gap-0.5 sm:w-[118px]",
+                  "pointer-events-none absolute top-1/2 flex w-[120px] -translate-y-1/2 flex-col gap-0.5 sm:w-[126px]",
                   safeSide === "left" ? "items-end text-right" : "items-start text-left",
                 )}
                 style={safeSide === "left" ? { right: `${labelOffsetPx}px` } : { left: `${labelOffsetPx}px` }}
               >
                 <p
                   className={cn(
-                    "rounded-md bg-[#E8EEF8] px-1.5 py-0.5 leading-tight shadow-[0_0_0_5px_#EEF3FB,0_1px_0_rgba(184,200,239,0.2)]",
-                    isEventNode ? "text-[10.5px] font-semibold text-foreground/90" : "text-[11px] font-bold text-foreground",
+                    "rounded-lg border px-2 py-1 leading-tight shadow-[0_0_0_4px_#EEF3FB,0_1px_0_rgba(184,200,239,0.2)]",
+                    labelTone,
+                    isEventNode ? "text-[10.5px] font-semibold" : "text-[11px] font-bold",
                   )}
                 >
                   <span
                     className={cn(
-                      "inline-block max-w-[110px] break-words align-top leading-tight [overflow-wrap:anywhere] sm:max-w-[118px]",
+                      "inline-block max-w-[120px] break-words align-top leading-tight [overflow-wrap:anywhere] sm:max-w-[126px]",
                       isEventNode ? "whitespace-normal" : "whitespace-normal",
                     )}
                     title={lesson ? lesson.title : event?.title ?? ""}
@@ -573,7 +599,7 @@ function UnitPath({
                   </span>
                 </p>
                 {lesson ? (
-                  <p className="rounded-md bg-[#E8EEF8] px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-secondary/85 shadow-[0_0_0_5px_#EEF3FB,0_1px_0_rgba(184,200,239,0.18)]">
+                  <p className={cn("rounded-md border px-1.5 py-0.5 text-[9px] font-bold tracking-wide shadow-[0_0_0_4px_#EEF3FB,0_1px_0_rgba(184,200,239,0.18)]", xpTone)}>
                     +{lesson.xpReward} XP
                   </p>
                 ) : null}

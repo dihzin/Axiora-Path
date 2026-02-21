@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, PiggyBank, Shield, Sparkles } from "lucide-react";
+import { ArrowLeft, Coins, PiggyBank, Shield, Sparkles, TrendingUp } from "lucide-react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
+import { ConfettiBurst } from "@/components/confetti-burst";
 import { LevelUpOverlay } from "@/components/level-up-overlay";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { registerGameSession, type GameSessionRegisterResponse } from "@/lib/api/client";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { UX_SETTINGS_FALLBACK, fetchUXSettings, hapticCompletion, hapticPress, playSfx } from "@/lib/ux-feedback";
 import { cn } from "@/lib/utils";
 
 type EventKey = "EXPENSE" | "BONUS" | "INVESTMENT_GROWTH" | "EMERGENCY";
@@ -103,6 +106,9 @@ export default function FinanceSimPage() {
     invest: 0,
     control: 0,
   });
+  const [uxSettings, setUxSettings] = useState(UX_SETTINGS_FALLBACK);
+  const [feedback, setFeedback] = useState("Monte sua estratégia para esta rodada.");
+  const [confettiTrigger, setConfettiTrigger] = useState(0);
 
   const donatePercent = useMemo(() => Math.max(0, 100 - spendPercent - savePercent - investPercent), [investPercent, savePercent, spendPercent]);
 
@@ -112,6 +118,7 @@ export default function FinanceSimPage() {
     if (rawChildId && Number.isFinite(parsedChildId)) {
       setChildId(parsedChildId);
     }
+    void fetchUXSettings().then(setUxSettings).catch(() => setUxSettings(UX_SETTINGS_FALLBACK));
   }, []);
 
   const onAdjustSpend = (next: number) => {
@@ -187,6 +194,9 @@ export default function FinanceSimPage() {
       setSessionResult(null);
     } finally {
       setRegistering(false);
+      playSfx("/sfx/completion-chime.ogg", uxSettings.soundEnabled);
+      hapticCompletion(uxSettings);
+      setConfettiTrigger((prev) => prev + 1);
     }
   };
 
@@ -210,18 +220,23 @@ export default function FinanceSimPage() {
     const eventKey = randomEvent();
     if (eventKey === "EXPENSE") {
       eventDelta = -20;
+      setFeedback("Despesa inesperada! Sua reserva ajudou?");
     } else if (eventKey === "BONUS") {
       eventDelta = 15;
+      setFeedback("Bônus recebido! Ótima oportunidade para investir.");
     } else if (eventKey === "INVESTMENT_GROWTH") {
       eventDelta = Math.round(investAmount * 0.1);
       roundXp += 8;
+      setFeedback("Seu investimento rendeu nesta rodada.");
     } else {
       // Emergência: com reserva, o impacto é menor.
       if (saveAmount >= 20) {
         eventDelta = -8;
         roundXp += 8;
+        setFeedback("Emergência controlada pela reserva. Excelente gestão.");
       } else {
         eventDelta = -25;
+        setFeedback("Emergência sem reserva impactou seu saldo.");
       }
     }
 
@@ -246,6 +261,8 @@ export default function FinanceSimPage() {
     setLogs((prev) => [...prev, log]);
     setScore(nextScore);
     setBalance(endBalance);
+    hapticPress(uxSettings);
+    playSfx(eventDelta >= 0 ? "/sfx/node-pop.ogg" : "/sfx/unlock-sparkle.ogg", uxSettings.soundEnabled);
 
     if (round >= TOTAL_ROUNDS) {
       const finalLogs = [...logs, log];
@@ -278,9 +295,15 @@ export default function FinanceSimPage() {
 
   const finalScore = score + bonusBreakdown.reserve + bonusBreakdown.invest + bonusBreakdown.control;
   const rating = classifyRating(finalScore);
+  const roundProgress = Math.round((Math.min(round, TOTAL_ROUNDS) / TOTAL_ROUNDS) * 100);
+  const spendAmountPreview = Math.round((balance * spendPercent) / 100);
+  const saveAmountPreview = Math.round((balance * savePercent) / 100);
+  const investAmountPreview = Math.round((balance * investPercent) / 100);
+  const donateAmountPreview = Math.max(0, balance - spendAmountPreview - saveAmountPreview - investAmountPreview);
 
   return (
     <>
+      <ConfettiBurst trigger={confettiTrigger} />
       {levelUpLevel !== null ? (
         <LevelUpOverlay
           level={levelUpLevel}
@@ -312,6 +335,13 @@ export default function FinanceSimPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
+            <div className="rounded-xl border border-border bg-white/85 p-2">
+              <div className="mb-1 flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Progresso da sessão</span>
+                <span className="font-semibold text-foreground">{roundProgress}%</span>
+              </div>
+              <ProgressBar value={roundProgress} tone="secondary" />
+            </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Rodada</span>
               <span className="font-semibold">
@@ -325,6 +355,9 @@ export default function FinanceSimPage() {
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Score</span>
               <span className="font-semibold text-foreground">{finalScore}</span>
+            </div>
+            <div className="rounded-xl border border-secondary/25 bg-secondary/10 p-2 text-xs text-secondary">
+              {feedback}
             </div>
           </CardContent>
         </Card>
@@ -382,6 +415,24 @@ export default function FinanceSimPage() {
                   <span>Doar</span>
                   <span className="font-semibold">{donatePercent}%</span>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 rounded-xl border border-border bg-white p-2 text-xs">
+                <p className="inline-flex items-center gap-1 rounded-lg border border-border/60 bg-muted/40 px-2 py-1">
+                  <Coins className="h-3.5 w-3.5 text-accent-foreground" />
+                  Gastar: {formatCoins(spendAmountPreview)}
+                </p>
+                <p className="inline-flex items-center gap-1 rounded-lg border border-border/60 bg-muted/40 px-2 py-1">
+                  <Shield className="h-3.5 w-3.5 text-secondary" />
+                  Guardar: {formatCoins(saveAmountPreview)}
+                </p>
+                <p className="inline-flex items-center gap-1 rounded-lg border border-border/60 bg-muted/40 px-2 py-1">
+                  <TrendingUp className="h-3.5 w-3.5 text-primary" />
+                  Investir: {formatCoins(investAmountPreview)}
+                </p>
+                <p className="inline-flex items-center gap-1 rounded-lg border border-border/60 bg-muted/40 px-2 py-1">
+                  <Sparkles className="h-3.5 w-3.5 text-secondary" />
+                  Doar: {formatCoins(donateAmountPreview)}
+                </p>
               </div>
               <div className="rounded-xl border border-secondary/25 bg-secondary/10 p-3 text-xs text-secondary">
                 <p className="font-semibold">Dica Axion</p>

@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Calculator, Coins, Crown, Flame, Grid2x2, MapPinned, PiggyBank, Search, Sparkles, Trophy } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { ArrowRight, Coins, Crown, Flame, Grid2x2, MapPinned, PiggyBank, Rocket, Search, Sparkles, Trophy } from "lucide-react";
 import type { ComponentType } from "react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
@@ -21,7 +21,6 @@ import {
   type GameCatalogItem,
   type LevelResponse,
 } from "@/lib/api/client";
-import { cn } from "@/lib/utils";
 
 type GameItem = {
   id: string;
@@ -35,7 +34,6 @@ type GameItem = {
   difficulty: "Fácil" | "Médio" | "Difícil";
   xpReward: number;
   icon: ComponentType<{ className?: string }>;
-  borderClassName: string;
 };
 
 const GAMES: GameItem[] = [
@@ -48,7 +46,6 @@ const GAMES: GameItem[] = [
     difficulty: "Fácil",
     xpReward: 50,
     icon: Grid2x2,
-    borderClassName: "games-gradient-shell--orange",
   },
   {
     id: "word-search",
@@ -59,7 +56,6 @@ const GAMES: GameItem[] = [
     difficulty: "Médio",
     xpReward: 130,
     icon: Search,
-    borderClassName: "games-gradient-shell--teal",
   },
   {
     id: "finance-sim",
@@ -70,7 +66,6 @@ const GAMES: GameItem[] = [
     difficulty: "Médio",
     xpReward: 80,
     icon: PiggyBank,
-    borderClassName: "games-gradient-shell--teal",
   },
 ];
 
@@ -83,7 +78,7 @@ function difficultyLabel(difficulty: string): "Fácil" | "Médio" | "Difícil" {
 
 function iconForGame(item: GameCatalogItem): ComponentType<{ className?: string }> {
   const title = item.title.trim().toLowerCase();
-  if (title === "corrida da soma") return Calculator;
+  if (title === "corrida da soma") return Rocket;
   if (title === "mapa de capitais") return MapPinned;
   const subject = item.subject.toLowerCase();
   if (subject.includes("financeira")) return PiggyBank;
@@ -96,19 +91,34 @@ function iconForGame(item: GameCatalogItem): ComponentType<{ className?: string 
   return Grid2x2;
 }
 
+function resolveCatalogRoute(item: GameCatalogItem): string | null {
+  const title = item.title.trim().toLowerCase();
+  if (title === "corrida da soma") return "/child/games/quiz";
+  if (title === "mapa de capitais") return "/child/games/memory";
+  if (title === "mercado do troco") return "/child/games/finance-sim";
+  if (title === "caça-palavras") return "/child/games/wordsearch";
+
+  const key = item.engineKey.toUpperCase();
+  if (key === "QUIZ") return "/child/games/quiz";
+  if (key === "MEMORY") return "/child/games/memory";
+  if (key === "SIMULATION") return "/child/games/finance-sim";
+  if (key === "DRAG_DROP") return "/child/games/wordsearch";
+  if (key === "STRATEGY") return "/child/games/tictactoe";
+
+  return item.playRoute;
+}
+
+function buildPlayHref(game: GameItem): string {
+  if (!game.templateId) return game.href;
+  const separator = game.href.includes("?") ? "&" : "?";
+  return `${game.href}${separator}templateId=${encodeURIComponent(game.templateId)}`;
+}
+
 function statusLabel(status?: GameItem["status"]): string {
   if (status === "AVAILABLE") return "Disponível";
   if (status === "BETA") return "Beta";
   if (status === "LOCKED") return "Bloqueado";
   return "Em breve";
-}
-
-function borderClassForEngine(engineKey: string): string {
-  const key = engineKey.toUpperCase();
-  if (key === "QUIZ") return "games-gradient-shell--orange";
-  if (key === "SIMULATION") return "games-gradient-shell--teal";
-  if (key === "DRAG_DROP") return "games-gradient-shell--teal";
-  return "games-gradient-shell--orange";
 }
 
 export default function ChildGamesPage() {
@@ -117,26 +127,52 @@ export default function ChildGamesPage() {
   const [levelData, setLevelData] = useState<LevelResponse | null>(null);
   const [achievements, setAchievements] = useState<AchievementItem[]>([]);
   const [axionCoins, setAxionCoins] = useState(0);
+  const [dailyXp, setDailyXp] = useState(0);
+  const [weeklyXp, setWeeklyXp] = useState(0);
   const [catalogGames, setCatalogGames] = useState<GameItem[]>([]);
-  const [loadingGames, setLoadingGames] = useState(true);
+  const [catalogState, setCatalogState] = useState<"loading" | "remote" | "fallback">("loading");
   const [startingId, setStartingId] = useState<string | null>(null);
-  const [usingCatalog, setUsingCatalog] = useState(false);
+  const weeklyGoal = 350;
 
   useEffect(() => {
     void getAxionBrief({ context: "games_tab" }).catch(() => undefined);
   }, []);
 
-  useEffect(() => {
-    const raw = localStorage.getItem("axiora_child_id");
-    const parsed = Number(raw);
-    if (!raw || !Number.isFinite(parsed)) return;
-    setChildId(parsed);
+  const refreshLocalXpMetrics = useCallback((activeChildId: number) => {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const dailyRaw = localStorage.getItem(`axiora_game_daily_xp_${activeChildId}_${todayIso}`);
+    const parsedDaily = Number(dailyRaw ?? "0");
+    setDailyXp(Number.isFinite(parsedDaily) ? Math.max(0, parsedDaily) : 0);
 
-    void getLevels(parsed)
+    const rawWeekly = localStorage.getItem(`axiora_game_weekly_xp_${activeChildId}`);
+    if (!rawWeekly) {
+      setWeeklyXp(0);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(rawWeekly) as { weekStart: string; xp: number };
+      const now = new Date();
+      const day = (now.getDay() + 6) % 7;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - day);
+      monday.setHours(0, 0, 0, 0);
+      const currentWeekStart = monday.toISOString().slice(0, 10);
+      if (parsed.weekStart !== currentWeekStart) {
+        setWeeklyXp(0);
+        return;
+      }
+      setWeeklyXp(Number.isFinite(parsed.xp) ? Math.max(0, parsed.xp) : 0);
+    } catch {
+      setWeeklyXp(0);
+    }
+  }, []);
+
+  const refreshRemoteStats = useCallback((activeChildId: number) => {
+    void getLevels(activeChildId)
       .then((data) => setLevelData(data))
       .catch(() => setLevelData(null));
 
-    void getAchievements(parsed)
+    void getAchievements(activeChildId)
       .then((data) => setAchievements(data.achievements.filter((item) => item.unlocked)))
       .catch(() => setAchievements([]));
 
@@ -146,13 +182,49 @@ export default function ChildGamesPage() {
   }, []);
 
   useEffect(() => {
+    const raw = localStorage.getItem("axiora_child_id");
+    const parsed = Number(raw);
+    if (!raw || !Number.isFinite(parsed)) return;
+    setChildId(parsed);
+    refreshLocalXpMetrics(parsed);
+    refreshRemoteStats(parsed);
+  }, [refreshLocalXpMetrics, refreshRemoteStats]);
+
+  useEffect(() => {
+    if (childId === null) return;
+    const onFocus = () => {
+      refreshLocalXpMetrics(childId);
+      refreshRemoteStats(childId);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        onFocus();
+      }
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (!event.key) return;
+      if (event.key.startsWith(`axiora_game_daily_xp_${childId}_`) || event.key === `axiora_game_weekly_xp_${childId}`) {
+        refreshLocalXpMetrics(childId);
+      }
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [childId, refreshLocalXpMetrics, refreshRemoteStats]);
+
+  useEffect(() => {
     let active = true;
-    setLoadingGames(true);
+    setCatalogState("loading");
     void getGamesCatalog({ limit: 12 })
       .then((response) => {
         if (!active) return;
         const mapped = response.items.reduce<GameItem[]>((acc, item) => {
-          const href = item.playRoute;
+          const href = resolveCatalogRoute(item);
           acc.push({
             id: item.templateId,
             href: href ?? "#",
@@ -165,58 +237,25 @@ export default function ChildGamesPage() {
             difficulty: difficultyLabel(item.difficulty),
             xpReward: item.xpReward,
             icon: iconForGame(item),
-            borderClassName: borderClassForEngine(item.engineKey),
           });
           return acc;
         }, []);
         setCatalogGames(mapped);
-        setUsingCatalog(mapped.length > 0);
+        setCatalogState(mapped.length > 0 ? "remote" : "fallback");
       })
       .catch(() => {
         if (!active) return;
         setCatalogGames([]);
-        setUsingCatalog(false);
-      })
-      .finally(() => {
-        if (!active) return;
-        setLoadingGames(false);
+        setCatalogState("fallback");
       });
     return () => {
       active = false;
     };
   }, []);
 
-  const games = usingCatalog && catalogGames.length > 0 ? catalogGames : GAMES;
+  const games = catalogState === "remote" ? catalogGames : catalogState === "fallback" ? GAMES : [];
   const availableGames = games.filter((game) => game.playable !== false);
   const upcomingGames = games.filter((game) => game.playable === false);
-
-  const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const dailyXp = useMemo(() => {
-    if (childId === null) return 0;
-    const raw = localStorage.getItem(`axiora_game_daily_xp_${childId}_${todayIso}`);
-    const parsed = Number(raw ?? "0");
-    return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
-  }, [childId, todayIso]);
-
-  const weeklyGoal = 350;
-  const weeklyXp = useMemo(() => {
-    if (childId === null) return 0;
-    const raw = localStorage.getItem(`axiora_game_weekly_xp_${childId}`);
-    if (!raw) return 0;
-    try {
-      const parsed = JSON.parse(raw) as { weekStart: string; xp: number };
-      const now = new Date();
-      const day = (now.getDay() + 6) % 7;
-      const monday = new Date(now);
-      monday.setDate(now.getDate() - day);
-      monday.setHours(0, 0, 0, 0);
-      const currentWeekStart = monday.toISOString().slice(0, 10);
-      if (parsed.weekStart !== currentWeekStart) return 0;
-      return Number.isFinite(parsed.xp) ? Math.max(0, parsed.xp) : 0;
-    } catch {
-      return 0;
-    }
-  }, [childId]);
 
   return (
     <PageShell tone="child" width="wide">
@@ -242,10 +281,12 @@ export default function ChildGamesPage() {
             <div className="rounded-2xl border border-border bg-white/90 p-3">
               <p className="text-xs text-muted-foreground">XP de hoje</p>
               <p className="mt-1 text-lg font-extrabold text-foreground">{dailyXp}</p>
+              <p className="mt-1 text-[10px] font-semibold text-muted-foreground">Atualiza ao concluir partidas</p>
             </div>
             <div className="rounded-2xl border border-border bg-white/90 p-3">
               <p className="text-xs text-muted-foreground">Meta semanal</p>
               <p className="mt-1 text-lg font-extrabold text-foreground">{weeklyXp}/{weeklyGoal}</p>
+              <ProgressBar value={(weeklyXp / weeklyGoal) * 100} tone="secondary" />
             </div>
             <div className="rounded-2xl border border-accent/35 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,245,236,0.96)_100%)] p-3">
               <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
@@ -294,7 +335,12 @@ export default function ChildGamesPage() {
       </section>
 
       <section className="space-y-3 pb-24">
-        {!loadingGames && !usingCatalog ? (
+        {catalogState === "loading" ? (
+          <article className="rounded-2xl border border-border bg-white/85 p-3 text-xs text-muted-foreground">
+            Carregando catálogo de jogos...
+          </article>
+        ) : null}
+        {catalogState === "fallback" ? (
           <article className="rounded-2xl border border-border bg-white/85 p-3 text-xs text-muted-foreground">
             Catálogo online indisponível no momento. Exibindo jogos locais para você continuar.
           </article>
@@ -303,7 +349,7 @@ export default function ChildGamesPage() {
         {availableGames.map((game) => {
           const Icon = game.icon;
           return (
-            <article key={game.id} className={cn("games-gradient-shell", game.borderClassName)}>
+            <article key={game.id} className="games-gradient-shell games-gradient-shell--brand">
               <div className="games-gradient-shell__inner">
                 <div className="flex items-start gap-3">
                   <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-white shadow-[0_2px_0_rgba(184,200,239,0.72)]">
@@ -327,10 +373,21 @@ export default function ChildGamesPage() {
                       size="sm"
                       disabled={startingId === game.id}
                       onClick={async () => {
+                        const nextHref = buildPlayHref(game);
                         if (!game.templateId) {
-                          router.push(game.href);
+                          router.push(nextHref);
                           return;
                         }
+                        localStorage.setItem(
+                          "axiora_active_game_engine_session",
+                          JSON.stringify({
+                            sessionId: null,
+                            templateId: game.templateId,
+                            title: game.title,
+                            href: game.href,
+                            startedAt: new Date().toISOString(),
+                          }),
+                        );
                         try {
                           setStartingId(game.id);
                           const started = await startGameEngineSession({ templateId: game.templateId });
@@ -348,7 +405,7 @@ export default function ChildGamesPage() {
                           // fallback: mantém navegação para rota já mapeada pelo backend
                         } finally {
                           setStartingId(null);
-                          router.push(game.href);
+                          router.push(nextHref);
                         }
                       }}
                     >
@@ -365,7 +422,7 @@ export default function ChildGamesPage() {
         {upcomingGames.map((game) => {
           const Icon = game.icon;
           return (
-            <article key={game.id} className={cn("games-gradient-shell", game.borderClassName)}>
+            <article key={game.id} className="games-gradient-shell games-gradient-shell--brand games-gradient-shell--muted">
               <div className="games-gradient-shell__inner">
                 <div className="flex items-start gap-3">
                   <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-white shadow-[0_2px_0_rgba(184,200,239,0.72)]">

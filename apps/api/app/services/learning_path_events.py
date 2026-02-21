@@ -296,13 +296,16 @@ def _compute_lesson_stars(score: int | None) -> int:
 def _unit_completion_rate(
     lessons: list[Lesson],
     progress_by_lesson: dict[int, LessonProgress],
+    completed_session_lessons: set[int],
 ) -> float:
     if not lessons:
         return 0.0
     completed = 0
     for lesson in lessons:
         row = progress_by_lesson.get(lesson.id)
-        if row and row.completed:
+        score_completed = bool(row and row.score is not None and row.score >= 60)
+        historical_completed = bool(row and ((row.completed_at is not None) or int(row.xp_granted or 0) > 0))
+        if (row and row.completed) or score_completed or historical_completed or (lesson.id in completed_session_lessons):
             completed += 1
     return completed / len(lessons)
 
@@ -425,7 +428,35 @@ def build_learning_path(
         )
     ).all()
     progress_by_lesson = {row.lesson_id: row for row in progress_rows}
+
+    # Resiliencia: considera sessoes finalizadas como conclusao quando houver lacuna em LessonProgress.
+    # Isso evita unidade 0% para usuarios que ja finalizaram sessoes adaptativas.
+    session_rows = db.scalars(
+        select(LearningSession).where(
+            LearningSession.user_id == user_id,
+            LearningSession.lesson_id.in_(lesson_ids),
+            LearningSession.ended_at.is_not(None),
+        )
+    ).all()
+    completed_session_lessons: set[int] = set()
+    latest_score_by_lesson: dict[int, int] = {}
+    latest_ended_at_by_lesson: dict[int, datetime] = {}
+    for session in session_rows:
+        if session.lesson_id is None:
+            continue
+        total = int(session.total_questions or 0)
+        correct = int(session.correct_count or 0)
+        score = int(round((correct / total) * 100)) if total > 0 else (60 if int(session.xp_earned or 0) > 0 else 0)
+        session_completed = (total > 0 and (correct / total) >= 0.60) or int(session.xp_earned or 0) > 0
+        if session_completed:
+            completed_session_lessons.add(session.lesson_id)
+        previous_ended = latest_ended_at_by_lesson.get(session.lesson_id)
+        if previous_ended is None or (session.ended_at and session.ended_at > previous_ended):
+            latest_ended_at_by_lesson[session.lesson_id] = session.ended_at or datetime.now(UTC)
+            latest_score_by_lesson[session.lesson_id] = score
+
     total_completed_lessons = sum(1 for row in progress_rows if row.completed)
+    total_completed_lessons = max(total_completed_lessons, len(completed_session_lessons))
     due_reviews_count, streak_days, mastery_average = _resolve_user_metrics(db, user_id=user_id)
 
     try:
@@ -452,10 +483,14 @@ def build_learning_path(
     out_units: list[PathUnitBlock] = []
     for unit in units:
         unit_lessons = lessons_by_unit.get(unit.id, [])
-        unit_completion = _unit_completion_rate(unit_lessons, progress_by_lesson)
+        unit_completion = _unit_completion_rate(unit_lessons, progress_by_lesson, completed_session_lessons)
         nodes: list[PathNode] = []
         for lesson in unit_lessons:
             row = progress_by_lesson.get(lesson.id)
+            fallback_score = latest_score_by_lesson.get(lesson.id)
+            effective_score = row.score if row else fallback_score
+            row_historical_completed = bool(row and ((row.completed_at is not None) or int(row.xp_granted or 0) > 0))
+            effective_completed = bool((row and row.completed) or row_historical_completed or (lesson.id in completed_session_lessons))
             nodes.append(
                 PathNode(
                     kind="LESSON",
@@ -466,9 +501,9 @@ def build_learning_path(
                         order=lesson.order,
                         xp_reward=lesson.xp_reward,
                         unlocked=True,
-                        completed=bool(row and row.completed),
-                        score=row.score if row else None,
-                        stars_earned=_compute_lesson_stars(row.score if row else None),
+                        completed=effective_completed,
+                        score=effective_score,
+                        stars_earned=_compute_lesson_stars(effective_score),
                     ),
                     event=None,
                 )

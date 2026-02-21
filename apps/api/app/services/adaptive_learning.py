@@ -1275,12 +1275,16 @@ def _upsert_lesson_progress(
         )
         db.flush()
         return
+    previously_completed = bool(row.completed)
+    previous_best_score = int(row.score or 0)
     row.attempts += 1
-    row.score = score
-    row.completed = completed
-    row.repeat_required = not completed
-    row.completed_at = now if completed else None
-    if completed:
+    # Mantem o melhor score para evitar "desconcluir" uma licao apos retries piores.
+    row.score = max(previous_best_score, score)
+    row.completed = previously_completed or completed
+    row.repeat_required = not row.completed
+    if row.completed and row.completed_at is None:
+        row.completed_at = now
+    if completed or previously_completed:
         row.xp_granted = max(row.xp_granted, xp_granted)
     db.flush()
 
@@ -1365,20 +1369,22 @@ def finish_adaptive_learning_session(
         stars=stars,
     )
     try:
-        track_mission_progress(
-            db,
-            user_id=user_id,
-            tenant_id=tenant_id,
-            delta=MissionDelta(
-                lessons_completed=1 if session.lesson_id is not None and accuracy >= 0.60 else 0,
-                xp_gained=session.xp_earned,
-                perfect_scores=1 if stars == 3 else 0,
-                streak_days=streak_days_delta,
-            ),
-            auto_claim=True,
-        )
+        # Isola erros de missao para nao perder progresso principal da sessao.
+        with db.begin_nested():
+            track_mission_progress(
+                db,
+                user_id=user_id,
+                tenant_id=tenant_id,
+                delta=MissionDelta(
+                    lessons_completed=1 if session.lesson_id is not None and accuracy >= 0.60 else 0,
+                    xp_gained=session.xp_earned,
+                    perfect_scores=1 if stars == 3 else 0,
+                    streak_days=streak_days_delta,
+                ),
+                auto_claim=True,
+            )
     except SQLAlchemyError:
-        db.rollback()
+        pass
     signal_type = AxionSignalType.LESSON_COMPLETED if accuracy >= 0.60 else AxionSignalType.LESSON_FAILED
     record_axion_signal(
         db,
