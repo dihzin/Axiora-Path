@@ -13,6 +13,7 @@ import {
   finishGameEngineSession,
   registerGameSession,
   submitGameEngineAnswer,
+  type GameType,
   type GameSessionRegisterResponse,
 } from "@/lib/api/client";
 import { UX_SETTINGS_FALLBACK, fetchUXSettings, hapticCompletion, hapticPress, playSfx } from "@/lib/ux-feedback";
@@ -178,6 +179,11 @@ function pointsByTheme(theme: QuizTheme): number {
   return 100;
 }
 
+function gameTypeForTheme(theme: QuizTheme): GameType {
+  if (theme === "ENGLISH") return "HANGMAN";
+  return "CROSSWORD";
+}
+
 export default function QuizGamePage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [theme, setTheme] = useState<QuizTheme>("SUM");
@@ -310,7 +316,7 @@ export default function QuizGamePage() {
       const comboBonus = Math.min(12, bestCombo) * 2;
       const livesBonus = lives * 5;
       const score = Math.min(100, accuracyScore + comboBonus + livesBonus);
-      const reg = await registerGameSession({ gameType: "CROSSWORD", score });
+      const reg = await registerGameSession({ gameType: gameTypeForTheme(theme), score });
       setReward(reg);
     } catch {
       setReward(null);
@@ -349,6 +355,17 @@ export default function QuizGamePage() {
             <span className="rounded-full border border-secondary/30 bg-secondary/10 px-2 py-1 text-xs font-semibold text-secondary">{progress}%</span>
           </div>
           <CardTitle className="mt-2 text-lg">{title}</CardTitle>
+          <p className="text-xs font-semibold text-muted-foreground">
+            {theme === "ENGLISH"
+              ? "Tema: Inglês"
+              : theme === "SCIENCE"
+                ? "Tema: Ciências"
+                : theme === "FRACTIONS"
+                  ? "Tema: Frações"
+                  : theme === "COMPARE"
+                    ? "Tema: Comparação Numérica"
+                    : "Tema: Soma"}
+          </p>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="rounded-2xl border border-border bg-white/90 p-3">

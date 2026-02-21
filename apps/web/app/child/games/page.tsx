@@ -39,6 +39,42 @@ type GameItem = {
 
 const GAMES: GameItem[] = [
   {
+    id: "local-corrida-soma",
+    href: "/child/games/quiz",
+    templateId: "7f9d501f-7c56-4690-9da5-bf1b95818801",
+    title: "Corrida da Soma",
+    description: "Desafios rápidos de soma com progressão por sessão.",
+    skill: "Aritmética e soma",
+    difficulty: "Fácil",
+    xpReward: 20,
+    icon: Rocket,
+    estimatedMinutes: 3,
+  },
+  {
+    id: "local-mapa-capitais",
+    href: "/child/games/memory",
+    templateId: "7ed50523-7a97-4d65-a687-d2f878f2c199",
+    title: "Mapa de Capitais",
+    description: "Ligue capitais e regiões em rodadas de memória visual.",
+    skill: "Geografia e memória",
+    difficulty: "Médio",
+    xpReward: 28,
+    icon: MapPinned,
+    estimatedMinutes: 5,
+  },
+  {
+    id: "local-estacao-ingles",
+    href: "/child/games/quiz",
+    templateId: "63b8fdd6-a512-487f-b0a4-9860904f7558",
+    title: "Estação de Inglês",
+    description: "Vocabulário e leitura em desafios curtos.",
+    skill: "Inglês e vocabulário",
+    difficulty: "Médio",
+    xpReward: 24,
+    icon: Search,
+    estimatedMinutes: 4,
+  },
+  {
     id: "local-tic-tac-toe",
     href: "/child/games/tictactoe",
     title: "Jogo da Velha",
@@ -327,7 +363,7 @@ export default function ChildGamesPage() {
         </CardContent>
       </Card>
 
-      <section className="mb-4 rounded-3xl border border-border bg-[linear-gradient(105deg,rgba(14,165,164,0.16),rgba(255,255,255,0.92)_35%,rgba(255,107,61,0.16))] p-4 shadow-[0_2px_0_rgba(184,200,239,0.68)]">
+      <section className="mb-4 rounded-3xl border border-border bg-[linear-gradient(110deg,rgba(14,165,164,0.18),rgba(255,255,255,0.96)_42%,rgba(67,190,187,0.18))] p-4 shadow-[0_2px_0_rgba(184,200,239,0.68)]">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Desafio da semana</p>
@@ -338,7 +374,7 @@ export default function ChildGamesPage() {
           </span>
         </div>
         <div className="mt-3">
-          <ProgressBar value={(weeklyXp / weeklyGoal) * 100} tone="primary" />
+          <ProgressBar value={(weeklyXp / weeklyGoal) * 100} tone="secondary" />
         </div>
       </section>
 
