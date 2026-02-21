@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import Select, select
 
 from app.api.deps import DBSession, get_current_tenant, get_current_user, require_role
-from app.models import GameMove, GameParticipant, GameSession, GameType, Membership, Tenant, User
+from app.models import AxionSignalType, GameMove, GameParticipant, GameSession, GameType, Membership, Tenant, User
 from app.schemas.games_multiplayer import (
     MultiplayerCloseRequest,
     MultiplayerCreateRequest,
@@ -20,6 +20,7 @@ from app.schemas.games_multiplayer import (
     MultiplayerParticipantOut,
     MultiplayerStateResponse,
 )
+from app.services.axion_core_v2 import recordAxionSignal
 
 router = APIRouter(prefix="/api/games/multiplayer", tags=["games-multiplayer"])
 
@@ -107,6 +108,35 @@ def _build_state(*, session: GameSession, participants: list[GameParticipant], m
         canPlay=can_play,
         expiresAt=session.expires_at,
     )
+
+
+def _emit_axion_multiplayer_signals(*, db: DBSession, session: GameSession, state: MultiplayerStateResponse) -> None:
+    already_emitted = False
+    if isinstance(session.metadata_payload, dict):
+        already_emitted = bool(session.metadata_payload.get("axionSignalsEmitted"))
+    if already_emitted:
+        return
+    if state.winner is None:
+        return
+    for participant in state.participants:
+        is_winner = state.winner in {"X", "O"} and participant.player_role == state.winner
+        payload = {
+            "source": "multiplayer_tictactoe",
+            "sessionId": session.id,
+            "winner": state.winner,
+            "playerRole": participant.player_role,
+            "result": "WIN" if is_winner else ("DRAW" if state.winner == "DRAW" else "LOSS"),
+            "movesCount": len(state.moves),
+        }
+        recordAxionSignal(
+            userId=int(participant.user_id),
+            type=AxionSignalType.GAME_PLAYED,
+            payload=payload,
+            db=db,
+        )
+    metadata = dict(session.metadata_payload or {})
+    metadata["axionSignalsEmitted"] = True
+    session.metadata_payload = metadata
 
 
 def _session_query(*, tenant_id: int, session_id: str) -> Select[tuple[GameSession]]:
@@ -324,6 +354,7 @@ def post_multiplayer_move(
 
     refreshed_moves = db.scalars(select(GameMove).where(GameMove.session_id == session.id).order_by(GameMove.move_index.asc())).all()
     state = _build_state(session=session, participants=participants, moves=refreshed_moves, user_id=user.id)
+    _emit_axion_multiplayer_signals(db=db, session=session, state=state)
     db.commit()
     return state
 
@@ -350,5 +381,6 @@ def close_multiplayer_session(
     session.session_status = "CANCELLED"
     moves = db.scalars(select(GameMove).where(GameMove.session_id == session.id).order_by(GameMove.move_index.asc())).all()
     state = _build_state(session=session, participants=participants, moves=moves, user_id=user.id)
+    _emit_axion_multiplayer_signals(db=db, session=session, state=state)
     db.commit()
     return state
