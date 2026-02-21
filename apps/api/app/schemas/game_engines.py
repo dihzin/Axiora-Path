@@ -5,6 +5,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 DifficultyLiteral = Literal["EASY", "MEDIUM", "HARD"]
+GameCatalogStatusLiteral = Literal["AVAILABLE", "COMING_SOON", "BETA", "LOCKED"]
 
 
 class GameCatalogItemOut(BaseModel):
@@ -16,6 +17,9 @@ class GameCatalogItemOut(BaseModel):
     age_group: str = Field(alias="ageGroup")
     engine_key: str = Field(alias="engineKey")
     difficulty: DifficultyLiteral
+    status: GameCatalogStatusLiteral
+    description: str
+    play_route: str | None = Field(default=None, alias="playRoute")
     estimated_minutes: int = Field(alias="estimatedMinutes", ge=1)
     xp_reward: int = Field(alias="xpReward", ge=0)
     coins_reward: int = Field(alias="coinsReward", ge=0)
@@ -72,4 +76,3 @@ class FinishGameSessionResponse(BaseModel):
     xp_earned: int = Field(alias="xpEarned", ge=0)
     coins_earned: int = Field(alias="coinsEarned", ge=0)
     updated_skills: list[dict[str, Any]] = Field(default_factory=list, alias="updatedSkills")
-

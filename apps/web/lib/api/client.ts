@@ -540,10 +540,13 @@ export type GameEngineDifficulty = "EASY" | "MEDIUM" | "HARD";
 export type GameCatalogItem = {
   templateId: string;
   title: string;
+  description: string;
   subject: string;
   ageGroup: string;
   engineKey: string;
   difficulty: GameEngineDifficulty;
+  status: "AVAILABLE" | "COMING_SOON" | "BETA" | "LOCKED";
+  playRoute: string | null;
   estimatedMinutes: number;
   xpReward: number;
   coinsReward: number;

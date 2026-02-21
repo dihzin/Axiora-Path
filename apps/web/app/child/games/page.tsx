@@ -28,6 +28,7 @@ type GameItem = {
   href: string;
   templateId?: string;
   playable?: boolean;
+  status?: "AVAILABLE" | "COMING_SOON" | "BETA" | "LOCKED";
   title: string;
   description: string;
   skill: string;
@@ -73,28 +74,6 @@ const GAMES: GameItem[] = [
   },
 ];
 
-function mapCatalogGameToRoute(item: GameCatalogItem): string | null {
-  const title = item.title.trim().toLowerCase();
-  if (title === "corrida da soma") return "/child/games/quiz";
-  if (title === "mercado do troco") return "/child/games/finance-sim";
-  if (title === "mapa de capitais") return "/child/games/memory";
-  if (title === "jogo da velha") return "/child/games/tictactoe";
-  if (title === "caça-palavras") return "/child/games/wordsearch";
-  if (title === "mesada inteligente") return "/child/games/finance-sim";
-  return null;
-}
-
-function qualityDescription(item: GameCatalogItem): string {
-  const title = item.title.trim().toLowerCase();
-  if (title === "corrida da soma") return "Desafios rápidos de soma com progresso por sessão.";
-  if (title === "mercado do troco") return "Simulação prática de decisões financeiras com eventos.";
-  if (title === "mapa de capitais") return "Treine memória ligando capitais às regiões corretas.";
-  if (title === "jogo da velha") return "Estratégia em partidas curtas com níveis de dificuldade.";
-  if (title === "caça-palavras") return "Foco e vocabulário com tabuleiro dinâmico.";
-  if (title === "mesada inteligente") return "Treino de orçamento e escolhas com impacto.";
-  return "Novo jogo em preparação para você. Em breve estará disponível.";
-}
-
 function difficultyLabel(difficulty: string): "Fácil" | "Médio" | "Difícil" {
   const value = difficulty.toUpperCase();
   if (value === "EASY") return "Fácil";
@@ -112,6 +91,13 @@ function iconForGame(item: GameCatalogItem): ComponentType<{ className?: string 
   if (item.engineKey.toUpperCase() === "SIMULATION") return PiggyBank;
   if (item.engineKey.toUpperCase() === "DRAG_DROP") return Search;
   return Grid2x2;
+}
+
+function statusLabel(status?: GameItem["status"]): string {
+  if (status === "AVAILABLE") return "Disponível";
+  if (status === "BETA") return "Beta";
+  if (status === "LOCKED") return "Bloqueado";
+  return "Em breve";
 }
 
 function borderClassForEngine(engineKey: string): string {
@@ -163,14 +149,15 @@ export default function ChildGamesPage() {
       .then((response) => {
         if (!active) return;
         const mapped = response.items.reduce<GameItem[]>((acc, item) => {
-          const href = mapCatalogGameToRoute(item);
+          const href = item.playRoute;
           acc.push({
             id: item.templateId,
             href: href ?? "#",
             templateId: item.templateId,
-            playable: href !== null,
+            playable: item.status === "AVAILABLE" && href !== null,
+            status: item.status,
             title: item.title,
-            description: qualityDescription(item),
+            description: item.description,
             skill: item.tags.length > 0 ? item.tags.slice(0, 2).join(" • ") : item.subject,
             difficulty: difficultyLabel(item.difficulty),
             xpReward: item.xpReward,
@@ -197,6 +184,8 @@ export default function ChildGamesPage() {
   }, []);
 
   const games = usingCatalog && catalogGames.length > 0 ? catalogGames : GAMES;
+  const availableGames = games.filter((game) => game.playable !== false);
+  const upcomingGames = games.filter((game) => game.playable === false);
 
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const dailyXp = useMemo(() => {
@@ -307,7 +296,8 @@ export default function ChildGamesPage() {
             Catálogo online indisponível no momento. Exibindo jogos locais para você continuar.
           </article>
         ) : null}
-        {games.map((game) => {
+        {availableGames.length > 0 ? <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Disponíveis agora</p> : null}
+        {availableGames.map((game) => {
           const Icon = game.icon;
           return (
             <article key={game.id} className={cn("games-gradient-shell", game.borderClassName)}>
@@ -332,9 +322,8 @@ export default function ChildGamesPage() {
                     <Button
                       className="games-play-button mt-3 w-full"
                       size="sm"
-                      disabled={startingId === game.id || game.playable === false}
+                      disabled={startingId === game.id}
                       onClick={async () => {
-                        if (game.playable === false) return;
                         if (!game.templateId) {
                           router.push(game.href);
                           return;
@@ -353,15 +342,51 @@ export default function ChildGamesPage() {
                             }),
                           );
                         } catch {
-                          // fallback: mantém navegação para a rota de jogo legada
+                          // fallback: mantém navegação para rota já mapeada pelo backend
                         } finally {
                           setStartingId(null);
                           router.push(game.href);
                         }
                       }}
                     >
-                      {game.playable === false ? "Em breve" : "Jogar"}
-                      {game.playable === false ? null : <ArrowRight className="h-4 w-4" />}
+                      Jogar
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+        {upcomingGames.length > 0 ? <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Em breve</p> : null}
+        {upcomingGames.map((game) => {
+          const Icon = game.icon;
+          return (
+            <article key={game.id} className={cn("games-gradient-shell", game.borderClassName)}>
+              <div className="games-gradient-shell__inner">
+                <div className="flex items-start gap-3">
+                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-white shadow-[0_2px_0_rgba(184,200,239,0.72)]">
+                    <Icon className="h-5 w-5 stroke-[2.6] text-primary" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <p className="truncate text-sm font-bold text-foreground">{game.title}</p>
+                      <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{statusLabel(game.status)}</span>
+                    </div>
+                    <p className="text-xs leading-relaxed text-muted-foreground">{game.description}</p>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-secondary/30 bg-secondary/10 px-2 py-0.5 text-[10px] font-semibold text-secondary">
+                        <Sparkles className="h-3 w-3" />
+                        +{game.xpReward} XP
+                      </span>
+                      <span className="truncate text-[11px] font-medium text-foreground/80">{game.skill}</span>
+                    </div>
+                    <Button
+                      className="games-play-button mt-3 w-full"
+                      size="sm"
+                      disabled
+                    >
+                      Em breve
                     </Button>
                   </div>
                 </div>
