@@ -74,12 +74,23 @@ const GAMES: GameItem[] = [
 ];
 
 function mapCatalogGameToRoute(item: GameCatalogItem): string | null {
-  const engineKey = item.engineKey.toUpperCase();
-  if (engineKey === "QUIZ") return "/child/games/quiz";
-  if (engineKey === "SIMULATION") return "/child/games/finance-sim";
-  if (engineKey === "DRAG_DROP" || engineKey === "MEMORY") return "/child/games/wordsearch";
-  if (engineKey === "STRATEGY") return "/child/games/tictactoe";
+  const title = item.title.trim().toLowerCase();
+  if (title === "corrida da soma") return "/child/games/quiz";
+  if (title === "mercado do troco") return "/child/games/finance-sim";
+  if (title === "jogo da velha") return "/child/games/tictactoe";
+  if (title === "caça-palavras") return "/child/games/wordsearch";
+  if (title === "mesada inteligente") return "/child/games/finance-sim";
   return null;
+}
+
+function qualityDescription(item: GameCatalogItem): string {
+  const title = item.title.trim().toLowerCase();
+  if (title === "corrida da soma") return "Desafios rápidos de soma com progresso por sessão.";
+  if (title === "mercado do troco") return "Simulação prática de decisões financeiras com eventos.";
+  if (title === "jogo da velha") return "Estratégia em partidas curtas com níveis de dificuldade.";
+  if (title === "caça-palavras") return "Foco e vocabulário com tabuleiro dinâmico.";
+  if (title === "mesada inteligente") return "Treino de orçamento e escolhas com impacto.";
+  return "Novo jogo em preparação para você. Em breve estará disponível.";
 }
 
 function difficultyLabel(difficulty: string): "Fácil" | "Médio" | "Difícil" {
@@ -157,7 +168,7 @@ export default function ChildGamesPage() {
             templateId: item.templateId,
             playable: href !== null,
             title: item.title,
-            description: `Motor ${item.engineKey}: experiência adaptativa focada em ${item.subject.toLowerCase()}.`,
+            description: qualityDescription(item),
             skill: item.tags.length > 0 ? item.tags.slice(0, 2).join(" • ") : item.subject,
             difficulty: difficultyLabel(item.difficulty),
             xpReward: item.xpReward,
@@ -348,7 +359,7 @@ export default function ChildGamesPage() {
                       }}
                     >
                       {game.playable === false ? "Em breve" : "Jogar"}
-                      <ArrowRight className="h-4 w-4" />
+                      {game.playable === false ? null : <ArrowRight className="h-4 w-4" />}
                     </Button>
                   </div>
                 </div>
