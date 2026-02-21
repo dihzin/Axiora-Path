@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Annotated
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -15,10 +16,161 @@ from app.schemas.games import (
     GameSessionRegisterResponse,
     UserGameProfileOut,
 )
+from app.schemas.game_engines import (
+    FinishGameSessionResponse,
+    GameAnswerRequest,
+    GameAnswerResponse,
+    GameCatalogItemOut,
+    GamesCatalogResponse,
+    StartGameSessionRequest,
+    StartGameSessionResponse,
+)
 from app.services.gamification import MAX_XP_PER_DAY, registerGameSession
 from app.services.learning_retention import MissionDelta, track_mission_progress
 
 router = APIRouter(prefix="/api/games", tags=["games"])
+
+_GAME_CATALOG: list[dict[str, object]] = [
+    {
+        "template_id": "7f9d501f-7c56-4690-9da5-bf1b95818801",
+        "title": "Corrida da Soma",
+        "subject": "Matemática",
+        "age_group": "6-8",
+        "engine_key": "QUIZ",
+        "difficulty": "EASY",
+        "estimated_minutes": 3,
+        "xp_reward": 20,
+        "coins_reward": 5,
+        "tags": ["aritmética", "soma"],
+    },
+    {
+        "template_id": "f3db2b95-89d8-4c1c-9cda-87fd357f7f9e",
+        "title": "Mercado do Troco",
+        "subject": "Educação Financeira",
+        "age_group": "9-12",
+        "engine_key": "SIMULATION",
+        "difficulty": "MEDIUM",
+        "estimated_minutes": 5,
+        "xp_reward": 30,
+        "coins_reward": 8,
+        "tags": ["troco", "decisão"],
+    },
+    {
+        "template_id": "b1b7b17d-306f-4f95-8f42-3f1727205fe2",
+        "title": "Pontos e Frases",
+        "subject": "Português",
+        "age_group": "9-12",
+        "engine_key": "DRAG_DROP",
+        "difficulty": "MEDIUM",
+        "estimated_minutes": 4,
+        "xp_reward": 26,
+        "coins_reward": 6,
+        "tags": ["pontuação", "sintaxe"],
+    },
+]
+
+
+@router.get("/catalog", response_model=GamesCatalogResponse)
+def get_games_catalog(
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    __user: Annotated[User, Depends(get_current_user)],
+    __membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    ageGroup: str | None = None,
+    subject: str | None = None,
+    limit: int = 20,
+) -> GamesCatalogResponse:
+    _ = db, tenant
+    normalized_age = ageGroup.strip() if ageGroup else None
+    normalized_subject = subject.strip().lower() if subject else None
+    max_limit = min(max(limit, 1), 100)
+    filtered: list[GameCatalogItemOut] = []
+    for raw in _GAME_CATALOG:
+        if normalized_age and raw["age_group"] != normalized_age:
+            continue
+        if normalized_subject and str(raw["subject"]).lower() != normalized_subject:
+            continue
+        filtered.append(GameCatalogItemOut.model_validate(raw))
+        if len(filtered) >= max_limit:
+            break
+    return GamesCatalogResponse(items=filtered)
+
+
+@router.post("/session/start", response_model=StartGameSessionResponse)
+def start_game_session_v1(
+    payload: StartGameSessionRequest,
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    __user: Annotated[User, Depends(get_current_user)],
+    __membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+) -> StartGameSessionResponse:
+    _ = db, tenant
+    match = next((item for item in _GAME_CATALOG if item["template_id"] == payload.template_id), None)
+    if match is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game template not found")
+    runtime_config = {
+        "difficulty": match["difficulty"],
+        "estimatedMinutes": match["estimated_minutes"],
+        "xpReward": match["xp_reward"],
+        "coinsReward": match["coins_reward"],
+    }
+    return StartGameSessionResponse(
+        sessionId=str(uuid4()),
+        game={
+            "engineKey": match["engine_key"],
+            "runtimeConfig": runtime_config,
+            "initialPayload": {"title": match["title"], "tags": match["tags"]},
+        },
+        axion={"difficultyMix": {"easy": 40, "medium": 45, "hard": 15}, "activeBoosts": []},
+    )
+
+
+@router.post("/session/{session_id}/answer", response_model=GameAnswerResponse)
+def submit_game_answer(
+    session_id: str,
+    payload: GameAnswerRequest,
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    __user: Annotated[User, Depends(get_current_user)],
+    __membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+) -> GameAnswerResponse:
+    _ = session_id, db, tenant
+    correct = bool(payload.answer.get("isCorrect", False))
+    score_delta = 15 if correct else 0
+    feedback = "Boa! Você avançou mais um passo." if correct else "Quase lá! Vamos tentar de novo com calma."
+    signals = [
+        {"signalType": "RESPONSE_TIME_MS", "value": float(payload.elapsed_ms)},
+        {"signalType": "HINTS_USED", "value": float(payload.hints_used)},
+    ]
+    return GameAnswerResponse(
+        correct=correct,
+        scoreDelta=score_delta,
+        feedback=feedback,
+        cognitiveSignals=signals,
+        nextStep=None,
+    )
+
+
+@router.post("/session/{session_id}/finish", response_model=FinishGameSessionResponse)
+def finish_game_session_v1(
+    session_id: str,
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    __user: Annotated[User, Depends(get_current_user)],
+    __membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+) -> FinishGameSessionResponse:
+    _ = db, tenant
+    return FinishGameSessionResponse(
+        sessionId=session_id,
+        totalScore=100,
+        accuracy=0.9,
+        timeSpentMs=120000,
+        xpEarned=30,
+        coinsEarned=8,
+        updatedSkills=[
+            {"skillKey": "problem_solving", "mastery": 0.62, "confidence": 0.67, "velocity": 0.05},
+        ],
+    )
 
 
 @router.post(

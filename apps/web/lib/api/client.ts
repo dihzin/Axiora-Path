@@ -535,6 +535,55 @@ export type DailyMissionCompleteResponse = {
 };
 
 export type GameType = "TICTACTOE" | "WORDSEARCH" | "CROSSWORD" | "HANGMAN" | "FINANCE_SIM";
+export type GameEngineDifficulty = "EASY" | "MEDIUM" | "HARD";
+
+export type GameCatalogItem = {
+  templateId: string;
+  title: string;
+  subject: string;
+  ageGroup: string;
+  engineKey: string;
+  difficulty: GameEngineDifficulty;
+  estimatedMinutes: number;
+  xpReward: number;
+  coinsReward: number;
+  tags: string[];
+};
+
+export type GamesCatalogResponse = {
+  items: GameCatalogItem[];
+};
+
+export type StartGameSessionResponse = {
+  sessionId: string;
+  game: {
+    engineKey: string;
+    runtimeConfig: Record<string, unknown>;
+    initialPayload: Record<string, unknown>;
+  };
+  axion: {
+    difficultyMix: Record<string, unknown>;
+    activeBoosts: Array<Record<string, unknown>>;
+  } | null;
+};
+
+export type GameAnswerResponse = {
+  correct: boolean;
+  scoreDelta: number;
+  feedback: string;
+  cognitiveSignals: Array<Record<string, unknown>>;
+  nextStep: Record<string, unknown> | null;
+};
+
+export type FinishGameSessionResponse = {
+  sessionId: string;
+  totalScore: number;
+  accuracy: number;
+  timeSpentMs: number;
+  xpEarned: number;
+  coinsEarned: number;
+  updatedSkills: Array<Record<string, unknown>>;
+};
 
 export type GameSessionRegisterResponse = {
   profile: {
@@ -1262,6 +1311,62 @@ export async function registerGameSession(payload: { gameType: GameType; score: 
   return apiRequest<GameSessionRegisterResponse>("/api/games/session", {
     method: "POST",
     body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getGamesCatalog(params?: {
+  ageGroup?: "6-8" | "9-12" | "13-15";
+  subject?: string;
+  limit?: number;
+}): Promise<GamesCatalogResponse> {
+  const query = new URLSearchParams();
+  if (params?.ageGroup) query.set("ageGroup", params.ageGroup);
+  if (params?.subject) query.set("subject", params.subject);
+  if (typeof params?.limit === "number") query.set("limit", String(params.limit));
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<GamesCatalogResponse>(`/api/games/catalog${suffix}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function startGameEngineSession(payload: {
+  templateId: string;
+  variationId?: string | null;
+  levelId?: string | null;
+  context?: Record<string, unknown>;
+}): Promise<StartGameSessionResponse> {
+  return apiRequest<StartGameSessionResponse>("/api/games/session/start", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function submitGameEngineAnswer(
+  sessionId: string,
+  payload: {
+    stepId: string;
+    answer: Record<string, unknown>;
+    elapsedMs: number;
+    hintsUsed?: number;
+  },
+): Promise<GameAnswerResponse> {
+  return apiRequest<GameAnswerResponse>(`/api/games/session/${sessionId}/answer`, {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function finishGameEngineSession(sessionId: string): Promise<FinishGameSessionResponse> {
+  return apiRequest<FinishGameSessionResponse>(`/api/games/session/${sessionId}/finish`, {
+    method: "POST",
     requireAuth: true,
     includeTenant: true,
   });
