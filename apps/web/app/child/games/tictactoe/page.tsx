@@ -4,22 +4,23 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Sparkles } from "lucide-react";
 
+import { MultiplayerLaunchModal } from "@/components/games/tictactoe/multiplayer-launch-modal";
+import { MultiplayerWaitingCard } from "@/components/games/tictactoe/multiplayer-waiting-card";
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { ConfettiBurst } from "@/components/confetti-burst";
 import { LevelUpOverlay } from "@/components/level-up-overlay";
+import { useMultiplayerSession } from "@/hooks/use-multiplayer-session";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   closeMultiplayerSession,
   createMultiplayerSession,
-  getMultiplayerSession,
   joinMultiplayerSession,
   postMultiplayerMove,
   registerGameSession,
   type GameSessionRegisterResponse,
   type MultiplayerCreateResponse,
-  type MultiplayerStateResponse,
 } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 
@@ -219,10 +220,17 @@ export default function TicTacToePage() {
   const [levelUpLevel, setLevelUpLevel] = useState<number | null>(null);
   const [levelUpReward, setLevelUpReward] = useState<string | null>(null);
   const [multiplayerCreate, setMultiplayerCreate] = useState<MultiplayerCreateResponse | null>(null);
-  const [multiplayerState, setMultiplayerState] = useState<MultiplayerStateResponse | null>(null);
   const [joinCodeInput, setJoinCodeInput] = useState("");
   const [flowStep, setFlowStep] = useState<"MODE" | "HOST" | "JOIN" | "PLAY">("MODE");
   const [flowError, setFlowError] = useState<string | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [resultRewardKey, setResultRewardKey] = useState<string | null>(null);
+  const [joinTokenFromUrl, setJoinTokenFromUrl] = useState<string | null>(null);
+
+  const { state: multiplayerState, isRealtimeConnected, statusLabel } = useMultiplayerSession({
+    sessionId: activeSessionId,
+    enabled: playMode !== "SOLO" && Boolean(activeSessionId),
+  });
 
   useEffect(() => {
     const raw = localStorage.getItem("axiora_child_id");
@@ -237,25 +245,28 @@ export default function TicTacToePage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const joinCode = new URLSearchParams(window.location.search).get("join")?.trim().toUpperCase();
+    const params = new URLSearchParams(window.location.search);
+    const joinCode = params.get("join")?.trim().toUpperCase();
+    const joinToken = params.get("joinToken")?.trim();
+    const sessionId = params.get("session")?.trim();
+    const mode = params.get("mode")?.trim();
+    if (sessionId && mode === "guest") {
+      setPlayMode("MULTI_GUEST");
+      setFlowStep("PLAY");
+      setActiveSessionId(sessionId);
+      return;
+    }
+    if (joinToken) {
+      setFlowStep("JOIN");
+      setJoinTokenFromUrl(joinToken);
+      setPlayMode("MULTI_GUEST");
+      return;
+    }
     if (!joinCode) return;
     setFlowStep("JOIN");
     setJoinCodeInput(joinCode);
     setPlayMode("MULTI_GUEST");
   }, []);
-
-  useEffect(() => {
-    if (playMode === "SOLO" || !multiplayerState?.sessionId) return;
-    const timer = window.setInterval(async () => {
-      try {
-        const latest = await getMultiplayerSession(multiplayerState.sessionId);
-        setMultiplayerState(latest);
-      } catch {
-        // noop: polling is best-effort for MVP.
-      }
-    }, 2000);
-    return () => window.clearInterval(timer);
-  }, [playMode, multiplayerState?.sessionId]);
 
   const statusText = useMemo(() => {
     if (playMode !== "SOLO") {
@@ -276,15 +287,60 @@ export default function TicTacToePage() {
   const isFinished = playMode === "SOLO" ? matchResult !== null : Boolean(multiplayerState?.winner || multiplayerState?.status === "CANCELLED");
   const displayedBoard = playMode === "SOLO" ? board : multiplayerState?.board ?? emptyBoard();
 
+  useEffect(() => {
+    if (!joinTokenFromUrl || playMode !== "MULTI_GUEST") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const joined = await joinMultiplayerSession({ joinToken: joinTokenFromUrl });
+        if (cancelled) return;
+        setActiveSessionId(joined.sessionId);
+        setFlowStep("PLAY");
+        setFlowError(null);
+      } catch {
+        if (cancelled) return;
+        setFlowError("Convite inválido ou expirado.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [joinTokenFromUrl, playMode]);
+
+  useEffect(() => {
+    if (playMode === "SOLO" || !multiplayerState?.sessionId) return;
+    if (!(multiplayerState.winner === "X" || multiplayerState.winner === "O" || multiplayerState.winner === "DRAW")) return;
+    const rewardKey = `${multiplayerState.sessionId}:${multiplayerState.winner}`;
+    if (resultRewardKey === rewardKey) return;
+    const result: MatchResult = multiplayerState.winner === "DRAW" ? "DRAW" : "WIN";
+    const base = XP_BY_RESULT[result];
+    setMatchResult(result);
+    setBaseXp(base);
+    setBonusXp(0);
+    setResultRewardKey(rewardKey);
+    if (multiplayerState.winner !== "DRAW") {
+      setConfettiTrigger((prev) => prev + 1);
+    }
+    void (async () => {
+      try {
+        const response = await registerGameSession({ gameType: "TICTACTOE", score: base * 10 });
+        setLastSession(response);
+      } catch {
+        setLastSession(null);
+      } finally {
+        setRewardOpen(true);
+      }
+    })();
+  }, [multiplayerState, playMode, resultRewardKey]);
+
   const startMultiplayerHost = async () => {
     setFlowError(null);
     try {
       const created = await createMultiplayerSession({ gameType: "TICTACTOE", joinMethod: "QR_CODE", mode: "PVP_PRIVATE", ttlMinutes: 30 });
       setPlayMode("MULTI_HOST");
       setMultiplayerCreate(created);
+      setActiveSessionId(created.sessionId);
       setFlowStep("HOST");
-      const state = await getMultiplayerSession(created.sessionId);
-      setMultiplayerState(state);
     } catch {
       setFlowError("Não foi possível criar a partida multiplayer.");
     }
@@ -300,7 +356,7 @@ export default function TicTacToePage() {
     try {
       const state = await joinMultiplayerSession({ joinCode: code });
       setPlayMode("MULTI_GUEST");
-      setMultiplayerState(state);
+      setActiveSessionId(state.sessionId);
       setFlowStep("PLAY");
     } catch {
       setFlowError("Código inválido ou partida indisponível.");
@@ -400,26 +456,7 @@ export default function TicTacToePage() {
       if (!multiplayerState?.sessionId || !multiplayerState.canPlay || displayedBoard[idx] !== null || isFinished) return;
       void (async () => {
         try {
-          const myRole = multiplayerState.nextTurn;
-          const next = await postMultiplayerMove(multiplayerState.sessionId, idx);
-          setMultiplayerState(next);
-          if (next.winner && next.winner !== "DRAW") {
-            setConfettiTrigger((prev) => prev + 1);
-          }
-          if (next.winner === "X" || next.winner === "O" || next.winner === "DRAW") {
-            try {
-              const result: MatchResult =
-                next.winner === "DRAW" ? "DRAW" : myRole && next.winner === myRole ? "WIN" : "LOSS";
-              const base = XP_BY_RESULT[result];
-              const response = await registerGameSession({ gameType: "TICTACTOE", score: base * 10 });
-              setBaseXp(base);
-              setBonusXp(0);
-              setLastSession(response);
-              setRewardOpen(true);
-            } catch {
-              // silent fallback
-            }
-          }
+          await postMultiplayerMove(multiplayerState.sessionId, idx);
         } catch {
           setFlowError("Não foi possível registrar a jogada. Tente novamente.");
         }
@@ -459,13 +496,13 @@ export default function TicTacToePage() {
 
   const startNewMatch = () => {
     if (playMode !== "SOLO") {
-      if (multiplayerState?.sessionId) {
-        void closeMultiplayerSession(multiplayerState.sessionId, "restart").catch(() => null);
+      if (activeSessionId) {
+        void closeMultiplayerSession(activeSessionId, "restart").catch(() => null);
       }
       setPlayMode("SOLO");
       setFlowStep("MODE");
       setMultiplayerCreate(null);
-      setMultiplayerState(null);
+      setActiveSessionId(null);
       setJoinCodeInput("");
       setFlowError(null);
     }
@@ -500,6 +537,15 @@ export default function TicTacToePage() {
         onClose={() => setRewardOpen(false)}
       />
 
+      <MultiplayerLaunchModal
+        open={flowStep === "MODE"}
+        onSolo={() => {
+          setPlayMode("SOLO");
+          setFlowStep("PLAY");
+        }}
+        onMulti={() => setFlowStep("HOST")}
+      />
+
       <PageShell tone="child" width="content">
         <div className="mb-3">
           <Link
@@ -518,23 +564,6 @@ export default function TicTacToePage() {
             <CardTitle>Jogo da Velha</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {flowStep === "MODE" ? (
-              <div className="space-y-2 rounded-2xl border border-border bg-muted/40 p-3">
-                <p className="text-sm font-semibold text-foreground">Escolha o modo</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button type="button" onClick={() => { setPlayMode("SOLO"); setFlowStep("PLAY"); }}>
-                    1 jogador
-                  </Button>
-                  <Button type="button" variant="secondary" onClick={() => setFlowStep("HOST")}>
-                    2 jogadores
-                  </Button>
-                </div>
-                <Button type="button" variant="outline" onClick={() => setFlowStep("JOIN")}>
-                  Entrar com código
-                </Button>
-              </div>
-            ) : null}
-
             {flowStep === "HOST" ? (
               <div className="space-y-2 rounded-2xl border border-border bg-card p-3">
                 <p className="text-sm font-semibold text-foreground">Partida privada por QR/código</p>
@@ -544,16 +573,16 @@ export default function TicTacToePage() {
                   </Button>
                 ) : (
                   <>
-                    <p className="text-sm text-muted-foreground">Código: <span className="font-bold text-foreground">{multiplayerCreate.joinCode}</span></p>
-                    <p className="text-xs text-muted-foreground">Compartilhe o código ou link para o segundo jogador entrar.</p>
-                    <div className="flex gap-2">
-                      <Button type="button" variant="secondary" onClick={() => navigator.clipboard.writeText(multiplayerCreate.joinCode)}>
-                        Copiar código
-                      </Button>
-                      <Button type="button" onClick={async () => setMultiplayerState(await getMultiplayerSession(multiplayerCreate.sessionId))}>
-                        Atualizar
-                      </Button>
-                    </div>
+                    <MultiplayerWaitingCard
+                      joinCode={multiplayerCreate.joinCode}
+                      joinUrl={
+                        typeof window !== "undefined"
+                          ? `${window.location.origin}/join/${multiplayerCreate.joinToken}`
+                          : multiplayerCreate.joinUrl
+                      }
+                      waiting={multiplayerState?.status !== "IN_PROGRESS"}
+                      onRefresh={() => setActiveSessionId(multiplayerCreate.sessionId)}
+                    />
                     <Button type="button" variant="outline" onClick={() => setFlowStep("PLAY")}>
                       Ir para partida
                     </Button>
@@ -602,7 +631,7 @@ export default function TicTacToePage() {
               </div>
             ) : (
               <div className="inline-flex rounded-2xl border border-border bg-secondary/10 px-3 py-1.5 text-sm font-semibold text-secondary-foreground">
-                2 jogadores • convite privado
+                2 jogadores • {statusLabel} • {isRealtimeConnected ? "ao vivo" : "sincronizando"}
               </div>
             )}
             {flowError ? <p className="text-xs font-semibold text-destructive">{flowError}</p> : null}

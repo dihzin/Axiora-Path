@@ -5,10 +5,13 @@ from secrets import token_urlsafe
 from string import ascii_uppercase, digits
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import anyio
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from sqlalchemy import Select, select
 
 from app.api.deps import DBSession, get_current_tenant, get_current_user, require_role
+from app.core.security import decode_token
+from app.db.session import SessionLocal
 from app.models import AxionSignalType, GameMove, GameParticipant, GameSession, GameType, Membership, Tenant, User
 from app.schemas.games_multiplayer import (
     MultiplayerCloseRequest,
@@ -25,6 +28,39 @@ from app.services.axion_core_v2 import recordAxionSignal
 router = APIRouter(prefix="/api/games/multiplayer", tags=["games-multiplayer"])
 
 _JOIN_ALPHABET = "".join(ch for ch in (ascii_uppercase + digits) if ch not in {"0", "1", "I", "O"})
+
+
+class _MultiplayerWsHub:
+    def __init__(self) -> None:
+        self._connections: dict[str, set[WebSocket]] = {}
+
+    async def connect(self, session_id: str, websocket: WebSocket) -> None:
+        await websocket.accept()
+        self._connections.setdefault(session_id, set()).add(websocket)
+
+    def disconnect(self, session_id: str, websocket: WebSocket) -> None:
+        bucket = self._connections.get(session_id)
+        if not bucket:
+            return
+        bucket.discard(websocket)
+        if not bucket:
+            self._connections.pop(session_id, None)
+
+    async def broadcast_state(self, session_id: str, payload: dict[str, object]) -> None:
+        bucket = list(self._connections.get(session_id, set()))
+        if not bucket:
+            return
+        stale: list[WebSocket] = []
+        for ws in bucket:
+            try:
+                await ws.send_json(payload)
+            except Exception:
+                stale.append(ws)
+        for ws in stale:
+            self.disconnect(session_id, ws)
+
+
+_WS_HUB = _MultiplayerWsHub()
 
 
 def _now() -> datetime:
@@ -137,6 +173,15 @@ def _emit_axion_multiplayer_signals(*, db: DBSession, session: GameSession, stat
     metadata = dict(session.metadata_payload or {})
     metadata["axionSignalsEmitted"] = True
     session.metadata_payload = metadata
+
+
+def _publish_state_realtime(state: MultiplayerStateResponse) -> None:
+    payload = state.model_dump(by_alias=True)
+    try:
+        anyio.from_thread.run(_WS_HUB.broadcast_state, state.session_id, payload)
+    except Exception:
+        # WebSocket broadcast is best-effort. HTTP flow remains source of truth.
+        return
 
 
 def _session_query(*, tenant_id: int, session_id: str) -> Select[tuple[GameSession]]:
@@ -266,6 +311,7 @@ def join_multiplayer_session(
     moves = db.scalars(select(GameMove).where(GameMove.session_id == session.id).order_by(GameMove.move_index.asc())).all()
     state = _build_state(session=session, participants=participants, moves=moves, user_id=user.id)
     db.commit()
+    _publish_state_realtime(state)
     return state
 
 
@@ -356,6 +402,7 @@ def post_multiplayer_move(
     state = _build_state(session=session, participants=participants, moves=refreshed_moves, user_id=user.id)
     _emit_axion_multiplayer_signals(db=db, session=session, state=state)
     db.commit()
+    _publish_state_realtime(state)
     return state
 
 
@@ -383,4 +430,63 @@ def close_multiplayer_session(
     state = _build_state(session=session, participants=participants, moves=moves, user_id=user.id)
     _emit_axion_multiplayer_signals(db=db, session=session, state=state)
     db.commit()
+    _publish_state_realtime(state)
     return state
+
+
+@router.websocket("/ws/{session_id}")
+async def multiplayer_ws(
+    websocket: WebSocket,
+    session_id: str,
+    token: Annotated[str | None, Query()] = None,
+    tenant: Annotated[str | None, Query()] = None,
+) -> None:
+    if not token or not tenant:
+        await websocket.close(code=4401)
+        return
+    try:
+        payload = decode_token(token)
+        if payload.get("type") != "access":
+            await websocket.close(code=4401)
+            return
+        sub = payload.get("sub")
+        if not isinstance(sub, str) or not sub.isdigit():
+            await websocket.close(code=4401)
+            return
+        user_id = int(sub)
+    except Exception:
+        await websocket.close(code=4401)
+        return
+
+    db = SessionLocal()
+    try:
+        tenant_row = db.scalar(select(Tenant).where(Tenant.slug == tenant, Tenant.deleted_at.is_(None)))
+        if tenant_row is None:
+            await websocket.close(code=4404)
+            return
+        session = db.scalar(
+            select(GameSession).where(
+                GameSession.id == session_id,
+                GameSession.tenant_id == tenant_row.id,
+                GameSession.multiplayer_mode == "PVP_PRIVATE",
+            ),
+        )
+        if session is None:
+            await websocket.close(code=4404)
+            return
+        participants = db.scalars(select(GameParticipant).where(GameParticipant.session_id == session.id)).all()
+        if not any(int(item.user_id) == user_id for item in participants):
+            await websocket.close(code=4403)
+            return
+
+        await _WS_HUB.connect(session_id, websocket)
+        moves = db.scalars(select(GameMove).where(GameMove.session_id == session.id).order_by(GameMove.move_index.asc())).all()
+        initial_state = _build_state(session=session, participants=participants, moves=moves, user_id=user_id)
+        await websocket.send_json(initial_state.model_dump(by_alias=True))
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        return
+    finally:
+        _WS_HUB.disconnect(session_id, websocket)
+        db.close()
