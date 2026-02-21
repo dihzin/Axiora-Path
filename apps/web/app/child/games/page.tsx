@@ -34,11 +34,12 @@ type GameItem = {
   difficulty: "Fácil" | "Médio" | "Difícil";
   xpReward: number;
   icon: ComponentType<{ className?: string }>;
+  estimatedMinutes?: number;
 };
 
 const GAMES: GameItem[] = [
   {
-    id: "tic-tac-toe",
+    id: "local-tic-tac-toe",
     href: "/child/games/tictactoe",
     title: "Jogo da Velha",
     description: "Treine lógica, antecipação e tomada de decisão em partidas rápidas.",
@@ -46,9 +47,10 @@ const GAMES: GameItem[] = [
     difficulty: "Fácil",
     xpReward: 50,
     icon: Grid2x2,
+    estimatedMinutes: 3,
   },
   {
-    id: "word-search",
+    id: "local-word-search",
     href: "/child/games/wordsearch",
     title: "Caça-palavras",
     description: "Encontre palavras por tema em grades dinâmicas com seleção por arraste.",
@@ -56,9 +58,10 @@ const GAMES: GameItem[] = [
     difficulty: "Médio",
     xpReward: 130,
     icon: Search,
+    estimatedMinutes: 4,
   },
   {
-    id: "finance-sim",
+    id: "local-finance-sim",
     href: "/child/games/finance-sim",
     title: "Mesada Inteligente",
     description: "Simule decisões financeiras em 5 rodadas com eventos surpresa.",
@@ -66,6 +69,7 @@ const GAMES: GameItem[] = [
     difficulty: "Médio",
     xpReward: 80,
     icon: PiggyBank,
+    estimatedMinutes: 5,
   },
 ];
 
@@ -92,6 +96,13 @@ function iconForGame(item: GameCatalogItem): ComponentType<{ className?: string 
 }
 
 function resolveCatalogRoute(item: GameCatalogItem): string | null {
+  const templateId = item.templateId.toLowerCase();
+  if (templateId.includes("capitais") || templateId.includes("memory")) return "/child/games/memory";
+  if (templateId.includes("soma") || templateId.includes("quiz")) return "/child/games/quiz";
+  if (templateId.includes("troco") || templateId.includes("finance")) return "/child/games/finance-sim";
+  if (templateId.includes("palavra") || templateId.includes("drag")) return "/child/games/wordsearch";
+  if (templateId.includes("tictactoe") || templateId.includes("strategy")) return "/child/games/tictactoe";
+
   const title = item.title.trim().toLowerCase();
   if (title === "corrida da soma") return "/child/games/quiz";
   if (title === "mapa de capitais") return "/child/games/memory";
@@ -112,6 +123,13 @@ function buildPlayHref(game: GameItem): string {
   if (!game.templateId) return game.href;
   const separator = game.href.includes("?") ? "&" : "?";
   return `${game.href}${separator}templateId=${encodeURIComponent(game.templateId)}`;
+}
+
+function estimatedMinutesForGame(game: Pick<GameItem, "difficulty" | "estimatedMinutes">): number {
+  if (typeof game.estimatedMinutes === "number" && game.estimatedMinutes > 0) return game.estimatedMinutes;
+  if (game.difficulty === "Fácil") return 3;
+  if (game.difficulty === "Difícil") return 6;
+  return 4;
 }
 
 function statusLabel(status?: GameItem["status"]): string {
@@ -237,11 +255,21 @@ export default function ChildGamesPage() {
             difficulty: difficultyLabel(item.difficulty),
             xpReward: item.xpReward,
             icon: iconForGame(item),
+            estimatedMinutes: item.difficulty.toUpperCase() === "HARD" ? 6 : item.difficulty.toUpperCase() === "EASY" ? 3 : 4,
           });
           return acc;
         }, []);
-        setCatalogGames(mapped);
-        setCatalogState(mapped.length > 0 ? "remote" : "fallback");
+        if (mapped.length === 0) {
+          setCatalogGames([]);
+          setCatalogState("fallback");
+          return;
+        }
+        const existingTitles = new Set(mapped.map((game) => game.title.toLowerCase()));
+        const enriched = mapped.length < 6
+          ? [...mapped, ...GAMES.filter((game) => !existingTitles.has(game.title.toLowerCase()))]
+          : mapped;
+        setCatalogGames(enriched);
+        setCatalogState("remote");
       })
       .catch(() => {
         if (!active) return;
@@ -335,7 +363,7 @@ export default function ChildGamesPage() {
       </section>
 
       <section className="space-y-3 pb-24">
-        {catalogState === "loading" ? (
+        {catalogState === "loading" && games.length === 0 ? (
           <article className="rounded-2xl border border-border bg-white/85 p-3 text-xs text-muted-foreground">
             Carregando catálogo de jogos...
           </article>
@@ -368,6 +396,9 @@ export default function ChildGamesPage() {
                       </span>
                       <span className="truncate text-[11px] font-medium text-foreground/80">{game.skill}</span>
                     </div>
+                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Sessão de ~{estimatedMinutesForGame(game)} min
+                    </p>
                     <Button
                       className="games-play-button mt-3 w-full"
                       size="sm"
