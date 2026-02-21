@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import DBSession, get_current_tenant, get_current_user, require_role
-from app.models import Lesson, Membership, QuestionResult, SubjectAgeGroup, Tenant, Unit, User
+from app.models import Lesson, Membership, QuestionResult, Tenant, Unit, User
 from app.schemas.learning import (
     LearningAnswerRequest,
     LearningAnswerResponse,
@@ -66,8 +66,7 @@ def get_learning_path(
         )
     except ValueError as exc:
         message = str(exc).strip().lower()
-        # Produção resiliente: não quebrar a tela quando a trilha ainda não foi semeada
-        # ou quando um subjectId inválido foi enviado.
+        # Resiliente para subjectId inválido, sem mascarar ausência real de currículo.
         if "subject not found" in message or "no subject available" in message:
             try:
                 snapshot = build_learning_path(
@@ -75,16 +74,14 @@ def get_learning_path(
                     user_id=user.id,
                     subject_id=None,
                 )
-            except ValueError:
-                return LearningPathResponse(
-                    subjectId=subject_id or 0,
-                    subjectName="Aprender",
-                    ageGroup=SubjectAgeGroup.AGE_9_12.value,
-                    dueReviewsCount=0,
-                    streakDays=0,
-                    masteryAverage=0.0,
-                    units=[],
-                )
+            except ValueError as fallback_exc:
+                fallback_message = str(fallback_exc).strip().lower()
+                if "no subject available" in fallback_message:
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail="Trilha de aprendizado ainda não configurada. Execute os seeds de currículo e eventos.",
+                    ) from fallback_exc
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(fallback_exc)) from fallback_exc
         else:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except SQLAlchemyError as exc:

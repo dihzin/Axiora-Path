@@ -99,6 +99,9 @@ function normalizePathErrorMessage(message: string): string {
   if (!value) return "Não foi possível carregar a trilha.";
   if (value.includes("no subject available")) return "Nenhuma matéria disponível para este perfil no momento.";
   if (value.includes("subject not available")) return "Nenhuma matéria disponível para este perfil no momento.";
+  if (value.includes("trilha de aprendizado ainda não configurada")) {
+    return "A trilha ainda está sendo preparada para este perfil. Tente novamente em instantes.";
+  }
   return message;
 }
 
