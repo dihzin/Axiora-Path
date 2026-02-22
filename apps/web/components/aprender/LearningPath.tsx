@@ -1,9 +1,10 @@
 "use client";
 
-import { Flag, Gift, Sparkles, Swords, Zap } from "lucide-react";
+import { Flag, Gift, Sparkles, Star, Swords, Trophy, Zap } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { LessonBadge } from "@/components/aprender/LessonBadge";
+import { PathAmbientLayer } from "@/components/aprender/PathAmbientLayer";
 import { PathMascot } from "@/components/aprender/PathMascot";
 import { PathSvg } from "@/components/aprender/PathSvg";
 import { UnitCard } from "@/components/aprender/UnitCard";
@@ -17,7 +18,7 @@ type Entry = {
 };
 
 type Point = { x: number; y: number };
-const UNIT_CHAPTER_GAP = 280;
+const UNIT_CHAPTER_GAP = 340;
 const CARD_HEIGHT_ESTIMATE = 212;
 const CARD_TO_FIRST_NODE_GAP = 36;
 const PREV_NODE_TO_CARD_GAP = 26;
@@ -37,6 +38,10 @@ function checkpointGlyph(seedIndex: number) {
   if (variant === 0) return <Flag className="h-5 w-5" aria-hidden />;
   if (variant === 1) return <Gift className="h-5 w-5" aria-hidden />;
   return <Sparkles className="h-5 w-5" aria-hidden />;
+}
+
+function milestoneGlyph(seedIndex: number) {
+  return seedIndex % 2 === 0 ? <Star className="h-5 w-5" aria-hidden /> : <Trophy className="h-5 w-5" aria-hidden />;
 }
 
 function lessonStatus(lesson: LearningPathLessonNode, currentLessonId: number | null): "completed" | "current" | "available" | "locked" {
@@ -142,6 +147,8 @@ export function LearningPath({ units, onLessonPress, onEventPress, celebrateLess
     return list;
   }, [units]);
 
+  const unitSeed = useMemo(() => units.reduce((acc, unit, index) => acc + unit.id * (index + 3) + unit.order * 17, 7919), [units]);
+
   const progressRatio = useMemo(() => {
     if (entries.length <= 1) return 0;
     let sequentialProgressIndex = -1;
@@ -178,12 +185,26 @@ export function LearningPath({ units, onLessonPress, onEventPress, celebrateLess
     return map;
   }, [units]);
 
+  const milestoneLessons = useMemo(() => {
+    const map = new Map<number, number>();
+    units.forEach((unit, unitIndex) => {
+      const lessons = unit.nodes.flatMap((node) => (node.lesson ? [node.lesson] : []));
+      const last = lessons[lessons.length - 1];
+      if (last) {
+        map.set(last.id, unitIndex);
+      }
+    });
+    return map;
+  }, [units]);
+
   const measureRef = useRef<HTMLDivElement | null>(null);
   const pathRef = useRef<SVGPathElement | null>(null);
   const hasAutoScrolledRef = useRef(false);
   const userInteractedRef = useRef(false);
   const [width, setWidth] = useState(390);
   const [pathPoints, setPathPoints] = useState<Point[]>([]);
+  const [previewRatio, setPreviewRatio] = useState<number | null>(null);
+  const [pulseLessonId, setPulseLessonId] = useState<number | null>(null);
 
   useLayoutEffect(() => {
     const node = measureRef.current;
@@ -201,18 +222,26 @@ export function LearningPath({ units, onLessonPress, onEventPress, celebrateLess
     const freq = 0.78 + seeded(entries.length || 1, 1, 41.7) * 0.14;
     const phase = seeded(entries.length || 1, 0, 13.2) * Math.PI * 2;
     const amplitude = 100 + Math.round(seeded(entries.length || 1, 2, 19.5) * 50);
+    const unitAmplitudeMultiplier = new Map<number, number>();
+    units.forEach((unit, unitIndex) => {
+      const swing = 0.92 + seeded(unitSeed + unit.id, unitIndex + 1, 55.1) * 0.16;
+      unitAmplitudeMultiplier.set(unit.id, swing);
+    });
     let y = 40;
     return entries.map((entry) => {
       if (entry.globalIndex > 0) {
         const prev = entries[entry.globalIndex - 1];
-        if (prev && prev.unitId !== entry.unitId) y += UNIT_CHAPTER_GAP;
+        if (prev && prev.unitId !== entry.unitId) {
+          y += UNIT_CHAPTER_GAP + Math.round(seeded(entry.globalIndex, entry.unitIndex, 95.7) * 34);
+        }
       }
       const step = 120 + Math.round(seeded(entry.globalIndex, entry.unitIndex, 149.4) * 30); // 120..150
       y += step;
-      const xBase = xCenter + Math.sin(entry.globalIndex * freq + phase) * amplitude;
+      const amp = amplitude * (unitAmplitudeMultiplier.get(entry.unitId) ?? 1);
+      const xBase = xCenter + Math.sin(entry.globalIndex * freq + phase) * amp;
       return { x: xBase, y };
     });
-  }, [entries, width]);
+  }, [entries, unitSeed, units, width]);
 
   const unitRanges = useMemo(() => {
     const ranges: Array<{ unitId: number; unitIndex: number; start: number; end: number }> = [];
@@ -304,6 +333,60 @@ export function LearningPath({ units, onLessonPress, onEventPress, celebrateLess
     return map;
   }, [basePoints, entries, pathPoints, units, width]);
 
+  useEffect(() => {
+    if (!celebrateLessonId || entries.length <= 1) return;
+    const completedIndex = entries.findIndex((entry) => entry.node.lesson?.id === celebrateLessonId);
+    if (completedIndex < 0) return;
+
+    let nextNodeIndex: number | null = null;
+    let nextLessonId: number | null = null;
+    for (let index = completedIndex + 1; index < entries.length; index += 1) {
+      const lesson = entries[index].node.lesson;
+      if (!lesson) continue;
+      nextNodeIndex = index;
+      if (lesson.unlocked && !lesson.completed) {
+        nextLessonId = lesson.id;
+      }
+      break;
+    }
+
+    if (nextNodeIndex !== null) {
+      setPreviewRatio(nextNodeIndex / (entries.length - 1));
+    }
+    if (nextLessonId !== null) {
+      setPulseLessonId(nextLessonId);
+    }
+
+    const clearTimer = window.setTimeout(() => {
+      setPreviewRatio(null);
+      setPulseLessonId(null);
+    }, 900);
+
+    return () => window.clearTimeout(clearTimer);
+  }, [celebrateLessonId, entries]);
+
+  const chapterBlocks = useMemo(() => {
+    return units
+      .map((unit, unitIndex) => {
+        const items = unitMap.get(unit.id) ?? [];
+        if (items.length === 0) return null;
+        const firstY = Math.min(...items.map((item) => item.point.y));
+        const lastY = Math.max(...items.map((item) => item.point.y));
+        const titleY = Math.max(10, firstY - 96);
+        const bandTop = Math.max(0, firstY - 120);
+        const bandHeight = Math.max(180, lastY - firstY + 180);
+        return {
+          id: unit.id,
+          title: `UNIDADE ${unit.order}`,
+          titleY,
+          bandTop,
+          bandHeight,
+          tone: unitIndex % 2 === 0 ? ("soft" as const) : ("alt" as const),
+        };
+      })
+      .filter((value): value is NonNullable<typeof value> => Boolean(value));
+  }, [unitMap, units]);
+
   const activeNodeIndex = useMemo(() => {
     const currentIndex = entries.findIndex((entry) => entry.node.lesson?.id === currentLessonId);
     if (currentIndex >= 0) return currentIndex;
@@ -350,23 +433,22 @@ export function LearningPath({ units, onLessonPress, onEventPress, celebrateLess
 
   const mascotAnchor = useMemo(() => {
     if (entries.length === 0) return { x: 16, y: 16 };
-    const activeIndex = entries.findIndex((entry) => entry.node.lesson?.id === currentLessonId);
-    const nextCheckpointIndex = entries.findIndex((entry) => {
-      const lesson = entry.node.lesson;
-      return Boolean(lesson && checkpointLessons.has(lesson.id) && !lesson.completed);
-    });
-    const fallbackIndex = entries.findIndex((entry) => Boolean(entry.node.lesson && !entry.node.lesson.completed));
-    const anchorIndex = activeIndex >= 0 ? activeIndex : nextCheckpointIndex >= 0 ? nextCheckpointIndex : fallbackIndex >= 0 ? fallbackIndex : 0;
+    const anchorIndex = activeNodeIndex >= 0 ? activeNodeIndex : 0;
     const point = pathPoints[anchorIndex] ?? basePoints[anchorIndex] ?? { x: width / 2, y: 80 };
     return {
       x: clamp(point.x + 54, 10, width - 128),
       y: clamp(point.y - 28, 8, canvasHeight - 56),
     };
-  }, [basePoints, canvasHeight, checkpointLessons, currentLessonId, entries, pathPoints, width]);
+  }, [activeNodeIndex, basePoints, canvasHeight, entries.length, pathPoints, width]);
 
   return (
     <section ref={measureRef} className="space-y-[var(--path-space-3)]" aria-label="Trilha de aprendizado">
       <div className="relative bg-transparent" style={{ height: `${canvasHeight}px` }}>
+        <PathAmbientLayer
+          width={width}
+          height={canvasHeight}
+          chapterBands={chapterBlocks.map((chapter) => ({ top: chapter.bandTop, height: chapter.bandHeight, tone: chapter.tone }))}
+        />
         <PathSvg
           samplePathRef={pathRef}
           samplePathD={enhancedPathD}
@@ -374,7 +456,19 @@ export function LearningPath({ units, onLessonPress, onEventPress, celebrateLess
           width={width}
           height={canvasHeight}
           progressRatio={progressRatio}
+          previewRatio={previewRatio}
         />
+
+        {chapterBlocks.map((chapter) => (
+          <div
+            key={`chapter-title-${chapter.id}`}
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 z-0 -translate-x-1/2 select-none text-center font-black uppercase tracking-[0.18em] text-slate-700/20"
+            style={{ top: `${chapter.titleY}px`, fontSize: "clamp(20px, 6.2vw, 40px)" }}
+          >
+            {chapter.title}
+          </div>
+        ))}
 
         {units.map((unit, unitIndex) => {
           const items = unitMap.get(unit.id) ?? [];
@@ -414,10 +508,11 @@ export function LearningPath({ units, onLessonPress, onEventPress, celebrateLess
 
                 if (node.lesson) {
                   const status = lessonStatus(node.lesson, currentLessonId);
+                  const isMilestone = milestoneLessons.has(node.lesson.id);
                   const isCheckpoint = checkpointLessons.has(node.lesson.id);
                   const size: "hero" | "default" | "small" | "checkpoint" = isCurrent
                     ? "hero"
-                    : isCheckpoint
+                    : isMilestone || isCheckpoint
                       ? "checkpoint"
                       : !node.lesson.unlocked || isEdge
                         ? "small"
@@ -437,6 +532,9 @@ export function LearningPath({ units, onLessonPress, onEventPress, celebrateLess
                         size={size}
                         checkpoint={isCheckpoint}
                         checkpointIcon={isCheckpoint ? checkpointGlyph(checkpointLessons.get(node.lesson.id) ?? entry.globalIndex) : undefined}
+                        milestone={isMilestone}
+                        milestoneIcon={isMilestone ? milestoneGlyph(milestoneLessons.get(node.lesson.id) ?? entry.globalIndex) : undefined}
+                        pulseOnce={pulseLessonId === node.lesson.id}
                         startLabel={isCurrent ? "Começar" : null}
                         onClick={() => onLessonPress(node.lesson!)}
                       />

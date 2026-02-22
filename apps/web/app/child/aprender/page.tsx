@@ -24,12 +24,7 @@ import {
 
 const SUBJECT_PREF_KEY = "axiora_path_subject";
 
-const AXION_LINES = ["Vai nessa!", "Bom ritmo!", "So mais um!", "Bora!", "Boa jogada!"] as const;
-const AXION_DEFAULT_LINE = "So mais um!";
-
-function randomLine(): string {
-  return AXION_LINES[Math.floor(Math.random() * AXION_LINES.length)] ?? AXION_LINES[0];
-}
+const AXION_DEFAULT_LINE = "Bora aprender?";
 
 function getStoredSubjectId(): number | null {
   if (typeof window === "undefined") return null;
@@ -63,10 +58,14 @@ export default function LearningPathPage() {
   const mascotTimerRef = useRef<number | null>(null);
   const hasShownArrivalRef = useRef(false);
   const hasShownStreakRiskRef = useRef(false);
+  const lastMascotAtRef = useRef(0);
 
   const currentSubjectId = selectedSubjectId ?? path?.subjectId ?? null;
 
-  const showMascot = (line: string, duration = 2200) => {
+  const showMascot = (line: string) => {
+    const now = Date.now();
+    if (now - lastMascotAtRef.current < 2600) return;
+    lastMascotAtRef.current = now;
     if (mascotTimerRef.current) {
       window.clearTimeout(mascotTimerRef.current);
       mascotTimerRef.current = null;
@@ -76,7 +75,7 @@ export default function LearningPathPage() {
     mascotTimerRef.current = window.setTimeout(() => {
       setMascotVisible(false);
       mascotTimerRef.current = null;
-    }, duration);
+    }, 3000);
   };
 
   const loadPath = async (subjectId?: number) => {
@@ -113,10 +112,6 @@ export default function LearningPathPage() {
   }, []);
 
   useEffect(() => {
-    setMascotLine(randomLine());
-  }, []);
-
-  useEffect(() => {
     return () => {
       if (mascotTimerRef.current) {
         window.clearTimeout(mascotTimerRef.current);
@@ -142,7 +137,7 @@ export default function LearningPathPage() {
     if (!Number.isFinite(doneId) || doneId <= 0) return;
 
     setCelebrateLessonId(doneId);
-    showMascot("Boa! Siga firme!", 2400);
+    showMascot("Boa! Proxima.");
     const celebrationTimer = window.setTimeout(() => setCelebrateLessonId(null), 1200);
     return () => {
       window.clearTimeout(celebrationTimer);
@@ -152,14 +147,14 @@ export default function LearningPathPage() {
   useEffect(() => {
     if (loading || !path || hasShownArrivalRef.current) return;
     hasShownArrivalRef.current = true;
-    showMascot("Pronto para avancar?", 2200);
+    showMascot("Bora aprender?");
   }, [loading, path]);
 
   useEffect(() => {
     if (loading || !path || !hasShownArrivalRef.current || hasShownStreakRiskRef.current) return;
     if ((path.streakDays ?? 0) > 1) return;
     hasShownStreakRiskRef.current = true;
-    const timer = window.setTimeout(() => showMascot("Nao perca sua sequencia", 2100), 2600);
+    const timer = window.setTimeout(() => showMascot("Proteja sua sequencia."), 2600);
     return () => window.clearTimeout(timer);
   }, [loading, path]);
 
@@ -179,7 +174,6 @@ export default function LearningPathPage() {
   const onOpenEvent = (event: LearningPathEventNode) => {
     setSelectedEvent(event);
     setEventResult(null);
-    showMascot("Evento liberado. Bora?", 1800);
   };
 
   const onStartEvent = async () => {
@@ -188,7 +182,6 @@ export default function LearningPathPage() {
       setEventLoading("start");
       await startLearningPathEvent(selectedEvent.id);
       await loadPath(currentSubjectId ?? undefined);
-      showMascot("Boa sorte no desafio!", 2000);
     } finally {
       setEventLoading(null);
     }
@@ -204,7 +197,6 @@ export default function LearningPathPage() {
       });
       setEventResult(result);
       await loadPath(currentSubjectId ?? undefined);
-      showMascot(result.passed ? "Evento concluido! Excelente!" : "Quase la. Tente de novo.", 2200);
     } finally {
       setEventLoading(null);
     }
@@ -407,6 +399,44 @@ export default function LearningPathPage() {
             opacity: 0;
           }
         }
+        @keyframes path-next-badge-pulse {
+          0% {
+            transform: scale(1);
+            filter: brightness(1);
+          }
+          45% {
+            transform: scale(1.04);
+            filter: brightness(1.06);
+          }
+          100% {
+            transform: scale(1);
+            filter: brightness(1);
+          }
+        }
+        @keyframes path-axion-idle {
+          0% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-1px);
+          }
+          100% {
+            transform: translateY(0);
+          }
+        }
+        @keyframes path-milestone-radial {
+          0% {
+            transform: scale(0.92);
+            opacity: 0;
+          }
+          35% {
+            opacity: 0.9;
+          }
+          100% {
+            transform: scale(1.08);
+            opacity: 0;
+          }
+        }
         .path-badge-idle {
           animation: path-badge-idle-float 2.6s ease-in-out infinite;
         }
@@ -428,6 +458,15 @@ export default function LearningPathPage() {
         .path-checkpoint-confetti {
           animation: path-checkpoint-confetti 680ms ease-out;
         }
+        .path-next-badge-pulse {
+          animation: path-next-badge-pulse 420ms cubic-bezier(0.22, 0.61, 0.36, 1) 1;
+        }
+        .path-milestone-radial-ring {
+          animation: path-milestone-radial 520ms ease-out;
+        }
+        .path-axion-idle {
+          animation: path-axion-idle 2.8s ease-in-out infinite;
+        }
         .path-badge-button:active .path-badge-base {
           opacity: 0.15;
         }
@@ -440,7 +479,10 @@ export default function LearningPathPage() {
           .path-hero-ring-breathe,
           .path-badge-active-idle,
           .path-checkpoint-shine > span,
-          .path-checkpoint-confetti {
+          .path-checkpoint-confetti,
+          .path-next-badge-pulse,
+          .path-milestone-radial-ring,
+          .path-axion-idle {
             animation: none;
           }
         }

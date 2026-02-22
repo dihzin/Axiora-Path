@@ -20,6 +20,9 @@ type LessonBadgeProps = {
   startLabel?: string | null;
   checkpoint?: boolean;
   checkpointIcon?: ReactNode;
+  milestone?: boolean;
+  milestoneIcon?: ReactNode;
+  pulseOnce?: boolean;
 };
 
 export function LessonBadge({
@@ -35,6 +38,9 @@ export function LessonBadge({
   startLabel = null,
   checkpoint = false,
   checkpointIcon,
+  milestone = false,
+  milestoneIcon,
+  pulseOnce = false,
 }: LessonBadgeProps) {
   const baseShade = status === "current" ? "bg-[#D06748]" : status === "completed" ? "bg-[#4AAE9D]" : status === "available" ? "bg-[#C6CED8]" : "bg-[#9AA3AF]";
   const surfaceSolid =
@@ -76,10 +82,12 @@ export function LessonBadge({
         status === "locked" &&
           "border-[#9FA8B5] text-white shadow-[0_12px_0_rgba(144,153,166,0.98),0_6px_14px_rgba(0,0,0,0.18)]",
         checkpoint ? "border-[2.5px]" : "",
+        milestone ? "border-[#F2C94C] ring-2 ring-[#F2C94C]/25" : "",
         disabled ? (status === "locked" ? "cursor-not-allowed opacity-100" : "cursor-not-allowed opacity-90") : "hover:brightness-105",
         status === "current" ? "path-badge-active-idle" : "",
         surfaceSolid,
         celebrate ? "path-completed-pop" : "",
+        pulseOnce ? "path-next-badge-pulse" : "",
       )}
     >
       {status === "current" ? (
@@ -120,12 +128,18 @@ export function LessonBadge({
       ) : null}
       <span className="sr-only">{label}</span>
       <span aria-hidden className="inline-flex items-center justify-center">
-        {status === "completed" ? (checkpointIcon ?? <Check className={iconSize} aria-hidden />) : null}
+        {status === "completed" ? (milestone && milestoneIcon ? milestoneIcon : checkpointIcon ?? <Check className={iconSize} aria-hidden />) : null}
         {status === "locked" ? <span className="h-3.5 w-3.5 rounded-full bg-white/55" aria-hidden /> : null}
-        {status === "current" ? (checkpoint && checkpointIcon ? checkpointIcon : <Star className={iconSize} aria-hidden />) : null}
-        {status === "available" ? (checkpoint && checkpointIcon ? checkpointIcon : icon ?? <span className="text-sm font-black">{label}</span>) : null}
+        {status === "current" ? (milestone && milestoneIcon ? milestoneIcon : checkpoint && checkpointIcon ? checkpointIcon : <Star className={iconSize} aria-hidden />) : null}
+        {status === "available" ? (milestone && milestoneIcon ? milestoneIcon : checkpoint && checkpointIcon ? checkpointIcon : icon ?? <span className="text-sm font-black">{label}</span>) : null}
       </span>
-      {checkpoint && status === "completed" ? (
+      {milestone && status === "completed" ? (
+        <span aria-hidden className="path-milestone-radial pointer-events-none absolute inset-0">
+          <span className="path-milestone-radial-ring absolute inset-[-10px] rounded-full border-2 border-[#F2C94C]/35" />
+          <span className="path-milestone-radial-ring absolute inset-[-16px] rounded-full border border-[#F2C94C]/28 [animation-delay:90ms]" />
+        </span>
+      ) : null}
+      {checkpoint && !milestone && status === "completed" ? (
         <span aria-hidden className="pointer-events-none absolute inset-0">
           <span className="path-checkpoint-confetti absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-[22px] -translate-y-[26px] rounded-full bg-[#FFD166]" />
           <span className="path-checkpoint-confetti absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-[2px] -translate-y-[30px] rounded-full bg-[#FF7A59]" />
