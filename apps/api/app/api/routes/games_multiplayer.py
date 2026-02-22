@@ -10,13 +10,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSock
 from sqlalchemy import Select, select
 
 from app.api.deps import DBSession, get_current_tenant, get_current_user, require_role
-from app.core.security import decode_token
+from app.core.security import create_access_token, decode_token, hash_password
 from app.db.session import SessionLocal
-from app.models import AxionSignalType, GameMove, GameParticipant, GameSession, Membership, Tenant, User
+from app.models import AxionSignalType, GameMove, GameParticipant, GameSession, Membership, MembershipRole, Tenant, User
 from app.schemas.games_multiplayer import (
     MultiplayerCloseRequest,
     MultiplayerCreateRequest,
     MultiplayerCreateResponse,
+    MultiplayerGuestJoinRequest,
+    MultiplayerGuestJoinResponse,
     MultiplayerJoinRequest,
     MultiplayerMoveRequest,
     MultiplayerStateResponse,
@@ -27,6 +29,7 @@ from app.services.axion_core_v2 import recordAxionSignal
 router = APIRouter(prefix="/api/games/multiplayer", tags=["games-multiplayer"])
 
 _JOIN_ALPHABET = "".join(ch for ch in (ascii_uppercase + digits) if ch not in {"0", "1", "I", "O"})
+_SAFE_AVATARS = {"😀", "🤖", "🦊", "🐼", "🦁", "🐙"}
 
 
 class _MultiplayerWsHub:
@@ -70,6 +73,13 @@ def _generate_join_code(length: int = 6) -> str:
     import random
 
     return "".join(random.choice(_JOIN_ALPHABET) for _ in range(length))
+
+
+def _sanitize_guest_name(value: str) -> str:
+    cleaned = " ".join(value.strip().split())
+    if len(cleaned) < 2:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Nome do jogador muito curto")
+    return cleaned[:24]
 
 
 def _participant_role_map(participants: list[GameParticipant]) -> dict[int, str]:
@@ -266,6 +276,102 @@ def join_multiplayer_session(
     db.commit()
     _publish_state_realtime(state)
     return state
+
+
+@router.post("/session/join/public", response_model=MultiplayerGuestJoinResponse)
+def join_multiplayer_session_public(
+    payload: MultiplayerGuestJoinRequest,
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+) -> MultiplayerGuestJoinResponse:
+    code = payload.join_code.strip().upper() if payload.join_code else None
+    token = payload.join_token.strip() if payload.join_token else None
+    if not code and not token:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="joinCode or joinToken is required")
+
+    filters = [
+        GameSession.tenant_id == tenant.id,
+        GameSession.multiplayer_mode.in_(["PVP_PRIVATE", "COOP_PRIVATE"]),
+        GameSession.expires_at > _now(),
+    ]
+    if code:
+        filters.append(GameSession.join_code == code)
+    if token:
+        filters.append(GameSession.join_token == token)
+    session = db.scalar(select(GameSession).where(*filters))
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Multiplayer session not found")
+    if session.session_status in {"FINISHED", "CANCELLED"}:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Session already closed")
+
+    participants = db.scalars(
+        select(GameParticipant).where(GameParticipant.session_id == session.id).order_by(GameParticipant.joined_at.asc()),
+    ).all()
+    if len(participants) >= 2:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Session is full")
+
+    adapter = get_multiplayer_engine(session.game_type)
+    if adapter is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unsupported multiplayer game")
+
+    guest_name = _sanitize_guest_name(payload.display_name)
+    guest_avatar = payload.avatar if payload.avatar in _SAFE_AVATARS else "😀"
+    guest_suffix = token_urlsafe(8).replace("-", "").replace("_", "").lower()[:10]
+    guest_email = f"guest.{session.id[:8]}.{guest_suffix}@axiora.local"
+
+    guest_user = User(
+        email=guest_email,
+        name=guest_name,
+        password_hash=hash_password(token_urlsafe(20)),
+    )
+    db.add(guest_user)
+    db.flush()
+
+    db.add(
+        Membership(
+            tenant_id=tenant.id,
+            user_id=guest_user.id,
+            role=MembershipRole.CHILD,
+        )
+    )
+
+    used_roles = {str(item.player_role) for item in participants}
+    available_role = next((role for role in adapter.supported_roles if role not in used_roles), adapter.supported_roles[1])
+    db.add(
+        GameParticipant(
+            session_id=session.id,
+            user_id=guest_user.id,
+            is_host=False,
+            player_role=available_role,
+        ),
+    )
+
+    session.session_status = "IN_PROGRESS"
+    metadata = dict(session.metadata_payload or {})
+    metadata["engineState"] = adapter.join_session(metadata.get("engineState") or {}, len(participants) + 1)
+    metadata["guestProfiles"] = {
+        **dict((metadata.get("guestProfiles") or {})),
+        str(guest_user.id): {"name": guest_name, "avatar": guest_avatar},
+    }
+    session.metadata_payload = metadata
+    db.flush()
+
+    participants = db.scalars(
+        select(GameParticipant).where(GameParticipant.session_id == session.id).order_by(GameParticipant.joined_at.asc()),
+    ).all()
+    moves = db.scalars(select(GameMove).where(GameMove.session_id == session.id).order_by(GameMove.move_index.asc())).all()
+    state = _build_state(session=session, participants=participants, moves=moves, user_id=guest_user.id)
+    access_token = create_access_token(
+        user_id=guest_user.id,
+        tenant_id=tenant.id,
+        role=MembershipRole.CHILD.value,
+    )
+    db.commit()
+    _publish_state_realtime(state)
+    return MultiplayerGuestJoinResponse(
+        accessToken=access_token,
+        state=state,
+    )
 
 
 @router.get("/session/{session_id}", response_model=MultiplayerStateResponse)

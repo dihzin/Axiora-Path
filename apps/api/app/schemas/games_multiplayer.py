@@ -41,6 +41,15 @@ class MultiplayerJoinRequest(BaseModel):
     join_token: str | None = Field(default=None, alias="joinToken")
 
 
+class MultiplayerGuestJoinRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    join_code: str | None = Field(default=None, alias="joinCode")
+    join_token: str | None = Field(default=None, alias="joinToken")
+    display_name: str = Field(alias="displayName", min_length=2, max_length=24)
+    avatar: str | None = Field(default=None, max_length=8)
+
+
 class MultiplayerMoveRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
@@ -79,6 +88,13 @@ class MultiplayerStateResponse(BaseModel):
     can_play: bool = Field(alias="canPlay")
     expires_at: datetime | None = Field(default=None, alias="expiresAt")
     engine_state: dict[str, Any] = Field(default_factory=dict, alias="engineState")
+
+
+class MultiplayerGuestJoinResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    access_token: str = Field(alias="accessToken")
+    state: MultiplayerStateResponse
 
 
 class MultiplayerCloseRequest(BaseModel):

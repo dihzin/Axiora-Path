@@ -1403,6 +1403,11 @@ export type MultiplayerStateResponse = {
   engineState: Record<string, unknown>;
 };
 
+export type MultiplayerGuestJoinResponse = {
+  accessToken: string;
+  state: MultiplayerStateResponse;
+};
+
 export async function createMultiplayerSession(payload?: {
   gameType?: "TICTACTOE" | "QUIZ_BATTLE" | "MATH_CHALLENGE" | "PUZZLE_COOP" | "FINANCE_BATTLE";
   mode?: "PVP_PRIVATE" | "COOP_PRIVATE";
@@ -1426,6 +1431,20 @@ export async function joinMultiplayerSession(payload: {
     method: "POST",
     body: payload,
     requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function joinMultiplayerSessionAsGuest(payload: {
+  joinCode?: string;
+  joinToken?: string;
+  displayName: string;
+  avatar?: string;
+}): Promise<MultiplayerGuestJoinResponse> {
+  return apiRequest<MultiplayerGuestJoinResponse>("/api/games/multiplayer/session/join/public", {
+    method: "POST",
+    body: payload,
+    requireAuth: false,
     includeTenant: true,
   });
 }

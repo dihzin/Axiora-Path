@@ -8,8 +8,8 @@ import { useMemo, useState } from "react";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ApiError, joinMultiplayerSession } from "@/lib/api/client";
-import { getAccessToken, getTenantSlug, setTenantSlug } from "@/lib/api/session";
+import { ApiError, joinMultiplayerSession, joinMultiplayerSessionAsGuest } from "@/lib/api/client";
+import { getAccessToken, getTenantSlug, setAccessToken, setTenantSlug } from "@/lib/api/session";
 
 const AVATARS = ["😀", "🤖", "🦊", "🐼", "🦁", "🐙"];
 
@@ -38,17 +38,21 @@ export default function JoinGamePage() {
     if (tenantFromInvite && tenantFromInvite !== currentTenant) {
       setTenantSlug(tenantFromInvite);
     }
-    const accessToken = getAccessToken();
-    if (!accessToken) {
-      const next = encodeURIComponent(window.location.pathname + window.location.search);
-      const tenantQuery = tenantFromInvite ? `?tenant=${encodeURIComponent(tenantFromInvite)}&next=${next}` : `?next=${next}`;
-      router.push(`/login${tenantQuery}`);
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
-      const state = await joinMultiplayerSession({ joinToken: token });
+      const accessToken = getAccessToken();
+      const state = accessToken
+        ? await joinMultiplayerSession({ joinToken: token })
+        : await (async () => {
+            const guest = await joinMultiplayerSessionAsGuest({
+              joinToken: token,
+              displayName: name.trim(),
+              avatar,
+            });
+            setAccessToken(guest.accessToken);
+            return guest.state;
+          })();
       if (typeof window !== "undefined") {
         sessionStorage.setItem(
           `axiora_multiplayer_profile_${state.sessionId}`,
@@ -58,10 +62,8 @@ export default function JoinGamePage() {
       router.replace(`/child/games/tictactoe?session=${encodeURIComponent(state.sessionId)}&mode=guest`);
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.status === 401) {
-          setError("Faça login na mesma organização para entrar na partida.");
-        } else if (err.status === 403) {
-          setError("Você não tem permissão para entrar nesta partida.");
+        if (err.status === 401 || err.status === 403) {
+          setError("Não foi possível validar seu convite nesta organização.");
         } else if (err.status === 404 || err.status === 409) {
           setError("Convite expirado, inválido ou já utilizado.");
         } else {
