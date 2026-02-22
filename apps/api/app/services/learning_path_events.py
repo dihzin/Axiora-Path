@@ -364,8 +364,12 @@ def _resolve_subject(db: Session, *, subject_id: int | None) -> Subject:
         if subject is None:
             raise ValueError("Subject not found")
         normalized = _normalize_subject_name(subject.name)
-        if normalized in _GENERIC_SUBJECT_NAMES and not _subject_has_curriculum(db, subject_id=subject.id):
-            raise ValueError("Subject not found")
+        if normalized in _GENERIC_SUBJECT_NAMES:
+            preferred = _pick_default_subject(db)
+            if preferred is not None and int(preferred.id) != int(subject.id):
+                return preferred
+            if not _subject_has_curriculum(db, subject_id=subject.id):
+                raise ValueError("Subject not found")
         return subject
     subject = _pick_default_subject(db)
     if subject is None:

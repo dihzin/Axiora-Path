@@ -60,6 +60,37 @@ from app.services.learning_streak import LearningStreakSnapshot, get_learning_st
 
 router = APIRouter(prefix="/api/aprender", tags=["aprender"])
 
+_GENERIC_SUBJECT_NAMES = {
+    "aprender",
+    "geral",
+    "padrao",
+    "default",
+    "trilha",
+}
+
+
+def _normalize_subject_name(value: str | None) -> str:
+    if not value:
+        return ""
+    normalized = value.strip().lower()
+    replacements = {
+        "á": "a",
+        "à": "a",
+        "â": "a",
+        "ã": "a",
+        "é": "e",
+        "ê": "e",
+        "í": "i",
+        "ó": "o",
+        "ô": "o",
+        "õ": "o",
+        "ú": "u",
+        "ç": "c",
+    }
+    for source, target in replacements.items():
+        normalized = normalized.replace(source, target)
+    return normalized
+
 
 def _to_energy_out(snapshot: EnergySnapshot) -> LearningEnergyStatusOut:
     return LearningEnergyStatusOut(
@@ -214,6 +245,9 @@ def list_subjects(
     if target_age_group is not None:
         query = query.where(Subject.age_group == target_age_group)
     subjects = db.scalars(query).all()
+    non_generic = [item for item in subjects if _normalize_subject_name(item.name) not in _GENERIC_SUBJECT_NAMES]
+    if non_generic:
+        subjects = non_generic
     return [
         SubjectOut(
             id=subject.id,

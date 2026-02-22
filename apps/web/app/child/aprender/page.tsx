@@ -119,6 +119,32 @@ function normalizePathErrorMessage(message: string): string {
   return message;
 }
 
+const GENERIC_SUBJECT_NAMES = new Set(["aprender", "geral", "padrao", "default", "trilha"]);
+
+function normalizeSubjectName(value: string | null | undefined): string {
+  if (!value) return "";
+  const normalized = value.trim().toLowerCase();
+  const replacements: Record<string, string> = {
+    á: "a",
+    à: "a",
+    â: "a",
+    ã: "a",
+    é: "e",
+    ê: "e",
+    í: "i",
+    ó: "o",
+    ô: "o",
+    õ: "o",
+    ú: "u",
+    ç: "c",
+  };
+  return Object.entries(replacements).reduce((acc, [from, to]) => acc.replaceAll(from, to), normalized);
+}
+
+function isGenericSubjectName(value: string | null | undefined): boolean {
+  return GENERIC_SUBJECT_NAMES.has(normalizeSubjectName(value));
+}
+
 function LearningPathSkeleton() {
   return (
     <div className="space-y-4 animate-pulse">
@@ -706,10 +732,16 @@ export default function ChildAprenderPage() {
       } else if (ordered.length > 0) {
         const raw = typeof window !== "undefined" ? window.localStorage.getItem(subjectPreferenceKey(childId)) : null;
         const saved = raw ? Number(raw) : NaN;
+        const firstNonGeneric = ordered.find((subject) => !isGenericSubjectName(subject.name)) ?? ordered[0];
         if (Number.isFinite(saved) && ordered.some((subject) => subject.id === saved)) {
-          setSelectedSubjectId(saved);
+          const savedSubject = ordered.find((subject) => subject.id === saved) ?? null;
+          if (savedSubject && !isGenericSubjectName(savedSubject.name)) {
+            setSelectedSubjectId(saved);
+          } else {
+            setSelectedSubjectId(firstNonGeneric.id);
+          }
         } else {
-          setSelectedSubjectId((prev) => prev ?? ordered[0].id);
+          setSelectedSubjectId((prev) => prev ?? firstNonGeneric.id);
         }
       }
     } catch {
@@ -946,11 +978,19 @@ export default function ChildAprenderPage() {
   const activeSeason = seasonal?.active[0] ?? null;
   const streakDays = path?.streakDays ?? 0;
   const streakAtRisk = streakDays <= 1;
+  const displaySubjectName = useMemo(() => {
+    const selected = availableSubjects.find((subject) => subject.id === (selectedSubjectId ?? path?.subjectId));
+    if (selected && !isGenericSubjectName(selected.name)) return selected.name;
+    if (path?.subjectName && !isGenericSubjectName(path.subjectName)) return path.subjectName;
+    const firstNonGeneric = availableSubjects.find((subject) => !isGenericSubjectName(subject.name));
+    if (firstNonGeneric) return firstNonGeneric.name;
+    return path?.subjectName ?? selected?.name ?? "Matéria";
+  }, [availableSubjects, path?.subjectId, path?.subjectName, selectedSubjectId]);
   const coachTip = buildCoachTip({
     streakDays,
     dueReviews: path?.dueReviewsCount ?? 0,
     completionPercent,
-    subjectName: path?.subjectName ?? null,
+    subjectName: displaySubjectName,
   });
   const nextLessonNode = useMemo(() => {
     const units = path?.units ?? [];
@@ -1159,11 +1199,11 @@ export default function ChildAprenderPage() {
                     aria-expanded={subjectPickerOpen}
                     aria-label="Abrir seleção de matéria"
                   >
-                    <span className="break-words text-left leading-tight [overflow-wrap:anywhere]">{path?.subjectName ?? "Selecionar"}</span>
+                    <span className="break-words text-left leading-tight [overflow-wrap:anywhere]">{displaySubjectName}</span>
                     <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   </button>
                 ) : (
-                  <p className="break-words text-sm font-bold leading-tight text-foreground [overflow-wrap:anywhere]">{path?.subjectName ?? "--"}</p>
+                  <p className="break-words text-sm font-bold leading-tight text-foreground [overflow-wrap:anywhere]">{displaySubjectName}</p>
                 )}
               </div>
             </div>
