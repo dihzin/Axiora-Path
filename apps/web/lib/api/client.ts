@@ -23,6 +23,7 @@ type RequestOptions = {
   body?: unknown;
   requireAuth?: boolean;
   includeTenant?: boolean;
+  suppressAuthRedirect?: boolean;
 };
 
 export class ApiError extends Error {
@@ -100,13 +101,15 @@ async function parseJsonSafe(response: Response): Promise<unknown> {
   }
 }
 
-async function refreshAccessToken(): Promise<string | null> {
+async function refreshAccessToken(suppressRedirect = false): Promise<string | null> {
   const apiUrl = resolveApiUrl();
   const tenantSlug = getTenantSlug();
   if (!tenantSlug) {
     clearTokens();
     clearTenantSlug();
-    redirectToLoginIfBrowser();
+    if (!suppressRedirect) {
+      redirectToLoginIfBrowser();
+    }
     return null;
   }
 
@@ -130,7 +133,9 @@ async function refreshAccessToken(): Promise<string | null> {
   } catch {
     clearTokens();
     clearTenantSlug();
-    redirectToLoginIfBrowser();
+    if (!suppressRedirect) {
+      redirectToLoginIfBrowser();
+    }
     return null;
   }
 
@@ -138,7 +143,9 @@ async function refreshAccessToken(): Promise<string | null> {
     if (response.status === 401 || response.status === 403) {
       clearTokens();
       clearTenantSlug();
-      redirectToLoginIfBrowser();
+      if (!suppressRedirect) {
+        redirectToLoginIfBrowser();
+      }
     }
     return null;
   }
@@ -194,7 +201,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   let response = await makeRequest();
   if (response.status === 401 && options.requireAuth !== false) {
-    accessToken = await refreshAccessToken();
+    accessToken = await refreshAccessToken(Boolean(options.suppressAuthRedirect));
     if (accessToken) {
       headers.Authorization = `Bearer ${accessToken}`;
       response = await makeRequest();
@@ -209,7 +216,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     if (options.requireAuth !== false && response.status === 401) {
       clearTokens();
       clearTenantSlug();
-      redirectToLoginIfBrowser();
+      if (!options.suppressAuthRedirect) {
+        redirectToLoginIfBrowser();
+      }
     }
     throw new ApiError("API request failed", response.status, payload);
   }
@@ -1432,6 +1441,7 @@ export async function joinMultiplayerSession(payload: {
     body: payload,
     requireAuth: true,
     includeTenant: true,
+    suppressAuthRedirect: true,
   });
 }
 
@@ -1454,6 +1464,7 @@ export async function getMultiplayerSession(sessionId: string): Promise<Multipla
     method: "GET",
     requireAuth: true,
     includeTenant: true,
+    suppressAuthRedirect: true,
   });
 }
 
@@ -1467,6 +1478,7 @@ export async function postMultiplayerMove(
     body: { cellIndex, action: options?.action, payload: options?.payload },
     requireAuth: true,
     includeTenant: true,
+    suppressAuthRedirect: true,
   });
 }
 
@@ -1476,6 +1488,7 @@ export async function closeMultiplayerSession(sessionId: string, reason?: string
     body: { reason: reason ?? null },
     requireAuth: true,
     includeTenant: true,
+    suppressAuthRedirect: true,
   });
 }
 

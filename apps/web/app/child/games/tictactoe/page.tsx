@@ -14,8 +14,11 @@ import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  ApiError,
   closeMultiplayerSession,
   createMultiplayerSession,
+  getMultiplayerSession,
+  getApiErrorMessage,
   joinMultiplayerSession,
   postMultiplayerMove,
   registerGameSession,
@@ -457,8 +460,19 @@ export default function TicTacToePage() {
       void (async () => {
         try {
           await postMultiplayerMove(multiplayerState.sessionId, idx);
-        } catch {
-          setFlowError("Não foi possível registrar a jogada. Tente novamente.");
+        } catch (error) {
+          const message = getApiErrorMessage(error, "Não foi possível registrar a jogada. Tente novamente.");
+          setFlowError(message);
+          if (error instanceof ApiError && (error.status === 401 || error.status === 409)) {
+            try {
+              const latest = await getMultiplayerSession(multiplayerState.sessionId);
+              if (latest.status === "IN_PROGRESS" && latest.canPlay) {
+                setFlowError(null);
+              }
+            } catch {
+              // Keep original error message when refresh fails.
+            }
+          }
         }
       })();
       return;
