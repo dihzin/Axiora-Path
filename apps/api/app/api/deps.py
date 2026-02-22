@@ -93,6 +93,15 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
         )
+    # Guest multiplayer tokens are sandboxed to multiplayer endpoints only.
+    if payload.get("guest_mode") is True:
+        path = request.url.path or ""
+        if not path.startswith("/api/games/multiplayer"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Guest token cannot access this route",
+            )
+
     request.state.user_id = user.id
     return user
 

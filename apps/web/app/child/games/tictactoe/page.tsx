@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Sparkles } from "lucide-react";
 
 import { MultiplayerLaunchModal } from "@/components/games/tictactoe/multiplayer-launch-modal";
@@ -206,7 +205,6 @@ function RewardModal({ open, result, baseXp, bonusXp, apiResult, onClose }: Rewa
 }
 
 export default function TicTacToePage() {
-  const searchParams = useSearchParams();
   const [childId, setChildId] = useState<number | null>(null);
   const [playMode, setPlayMode] = useState<PlayMode>("SOLO");
   const [difficulty, setDifficulty] = useState<Difficulty>("MEDIUM");
@@ -232,7 +230,7 @@ export default function TicTacToePage() {
   const [resultRewardKey, setResultRewardKey] = useState<string | null>(null);
   const [joinTokenFromUrl, setJoinTokenFromUrl] = useState<string | null>(null);
   const [isGuestMode, setIsGuestMode] = useState(false);
-  const isGuestFromQuery = (searchParams.get("mode") ?? "").trim() === "guest" || Boolean((searchParams.get("joinToken") ?? "").trim());
+  const [isGuestFromQuery, setIsGuestFromQuery] = useState(false);
 
   const { state: multiplayerState, isRealtimeConnected, statusLabel } = useMultiplayerSession({
     sessionId: activeSessionId,
@@ -257,6 +255,9 @@ export default function TicTacToePage() {
     const joinToken = params.get("joinToken")?.trim();
     const sessionId = params.get("session")?.trim();
     const mode = params.get("mode")?.trim();
+    if (mode === "guest" || Boolean(joinToken)) {
+      setIsGuestFromQuery(true);
+    }
     if (sessionId && mode === "guest") {
       setPlayMode("MULTI_GUEST");
       setFlowStep("PLAY");
@@ -579,17 +580,19 @@ export default function TicTacToePage() {
       />
 
       <PageShell tone="child" width="content">
-        <div className="mb-3">
-          <Link
-            className="inline-flex items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted"
-            href="/child/games"
-          >
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-muted">
-              <ArrowLeft className="h-4 w-4 stroke-[2.6]" />
-            </span>
-            Voltar aos jogos
-          </Link>
-        </div>
+        {!isGuestMode && !isGuestFromQuery ? (
+          <div className="mb-3">
+            <Link
+              className="inline-flex items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted"
+              href="/child/games"
+            >
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-muted">
+                <ArrowLeft className="h-4 w-4 stroke-[2.6]" />
+              </span>
+              Voltar aos jogos
+            </Link>
+          </div>
+        ) : null}
 
         <Card className="mb-3">
           <CardHeader>
@@ -698,9 +701,11 @@ export default function TicTacToePage() {
               ))}
             </div>
 
-            <div className="mt-4 flex items-center gap-2">
-              <Button onClick={startNewMatch}>{isFinished ? "Jogar novamente" : "Reiniciar partida"}</Button>
-            </div>
+            {!isGuestMode && !isGuestFromQuery ? (
+              <div className="mt-4 flex items-center gap-2">
+                <Button onClick={startNewMatch}>{isFinished ? "Jogar novamente" : "Reiniciar partida"}</Button>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 

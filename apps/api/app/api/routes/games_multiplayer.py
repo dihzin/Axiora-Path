@@ -365,6 +365,10 @@ def join_multiplayer_session_public(
         user_id=guest_user.id,
         tenant_id=tenant.id,
         role=MembershipRole.CHILD.value,
+        extra_claims={
+            "guest_mode": True,
+            "guest_session_id": session.id,
+        },
     )
     db.commit()
     _publish_state_realtime(state)

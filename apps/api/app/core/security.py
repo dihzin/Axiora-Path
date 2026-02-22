@@ -38,6 +38,7 @@ def _create_token(
     tenant_id: int,
     role: str,
     expires_delta: timedelta,
+    extra_claims: dict[str, Any] | None = None,
 ) -> str:
     now = datetime.now(UTC)
     payload: dict[str, Any] = {
@@ -49,16 +50,19 @@ def _create_token(
         "iat": int(now.timestamp()),
         "exp": int((now + expires_delta).timestamp()),
     }
+    if extra_claims:
+        payload.update(extra_claims)
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 
 
-def create_access_token(*, user_id: int, tenant_id: int, role: str) -> str:
+def create_access_token(*, user_id: int, tenant_id: int, role: str, extra_claims: dict[str, Any] | None = None) -> str:
     return _create_token(
         token_type="access",
         user_id=user_id,
         tenant_id=tenant_id,
         role=role,
         expires_delta=timedelta(minutes=ACCESS_TOKEN_MINUTES),
+        extra_claims=extra_claims,
     )
 
 
