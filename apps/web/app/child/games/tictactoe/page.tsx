@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Sparkles } from "lucide-react";
 
 import { MultiplayerLaunchModal } from "@/components/games/tictactoe/multiplayer-launch-modal";
@@ -205,6 +206,7 @@ function RewardModal({ open, result, baseXp, bonusXp, apiResult, onClose }: Rewa
 }
 
 export default function TicTacToePage() {
+  const searchParams = useSearchParams();
   const [childId, setChildId] = useState<number | null>(null);
   const [playMode, setPlayMode] = useState<PlayMode>("SOLO");
   const [difficulty, setDifficulty] = useState<Difficulty>("MEDIUM");
@@ -230,6 +232,7 @@ export default function TicTacToePage() {
   const [resultRewardKey, setResultRewardKey] = useState<string | null>(null);
   const [joinTokenFromUrl, setJoinTokenFromUrl] = useState<string | null>(null);
   const [isGuestMode, setIsGuestMode] = useState(false);
+  const isGuestFromQuery = (searchParams.get("mode") ?? "").trim() === "guest" || Boolean((searchParams.get("joinToken") ?? "").trim());
 
   const { state: multiplayerState, isRealtimeConnected, statusLabel } = useMultiplayerSession({
     sessionId: activeSessionId,
@@ -701,7 +704,7 @@ export default function TicTacToePage() {
           </CardContent>
         </Card>
 
-        {!isGuestMode ? <ChildBottomNav /> : null}
+        {!isGuestMode && !isGuestFromQuery ? <ChildBottomNav /> : null}
       </PageShell>
     </>
   );

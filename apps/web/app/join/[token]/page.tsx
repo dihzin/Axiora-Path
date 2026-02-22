@@ -8,8 +8,8 @@ import { useMemo, useState } from "react";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ApiError, joinMultiplayerSession, joinMultiplayerSessionAsGuest } from "@/lib/api/client";
-import { getAccessToken, getTenantSlug, setAccessToken, setTenantSlug } from "@/lib/api/session";
+import { ApiError, joinMultiplayerSessionAsGuest } from "@/lib/api/client";
+import { clearTokens, getTenantSlug, setAccessToken, setTenantSlug } from "@/lib/api/session";
 
 const AVATARS = ["😀", "🤖", "🦊", "🐼", "🦁", "🐙"];
 
@@ -35,24 +35,22 @@ export default function JoinGamePage() {
       return;
     }
     const currentTenant = getTenantSlug();
-    if (tenantFromInvite && tenantFromInvite !== currentTenant) {
+    if (tenantFromInvite) {
+      if (tenantFromInvite !== currentTenant) {
+        clearTokens();
+      }
       setTenantSlug(tenantFromInvite);
     }
     setLoading(true);
     setError(null);
     try {
-      const accessToken = getAccessToken();
-      const state = accessToken
-        ? await joinMultiplayerSession({ joinToken: token })
-        : await (async () => {
-            const guest = await joinMultiplayerSessionAsGuest({
-              joinToken: token,
-              displayName: name.trim(),
-              avatar,
-            });
-            setAccessToken(guest.accessToken);
-            return guest.state;
-          })();
+      const guest = await joinMultiplayerSessionAsGuest({
+        joinToken: token,
+        displayName: name.trim(),
+        avatar,
+      });
+      setAccessToken(guest.accessToken);
+      const state = guest.state;
       if (typeof window !== "undefined") {
         sessionStorage.setItem(
           `axiora_multiplayer_profile_${state.sessionId}`,
