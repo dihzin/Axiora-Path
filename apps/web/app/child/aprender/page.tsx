@@ -1,7 +1,7 @@
 "use client";
 
 import { BookOpen, Check, ChevronDown, Flame, Star } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { LearningPath } from "@/components/aprender/LearningPath";
@@ -46,7 +46,6 @@ function setStoredSubjectId(subjectId: number): void {
 
 export default function LearningPathPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [path, setPath] = useState<LearningPathResponse | null>(null);
   const [subjects, setSubjects] = useState<AprenderSubjectOption[]>([]);
@@ -137,7 +136,9 @@ export default function LearningPathPage() {
   }, [subjectMenuOpen]);
 
   useEffect(() => {
-    const doneId = Number(searchParams.get("completedLessonId") ?? "");
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const doneId = Number(params.get("completedLessonId") ?? "");
     if (!Number.isFinite(doneId) || doneId <= 0) return;
 
     setCelebrateLessonId(doneId);
@@ -146,7 +147,7 @@ export default function LearningPathPage() {
     return () => {
       window.clearTimeout(celebrationTimer);
     };
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
     if (loading || !path || hasShownArrivalRef.current) return;

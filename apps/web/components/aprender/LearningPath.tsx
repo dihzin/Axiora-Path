@@ -214,8 +214,6 @@ export function LearningPath({ units, onLessonPress, onEventPress, celebrateLess
     });
   }, [entries, width]);
 
-  const pathD = useMemo(() => catmullRomToBezier(basePoints), [basePoints]);
-
   const unitRanges = useMemo(() => {
     const ranges: Array<{ unitId: number; unitIndex: number; start: number; end: number }> = [];
     entries.forEach((entry, idx) => {
