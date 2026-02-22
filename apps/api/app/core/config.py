@@ -37,6 +37,14 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("LLM_MODEL", "AXIORA_LLM_MODEL"),
     )
+    git_sha: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("GIT_SHA", "RENDER_GIT_COMMIT", "AXIORA_GIT_SHA"),
+    )
+    build_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("BUILD_ID", "RENDER_SERVICE_ID", "AXIORA_BUILD_ID"),
+    )
 
 
 settings = Settings()

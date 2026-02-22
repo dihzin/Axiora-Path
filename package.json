@@ -10,6 +10,7 @@
     "build:web": "npm run build --workspace @axiora/web",
     "lint:web": "npm run lint --workspace @axiora/web",
     "typecheck:web": "npm run typecheck --workspace @axiora/web",
-    "format:web": "npm run format --workspace @axiora/web"
+    "format:web": "npm run format --workspace @axiora/web",
+    "parity:check": "node scripts/release-parity-check.mjs"
   }
 }

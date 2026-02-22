@@ -109,4 +109,9 @@ app.include_router(retention_router)
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "env": settings.app_env,
+        "commit": settings.git_sha or "unknown",
+        "build": settings.build_id or "unknown",
+    }
