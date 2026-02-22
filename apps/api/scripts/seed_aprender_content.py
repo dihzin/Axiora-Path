@@ -2,16 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, text
 
 from app.db.session import SessionLocal
 from app.models import (
-    Lesson,
     LessonContent,
     LessonContentType,
     LessonDifficulty,
     LessonType,
-    Unit,
 )
 
 
@@ -378,26 +376,29 @@ def _upsert_content() -> None:
                     f"Motivação: {unit_blueprint.motivational_subtitle}"
                 )
 
-                unit = db.scalar(
-                    select(Unit).where(
-                        Unit.subject_id == subject_id,
-                        Unit.order == unit_order,
-                    )
+                unit_id = db.scalar(
+                    text(
+                        """
+                        INSERT INTO units (subject_id, title, description, "order", required_level)
+                        VALUES (:subject_id, :title, :description, :order, :required_level)
+                        ON CONFLICT (subject_id, "order")
+                        DO UPDATE SET
+                            title = EXCLUDED.title,
+                            description = EXCLUDED.description,
+                            required_level = EXCLUDED.required_level
+                        RETURNING id
+                        """
+                    ),
+                    {
+                        "subject_id": subject_id,
+                        "title": title,
+                        "description": description,
+                        "order": unit_order,
+                        "required_level": max(1, unit_order),
+                    },
                 )
-                if unit is None:
-                    unit = Unit(
-                        subject_id=subject_id,
-                        title=title,
-                        description=description,
-                        order=unit_order,
-                        required_level=max(1, unit_order),
-                    )
-                    db.add(unit)
-                    db.flush()
-                else:
-                    unit.title = title
-                    unit.description = description
-                    unit.required_level = max(1, unit_order)
+                if unit_id is None:
+                    raise RuntimeError("Falha ao criar/atualizar unidade no seed.")
                 created_units += 1
 
                 for lesson_order in range(1, 6):
@@ -411,35 +412,38 @@ def _upsert_content() -> None:
                         lesson_order=lesson_order,
                     )
 
-                    lesson = db.scalar(
-                        select(Lesson).where(
-                            Lesson.unit_id == unit.id,
-                            Lesson.order == lesson_order,
-                        )
+                    lesson_id = db.scalar(
+                        text(
+                            """
+                            INSERT INTO lessons (unit_id, title, "order", xp_reward, difficulty, type)
+                            VALUES (:unit_id, :title, :order, :xp_reward, :difficulty, :type)
+                            ON CONFLICT (unit_id, "order")
+                            DO UPDATE SET
+                                title = EXCLUDED.title,
+                                xp_reward = EXCLUDED.xp_reward,
+                                difficulty = EXCLUDED.difficulty,
+                                type = EXCLUDED.type
+                            RETURNING id
+                            """
+                        ),
+                        {
+                            "unit_id": int(unit_id),
+                            "title": lesson_title,
+                            "order": lesson_order,
+                            "xp_reward": xp_reward,
+                            "difficulty": difficulty.value,
+                            "type": lesson_type.value,
+                        },
                     )
-                    if lesson is None:
-                        lesson = Lesson(
-                            unit_id=unit.id,
-                            title=lesson_title,
-                            order=lesson_order,
-                            xp_reward=xp_reward,
-                            difficulty=difficulty,
-                            type=lesson_type,
-                        )
-                        db.add(lesson)
-                        db.flush()
-                    else:
-                        lesson.title = lesson_title
-                        lesson.xp_reward = xp_reward
-                        lesson.type = lesson_type
-                        lesson.difficulty = difficulty
+                    if lesson_id is None:
+                        raise RuntimeError("Falha ao criar/atualizar lição no seed.")
                     created_lessons += 1
 
-                    db.execute(delete(LessonContent).where(LessonContent.lesson_id == lesson.id))
+                    db.execute(delete(LessonContent).where(LessonContent.lesson_id == int(lesson_id)))
                     for content_type, content_data, content_order in lesson_contents:
                         db.add(
                             LessonContent(
-                                lesson_id=lesson.id,
+                                lesson_id=int(lesson_id),
                                 content_type=content_type,
                                 content_data=content_data,
                                 order=content_order,

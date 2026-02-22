@@ -859,6 +859,11 @@ export default function ChildAprenderPage() {
   }, [childId, loadPath, selectedSubjectId]);
 
   useEffect(() => {
+    if (!path || childId === null) return;
+    void loadSubjects(path.ageGroup, path.subjectId);
+  }, [childId, loadSubjects, path]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     const raw = new URLSearchParams(window.location.search).get("completedLessonId");
     const parsed = Number(raw);
