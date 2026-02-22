@@ -986,6 +986,14 @@ export default function ChildAprenderPage() {
     if (firstNonGeneric) return firstNonGeneric.name;
     return path?.subjectName ?? selected?.name ?? "Matéria";
   }, [availableSubjects, path?.subjectId, path?.subjectName, selectedSubjectId]);
+
+  const subjectPickerOptions = useMemo(() => {
+    if (availableSubjects.length > 0) return availableSubjects;
+    if (path?.subjectId) {
+      return [{ id: path.subjectId, name: displaySubjectName, order: 0 } as AprenderSubjectOption];
+    }
+    return [];
+  }, [availableSubjects, displaySubjectName, path?.subjectId]);
   const coachTip = buildCoachTip({
     streakDays,
     dueReviews: path?.dueReviewsCount ?? 0,
@@ -1190,7 +1198,7 @@ export default function ChildAprenderPage() {
               </div>
               <div className="col-span-2 rounded-xl border border-border bg-white/90 p-2 text-center sm:col-span-1">
                 <p className="text-[11px] text-muted-foreground">Matéria</p>
-                {availableSubjects.length > 1 ? (
+                {subjectPickerOptions.length > 0 ? (
                   <button
                     type="button"
                     className="mt-1 inline-flex min-h-8 w-full items-center justify-between rounded-lg border border-border bg-white px-2 py-1 text-xs font-bold text-foreground transition hover:border-secondary/55"
@@ -1655,7 +1663,7 @@ export default function ChildAprenderPage() {
             </div>
             <p className="mb-3 text-xs text-muted-foreground">Selecione uma matéria para atualizar a trilha.</p>
             <div className="grid max-h-[52vh] grid-cols-1 gap-2 overflow-y-auto pr-1">
-              {availableSubjects.map((subject) => {
+              {subjectPickerOptions.map((subject) => {
                 const selected = (selectedSubjectId ?? path?.subjectId) === subject.id;
                 return (
                   <button
@@ -1683,6 +1691,11 @@ export default function ChildAprenderPage() {
                   </button>
                 );
               })}
+              {subjectPickerOptions.length === 0 ? (
+                <div className="rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-muted-foreground">
+                  Nenhuma matéria disponível no momento.
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
