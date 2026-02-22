@@ -229,6 +229,7 @@ export default function TicTacToePage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [resultRewardKey, setResultRewardKey] = useState<string | null>(null);
   const [joinTokenFromUrl, setJoinTokenFromUrl] = useState<string | null>(null);
+  const [isGuestMode, setIsGuestMode] = useState(false);
 
   const { state: multiplayerState, isRealtimeConnected, statusLabel } = useMultiplayerSession({
     sessionId: activeSessionId,
@@ -257,12 +258,14 @@ export default function TicTacToePage() {
       setPlayMode("MULTI_GUEST");
       setFlowStep("PLAY");
       setActiveSessionId(sessionId);
+      setIsGuestMode(true);
       return;
     }
     if (joinToken) {
       setFlowStep("JOIN");
       setJoinTokenFromUrl(joinToken);
       setPlayMode("MULTI_GUEST");
+      setIsGuestMode(true);
       return;
     }
     if (!joinCode) return;
@@ -462,12 +465,24 @@ export default function TicTacToePage() {
           await postMultiplayerMove(multiplayerState.sessionId, idx);
         } catch (error) {
           const message = getApiErrorMessage(error, "Não foi possível registrar a jogada. Tente novamente.");
-          setFlowError(message);
+          let friendly = message;
+          if (error instanceof ApiError && error.status === 409) {
+            const payload = error.payload as { detail?: unknown } | null;
+            const detail = typeof payload?.detail === "string" ? payload.detail.toLowerCase() : "";
+            if (detail.includes("turn") || detail.includes("vez")) {
+              friendly = "Aguarde sua vez para jogar.";
+            }
+          }
+          setFlowError(friendly);
           if (error instanceof ApiError && (error.status === 401 || error.status === 409)) {
             try {
               const latest = await getMultiplayerSession(multiplayerState.sessionId);
-              if (latest.status === "IN_PROGRESS" && latest.canPlay) {
-                setFlowError(null);
+              if (latest.status === "IN_PROGRESS") {
+                if (latest.canPlay) {
+                  setFlowError(null);
+                } else if (error.status === 409) {
+                  setFlowError("Aguarde sua vez para jogar.");
+                }
               }
             } catch {
               // Keep original error message when refresh fails.
@@ -686,7 +701,7 @@ export default function TicTacToePage() {
           </CardContent>
         </Card>
 
-        <ChildBottomNav />
+        {!isGuestMode ? <ChildBottomNav /> : null}
       </PageShell>
     </>
   );
