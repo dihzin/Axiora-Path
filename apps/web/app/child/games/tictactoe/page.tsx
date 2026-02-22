@@ -577,7 +577,7 @@ export default function TicTacToePage() {
                       joinCode={multiplayerCreate.joinCode}
                       joinUrl={
                         typeof window !== "undefined"
-                          ? `${window.location.origin}/join/${multiplayerCreate.joinToken}`
+                          ? `${window.location.origin}${multiplayerCreate.joinUrl}`
                           : multiplayerCreate.joinUrl
                       }
                       waiting={multiplayerState?.status !== "IN_PROGRESS"}

@@ -195,7 +195,7 @@ def create_multiplayer_session(
         sessionId=session.id,
         joinCode=join_code,
         joinToken=join_token,
-        joinUrl=f"/join/{join_token}",
+        joinUrl=f"/join/{join_token}?tenant={tenant.slug}",
         gameType=adapter.game_type.value,
         engineKey=adapter.engine_key,
         status="WAITING",
