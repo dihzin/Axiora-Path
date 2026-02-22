@@ -32,6 +32,102 @@ from app.services.adaptive_learning import resolve_effective_learning_settings
 from app.services.gamification import addXP, get_or_create_game_profile
 from app.services.learning_retention import MissionDelta, get_active_season_bonus, track_mission_progress
 
+_CURRICULUM_SUBJECT_PRIORITY = (
+    "matematica",
+    "portugues",
+    "fisica",
+    "quimica",
+    "historia",
+    "geografia",
+    "ingles",
+    "ciencias",
+)
+
+_GENERIC_SUBJECT_NAMES = {
+    "aprender",
+    "geral",
+    "padrao",
+    "default",
+    "trilha",
+}
+
+
+def _normalize_subject_name(value: str | None) -> str:
+    if not value:
+        return ""
+    normalized = value.strip().lower()
+    replacements = {
+        "á": "a",
+        "à": "a",
+        "â": "a",
+        "ã": "a",
+        "é": "e",
+        "ê": "e",
+        "í": "i",
+        "ó": "o",
+        "ô": "o",
+        "õ": "o",
+        "ú": "u",
+        "ç": "c",
+    }
+    for source, target in replacements.items():
+        normalized = normalized.replace(source, target)
+    return normalized
+
+
+def _subject_has_curriculum(db: Session, *, subject_id: int) -> bool:
+    count = int(
+        db.scalar(
+            select(func.count(Lesson.id))
+            .join(Unit, Unit.id == Lesson.unit_id)
+            .where(Unit.subject_id == subject_id)
+        )
+        or 0
+    )
+    return count > 0
+
+
+def _pick_default_subject(db: Session) -> Subject | None:
+    subjects = db.scalars(select(Subject).order_by(Subject.age_group.asc(), Subject.order.asc(), Subject.id.asc())).all()
+    if not subjects:
+        return None
+
+    candidates: list[tuple[int, Subject]] = []
+    for subject in subjects:
+        normalized = _normalize_subject_name(subject.name)
+        in_catalog = normalized in _CURRICULUM_SUBJECT_PRIORITY
+        is_generic = normalized in _GENERIC_SUBJECT_NAMES
+        has_curriculum = _subject_has_curriculum(db, subject_id=subject.id)
+        if not has_curriculum and (is_generic or not in_catalog):
+            continue
+        if in_catalog and has_curriculum:
+            score = 0
+        elif has_curriculum and not is_generic:
+            score = 1
+        elif not is_generic:
+            score = 2
+        else:
+            score = 3
+        candidates.append((score, subject))
+
+    if not candidates:
+        return subjects[0]
+
+    priority_index = {name: index for index, name in enumerate(_CURRICULUM_SUBJECT_PRIORITY)}
+
+    def _sort_key(item: tuple[int, Subject]) -> tuple[int, int, int, int]:
+        score, subject = item
+        normalized = _normalize_subject_name(subject.name)
+        return (
+            score,
+            int(subject.age_group.value.split("-")[0]),
+            priority_index.get(normalized, 999),
+            int(subject.order or 0),
+        )
+
+    candidates.sort(key=_sort_key)
+    return candidates[0][1]
+
 
 @dataclass(slots=True)
 class PathLessonNode:
@@ -267,12 +363,15 @@ def _resolve_subject(db: Session, *, subject_id: int | None) -> Subject:
         subject = db.get(Subject, subject_id)
         if subject is None:
             raise ValueError("Subject not found")
+        normalized = _normalize_subject_name(subject.name)
+        if normalized in _GENERIC_SUBJECT_NAMES and not _subject_has_curriculum(db, subject_id=subject.id):
+            raise ValueError("Subject not found")
         return subject
-    subject = db.scalar(select(Subject).order_by(Subject.age_group.asc(), Subject.order.asc()))
+    subject = _pick_default_subject(db)
     if subject is None:
         try:
             _bootstrap_minimum_learning_path(db)
-            subject = db.scalar(select(Subject).order_by(Subject.age_group.asc(), Subject.order.asc()))
+            subject = _pick_default_subject(db)
         except SQLAlchemyError:
             db.rollback()
             subject = None
