@@ -202,10 +202,6 @@ class EventCompleteSnapshot:
 def _bootstrap_minimum_learning_path(db: Session) -> None:
     # Seed de segurança para ambientes sem shell/seed manual (idempotente).
     # Gera e mantém currículo amplo para evitar trilha vazia em produção.
-    existing_lesson_count = int(db.scalar(select(func.count(Lesson.id))) or 0)
-    if existing_lesson_count >= 1000:
-        return
-
     age_groups = [
         SubjectAgeGroup.AGE_6_8,
         SubjectAgeGroup.AGE_9_12,
@@ -247,10 +243,20 @@ def _bootstrap_minimum_learning_path(db: Session) -> None:
         LessonType.MULTIPLE_CHOICE,
     ]
 
+    catalog_keys = {_normalize_subject_name(name) for name, _, _ in subjects_catalog}
+    expected_by_age_group = len(catalog_keys)
+    existing_by_age_group: dict[SubjectAgeGroup, set[str]] = {item: set() for item in age_groups}
+    existing_subject_rows = db.scalars(select(Subject)).all()
+    for subject in existing_subject_rows:
+        normalized = _normalize_subject_name(subject.name)
+        if normalized in catalog_keys:
+            existing_by_age_group.setdefault(subject.age_group, set()).add(normalized)
+    if all(len(existing_by_age_group.get(group, set())) >= expected_by_age_group for group in age_groups):
+        return
+
     subject_by_key: dict[tuple[SubjectAgeGroup, str], Subject] = {}
-    existing_subjects = db.scalars(select(Subject)).all()
-    for subject in existing_subjects:
-        key = (subject.age_group, subject.name.strip().lower())
+    for subject in existing_subject_rows:
+        key = (subject.age_group, _normalize_subject_name(subject.name))
         if key not in subject_by_key:
             subject_by_key[key] = subject
 
@@ -263,7 +269,7 @@ def _bootstrap_minimum_learning_path(db: Session) -> None:
     created_subjects: list[Subject] = []
     for age_group in age_groups:
         for name, icon, color in subjects_catalog:
-            key = (age_group, name.strip().lower())
+            key = (age_group, _normalize_subject_name(name))
             if key in subject_by_key:
                 continue
             max_order_by_age_group[age_group] += 1
