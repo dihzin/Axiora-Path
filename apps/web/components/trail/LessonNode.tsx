@@ -1,6 +1,6 @@
 "use client";
 
-import type { TrailNodeType } from "@axiora/shared";
+import type { TrailNodeType } from "@/lib/trail-types";
 import { cn } from "@/lib/utils";
 
 type LessonNodeProps = {

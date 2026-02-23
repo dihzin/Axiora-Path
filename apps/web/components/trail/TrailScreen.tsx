@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import type { TrailLessonNode, TrailUnit } from "@axiora/shared";
+import type { TrailLessonNode, TrailUnit } from "@/lib/trail-types";
 import { AxionCharacter } from "@/components/axion-character";
 import { ChildNavIcon, type ChildNavIconKey } from "@/components/child-bottom-nav";
 import { BottomNav } from "@/components/trail/BottomNav";

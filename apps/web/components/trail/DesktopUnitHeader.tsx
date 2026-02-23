@@ -1,6 +1,6 @@
 "use client";
 
-import type { TrailUnit } from "@axiora/shared";
+import type { TrailUnit } from "@/lib/trail-types";
 import { UnitBanner } from "@/components/trail/UnitBanner";
 
 type DesktopUnitHeaderProps = {

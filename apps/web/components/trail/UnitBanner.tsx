@@ -2,7 +2,7 @@
 
 import { BookOpen, List } from "lucide-react";
 
-import type { TrailUnit } from "@axiora/shared";
+import type { TrailUnit } from "@/lib/trail-types";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
