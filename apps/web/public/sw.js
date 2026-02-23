@@ -1,4 +1,4 @@
-const STATIC_CACHE = "axiora-static-v1";
+const STATIC_CACHE = "axiora-static-v2";
 const STATIC_URLS = ["/", "/manifest.webmanifest", "/icons/icon-192.svg", "/icons/icon-512.svg"];
 
 self.addEventListener("install", (event) => {
@@ -28,24 +28,45 @@ function isStaticAsset(request) {
   return /\.(?:js|css|png|jpg|jpeg|gif|svg|webp|ico|woff2?)$/i.test(url.pathname);
 }
 
+function isImmutableNextAsset(request) {
+  const url = new URL(request.url);
+  return url.origin === self.location.origin && url.pathname.startsWith("/_next/static/");
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
 
-  if (isStaticAsset(request)) {
+  if (!isStaticAsset(request)) return;
+
+  // Prevent stale UI bundles in production: prefer fresh Next assets first.
+  if (isImmutableNextAsset(request)) {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        const network = fetch(request)
-          .then((response) => {
-            if (response && response.status === 200 && response.type === "basic") {
-              const cloned = response.clone();
-              caches.open(STATIC_CACHE).then((cache) => cache.put(request, cloned));
-            }
-            return response;
-          })
-          .catch(() => cached);
-        return cached || network;
-      }),
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200 && response.type === "basic") {
+            const cloned = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, cloned));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request)),
     );
+    return;
   }
+
+  event.respondWith(
+    caches.match(request).then((cached) => {
+      const network = fetch(request)
+        .then((response) => {
+          if (response && response.status === 200 && response.type === "basic") {
+            const cloned = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, cloned));
+          }
+          return response;
+        })
+        .catch(() => cached);
+      return cached || network;
+    }),
+  );
 });
