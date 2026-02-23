@@ -11,6 +11,38 @@
   --theme-accent-rgb: 255 200 87;
   --duo-chunky-shadow: 0 8px 0 rgba(180, 64, 34, 0.35), 0 14px 24px rgba(18, 39, 72, 0.13);
   --duo-card-shadow: 0 2px 0 rgba(207, 217, 243, 0.95), 0 14px 26px rgba(38, 74, 126, 0.12);
+
+  /* Unit Card Duolingo-like Tokens */
+  --card-radius-xl: 30px;
+  --card-shadow-soft: 0 10px 20px rgba(0, 0, 0, 0.06);
+  --card-highlight-inset: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --card-gloss-overlay: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 100%);
+  --progress-track: #d7e2ee;
+  --progress-fill: linear-gradient(90deg, #40d7c0 0%, #6edfd0 100%);
+  --progress-thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.16);
+  --action-btn-bg: #11afa0;
+  --action-btn-shadow: 0 3px 8px rgba(0, 0, 0, 0.14);
+
+  --card-shell-bg-default: #12ac9c;
+  --card-shell-border-default: #109e92;
+  --card-shell-bg-inprogress: #12ac9c;
+  --card-shell-border-inprogress: #109e92;
+  --card-shell-bg-completed: #11b3a2;
+  --card-shell-border-completed: #0e9b8f;
+  --card-shell-bg-locked: #7fa2ad;
+  --card-shell-border-locked: #89a8b1;
+  --card-shell-fg-default: #ffffff;
+  --card-shell-fg-locked: rgba(255, 255, 255, 0.9);
+
+  --action-btn-bg-default: #11afa0;
+  --action-btn-border-default: #0b9589;
+  --action-btn-bg-completed: #11a899;
+  --action-btn-border-completed: #0a8f83;
+  --action-btn-bg-locked: #86a5af;
+  --action-btn-border-locked: #7e99a4;
+
+  --progress-track-locked: #c9d4e0;
+  --progress-fill-locked: linear-gradient(90deg, #a8b6c6 0%, #b9c5d2 100%);
 }
 
 body {

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CheckCircle2, Search, Sparkles } from "lucide-react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
+import { ChildDesktopShell } from "@/components/child-desktop-shell";
 import { ConfettiBurst } from "@/components/confetti-burst";
 import { LevelUpOverlay } from "@/components/level-up-overlay";
 import { PageShell } from "@/components/layout/page-shell";
@@ -360,7 +361,7 @@ export default function WordSearchPage() {
   const selectedCellSet = useMemo(() => new Set(selectedPath.map((cell) => toCellKey(cell))), [selectedPath]);
 
   return (
-    <>
+    <ChildDesktopShell activeNav="jogos">
       <ConfettiBurst trigger={confettiTrigger} />
       {levelUpLevel !== null ? (
         <LevelUpOverlay
@@ -502,6 +503,6 @@ export default function WordSearchPage() {
 
         <ChildBottomNav />
       </PageShell>
-    </>
+    </ChildDesktopShell>
   );
 }

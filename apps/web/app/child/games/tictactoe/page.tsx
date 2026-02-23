@@ -7,6 +7,7 @@ import { ArrowLeft, Sparkles } from "lucide-react";
 import { MultiplayerLaunchModal } from "@/components/games/tictactoe/multiplayer-launch-modal";
 import { MultiplayerWaitingCard } from "@/components/games/tictactoe/multiplayer-waiting-card";
 import { ChildBottomNav } from "@/components/child-bottom-nav";
+import { ChildDesktopShell } from "@/components/child-desktop-shell";
 import { ConfettiBurst } from "@/components/confetti-burst";
 import { LevelUpOverlay } from "@/components/level-up-overlay";
 import { useMultiplayerSession } from "@/hooks/use-multiplayer-session";
@@ -549,7 +550,7 @@ export default function TicTacToePage() {
   };
 
   return (
-    <>
+    <ChildDesktopShell activeNav="jogos">
       <ConfettiBurst trigger={confettiTrigger} />
       {levelUpLevel !== null ? (
         <LevelUpOverlay
@@ -711,6 +712,6 @@ export default function TicTacToePage() {
 
         {!isGuestMode && !isGuestFromQuery ? <ChildBottomNav /> : null}
       </PageShell>
-    </>
+    </ChildDesktopShell>
   );
 }

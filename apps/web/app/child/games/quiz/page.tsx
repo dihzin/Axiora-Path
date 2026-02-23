@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Gauge, Heart, Timer, Trophy, Zap } from "lucide-react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
+import { ChildDesktopShell } from "@/components/child-desktop-shell";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -344,7 +345,8 @@ export default function QuizGamePage() {
   }
 
   return (
-    <PageShell tone="child" width="compact">
+    <ChildDesktopShell activeNav="jogos">
+      <PageShell tone="child" width="compact">
       <Card className="mb-3">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -475,7 +477,8 @@ export default function QuizGamePage() {
           )}
         </CardContent>
       </Card>
-      <ChildBottomNav />
-    </PageShell>
+        <ChildBottomNav />
+      </PageShell>
+    </ChildDesktopShell>
   );
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Bot, Flame, HelpCircle, Sparkles, Target, Zap } from "lucide-react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
+import { ChildDesktopShell } from "@/components/child-desktop-shell";
 import { PageShell } from "@/components/layout/page-shell";
 import { getApiErrorMessage, getAxionBrief, type AxionBriefResponse } from "@/lib/api/client";
 
@@ -120,8 +121,9 @@ export default function ChildAxionPage() {
   };
 
   return (
-    <PageShell tone="child" width="content" className="pt-4">
-      <section className={`rounded-[30px] border border-[#BFD3EE] bg-gradient-to-br p-5 shadow-[0_8px_24px_rgba(32,88,140,0.08)] ${toneBg}`}>
+    <ChildDesktopShell activeNav="axion">
+      <PageShell tone="child" width="content" className="pt-4">
+        <section className={`rounded-[30px] border border-[#BFD3EE] bg-gradient-to-br p-5 shadow-[0_8px_24px_rgba(32,88,140,0.08)] ${toneBg}`}>
         <div className="mb-4 flex items-center justify-between">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#BFD3EE] bg-white/85 px-3 py-1 text-xs font-bold text-[#2A456D]">
             <Bot className="h-3.5 w-3.5" />
@@ -243,36 +245,37 @@ export default function ChildAxionPage() {
         ) : null}
       </section>
 
-      {coachOpen && brief ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#122949]/45 px-4" onClick={() => setCoachOpen(false)}>
-          <div
-            className="w-full max-w-sm rounded-[28px] border border-[#BFD3EE] bg-white p-5 shadow-[0_20px_40px_rgba(11,44,79,0.2)]"
-            onClick={(event) => event.stopPropagation()}
-            role="dialog"
-          >
-            <h2 className="text-lg font-extrabold text-[#1B365D]">Coach do Axion</h2>
-            <div className="mt-4 space-y-3 text-sm text-[#2C4C76]">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-[#5A7AA4]">Por que estou sugerindo isso?</p>
-                <p className="mt-1 font-semibold">{coachCopy.why}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-[#5A7AA4]">Como isso ajuda voce</p>
-                <p className="mt-1 font-semibold">{coachCopy.how}</p>
-              </div>
-            </div>
-            <button
-              className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-[#20B3A8] px-4 py-3 text-sm font-extrabold text-white shadow-[0_6px_0_rgba(14,125,116,0.35)] transition hover:brightness-95"
-              onClick={() => setCoachOpen(false)}
-              type="button"
+        {coachOpen && brief ? (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#122949]/45 px-4" onClick={() => setCoachOpen(false)}>
+            <div
+              className="w-full max-w-sm rounded-[28px] border border-[#BFD3EE] bg-white p-5 shadow-[0_20px_40px_rgba(11,44,79,0.2)]"
+              onClick={(event) => event.stopPropagation()}
+              role="dialog"
             >
-              Entendi
-            </button>
+              <h2 className="text-lg font-extrabold text-[#1B365D]">Coach do Axion</h2>
+              <div className="mt-4 space-y-3 text-sm text-[#2C4C76]">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#5A7AA4]">Por que estou sugerindo isso?</p>
+                  <p className="mt-1 font-semibold">{coachCopy.why}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#5A7AA4]">Como isso ajuda voce</p>
+                  <p className="mt-1 font-semibold">{coachCopy.how}</p>
+                </div>
+              </div>
+              <button
+                className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-[#20B3A8] px-4 py-3 text-sm font-extrabold text-white shadow-[0_6px_0_rgba(14,125,116,0.35)] transition hover:brightness-95"
+                onClick={() => setCoachOpen(false)}
+                type="button"
+              >
+                Entendi
+              </button>
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      <ChildBottomNav />
-    </PageShell>
+        <ChildBottomNav />
+      </PageShell>
+    </ChildDesktopShell>
   );
 }

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Brain, Sparkles, Target, Zap } from "lucide-react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
+import { ChildDesktopShell } from "@/components/child-desktop-shell";
 import { ConfettiBurst } from "@/components/confetti-burst";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
@@ -191,7 +192,8 @@ export default function MemoryGamePage() {
   }, [finished, flipped.length, feedback]);
 
   return (
-    <PageShell tone="child" width="compact">
+    <ChildDesktopShell activeNav="jogos">
+      <PageShell tone="child" width="compact">
       <ConfettiBurst trigger={confettiTrigger} />
       <Card className="mb-3">
         <CardHeader className="pb-2">
@@ -270,7 +272,8 @@ export default function MemoryGamePage() {
           ) : null}
         </CardContent>
       </Card>
-      <ChildBottomNav />
-    </PageShell>
+        <ChildBottomNav />
+      </PageShell>
+    </ChildDesktopShell>
   );
 }

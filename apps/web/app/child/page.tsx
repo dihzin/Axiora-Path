@@ -12,6 +12,7 @@ import { AxionDialogue } from "@/components/axion-dialogue";
 import { AvatarEvolution } from "@/components/avatar-evolution";
 import { ChildAvatar } from "@/components/child-avatar";
 import { ChildBottomNav } from "@/components/child-bottom-nav";
+import { ChildDesktopShell } from "@/components/child-desktop-shell";
 import { PageShell } from "@/components/layout/page-shell";
 import { LevelUpOverlay } from "@/components/level-up-overlay";
 import { useTheme } from "@/components/theme-provider";
@@ -749,13 +750,14 @@ export default function ChildPage() {
       {levelUpOverlayLevel !== null ? (
         <LevelUpOverlay level={levelUpOverlayLevel} onDismiss={() => setLevelUpOverlayLevel(null)} />
       ) : null}
-      <PageShell
-        tone="child"
-        width={isSchoolTenant ? "wide" : "content"}
-        className={cn(
-          "flex flex-col pt-5",
-        )}
-      >
+      <ChildDesktopShell activeNav="inicio">
+        <PageShell
+          tone="child"
+          width={isSchoolTenant ? "wide" : "content"}
+          className={cn(
+            "flex flex-col pt-5",
+          )}
+        >
         <div className="mb-3 flex flex-wrap items-center gap-2 sm:flex-nowrap sm:justify-between">
           <p className="order-2 min-w-0 flex-1 basis-full truncate text-sm font-medium text-muted-foreground sm:order-1 sm:basis-auto">
             {childName ? `Perfil: ${childName}` : "Perfil infantil"}
@@ -1093,7 +1095,8 @@ export default function ChildPage() {
             </div>
           </div>
         ) : null}
-      </PageShell>
+        </PageShell>
+      </ChildDesktopShell>
     </>
   );
 }

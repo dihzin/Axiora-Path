@@ -7,7 +7,7 @@ type PageShellWidth = "compact" | "content" | "wide" | "full";
 
 const toneClass: Record<PageShellTone, string> = {
   default: "",
-  child: "pb-52 md:pb-40",
+  child: "pb-52 md:pb-40 lg:pb-8",
   parent: "",
   admin: "",
 };

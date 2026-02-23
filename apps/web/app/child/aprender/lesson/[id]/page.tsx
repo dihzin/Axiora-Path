@@ -1,10 +1,11 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Coins, Flame, Lightbulb, Star, Volume2, VolumeX, Zap } from "lucide-react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
+import { ChildDesktopShell } from "@/components/child-desktop-shell";
 import { ConfettiBurst } from "@/components/confetti-burst";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
@@ -151,6 +152,76 @@ function difficultyLabel(difficulty: LearningNextItem["difficulty"] | undefined)
   return { text: "Fácil", className: "border-secondary/35 bg-secondary/10 text-secondary" };
 }
 
+function questionFingerprint(item: LearningNextItem): string {
+  return [item.questionId ?? "", item.templateId ?? "", item.generatedVariantId ?? "", item.variantId ?? "", item.prompt ?? ""].join("|");
+}
+
+function buildOfflineQuestions(lessonId: number): LearningNextItem[] {
+  const lid = Number.isFinite(lessonId) && lessonId > 0 ? lessonId : 0;
+  return [
+    {
+      questionId: `offline-${lid}-1`,
+      templateId: null,
+      generatedVariantId: null,
+      variantId: null,
+      skillId: "offline-core-1",
+      difficulty: "EASY",
+      type: "MCQ",
+      prompt: "Sofia tinha 1 adesivo e ganhou 7 adesivos. Quantos adesivos tem agora?",
+      explanation: "Some os adesivos iniciais aos que ela ganhou.",
+      metadata: {
+        options: [
+          { id: "a", label: "4" },
+          { id: "b", label: "8" },
+          { id: "c", label: "7" },
+          { id: "d", label: "13" },
+        ],
+        correctOptionId: "b",
+      },
+    },
+    {
+      questionId: `offline-${lid}-2`,
+      templateId: null,
+      generatedVariantId: null,
+      variantId: null,
+      skillId: "offline-core-2",
+      difficulty: "MEDIUM",
+      type: "MCQ",
+      prompt: "Quanto é 14 + 11?",
+      explanation: "Quebre em dezenas e unidades para facilitar.",
+      metadata: {
+        options: [
+          { id: "a", label: "26" },
+          { id: "b", label: "29" },
+          { id: "c", label: "27" },
+          { id: "d", label: "25" },
+        ],
+        correctOptionId: "d",
+      },
+    },
+    {
+      questionId: `offline-${lid}-3`,
+      templateId: null,
+      generatedVariantId: null,
+      variantId: null,
+      skillId: "offline-core-3",
+      difficulty: "EASY",
+      type: "MCQ",
+      prompt: "Qual número completa: 5, 6, 7, __ ?",
+      explanation: "A sequência cresce de 1 em 1.",
+      metadata: {
+        options: [
+          { id: "a", label: "8" },
+          { id: "b", label: "9" },
+          { id: "c", label: "6" },
+          { id: "d", label: "10" },
+        ],
+        correctOptionId: "a",
+      },
+    },
+  ];
+}
+
 function hashSeed(input: string): number {
   let h = 2166136261;
   for (let i = 0; i < input.length; i += 1) {
@@ -285,6 +356,52 @@ const ENCOURAGE_CLOSERS = [
   "A resposta certa está pertinho.",
 ] as const;
 
+const MIN_SESSION_QUESTIONS = 3;
+const MAX_SESSION_QUESTIONS = 8;
+const LOCAL_COMPLETED_LESSONS_KEY = "axiora_learning_completed_lessons";
+
+function persistCompletedLessonLocally(lessonId: number) {
+  if (!Number.isFinite(lessonId) || lessonId <= 0) return;
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem(LOCAL_COMPLETED_LESSONS_KEY);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    const list = Array.isArray(parsed) ? parsed.filter((item): item is number => typeof item === "number" && Number.isFinite(item)) : [];
+    if (!list.includes(lessonId)) {
+      list.push(lessonId);
+      window.localStorage.setItem(LOCAL_COMPLETED_LESSONS_KEY, JSON.stringify(list));
+    }
+  } catch {
+    // no-op
+  }
+}
+
+function buildLocalFinishPayload(params: {
+  sessionId: string;
+  answeredCount: number;
+  correctCount: number;
+}): LearningSessionFinishResponse {
+  const safeTotal = Math.max(params.answeredCount, 1);
+  const safeAccuracy = safeTotal > 0 ? Math.max(0, Math.min(1, params.correctCount / safeTotal)) : 0;
+  const fallbackStars = safeAccuracy >= 0.9 ? 3 : safeAccuracy >= 0.6 ? 2 : 1;
+  return {
+    sessionId: params.sessionId,
+    endedAt: new Date().toISOString(),
+    stars: fallbackStars,
+    accuracy: safeAccuracy,
+    totalQuestions: safeTotal,
+    correctCount: params.correctCount,
+    xpEarned: Math.round(safeTotal * 6 + params.correctCount * 3),
+    coinsEarned: Math.max(2, Math.round(params.correctCount * 1.5)),
+    leveledUp: false,
+    gamification: {
+      xp: 0,
+      level: 0,
+      axionCoins: 0,
+    },
+  };
+}
+
 function joinParts(parts: string[]): string {
   return parts.filter((part) => part.trim().length > 0).join(" ").replace(/\s+/g, " ").trim();
 }
@@ -344,6 +461,8 @@ export default function AdaptiveLessonSessionPage() {
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [questionError, setQuestionError] = useState<string | null>(null);
+  const [questionRetrying, setQuestionRetrying] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [questionStartedAt, setQuestionStartedAt] = useState<number>(Date.now());
@@ -375,16 +494,95 @@ export default function AdaptiveLessonSessionPage() {
   const [microcopyTick, setMicrocopyTick] = useState(0);
   const [backSaving, setBackSaving] = useState(false);
   const [lessonContextLabel, setLessonContextLabel] = useState<string | null>(null);
+  const [sessionTargetQuestions, setSessionTargetQuestions] = useState<number>(MIN_SESSION_QUESTIONS);
+  const [loadingNextQuestion, setLoadingNextQuestion] = useState(false);
+  const [questionSupplyExhausted, setQuestionSupplyExhausted] = useState(false);
+  const [offlineMode, setOfflineMode] = useState(false);
   const reducedMotion = effectiveReducedMotion(uxSettings);
 
   const current = queue[index] ?? null;
   const currentDifficulty = difficultyLabel(current?.difficulty);
-  const progressPercent = queue.length > 0 ? ((index + 1) / queue.length) * 100 : 0;
   const answeredCount = Object.keys(answeredByStep).length;
+  const progressPercent = Math.min(100, (answeredCount / Math.max(1, sessionTargetQuestions)) * 100);
   const correctCount = Object.values(correctByStep).filter(Boolean).length;
   const energyBlocked = energyStatus ? !energyStatus.canPlay : false;
   const waitClock = energyStatus ? formatClock(energyStatus.secondsUntilPlayable) : "00:00";
   const axionTip = useMemo(() => resolveAxionTip(current), [current]);
+
+  const loadQuestionBatch = useCallback(async (subjectId: number) => {
+    const firstBatch = await getAdaptiveLearningNext({
+      subjectId,
+      lessonId,
+      count: 8,
+    });
+    if (!firstBatch.items.length) {
+      throw new ApiError("Empty adaptive batch", 503, {
+        code: "EMPTY_BATCH",
+        message: "Nenhuma pergunta disponível para esta lição agora.",
+      });
+    }
+    const target = Math.max(MIN_SESSION_QUESTIONS, Math.min(MAX_SESSION_QUESTIONS, firstBatch.items.length));
+    setQueue(firstBatch.items);
+    setSessionTargetQuestions(target);
+    setOfflineMode(false);
+    setIndex(0);
+    setQuestionStartedAt(Date.now());
+    setAnsweredByStep({});
+    setCorrectByStep({});
+    setFeedback(null);
+    setSelectedOption(null);
+    setDragAssignments({});
+    setQuestionSupplyExhausted(false);
+    setQuestionError(null);
+  }, [lessonId]);
+
+  const activateOfflineMode = useCallback(
+    (message?: string) => {
+      const items = buildOfflineQuestions(lessonId);
+      setQueue(items);
+      setSessionTargetQuestions(items.length);
+      setIndex(0);
+      setQuestionStartedAt(Date.now());
+      setAnsweredByStep({});
+      setCorrectByStep({});
+      setSelectedOption(null);
+      setDragAssignments({});
+      setQuestionSupplyExhausted(false);
+      setQuestionError(null);
+      setOfflineMode(true);
+      if (message) {
+        setFeedback({
+          tone: "encourage",
+          message,
+        });
+      }
+    },
+    [lessonId],
+  );
+
+  const loadQuestionBatchWithBackoff = useCallback(async (subjectId: number) => {
+    const retryDelays = [0, 1500, 3000];
+    let lastErr: unknown = null;
+
+    for (let attempt = 0; attempt < retryDelays.length; attempt += 1) {
+      const waitMs = retryDelays[attempt];
+      if (waitMs > 0) {
+        setQuestionRetrying(true);
+        await new Promise((resolve) => window.setTimeout(resolve, waitMs));
+      }
+
+      try {
+        await loadQuestionBatch(subjectId);
+        setQuestionRetrying(false);
+        return;
+      } catch (err: unknown) {
+        lastErr = err;
+      }
+    }
+
+    setQuestionRetrying(false);
+    throw lastErr ?? new Error("Adaptive question load failed");
+  }, [loadQuestionBatch]);
 
   const loadEnergy = async () => {
     try {
@@ -407,6 +605,7 @@ export default function AdaptiveLessonSessionPage() {
       try {
         setLoading(true);
         setError(null);
+        setQuestionError(null);
         const sessionStart = await startLearningSession({ lessonId });
         setSession(sessionStart);
         try {
@@ -423,14 +622,15 @@ export default function AdaptiveLessonSessionPage() {
         } catch {
           setLessonContextLabel(null);
         }
-        const firstBatch = await getAdaptiveLearningNext({
-          subjectId: sessionStart.subjectId,
-          lessonId,
-          count: 8,
-        });
-        setQueue(firstBatch.items);
-        setIndex(0);
-        setQuestionStartedAt(Date.now());
+        try {
+          await loadQuestionBatchWithBackoff(sessionStart.subjectId);
+        } catch (batchErr: unknown) {
+          const message =
+            batchErr instanceof ApiError
+              ? getApiErrorMessage(batchErr, "Não foi possível carregar as perguntas agora.")
+              : "Não foi possível carregar as perguntas agora.";
+          activateOfflineMode(`${message} Entramos no modo offline para você continuar.`);
+        }
       } catch (err: unknown) {
         const message =
           err instanceof ApiError
@@ -447,7 +647,7 @@ export default function AdaptiveLessonSessionPage() {
     void getAprenderLearningStreak()
       .then((data) => setLearningStreak(data))
       .catch(() => setLearningStreak(null));
-  }, [lessonId]);
+  }, [activateOfflineMode, lessonId, loadQuestionBatchWithBackoff]);
 
   useEffect(() => {
     void fetchUXSettings().then(setUxSettings);
@@ -502,6 +702,43 @@ export default function AdaptiveLessonSessionPage() {
     if (!current || submitting || energyBlocked) return;
     setSubmitting(true);
     try {
+      if (offlineMode) {
+        setAnsweredByStep((prev) => ({ ...prev, [index]: true }));
+        setCorrectByStep((prev) => ({ ...prev, [index]: outcome.correct }));
+        if (!outcome.correct) {
+          await applyWrongEnergy();
+          const explanation = current.explanation || "Vamos revisar juntos e praticar com uma versão mais simples.";
+          const seed = `${lessonId}|${index}|${current.questionId ?? current.templateId}|wrong|${microcopyTick}`;
+          const base = buildEncourageMicrocopy(seed, { maxChars: 88 });
+          const explained = joinParts([base, explanation]);
+          setFeedback({
+            tone: "encourage",
+            message: buildBoundedMessage([explained, base], 108),
+          });
+          setMicrocopyTick((prev) => prev + 1);
+          setTipVisible(true);
+          playSfx("/sfx/node-pop.ogg", uxSettings.soundEnabled);
+          hapticPress(uxSettings);
+        } else {
+          let localStreakCorrect = 1;
+          for (let i = index - 1; i >= 0; i -= 1) {
+            if (correctByStep[i]) localStreakCorrect += 1;
+            else break;
+          }
+          const streakCelebrate = localStreakCorrect > 0 && localStreakCorrect % 3 === 0;
+          const seed = `${lessonId}|${index}|${current.questionId ?? current.templateId}|correct|${microcopyTick}`;
+          setFeedback({
+            tone: "success",
+            message: buildSuccessMicrocopy(seed, { streakMode: streakCelebrate, maxChars: 108 }),
+          });
+          setMicrocopyTick((prev) => prev + 1);
+          setCorrectFxTick((prev) => prev + 1);
+          playSfx("/sfx/completion-chime.ogg", uxSettings.soundEnabled);
+          hapticCompletion(uxSettings);
+        }
+        return;
+      }
+
       const elapsed = Math.max(0, Date.now() - questionStartedAt);
       const answerResult = await submitAdaptiveLearningAnswer({
         questionId: current.questionId,
@@ -604,6 +841,7 @@ export default function AdaptiveLessonSessionPage() {
         totalQuestions: answeredCount,
         correctCount,
       });
+      persistCompletedLessonLocally(lessonId);
       setResult(response);
       if (!reducedMotion && (response.stars === 3 || response.leveledUp)) {
         setConfettiTrigger((prev) => prev + 1);
@@ -619,7 +857,26 @@ export default function AdaptiveLessonSessionPage() {
         err instanceof ApiError
           ? getApiErrorMessage(err, "Não foi possível finalizar a sessão.")
           : "Não foi possível finalizar a sessão.";
-      setError(message);
+      // Do not block the lesson UI on finish errors; fallback to local completion
+      // so the user can continue the flow without getting stuck.
+      setFeedback({
+        tone: "encourage",
+        message: buildBoundedMessage(
+          [
+            joinParts([message, "Conexão instável. Salvamos localmente por enquanto."]),
+            "Conexão instável. Continuando em modo local.",
+          ],
+          108,
+        ),
+      });
+      setResult(
+        buildLocalFinishPayload({
+          sessionId: session.sessionId,
+          answeredCount,
+          correctCount,
+        }),
+      );
+      persistCompletedLessonLocally(lessonId);
     } finally {
       setFinishing(false);
     }
@@ -648,24 +905,81 @@ export default function AdaptiveLessonSessionPage() {
         totalQuestions: answeredCount,
         correctCount,
       });
+      persistCompletedLessonLocally(lessonId);
       pushPathWithResult(response);
     } catch {
-      router.push("/child/aprender");
+      persistCompletedLessonLocally(lessonId);
+      const fallback = buildLocalFinishPayload({
+        sessionId: session.sessionId,
+        answeredCount,
+        correctCount,
+      });
+      pushPathWithResult(fallback);
     } finally {
       setBackSaving(false);
     }
   };
 
   const goNext = async () => {
+    if (loadingNextQuestion) return;
     setFeedback(null);
     setSelectedOption(null);
     setDragAssignments({});
+    const canFinishByTarget = answeredCount >= sessionTargetQuestions;
+    const canForceFinishBySupply = questionSupplyExhausted && answeredCount > 0;
+    if (canFinishByTarget || canForceFinishBySupply) {
+      await finishSessionNow();
+      return;
+    }
+
     if (index < queue.length - 1) {
       setIndex((prev) => prev + 1);
       setQuestionStartedAt(Date.now());
+      setQuestionSupplyExhausted(false);
       return;
     }
-    await finishSessionNow();
+
+    // When we reach the last loaded question, try to fetch more before finishing.
+    if (session) {
+      try {
+        setLoadingNextQuestion(true);
+        const nextBatch = await getAdaptiveLearningNext({
+          subjectId: session.subjectId,
+          lessonId,
+          count: 4,
+        });
+        if (nextBatch.items.length > 0) {
+          const known = new Set(queue.map((item) => questionFingerprint(item)));
+          const fresh = nextBatch.items.filter((item) => !known.has(questionFingerprint(item)));
+          if (fresh.length > 0) {
+            setQueue((prev) => [...prev, ...fresh]);
+            setIndex((prev) => prev + 1);
+            setQuestionStartedAt(Date.now());
+            setQuestionSupplyExhausted(false);
+            return;
+          }
+        }
+        setQuestionSupplyExhausted(true);
+        setFeedback({
+          tone: "encourage",
+          message: "Não foi possível carregar a próxima pergunta agora. Tente novamente.",
+        });
+        return;
+      } catch {
+        setQuestionSupplyExhausted(true);
+        setFeedback({
+          tone: "encourage",
+          message: "Conexão instável. Toque em Próximo para tentar novamente.",
+        });
+        return;
+      } finally {
+        setLoadingNextQuestion(false);
+      }
+    }
+    setFeedback({
+      tone: "encourage",
+      message: "Ainda não foi possível continuar. Tente novamente em instantes.",
+    });
   };
 
   const onRefillWait = async () => {
@@ -702,10 +1016,13 @@ export default function AdaptiveLessonSessionPage() {
   const options = useMemo(() => normalizeOptions(metadata), [metadata]);
   const pairs = useMemo(() => normalizePairs(metadata), [metadata]);
   const currentAnswered = Boolean(answeredByStep[index]);
+  const canFinishNow = currentAnswered && answeredCount >= sessionTargetQuestions;
+  const canForceFinishNow = currentAnswered && answeredCount > 0 && index >= queue.length - 1 && questionSupplyExhausted;
   const canSubmitDragDrop = pairs.length > 0 && Object.keys(dragAssignments).length >= pairs.length;
 
   return (
-    <PageShell tone="child" width="content">
+    <ChildDesktopShell activeNav="aprender">
+      <PageShell tone="child" width="content">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -965,12 +1282,53 @@ export default function AdaptiveLessonSessionPage() {
               </Button>
               <Button
                 className="w-full"
-                disabled={!currentAnswered || submitting || finishing || energyBlocked || Boolean(result)}
+                disabled={!currentAnswered || submitting || finishing || energyBlocked || Boolean(result) || loadingNextQuestion}
                 onClick={() => void goNext()}
               >
-                {index >= queue.length - 1 ? (finishing ? "Finalizando..." : "Finalizar sessão") : "Próximo"}
+                {canFinishNow || canForceFinishNow
+                  ? finishing
+                    ? "Finalizando..."
+                    : "Finalizar sessão"
+                  : loadingNextQuestion
+                    ? "Carregando..."
+                    : "Próximo"}
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {!loading && !error && !current ? (
+        <Card className="mb-4">
+          <CardContent className="space-y-3 p-5">
+            <p className="text-sm font-semibold text-muted-foreground">
+              {questionError ?? "Ainda não foi possível carregar esta lição."}
+            </p>
+            {questionRetrying ? (
+              <p className="text-xs font-semibold text-muted-foreground">Tentando reconectar...</p>
+            ) : null}
+            <Button
+              type="button"
+              className="w-full"
+              disabled={!session || submitting || questionRetrying}
+              onClick={() => {
+                if (!session) return;
+                void loadQuestionBatchWithBackoff(session.subjectId).catch((err: unknown) => {
+                  const message =
+                    err instanceof ApiError
+                      ? getApiErrorMessage(err, "Não foi possível carregar as perguntas agora.")
+                      : "Não foi possível carregar as perguntas agora.";
+                  activateOfflineMode(`${message} Entramos no modo offline para você continuar.`);
+                });
+              }}
+            >
+              Tentar novamente
+            </Button>
+            {session && answeredCount > 0 ? (
+              <Button type="button" variant="secondary" className="w-full" disabled={finishing} onClick={() => void finishSessionNow()}>
+                {finishing ? "Finalizando..." : "Finalizar com progresso atual"}
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}
@@ -1115,7 +1473,8 @@ export default function AdaptiveLessonSessionPage() {
           }
         }
       `}</style>
-    </PageShell>
+      </PageShell>
+    </ChildDesktopShell>
   );
 }
 

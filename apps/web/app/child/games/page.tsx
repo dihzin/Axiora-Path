@@ -1,11 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, Coins, Crown, Flame, Grid2x2, MapPinned, PiggyBank, Rocket, Search, Sparkles, Trophy } from "lucide-react";
 import type { ComponentType } from "react";
+import Link from "next/link";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
+import { ChildDesktopShell } from "@/components/child-desktop-shell";
 import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -202,6 +204,7 @@ export default function ChildGamesPage() {
   const [catalogGames, setCatalogGames] = useState<GameItem[]>([]);
   const [catalogState, setCatalogState] = useState<"loading" | "remote" | "fallback">("loading");
   const [startingId, setStartingId] = useState<string | null>(null);
+  const [catalogFilter, setCatalogFilter] = useState<"all" | "available" | "upcoming">("all");
   const weeklyGoal = 350;
 
   useEffect(() => {
@@ -343,13 +346,34 @@ export default function ChildGamesPage() {
     };
   }, []);
 
-  const games = catalogState === "remote" ? catalogGames : catalogState === "fallback" ? GAMES : [];
-  const availableGames = games.filter((game) => game.playable !== false);
-  const upcomingGames = games.filter((game) => game.playable === false);
+  const games = useMemo(
+    () => (catalogState === "remote" ? catalogGames : catalogState === "fallback" ? GAMES : []),
+    [catalogGames, catalogState],
+  );
+  const availableGames = useMemo(() => games.filter((game) => game.playable !== false), [games]);
+  const upcomingGames = useMemo(() => games.filter((game) => game.playable === false), [games]);
+  const visibleAvailable = catalogFilter === "upcoming" ? [] : availableGames;
+  const visibleUpcoming = catalogFilter === "available" ? [] : upcomingGames;
 
   return (
-    <PageShell tone="child" width="wide">
-      <Card className="mb-4 overflow-hidden border-border bg-[radial-gradient(circle_at_85%_15%,rgba(255,107,61,0.18),transparent_50%),linear-gradient(180deg,#ffffff_0%,#f7fbff_100%)] shadow-[0_2px_0_rgba(184,200,239,0.7),0_14px_28px_rgba(34,63,107,0.12)]">
+    <ChildDesktopShell activeNav="jogos">
+      <PageShell tone="child" width="wide" className="relative overflow-hidden">
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute left-[-10%] top-16 h-64 w-64 rounded-full bg-[#6FD9CA]/10 blur-2xl" />
+          <div className="absolute right-[-8%] top-[24%] h-72 w-72 rounded-full bg-[#B2C7FF]/11 blur-3xl" />
+          <div className="absolute bottom-24 left-[22%] h-52 w-52 rounded-full bg-[#FFD28A]/10 blur-3xl" />
+        </div>
+
+      <div className="mb-3">
+        <Link
+          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[#C9D8EF] bg-white/95 px-3 py-1.5 text-sm font-black text-[#4A5E7D] shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
+          href="/child"
+        >
+          Voltar
+        </Link>
+      </div>
+
+      <Card className="mb-4 overflow-hidden border-[#CFE6F3] bg-[linear-gradient(140deg,#FFFFFF_0%,#F4FBFF_52%,#EFF8FF_100%)] shadow-[0_14px_32px_rgba(65,98,151,0.10)]">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-lg">Arena de Jogos</CardTitle>
@@ -388,6 +412,25 @@ export default function ChildGamesPage() {
           </div>
         </CardContent>
       </Card>
+
+      <section className="mb-4 flex gap-2 overflow-x-auto pb-1">
+        {([
+          { id: "all", label: "Todos" },
+          { id: "available", label: `Disponiveis ${availableGames.length}` },
+          { id: "upcoming", label: `Em breve ${upcomingGames.length}` },
+        ] as const).map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => setCatalogFilter(option.id)}
+            className={`min-h-[40px] rounded-full border px-3 text-xs font-black transition ${
+              catalogFilter === option.id ? "border-[#36C8B5] bg-[#E8FBF8] text-[#129A8A]" : "border-[#D6E0EE] bg-white text-[#6A7F9D]"
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </section>
 
       <section className="mb-4 rounded-3xl border border-border bg-[linear-gradient(110deg,rgba(14,165,164,0.18),rgba(255,255,255,0.96)_42%,rgba(67,190,187,0.18))] p-4 shadow-[0_2px_0_rgba(184,200,239,0.68)]">
         <div className="flex items-start justify-between gap-3">
@@ -435,8 +478,8 @@ export default function ChildGamesPage() {
             Catálogo online indisponível no momento. Exibindo jogos locais para você continuar.
           </article>
         ) : null}
-        {availableGames.length > 0 ? <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Disponíveis agora</p> : null}
-        {availableGames.map((game) => {
+        {visibleAvailable.length > 0 ? <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Disponíveis agora</p> : null}
+        {visibleAvailable.map((game) => {
           const Icon = game.icon;
           return (
             <article key={game.id} className="games-gradient-shell games-gradient-shell--brand">
@@ -511,8 +554,8 @@ export default function ChildGamesPage() {
             </article>
           );
         })}
-        {upcomingGames.length > 0 ? <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Em breve</p> : null}
-        {upcomingGames.map((game) => {
+        {visibleUpcoming.length > 0 ? <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Em breve</p> : null}
+        {visibleUpcoming.map((game) => {
           const Icon = game.icon;
           return (
             <article key={game.id} className="games-gradient-shell games-gradient-shell--brand games-gradient-shell--muted">
@@ -549,7 +592,8 @@ export default function ChildGamesPage() {
         })}
       </section>
 
-      <ChildBottomNav />
-    </PageShell>
+        <ChildBottomNav />
+      </PageShell>
+    </ChildDesktopShell>
   );
 }
