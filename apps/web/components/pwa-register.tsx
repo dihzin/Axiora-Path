@@ -5,7 +5,8 @@ import { useEffect } from "react";
 export function PwaRegister() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
-    if (process.env.NODE_ENV !== "production") {
+    const enablePwa = process.env.NEXT_PUBLIC_ENABLE_PWA === "true";
+    if (process.env.NODE_ENV !== "production" || !enablePwa) {
       void navigator.serviceWorker.getRegistrations().then((registrations) => {
         registrations.forEach((registration) => {
           void registration.unregister();

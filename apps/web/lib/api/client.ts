@@ -9,11 +9,14 @@ import {
 } from "@/lib/api/session";
 
 function resolveApiUrl(): string {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!apiUrl) {
-    throw new Error("NEXT_PUBLIC_API_URL is not defined");
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (apiUrl) {
+    return apiUrl.replace(/\/+$/, "");
   }
-  return apiUrl;
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+  throw new Error("NEXT_PUBLIC_API_URL is not defined");
 }
 export type ThemeName = "default" | "space" | "jungle" | "ocean" | "soccer" | "capybara" | "dinos" | "princess" | "heroes";
 export type MultiplayerSessionStatus = "WAITING" | "IN_PROGRESS" | "FINISHED" | "CANCELLED";
