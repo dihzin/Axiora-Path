@@ -2,16 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { AxionCharacter } from "@/components/axion-character";
 import { ChildNavIcon, type ChildNavIconKey } from "@/components/child-bottom-nav";
 import { TopStatsBar } from "@/components/trail/TopStatsBar";
+import { getAprenderLearningProfile, getStreak } from "@/lib/api/client";
 
 type ChildDesktopShellProps = {
   children: ReactNode;
   activeNav?: ChildNavIconKey;
   rightRail?: ReactNode;
+  rightRailAppend?: ReactNode;
 };
 
 const NAV_ITEMS: Array<{ href: string; label: string; iconName: ChildNavIconKey }> = [
@@ -23,7 +25,7 @@ const NAV_ITEMS: Array<{ href: string; label: string; iconName: ChildNavIconKey 
   { href: "/child/axion", label: "Axion", iconName: "axion" },
 ];
 
-export function ChildDesktopShell({ children, activeNav, rightRail }: ChildDesktopShellProps) {
+export function ChildDesktopShell({ children, activeNav, rightRail, rightRailAppend }: ChildDesktopShellProps) {
   const pathname = usePathname();
   const resolvedActive = activeNav ?? resolveActive(pathname);
 
@@ -45,12 +47,17 @@ export function ChildDesktopShell({ children, activeNav, rightRail }: ChildDeskt
           ))}
         </aside>
 
-        <div className="mx-auto w-full lg:grid lg:max-w-[1220px] lg:grid-cols-[minmax(620px,1fr)_320px] lg:gap-7 lg:px-5 xl:px-8">
-          <div className="mx-auto w-full max-w-sm px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:max-w-[760px] lg:px-0 lg:pb-10 lg:pt-5">{children}</div>
+        <div className="mx-auto w-full lg:grid lg:max-w-[1320px] lg:grid-cols-[minmax(680px,820px)_320px] lg:gap-8 lg:px-6 xl:max-w-[1420px] xl:grid-cols-[minmax(720px,880px)_340px] xl:px-8">
+          <div className="mx-auto w-full max-w-sm px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:max-w-[820px] lg:px-0 lg:pb-10 lg:pt-5 xl:max-w-[880px]">{children}</div>
 
           <aside className="hidden lg:block lg:py-5">
             <div className="sticky top-5 space-y-3.5">
-              {rightRail ?? <DefaultRightRail />}
+              {rightRail ?? (
+                <>
+                  <DefaultRightRail />
+                  {rightRailAppend}
+                </>
+              )}
             </div>
           </aside>
         </div>
@@ -85,9 +92,59 @@ function DesktopNavItem({ href, iconName, label, active }: { href: string; iconN
 }
 
 function DefaultRightRail() {
+  const [streak, setStreak] = useState(0);
+  const [gems, setGems] = useState(0);
+  const [xp, setXp] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const rawChildId = window.localStorage.getItem("axiora_child_id");
+    const childId = rawChildId ? Number(rawChildId) : NaN;
+    if (!Number.isFinite(childId) || childId <= 0) {
+      setStreak(0);
+      setGems(0);
+      setXp(0);
+      return;
+    }
+
+    let cancelled = false;
+    const loadStats = () => {
+      void getStreak(childId)
+        .then((data) => {
+          if (!cancelled) setStreak(Math.max(0, data.current));
+        })
+        .catch(() => {
+          if (!cancelled) setStreak(0);
+        });
+      void getAprenderLearningProfile()
+        .then((data) => {
+          if (!cancelled) {
+            setGems(Math.max(0, Math.round(data.axionCoins ?? 0)));
+            setXp(Math.max(0, Math.min(100, Math.round(data.xpLevelPercent ?? 0))));
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setGems(0);
+            setXp(0);
+          }
+        });
+    };
+
+    loadStats();
+    const intervalId = window.setInterval(loadStats, 15000);
+    window.addEventListener("focus", loadStats);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", loadStats);
+    };
+  }, []);
+
   return (
     <>
-      <TopStatsBar streak={1} gems={277} xp={31} className="max-w-none" />
+      <TopStatsBar streak={streak} gems={gems} xp={xp} className="max-w-none" />
       <div className="rounded-2xl border border-[#DFE7F2] bg-white p-4 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
         <p className="text-xs font-black uppercase tracking-[0.08em] text-[#8A9BB4]">Progresso</p>
         <p className="mt-1 text-lg font-black text-[#1F3558]">Você está indo bem!</p>

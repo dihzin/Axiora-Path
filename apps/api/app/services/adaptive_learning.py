@@ -954,6 +954,35 @@ def _build_question_item(*, question: Question, variant: QuestionVariant | None)
     )
 
 
+def _infer_item_type_from_metadata(metadata: dict[str, Any], fallback: QuestionType) -> QuestionType:
+    if isinstance(metadata.get("pairs"), list) or isinstance(metadata.get("matchPairs"), list):
+        return QuestionType.MATCH
+    if isinstance(metadata.get("items"), list) or isinstance(metadata.get("sequence"), list):
+        return QuestionType.ORDERING
+    options = metadata.get("options")
+    if not isinstance(options, list):
+        options = metadata.get("choices")
+    if isinstance(options, list):
+        if len(options) == 2:
+            labels: set[str] = set()
+            for option in options:
+                data = option if isinstance(option, dict) else {}
+                label_raw = data.get("label", data.get("text", ""))
+                if isinstance(label_raw, str):
+                    labels.add(label_raw.strip().lower())
+            if labels in ({"verdadeiro", "falso"}, {"true", "false"}):
+                return QuestionType.TRUE_FALSE
+        return QuestionType.MCQ
+    return fallback
+
+
+def _creates_type_streak(items: list[NextQuestionItem], candidate_type: QuestionType, max_streak: int = 2) -> bool:
+    if len(items) < max_streak:
+        return False
+    recent = items[-max_streak:]
+    return all(item.type == candidate_type for item in recent)
+
+
 def _build_template_item(*, template: QuestionTemplate, generated_variant: GeneratedVariant) -> NextQuestionItem:
     payload = generated_variant.variant_data or {}
     metadata = dict(payload.get("metadata", {}))
@@ -974,12 +1003,74 @@ def _build_template_item(*, template: QuestionTemplate, generated_variant: Gener
         prompt = f"{name} tinha {a} {context_a} e ganhou {b} {context_b}. Quantos {context_answer} tem agora?"
         explanation = f"{name} somou {a} com {b} e chegou a {answer} {context_answer}."
 
+    variables = payload.get("variables") if isinstance(payload.get("variables"), dict) else {}
+    inferred_type = _infer_item_type_from_metadata(metadata, QuestionType.MCQ)
+
+    # Diversify interaction format for arithmetic templates to avoid quiz-only sessions.
+    if template.template_type in {QuestionTemplateType.MATH_ARITH, QuestionTemplateType.MATH_WORDPROB}:
+        signature = str(metadata.get("signature", "")).strip()
+        seed_source = signature or str(generated_variant.id) or f"{template.id}:{prompt}"
+        seed_int = int(sha256(seed_source.encode("utf-8")).hexdigest()[:8], 16)
+        mode = seed_int % 4
+        a = int(variables.get("a", 0))
+        b = int(variables.get("b", 0))
+        op = str(variables.get("op", "+")).strip()
+        answer = int(variables.get("answer", a + b))
+
+        if mode == 1:
+            is_true = (seed_int % 2) == 0
+            claimed = answer if is_true else answer + (2 if answer % 2 == 0 else 1)
+            prompt = f"{a} {op} {b} = {claimed}. Essa afirmação está correta?"
+            metadata = {
+                **metadata,
+                "options": [
+                    {"id": "true", "label": "Verdadeiro"},
+                    {"id": "false", "label": "Falso"},
+                ],
+                "correctOptionId": "true" if is_true else "false",
+            }
+            inferred_type = QuestionType.TRUE_FALSE
+        elif mode == 2:
+            p1_left, p1_right = a, b
+            p2_left, p2_right = a + 1, b
+            p3_left, p3_right = max(0, a - 1), b
+            op_label = "+" if op not in {"-", "*", "x", "/"} else op
+            res1 = p1_left + p1_right if op_label == "+" else (p1_left - p1_right if op_label == "-" else (p1_left * p1_right if op_label in {"*", "x"} else (p1_left // max(1, p1_right))))
+            res2 = p2_left + p2_right if op_label == "+" else (p2_left - p2_right if op_label == "-" else (p2_left * p2_right if op_label in {"*", "x"} else (p2_left // max(1, p2_right))))
+            res3 = p3_left + p3_right if op_label == "+" else (p3_left - p3_right if op_label == "-" else (p3_left * p3_right if op_label in {"*", "x"} else (p3_left // max(1, p3_right))))
+            prompt = "Associe cada operação ao resultado correto."
+            metadata = {
+                **metadata,
+                "pairs": [
+                    {"itemId": "m1", "itemLabel": f"{p1_left} {op_label} {p1_right}", "targetId": "t1", "targetLabel": str(res1)},
+                    {"itemId": "m2", "itemLabel": f"{p2_left} {op_label} {p2_right}", "targetId": "t2", "targetLabel": str(res2)},
+                    {"itemId": "m3", "itemLabel": f"{p3_left} {op_label} {p3_right}", "targetId": "t3", "targetLabel": str(res3)},
+                ],
+            }
+            inferred_type = QuestionType.MATCH
+        elif mode == 3:
+            values = [a, b, answer, answer + 2]
+            unique_values: list[int] = []
+            for value in values:
+                if value not in unique_values:
+                    unique_values.append(value)
+            ordered = sorted(unique_values)
+            prompt = "Organize os valores do menor para o maior."
+            metadata = {
+                **metadata,
+                "items": [
+                    {"id": f"ord-{idx+1}", "label": str(value), "correctOrder": ordered.index(value) + 1}
+                    for idx, value in enumerate(unique_values)
+                ],
+            }
+            inferred_type = QuestionType.ORDERING
+
     return NextQuestionItem(
         question_id=None,
         template_id=str(template.id),
         generated_variant_id=str(generated_variant.id),
         variant_id=None,
-        type=QuestionType.TEMPLATE,
+        type=inferred_type,
         prompt=prompt,
         explanation=explanation,
         skill_id=str(template.skill_id),
@@ -1064,8 +1155,7 @@ def build_next_questions(
         else:
             templates_query = templates_query.where(QuestionTemplate.lesson_id.is_(None))
         templates = db.scalars(templates_query).all()
-
-        picked = False
+        template_candidates: list[NextQuestionItem] = []
         for template in templates:
             used_signatures = _recent_template_signatures(
                 db,
@@ -1101,11 +1191,7 @@ def build_next_questions(
                 if llm_generated:
                     selected_variant = llm_generated[0]
             if selected_variant is not None:
-                out.append(_build_template_item(template=template, generated_variant=selected_variant))
-                picked = True
-                break
-        if picked:
-            continue
+                template_candidates.append(_build_template_item(template=template, generated_variant=selected_variant))
 
         q_query = (
             select(Question)
@@ -1130,13 +1216,35 @@ def build_next_questions(
                 )
             )
         questions = db.scalars(q_query).all()
-        if not questions:
+        question_candidates: list[NextQuestionItem] = []
+        if questions:
+            sorted_questions = sorted(questions, key=lambda item: 1 if str(item.id) in recent_qids else 0)
+            for question in sorted_questions[:4]:
+                variants = db.scalars(select(QuestionVariant).where(QuestionVariant.question_id == question.id)).all()
+                preferred_variant = next((item for item in variants if str(item.id) not in recent_vids), None)
+                fallback_variant = variants[0] if variants else None
+                candidate_item = _build_question_item(question=question, variant=preferred_variant or fallback_variant)
+                question_candidates.append(candidate_item)
+
+        all_candidates = [*question_candidates, *template_candidates]
+        if not all_candidates:
             continue
 
-        chosen = next((item for item in questions if str(item.id) not in recent_qids), questions[0])
-        variants = db.scalars(select(QuestionVariant).where(QuestionVariant.question_id == chosen.id)).all()
-        variant = next((item for item in variants if str(item.id) not in recent_vids), variants[0] if variants else None)
-        out.append(_build_question_item(question=chosen, variant=variant))
+        def _score(item: NextQuestionItem) -> tuple[int, int]:
+            # Prefer candidates that avoid long streaks of the same interaction.
+            streak_penalty = 1 if _creates_type_streak(out, item.type) else 0
+            # Prefer native question bank when possible to broaden interaction variety.
+            template_penalty = 1 if item.template_id is not None else 0
+            return (streak_penalty, template_penalty)
+
+        ranked = sorted(all_candidates, key=_score)
+        picked = ranked[0]
+        if _creates_type_streak(out, picked.type):
+            alternatives = [item for item in ranked if not _creates_type_streak(out, item.type)]
+            if alternatives:
+                picked = alternatives[0]
+
+        out.append(picked)
 
     return NextQuestionsPlan(items=out, focus_skills=focus_skills, difficulty_mix=mix)
 

@@ -127,6 +127,17 @@ class GamificationSnapshotOut(BaseModel):
     daily_xp: int = Field(alias="dailyXp")
 
 
+class LearningGamificationProfileOut(BaseModel):
+    xp: int
+    level: int
+    daily_xp: int = Field(alias="dailyXp")
+    axion_coins: int = Field(alias="axionCoins")
+    xp_level_percent: int = Field(alias="xpLevelPercent")
+    xp_in_level: int = Field(alias="xpInLevel")
+    xp_to_next_level: int = Field(alias="xpToNextLevel")
+    max_daily_xp: int = Field(alias="maxDailyXp")
+
+
 class LessonCompleteResponse(BaseModel):
     lesson_progress: LessonProgressOut = Field(alias="lessonProgress")
     xp_requested: int = Field(alias="xpRequested")

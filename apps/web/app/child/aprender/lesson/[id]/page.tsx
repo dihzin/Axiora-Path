@@ -1,8 +1,8 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Coins, Flame, Lightbulb, Star, Volume2, VolumeX, Zap } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, CheckCircle2, Coins, Flame, Lightbulb, Star, Volume2, VolumeX, XCircle, Zap } from "lucide-react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { ChildDesktopShell } from "@/components/child-desktop-shell";
@@ -13,6 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import {
   ApiError,
+  type AprenderLessonCompleteResponse,
+  completeAprenderLesson,
   consumeAprenderWrongAnswerEnergy,
   finishLearningSession,
   getAdaptiveLearningNext,
@@ -41,6 +43,8 @@ import {
   saveUXSettings,
 } from "@/lib/ux-feedback";
 import type { UserUXSettings } from "@/lib/api/client";
+import { trackAprenderEvent } from "@/lib/learning/analytics";
+import { writeRecentLearningReward } from "@/lib/learning/reward-cache";
 import { cn } from "@/lib/utils";
 
 type FeedbackState = {
@@ -64,6 +68,22 @@ type DragPair = {
   targetId: string;
   targetLabel: string;
 };
+
+type OrderingItem = {
+  id: string;
+  label: string;
+  correctOrder: number;
+};
+
+type LessonDesktopRailProps = {
+  sessionProgress: number;
+  masteryPercent: number;
+  answered: number;
+  target: number;
+  energyLabel: string;
+  waitClock: string | null;
+};
+const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F"];
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -91,7 +111,7 @@ function normalizeOptions(metadata: Record<string, unknown>): SelectOption[] {
 }
 
 function normalizePairs(metadata: Record<string, unknown>): DragPair[] {
-  const pairsRaw = asArray(metadata.pairs);
+  const pairsRaw = asArray(metadata.pairs).length > 0 ? asArray(metadata.pairs) : asArray(metadata.matchPairs);
   return pairsRaw
     .map((entry, index) => {
       const parsed = asRecord(entry);
@@ -103,6 +123,25 @@ function normalizePairs(metadata: Record<string, unknown>): DragPair[] {
       };
     })
     .filter((pair) => pair.itemLabel.length > 0 && pair.targetLabel.length > 0);
+}
+
+function normalizeOrderingItems(metadata: Record<string, unknown>): OrderingItem[] {
+  const itemsRaw = asArray(metadata.items).length > 0 ? asArray(metadata.items) : asArray(metadata.sequence);
+  return itemsRaw
+    .map((entry, index) => {
+      const parsed = asRecord(entry);
+      const fallbackId = `step-${index + 1}`;
+      const fallbackLabel = toStringSafe(entry, fallbackId);
+      const label = toStringSafe(parsed.label, toStringSafe(parsed.text, fallbackLabel));
+      const orderRaw = parsed.correctOrder ?? parsed.order ?? parsed.position;
+      const order = typeof orderRaw === "number" && Number.isFinite(orderRaw) ? Math.max(1, Math.floor(orderRaw)) : index + 1;
+      return {
+        id: toStringSafe(parsed.id, fallbackId),
+        label,
+        correctOrder: order,
+      };
+    })
+    .filter((item) => item.id.length > 0 && item.label.length > 0);
 }
 
 function evaluateSelection(metadata: Record<string, unknown>, optionId: string): QuestionOutcome {
@@ -119,6 +158,40 @@ function evaluateDragDrop(metadata: Record<string, unknown>, assignments: Record
   if (!pairs.length) return { result: "SKIPPED", correct: false };
   const ok = pairs.every((pair) => assignments[pair.itemId] === pair.targetId);
   return { result: ok ? "CORRECT" : "WRONG", correct: ok };
+}
+
+function evaluateOrdering(metadata: Record<string, unknown>, orderingIds: string[]): QuestionOutcome {
+  const items = normalizeOrderingItems(metadata);
+  if (items.length < 2 || orderingIds.length < items.length) return { result: "SKIPPED", correct: false };
+  const expected = [...items].sort((a, b) => a.correctOrder - b.correctOrder).map((item) => item.id);
+  const ok = expected.every((id, idx) => orderingIds[idx] === id);
+  return { result: ok ? "CORRECT" : "WRONG", correct: ok };
+}
+
+function diversifyQuestionBatch(items: LearningNextItem[]): LearningNextItem[] {
+  const next = [...items];
+  if (next.length < 3) return next;
+  for (let i = 2; i < next.length; i += 1) {
+    const t0 = next[i - 2]?.type;
+    const t1 = next[i - 1]?.type;
+    const ti = next[i]?.type;
+    if (!t0 || !t1 || !ti) continue;
+    if (t0 === t1 && t1 === ti) {
+      const replacementIdx = next.findIndex((candidate, idx) => idx > i && candidate.type !== ti);
+      if (replacementIdx >= 0) {
+        const temp = next[i];
+        next[i] = next[replacementIdx];
+        next[replacementIdx] = temp;
+      }
+    }
+  }
+  return next;
+}
+
+function diversifyIncomingBatch(prefix: LearningNextItem[], incoming: LearningNextItem[]): LearningNextItem[] {
+  const input = [...prefix.slice(-2), ...incoming];
+  const diversified = diversifyQuestionBatch(input);
+  return diversified.slice(Math.max(0, diversified.length - incoming.length));
 }
 
 function formatClock(totalSeconds: number): string {
@@ -141,6 +214,8 @@ function resolveAxionTip(question: LearningNextItem | null): string {
   if (directHint) return `Dica do Axion: ${directHint}`;
   if (question.explanation) return `Dica do Axion: ${question.explanation}`;
   if (question.type === "DRAG_DROP") return "Dica do Axion: conecte cada item pela ideia principal antes de arrastar.";
+  if (question.type === "MATCH") return "Dica do Axion: primeiro resolva mentalmente e depois associe.";
+  if (question.type === "ORDERING") return "Dica do Axion: compare pares e monte a sequência por etapas.";
   if (question.type === "TRUE_FALSE") return "Dica do Axion: procure palavras-chave para validar a afirmação.";
   if (question.type === "FILL_BLANK") return "Dica do Axion: pense no contexto da frase para completar com segurança.";
   return "Dica do Axion: você aprende melhor quando revisa a resposta com atenção.";
@@ -150,6 +225,51 @@ function difficultyLabel(difficulty: LearningNextItem["difficulty"] | undefined)
   if (difficulty === "HARD") return { text: "Difícil", className: "border-violet-300/60 bg-violet-100/65 text-violet-700" };
   if (difficulty === "MEDIUM") return { text: "Média", className: "border-amber-300/60 bg-amber-100/65 text-amber-700" };
   return { text: "Fácil", className: "border-secondary/35 bg-secondary/10 text-secondary" };
+}
+
+function LessonDesktopRail({
+  sessionProgress,
+  masteryPercent,
+  answered,
+  target,
+  energyLabel,
+  waitClock,
+}: LessonDesktopRailProps) {
+  const safeSession = Math.max(0, Math.min(100, Math.round(sessionProgress)));
+  const safeMastery = Math.max(0, Math.min(100, Math.round(masteryPercent)));
+  return (
+    <div className="space-y-2.5 xl:space-y-3">
+      <div className="rounded-2xl border border-[#E5ECF7] bg-white p-3.5 shadow-[0_3px_10px_rgba(0,0,0,0.05)] xl:p-4">
+        <p className="text-xs font-black uppercase tracking-[0.08em] text-[#8A9BB4]">Sessão</p>
+        <p className="mt-1 text-lg font-black text-[#1F3558]">
+          {answered}/{Math.max(1, target)} etapas
+        </p>
+        <p className="mt-1 text-sm font-semibold text-[#5F7393]">{waitClock ? `Energia recarrega em ${waitClock}` : `Energia ${energyLabel}`}</p>
+      </div>
+      <div className="rounded-2xl border border-[#E5ECF7] bg-white p-3.5 shadow-[0_3px_10px_rgba(0,0,0,0.05)] xl:p-4">
+        <div className="space-y-2.5">
+          <div>
+            <div className="mb-1 flex items-center justify-between text-xs font-bold text-[#5F7393]">
+              <span>Progresso da sessão</span>
+              <span>{safeSession}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-[#EAF0FA]">
+              <div className="h-full rounded-full bg-[#4DD9AC] transition-all duration-300" style={{ width: `${safeSession}%` }} />
+            </div>
+          </div>
+          <div>
+            <div className="mb-1 flex items-center justify-between text-xs font-bold text-[#5F7393]">
+              <span>Domínio atual</span>
+              <span>{safeMastery}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-[#EAF0FA]">
+              <div className="h-full rounded-full bg-[#38BDF8] transition-all duration-300" style={{ width: `${safeMastery}%` }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function questionFingerprint(item: LearningNextItem): string {
@@ -186,17 +306,15 @@ function buildOfflineQuestions(lessonId: number): LearningNextItem[] {
       variantId: null,
       skillId: "offline-core-2",
       difficulty: "MEDIUM",
-      type: "MCQ",
+      type: "TRUE_FALSE",
       prompt: "Quanto é 14 + 11?",
       explanation: "Quebre em dezenas e unidades para facilitar.",
       metadata: {
         options: [
-          { id: "a", label: "26" },
-          { id: "b", label: "29" },
-          { id: "c", label: "27" },
-          { id: "d", label: "25" },
+          { id: "true", label: "Verdadeiro" },
+          { id: "false", label: "Falso" },
         ],
-        correctOptionId: "d",
+        correctOptionId: "false",
       },
     },
     {
@@ -205,21 +323,57 @@ function buildOfflineQuestions(lessonId: number): LearningNextItem[] {
       generatedVariantId: null,
       variantId: null,
       skillId: "offline-core-3",
-      difficulty: "EASY",
-      type: "MCQ",
-      prompt: "Qual número completa: 5, 6, 7, __ ?",
-      explanation: "A sequência cresce de 1 em 1.",
+      difficulty: "MEDIUM",
+      type: "MATCH",
+      prompt: "Conecte cada operação ao resultado.",
+      explanation: "Resolva primeiro as contas mais simples.",
       metadata: {
-        options: [
-          { id: "a", label: "8" },
-          { id: "b", label: "9" },
-          { id: "c", label: "6" },
-          { id: "d", label: "10" },
+        pairs: [
+          { itemId: "sum1", itemLabel: "3 + 2", targetId: "t5", targetLabel: "5" },
+          { itemId: "sum2", itemLabel: "6 + 1", targetId: "t7", targetLabel: "7" },
+          { itemId: "sum3", itemLabel: "4 + 4", targetId: "t8", targetLabel: "8" },
         ],
-        correctOptionId: "a",
+      },
+    },
+    {
+      questionId: `offline-${lid}-4`,
+      templateId: null,
+      generatedVariantId: null,
+      variantId: null,
+      skillId: "offline-core-4",
+      difficulty: "EASY",
+      type: "ORDERING",
+      prompt: "Organize os números do menor para o maior.",
+      explanation: "Compare um par de cada vez.",
+      metadata: {
+        items: [
+          { id: "n8", label: "8", correctOrder: 3 },
+          { id: "n2", label: "2", correctOrder: 1 },
+          { id: "n5", label: "5", correctOrder: 2 },
+        ],
       },
     },
   ];
+}
+
+function shouldEnterOfflineFallback(error: unknown): boolean {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return true;
+  }
+  if (error instanceof ApiError) {
+    if (error.status === 0) return true;
+    const payload = asRecord(error.payload);
+    const code = toStringSafe(payload.code).toUpperCase();
+    if (code === "NETWORK_ERROR") return true;
+  }
+  return false;
+}
+
+function resolveQuestionLoadMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    return getApiErrorMessage(error, "Não foi possível carregar as perguntas agora.");
+  }
+  return "Não foi possível carregar as perguntas agora.";
 }
 
 function hashSeed(input: string): number {
@@ -358,46 +512,53 @@ const ENCOURAGE_CLOSERS = [
 
 const MIN_SESSION_QUESTIONS = 3;
 const MAX_SESSION_QUESTIONS = 8;
-const LOCAL_COMPLETED_LESSONS_KEY = "axiora_learning_completed_lessons";
+const SHOW_QUESTION_TYPE_DEBUG =
+  process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_DEBUG_LEARNING_TYPE === "1";
 
-function persistCompletedLessonLocally(lessonId: number) {
-  if (!Number.isFinite(lessonId) || lessonId <= 0) return;
-  if (typeof window === "undefined") return;
-  try {
-    const raw = window.localStorage.getItem(LOCAL_COMPLETED_LESSONS_KEY);
-    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
-    const list = Array.isArray(parsed) ? parsed.filter((item): item is number => typeof item === "number" && Number.isFinite(item)) : [];
-    if (!list.includes(lessonId)) {
-      list.push(lessonId);
-      window.localStorage.setItem(LOCAL_COMPLETED_LESSONS_KEY, JSON.stringify(list));
-    }
-  } catch {
-    // no-op
-  }
+function questionTypeLabel(type: LearningNextItem["type"] | undefined): string {
+  if (type === "MCQ") return "Escolha";
+  if (type === "TRUE_FALSE") return "V/F";
+  if (type === "DRAG_DROP") return "Arrastar";
+  if (type === "FILL_BLANK") return "Lacuna";
+  if (type === "MATCH") return "Associação";
+  if (type === "ORDERING") return "Ordenação";
+  if (type === "TEMPLATE") return "Template";
+  return "Questão";
 }
 
-function buildLocalFinishPayload(params: {
+async function persistLessonCompletionOnServer(lessonId: number, accuracy: number): Promise<void> {
+  const score = Math.max(0, Math.min(100, Math.round(accuracy * 100)));
+  await completeAprenderLesson(lessonId, score);
+}
+
+async function completeLessonOnServer(lessonId: number, accuracy: number): Promise<AprenderLessonCompleteResponse> {
+  const score = Math.max(0, Math.min(100, Math.round(accuracy * 100)));
+  return completeAprenderLesson(lessonId, score);
+}
+
+function buildFinishFallbackFromCompletion(params: {
   sessionId: string;
   answeredCount: number;
   correctCount: number;
+  completion: AprenderLessonCompleteResponse;
 }): LearningSessionFinishResponse {
   const safeTotal = Math.max(params.answeredCount, 1);
-  const safeAccuracy = safeTotal > 0 ? Math.max(0, Math.min(1, params.correctCount / safeTotal)) : 0;
-  const fallbackStars = safeAccuracy >= 0.9 ? 3 : safeAccuracy >= 0.6 ? 2 : 1;
+  const accuracy = safeTotal > 0 ? Math.max(0, Math.min(1, params.correctCount / safeTotal)) : 0;
+  const stars = accuracy >= 0.9 ? 3 : accuracy >= 0.6 ? 2 : 1;
   return {
     sessionId: params.sessionId,
     endedAt: new Date().toISOString(),
-    stars: fallbackStars,
-    accuracy: safeAccuracy,
+    stars,
+    accuracy,
     totalQuestions: safeTotal,
     correctCount: params.correctCount,
-    xpEarned: Math.round(safeTotal * 6 + params.correctCount * 3),
-    coinsEarned: Math.max(2, Math.round(params.correctCount * 1.5)),
+    xpEarned: Math.max(0, params.completion.xpGranted ?? 0),
+    coinsEarned: Math.max(0, params.completion.coinsGranted ?? 0),
     leveledUp: false,
     gamification: {
-      xp: 0,
-      level: 0,
-      axionCoins: 0,
+      xp: Math.max(0, params.completion.gamification?.xp ?? 0),
+      level: Math.max(1, params.completion.gamification?.level ?? 1),
+      axionCoins: Math.max(0, params.completion.coinsGranted ?? 0),
     },
   };
 }
@@ -471,11 +632,13 @@ export default function AdaptiveLessonSessionPage() {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [dragAssignments, setDragAssignments] = useState<Record<string, string>>({});
   const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
+  const [orderingIds, setOrderingIds] = useState<string[]>([]);
   const [learningStreak, setLearningStreak] = useState<AprenderLearningStreak | null>(null);
   const [energyStatus, setEnergyStatus] = useState<AprenderLearningEnergyStatus | null>(null);
   const [energyLoading, setEnergyLoading] = useState(true);
   const [energyActionLoading, setEnergyActionLoading] = useState<"wait" | "coins" | null>(null);
   const [result, setResult] = useState<LearningSessionFinishResponse | null>(null);
+  const [pendingCompletionResult, setPendingCompletionResult] = useState<LearningSessionFinishResponse | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [uxSettings, setUxSettings] = useState<UserUXSettings>({
     id: 0,
@@ -498,6 +661,7 @@ export default function AdaptiveLessonSessionPage() {
   const [loadingNextQuestion, setLoadingNextQuestion] = useState(false);
   const [questionSupplyExhausted, setQuestionSupplyExhausted] = useState(false);
   const [offlineMode, setOfflineMode] = useState(false);
+  const offlineAutoFallbackTriedRef = useRef(false);
   const reducedMotion = effectiveReducedMotion(uxSettings);
 
   const current = queue[index] ?? null;
@@ -505,6 +669,7 @@ export default function AdaptiveLessonSessionPage() {
   const answeredCount = Object.keys(answeredByStep).length;
   const progressPercent = Math.min(100, (answeredCount / Math.max(1, sessionTargetQuestions)) * 100);
   const correctCount = Object.values(correctByStep).filter(Boolean).length;
+  const masteryPercent = answeredCount > 0 ? Math.max(0, Math.min(100, Math.round((correctCount / answeredCount) * 100))) : 0;
   const energyBlocked = energyStatus ? !energyStatus.canPlay : false;
   const waitClock = energyStatus ? formatClock(energyStatus.secondsUntilPlayable) : "00:00";
   const axionTip = useMemo(() => resolveAxionTip(current), [current]);
@@ -521,8 +686,9 @@ export default function AdaptiveLessonSessionPage() {
         message: "Nenhuma pergunta disponível para esta lição agora.",
       });
     }
-    const target = Math.max(MIN_SESSION_QUESTIONS, Math.min(MAX_SESSION_QUESTIONS, firstBatch.items.length));
-    setQueue(firstBatch.items);
+    const diversified = diversifyQuestionBatch(firstBatch.items);
+    const target = Math.max(MIN_SESSION_QUESTIONS, Math.min(MAX_SESSION_QUESTIONS, diversified.length));
+    setQueue(diversified);
     setSessionTargetQuestions(target);
     setOfflineMode(false);
     setIndex(0);
@@ -532,13 +698,14 @@ export default function AdaptiveLessonSessionPage() {
     setFeedback(null);
     setSelectedOption(null);
     setDragAssignments({});
+    setOrderingIds([]);
     setQuestionSupplyExhausted(false);
     setQuestionError(null);
   }, [lessonId]);
 
   const activateOfflineMode = useCallback(
     (message?: string) => {
-      const items = buildOfflineQuestions(lessonId);
+      const items = diversifyQuestionBatch(buildOfflineQuestions(lessonId));
       setQueue(items);
       setSessionTargetQuestions(items.length);
       setIndex(0);
@@ -547,8 +714,10 @@ export default function AdaptiveLessonSessionPage() {
       setCorrectByStep({});
       setSelectedOption(null);
       setDragAssignments({});
+      setOrderingIds([]);
       setQuestionSupplyExhausted(false);
       setQuestionError(null);
+      setError(null);
       setOfflineMode(true);
       if (message) {
         setFeedback({
@@ -603,11 +772,17 @@ export default function AdaptiveLessonSessionPage() {
     }
     const bootstrap = async () => {
       try {
+        offlineAutoFallbackTriedRef.current = false;
         setLoading(true);
         setError(null);
         setQuestionError(null);
         const sessionStart = await startLearningSession({ lessonId });
         setSession(sessionStart);
+        trackAprenderEvent("lesson_opened", {
+          lessonId,
+          sessionId: sessionStart.sessionId,
+          subjectId: sessionStart.subjectId,
+        });
         try {
           const learningPath = await getLearningPath(sessionStart.subjectId);
           let contextLabel: string | null = null;
@@ -625,11 +800,12 @@ export default function AdaptiveLessonSessionPage() {
         try {
           await loadQuestionBatchWithBackoff(sessionStart.subjectId);
         } catch (batchErr: unknown) {
-          const message =
-            batchErr instanceof ApiError
-              ? getApiErrorMessage(batchErr, "Não foi possível carregar as perguntas agora.")
-              : "Não foi possível carregar as perguntas agora.";
-          activateOfflineMode(`${message} Entramos no modo offline para você continuar.`);
+          const message = resolveQuestionLoadMessage(batchErr);
+          if (shouldEnterOfflineFallback(batchErr)) {
+            activateOfflineMode(`${message} Entramos no modo offline para você continuar.`);
+          } else {
+            setQuestionError(message);
+          }
         }
       } catch (err: unknown) {
         const message =
@@ -650,6 +826,14 @@ export default function AdaptiveLessonSessionPage() {
   }, [activateOfflineMode, lessonId, loadQuestionBatchWithBackoff]);
 
   useEffect(() => {
+    if (loading || offlineMode || questionRetrying) return;
+    if (current || !session) return;
+    if (offlineAutoFallbackTriedRef.current) return;
+    offlineAutoFallbackTriedRef.current = true;
+    setQuestionError("Nenhuma pergunta disponível para esta lição agora.");
+  }, [current, loading, offlineMode, questionRetrying, session]);
+
+  useEffect(() => {
     void fetchUXSettings().then(setUxSettings);
   }, []);
 
@@ -663,6 +847,27 @@ export default function AdaptiveLessonSessionPage() {
   useEffect(() => {
     setTipVisible(false);
   }, [index, current?.questionId, current?.templateId]);
+
+  useEffect(() => {
+    if (!current || current.type !== "ORDERING") {
+      setOrderingIds([]);
+      return;
+    }
+    const ordering = normalizeOrderingItems(asRecord(current.metadata)).map((item) => item.id);
+    setOrderingIds(ordering);
+  }, [current]);
+
+  useEffect(() => {
+    if (!session || !current) return;
+    trackAprenderEvent("question_viewed", {
+      lessonId,
+      sessionId: session.sessionId,
+      questionType: current.type,
+      difficulty: current.difficulty,
+      stepIndex: index,
+      offlineMode,
+    });
+  }, [current, index, lessonId, offlineMode, session]);
 
   useEffect(() => {
     if (!result) return;
@@ -701,10 +906,22 @@ export default function AdaptiveLessonSessionPage() {
   const submitAnswer = async (outcome: QuestionOutcome) => {
     if (!current || submitting || energyBlocked) return;
     setSubmitting(true);
+    const elapsed = Math.max(0, Date.now() - questionStartedAt);
     try {
       if (offlineMode) {
         setAnsweredByStep((prev) => ({ ...prev, [index]: true }));
         setCorrectByStep((prev) => ({ ...prev, [index]: outcome.correct }));
+        trackAprenderEvent("question_answered", {
+          lessonId,
+          sessionId: session?.sessionId ?? "offline",
+          questionType: current.type,
+          difficulty: current.difficulty,
+          stepIndex: index,
+          correct: outcome.correct,
+          result: outcome.result,
+          elapsedMs: elapsed,
+          offlineMode: true,
+        });
         if (!outcome.correct) {
           await applyWrongEnergy();
           const explanation = current.explanation || "Vamos revisar juntos e praticar com uma versão mais simples.";
@@ -738,8 +955,6 @@ export default function AdaptiveLessonSessionPage() {
         }
         return;
       }
-
-      const elapsed = Math.max(0, Date.now() - questionStartedAt);
       const answerResult = await submitAdaptiveLearningAnswer({
         questionId: current.questionId,
         templateId: current.templateId,
@@ -751,6 +966,17 @@ export default function AdaptiveLessonSessionPage() {
 
       setAnsweredByStep((prev) => ({ ...prev, [index]: true }));
       setCorrectByStep((prev) => ({ ...prev, [index]: outcome.correct }));
+      trackAprenderEvent("question_answered", {
+        lessonId,
+        sessionId: session?.sessionId ?? "online",
+        questionType: current.type,
+        difficulty: current.difficulty,
+        stepIndex: index,
+        correct: outcome.correct,
+        result: outcome.result,
+        elapsedMs: elapsed,
+        offlineMode: false,
+      });
       if (!outcome.correct) {
         await applyWrongEnergy();
         const explanation = current.explanation || "Vamos revisar juntos e praticar com uma versão mais simples.";
@@ -832,22 +1058,56 @@ export default function AdaptiveLessonSessionPage() {
     await submitAnswer(outcome);
   };
 
+  const onCheckOrdering = async () => {
+    if (!current || answeredByStep[index]) return;
+    hapticPress(uxSettings);
+    const outcome = evaluateOrdering(asRecord(current.metadata), orderingIds);
+    await submitAnswer(outcome);
+  };
+
   const finishSessionNow = async () => {
     if (!session || finishing || result) return;
     setFinishing(true);
+    let finalized: LearningSessionFinishResponse | null = pendingCompletionResult;
     try {
-      const response = await finishLearningSession({
-        sessionId: session.sessionId,
-        totalQuestions: answeredCount,
-        correctCount,
+      if (!finalized) {
+        const completion = await completeLessonOnServer(
+          lessonId,
+          answeredCount > 0 ? correctCount / answeredCount : 0,
+        );
+        finalized = buildFinishFallbackFromCompletion({
+          sessionId: session.sessionId,
+          answeredCount,
+          correctCount,
+          completion,
+        });
+        try {
+          const settled = await finishLearningSession({
+            sessionId: session.sessionId,
+            totalQuestions: answeredCount,
+            correctCount,
+          });
+          finalized = settled;
+        } catch {
+          // Keep fallback built from persisted lesson completion.
+        }
+      }
+      setPendingCompletionResult(null);
+      setResult(finalized);
+      trackAprenderEvent("session_completed", {
+        lessonId,
+        sessionId: finalized.sessionId,
+        stars: finalized.stars,
+        accuracy: finalized.accuracy,
+        totalQuestions: finalized.totalQuestions,
+        correctCount: finalized.correctCount,
+        xpEarned: finalized.xpEarned,
       });
-      persistCompletedLessonLocally(lessonId);
-      setResult(response);
-      if (!reducedMotion && (response.stars === 3 || response.leveledUp)) {
+      if (!reducedMotion && (finalized.stars === 3 || finalized.leveledUp)) {
         setConfettiTrigger((prev) => prev + 1);
       }
       playSfx("/sfx/completion-chime.ogg", uxSettings.soundEnabled);
-      if (response.leveledUp) hapticLevelUp(uxSettings);
+      if (finalized.leveledUp) hapticLevelUp(uxSettings);
       else hapticCompletion(uxSettings);
       void getAprenderLearningStreak()
         .then((data) => setLearningStreak(data))
@@ -857,32 +1117,42 @@ export default function AdaptiveLessonSessionPage() {
         err instanceof ApiError
           ? getApiErrorMessage(err, "Não foi possível finalizar a sessão.")
           : "Não foi possível finalizar a sessão.";
-      // Do not block the lesson UI on finish errors; fallback to local completion
-      // so the user can continue the flow without getting stuck.
       setFeedback({
         tone: "encourage",
         message: buildBoundedMessage(
           [
-            joinParts([message, "Conexão instável. Salvamos localmente por enquanto."]),
-            "Conexão instável. Continuando em modo local.",
+            joinParts([message, "A lição ainda não foi concluída no servidor."]),
+            "Não foi possível salvar a conclusão agora. Tente finalizar novamente.",
           ],
           108,
         ),
       });
-      setResult(
-        buildLocalFinishPayload({
-          sessionId: session.sessionId,
-          answeredCount,
-          correctCount,
-        }),
-      );
-      persistCompletedLessonLocally(lessonId);
+      if (finalized) {
+        setPendingCompletionResult(finalized);
+      }
+      trackAprenderEvent("session_completed", {
+        lessonId,
+        sessionId: session.sessionId,
+        stars: 0,
+        accuracy: answeredCount > 0 ? correctCount / answeredCount : 0,
+        totalQuestions: answeredCount,
+        correctCount,
+        xpEarned: 0,
+        finishPersistFailed: true,
+      });
     } finally {
       setFinishing(false);
     }
   };
 
   const pushPathWithResult = (payload: LearningSessionFinishResponse) => {
+    if (typeof window !== "undefined") {
+      const rawChildId = window.localStorage.getItem("axiora_child_id");
+      const childId = rawChildId ? Number(rawChildId) : NaN;
+      if (Number.isFinite(childId) && childId > 0) {
+        writeRecentLearningReward(childId, payload.xpEarned, payload.coinsEarned);
+      }
+    }
     router.push(
       `/child/aprender?completedLessonId=${lessonId}&stars=${payload.stars}&xp=${payload.xpEarned}&coins=${payload.coinsEarned}&levelUp=${payload.leveledUp ? 1 : 0}`,
     );
@@ -892,6 +1162,25 @@ export default function AdaptiveLessonSessionPage() {
     if (backSaving || finishing) return;
     if (result) {
       pushPathWithResult(result);
+      return;
+    }
+    if (pendingCompletionResult) {
+      setBackSaving(true);
+      try {
+        await persistLessonCompletionOnServer(lessonId, pendingCompletionResult.accuracy);
+        pushPathWithResult(pendingCompletionResult);
+      } catch (err: unknown) {
+        const message =
+          err instanceof ApiError
+            ? getApiErrorMessage(err, "Não foi possível salvar esta lição agora.")
+            : "Não foi possível salvar esta lição agora.";
+        setFeedback({
+          tone: "encourage",
+          message: buildBoundedMessage([message, "Tente finalizar novamente antes de voltar ao caminho."], 108),
+        });
+      } finally {
+        setBackSaving(false);
+      }
       return;
     }
     if (!session || answeredCount === 0) {
@@ -905,16 +1194,17 @@ export default function AdaptiveLessonSessionPage() {
         totalQuestions: answeredCount,
         correctCount,
       });
-      persistCompletedLessonLocally(lessonId);
+      await persistLessonCompletionOnServer(lessonId, response.accuracy);
       pushPathWithResult(response);
-    } catch {
-      persistCompletedLessonLocally(lessonId);
-      const fallback = buildLocalFinishPayload({
-        sessionId: session.sessionId,
-        answeredCount,
-        correctCount,
+    } catch (err: unknown) {
+      const message =
+        err instanceof ApiError
+          ? getApiErrorMessage(err, "Não foi possível salvar esta lição agora.")
+          : "Não foi possível salvar esta lição agora.";
+      setFeedback({
+        tone: "encourage",
+        message: buildBoundedMessage([message, "Tente finalizar novamente antes de voltar ao caminho."], 108),
       });
-      pushPathWithResult(fallback);
     } finally {
       setBackSaving(false);
     }
@@ -925,8 +1215,31 @@ export default function AdaptiveLessonSessionPage() {
     setFeedback(null);
     setSelectedOption(null);
     setDragAssignments({});
+    setOrderingIds([]);
+    const ensureOfflineContinuation = (): boolean => {
+      if (answeredCount >= MIN_SESSION_QUESTIONS) return false;
+      const known = new Set(queue.map((item) => questionFingerprint(item)));
+      const candidates = diversifyIncomingBatch(
+        queue,
+        buildOfflineQuestions(lessonId).filter((item) => !known.has(questionFingerprint(item))),
+      );
+      if (candidates.length <= 0) return false;
+      const needed = Math.max(1, MIN_SESSION_QUESTIONS - answeredCount);
+      const nextItems = candidates.slice(0, needed);
+      if (nextItems.length <= 0) return false;
+      setQueue((prev) => [...prev, ...nextItems]);
+      setIndex((prev) => prev + 1);
+      setQuestionStartedAt(Date.now());
+      setQuestionSupplyExhausted(false);
+      setOfflineMode(true);
+      setFeedback({
+        tone: "encourage",
+        message: "Conexão instável. Seguimos com perguntas de continuidade para concluir a lição.",
+      });
+      return true;
+    };
     const canFinishByTarget = answeredCount >= sessionTargetQuestions;
-    const canForceFinishBySupply = questionSupplyExhausted && answeredCount > 0;
+    const canForceFinishBySupply = questionSupplyExhausted && answeredCount >= MIN_SESSION_QUESTIONS;
     if (canFinishByTarget || canForceFinishBySupply) {
       await finishSessionNow();
       return;
@@ -952,12 +1265,16 @@ export default function AdaptiveLessonSessionPage() {
           const known = new Set(queue.map((item) => questionFingerprint(item)));
           const fresh = nextBatch.items.filter((item) => !known.has(questionFingerprint(item)));
           if (fresh.length > 0) {
-            setQueue((prev) => [...prev, ...fresh]);
+            const diversifiedFresh = diversifyIncomingBatch(queue, fresh);
+            setQueue((prev) => [...prev, ...diversifiedFresh]);
             setIndex((prev) => prev + 1);
             setQuestionStartedAt(Date.now());
             setQuestionSupplyExhausted(false);
             return;
           }
+        }
+        if (ensureOfflineContinuation()) {
+          return;
         }
         setQuestionSupplyExhausted(true);
         setFeedback({
@@ -966,6 +1283,9 @@ export default function AdaptiveLessonSessionPage() {
         });
         return;
       } catch {
+        if (ensureOfflineContinuation()) {
+          return;
+        }
         setQuestionSupplyExhausted(true);
         setFeedback({
           tone: "encourage",
@@ -1015,18 +1335,36 @@ export default function AdaptiveLessonSessionPage() {
   const metadata = useMemo(() => asRecord(current?.metadata), [current]);
   const options = useMemo(() => normalizeOptions(metadata), [metadata]);
   const pairs = useMemo(() => normalizePairs(metadata), [metadata]);
+  const orderingItems = useMemo(() => normalizeOrderingItems(metadata), [metadata]);
   const currentAnswered = Boolean(answeredByStep[index]);
   const canFinishNow = currentAnswered && answeredCount >= sessionTargetQuestions;
   const canForceFinishNow = currentAnswered && answeredCount > 0 && index >= queue.length - 1 && questionSupplyExhausted;
   const canSubmitDragDrop = pairs.length > 0 && Object.keys(dragAssignments).length >= pairs.length;
+  const canSubmitOrdering = orderingItems.length > 1 && orderingIds.length === orderingItems.length;
+  const stepTotal = Math.max(1, Math.max(sessionTargetQuestions, queue.length));
+  const stepCurrent = Math.min(stepTotal, index + 1);
+  const canGoPrevious = index > 0 && !submitting && !finishing && !result;
+  const canGoNext = !currentAnswered || submitting || finishing || energyBlocked || Boolean(result) || loadingNextQuestion;
+  const shouldHighlightFinish = canFinishNow || canForceFinishNow;
+  const correctOptionId = toStringSafe(metadata.correctOptionId);
+  const lessonRightRail = (
+    <LessonDesktopRail
+      sessionProgress={progressPercent}
+      masteryPercent={masteryPercent}
+      answered={answeredCount}
+      target={stepTotal}
+      energyLabel={energyLoading ? "..." : energyStatus ? `${energyStatus.energy}/${energyStatus.maxEnergy}` : "--/--"}
+      waitClock={energyBlocked ? waitClock : null}
+    />
+  );
 
   return (
-    <ChildDesktopShell activeNav="aprender">
+    <ChildDesktopShell activeNav="aprender" rightRailAppend={lessonRightRail}>
       <PageShell tone="child" width="content">
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+      <div className="mb-2 flex flex-wrap items-center gap-1.5 xl:mb-2.5">
         <button
           type="button"
-          className="inline-flex w-full items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted"
+          className="inline-flex w-full items-center gap-1.5 rounded-2xl border border-[#DCE6F4] bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_1px_0_rgba(184,200,239,0.58)] transition hover:bg-muted"
           onClick={() => void onBackToPath()}
           disabled={backSaving}
         >
@@ -1038,7 +1376,7 @@ export default function AdaptiveLessonSessionPage() {
         <Button
           type="button"
           variant="secondary"
-          className="min-w-0 flex-1 px-2 text-xs"
+          className="min-w-0 flex-1 px-2 text-[11px]"
           onClick={() =>
             void saveUXSettings({
               soundEnabled: !uxSettings.soundEnabled,
@@ -1053,7 +1391,7 @@ export default function AdaptiveLessonSessionPage() {
         <Button
           type="button"
           variant="secondary"
-          className="min-w-0 flex-1 px-2 text-xs"
+          className="min-w-0 flex-1 px-2 text-[11px]"
           onClick={() =>
             void saveUXSettings({
               soundEnabled: uxSettings.soundEnabled,
@@ -1067,7 +1405,7 @@ export default function AdaptiveLessonSessionPage() {
         <Button
           type="button"
           variant="secondary"
-          className="min-w-0 flex-1 px-2 text-xs"
+          className="min-w-0 flex-1 px-2 text-[11px]"
           onClick={() =>
             void saveUXSettings({
               soundEnabled: uxSettings.soundEnabled,
@@ -1080,14 +1418,20 @@ export default function AdaptiveLessonSessionPage() {
         </Button>
       </div>
 
+      {offlineMode ? (
+        <div className="sticky top-2 z-40 mb-3 rounded-2xl border border-amber-300/60 bg-amber-100/80 px-3 py-2 text-xs font-semibold text-amber-900 shadow-[0_2px_0_rgba(180,83,9,0.16)] backdrop-blur">
+          Modo offline ativo: conexão instável. Suas respostas continuam normalmente.
+        </div>
+      ) : null}
+
       <ConfettiBurst trigger={confettiTrigger} />
 
-      <Card className="mb-4 overflow-hidden border-border bg-[radial-gradient(circle_at_85%_12%,rgba(45,212,191,0.18),transparent_48%),linear-gradient(180deg,#ffffff_0%,#f3fbff_100%)] shadow-[0_2px_0_rgba(184,200,239,0.7),0_14px_28px_rgba(34,63,107,0.12)]">
-        <CardHeader className="pb-2">
+      <Card className="mb-2.5 overflow-hidden border border-[#DEE8F6] bg-[radial-gradient(circle_at_86%_12%,rgba(45,212,191,0.1),transparent_44%),linear-gradient(180deg,#ffffff_0%,#f8fcff_100%)] shadow-[0_1px_0_rgba(184,200,239,0.62),0_8px_16px_rgba(34,63,107,0.08)] xl:mb-3">
+        <CardHeader className="pb-1.5 pt-3.5 xl:pt-4">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <CardTitle className="text-lg">Sessão adaptativa</CardTitle>
-              <p className="mt-0.5 text-xs font-semibold text-muted-foreground">{lessonContextLabel ?? "Lição em andamento"}</p>
+              <CardTitle className="text-[15px] xl:text-base">Sessão adaptativa</CardTitle>
+              <p className="mt-0.5 text-[11px] font-semibold text-muted-foreground">{lessonContextLabel ?? "Lição em andamento"}</p>
             </div>
             <span className="inline-flex items-center gap-1 rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-xs font-semibold text-accent-foreground">
               <Flame className="h-3.5 w-3.5 text-accent" />
@@ -1095,8 +1439,8 @@ export default function AdaptiveLessonSessionPage() {
             </span>
           </div>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <div className="flex items-center justify-between rounded-2xl border border-border bg-white/90 px-3 py-2">
+        <CardContent className="space-y-1.5 pb-3.5 text-sm xl:pb-4">
+          <div className="flex items-center justify-between rounded-2xl border border-[#E4EBF7] bg-white/92 px-3 py-1.5">
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
               <Zap className="h-4 w-4 text-accent" />
               Energia
@@ -1111,6 +1455,10 @@ export default function AdaptiveLessonSessionPage() {
             <span className="font-semibold text-foreground">{Math.round(progressPercent)}%</span>
           </div>
           <ProgressBar value={progressPercent} tone="secondary" />
+          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+            <span className="font-semibold">Domínio {masteryPercent}%</span>
+            <span className="font-semibold">{answeredCount}/{stepTotal}</span>
+          </div>
         </CardContent>
       </Card>
 
@@ -1127,8 +1475,8 @@ export default function AdaptiveLessonSessionPage() {
       ) : null}
 
       {!loading && !error && current ? (
-        <Card className="mb-4">
-          <CardContent className="space-y-4 p-5">
+        <Card className="mb-4 border border-[#DFE8F6] bg-white shadow-[0_2px_0_rgba(184,200,239,0.64),0_12px_24px_rgba(18,52,86,0.08)]">
+          <CardContent className="space-y-3.5 p-4 md:p-5 xl:space-y-4 xl:p-5">
             {energyBlocked ? (
               <div className="rounded-2xl border border-accent/40 bg-accent/10 p-3">
                 <p className="text-sm font-semibold text-accent-foreground">Energia em recarga</p>
@@ -1149,6 +1497,21 @@ export default function AdaptiveLessonSessionPage() {
               key={`${current.questionId ?? current.templateId ?? "q"}-${index}-${correctFxTick}`}
               className={cn("question-enter space-y-3", feedback?.tone === "success" ? "correct-glow" : "")}
             >
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center rounded-full border border-[#DDE7F6] bg-[#F8FBFF] px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.04em] text-[#577093]">
+                  Questão {stepCurrent}/{stepTotal}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  {SHOW_QUESTION_TYPE_DEBUG ? (
+                    <span className="inline-flex items-center rounded-full border border-[#D8E5F8] bg-[#F3F8FF] px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.05em] text-[#6782A8]">
+                      DEV {questionTypeLabel(current.type)}
+                    </span>
+                  ) : null}
+                  <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-extrabold", currentDifficulty.className)}>
+                    {currentDifficulty.text}
+                  </span>
+                </div>
+              </div>
               {tipVisible ? (
                 <div className="rounded-2xl border border-secondary/35 bg-secondary/10 px-3 py-2">
                   <p className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-secondary">
@@ -1165,22 +1528,27 @@ export default function AdaptiveLessonSessionPage() {
                     size="sm"
                     variant="secondary"
                     className="h-8 shrink-0 whitespace-nowrap rounded-xl border-b-2 px-3 text-xs leading-none shadow-[0_3px_0_rgba(10,114,113,0.28),0_6px_10px_rgba(10,76,74,0.14)] active:translate-y-[1px]"
-                    onClick={() => setTipVisible(true)}
+                    onClick={() => {
+                      setTipVisible(true);
+                      trackAprenderEvent("question_hint_opened", {
+                        lessonId,
+                        sessionId: session?.sessionId ?? "unknown",
+                        stepIndex: index,
+                        questionType: current.type,
+                      });
+                    }}
                   >
                     Mostrar dica
                   </Button>
                 </div>
               )}
-              <h2 className="text-lg font-extrabold text-foreground">{current.prompt}</h2>
-              <div className="flex items-center justify-between">
-                <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-extrabold", currentDifficulty.className)}>
-                  {currentDifficulty.text}
-                </span>
-              </div>
-              {current.type === "DRAG_DROP" ? (
+              <h2 className="text-[21px] font-extrabold leading-tight text-foreground md:text-[25px] xl:text-[28px]">{current.prompt}</h2>
+              {current.type === "DRAG_DROP" || current.type === "MATCH" ? (
                 <div className="space-y-3">
                   <div className="rounded-2xl border border-border bg-white/90 p-3">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Itens</p>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {current.type === "MATCH" ? "Cartões" : "Itens"}
+                    </p>
                     <div className="flex flex-wrap gap-2">
                       {pairs
                         .filter((pair) => !dragAssignments[pair.itemId])
@@ -1212,7 +1580,9 @@ export default function AdaptiveLessonSessionPage() {
                           }}
                           className="rounded-2xl border border-border bg-muted/40 p-3"
                         >
-                          <p className="text-xs font-semibold text-muted-foreground">{pair.targetLabel}</p>
+                          <p className="text-xs font-semibold text-muted-foreground">
+                            {current.type === "MATCH" ? `Combine com: ${pair.targetLabel}` : pair.targetLabel}
+                          </p>
                           <p className="mt-1 text-sm font-bold text-foreground">{assignedLabel || "Solte aqui"}</p>
                         </div>
                       );
@@ -1223,26 +1593,100 @@ export default function AdaptiveLessonSessionPage() {
                     disabled={currentAnswered || !canSubmitDragDrop || energyBlocked || submitting}
                     onClick={() => void onCheckDragDrop()}
                   >
-                    Verificar resposta
+                    {current.type === "MATCH" ? "Validar combinação" : "Verificar resposta"}
+                  </Button>
+                </div>
+              ) : current.type === "ORDERING" ? (
+                <div className="space-y-3">
+                  <div className="rounded-2xl border border-border bg-white/90 p-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ordem atual</p>
+                    <div className="space-y-2">
+                      {orderingIds.map((itemId, itemIndex) => {
+                        const item = orderingItems.find((entry) => entry.id === itemId);
+                        if (!item) return null;
+                        return (
+                          <div key={item.id} className="flex items-center gap-2 rounded-xl border border-border bg-muted/25 px-2 py-2">
+                            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-muted-foreground">
+                              {itemIndex + 1}
+                            </span>
+                            <p className="flex-1 text-sm font-semibold text-foreground">{item.label}</p>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                className="h-8 rounded-lg px-2 text-xs"
+                                disabled={currentAnswered || itemIndex === 0}
+                                onClick={() =>
+                                  setOrderingIds((prev) => {
+                                    const next = [...prev];
+                                    [next[itemIndex - 1], next[itemIndex]] = [next[itemIndex], next[itemIndex - 1]];
+                                    return next;
+                                  })
+                                }
+                              >
+                                ↑
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                className="h-8 rounded-lg px-2 text-xs"
+                                disabled={currentAnswered || itemIndex === orderingIds.length - 1}
+                                onClick={() =>
+                                  setOrderingIds((prev) => {
+                                    const next = [...prev];
+                                    [next[itemIndex], next[itemIndex + 1]] = [next[itemIndex + 1], next[itemIndex]];
+                                    return next;
+                                  })
+                                }
+                              >
+                                ↓
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <Button
+                    className="w-full"
+                    disabled={currentAnswered || !canSubmitOrdering || energyBlocked || submitting}
+                    onClick={() => void onCheckOrdering()}
+                  >
+                    Verificar ordem
                   </Button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-2">
                   {options.length > 0 ? (
-                    options.map((option) => (
+                    options.map((option, optionIndex) => (
                       <button
                         key={option.id}
                         type="button"
+                        aria-pressed={selectedOption === option.id}
                         className={cn(
-                        "rounded-2xl border px-3 py-3 text-left text-sm font-semibold transition-all",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2",
-                        selectedOption === option.id ? "border-primary bg-primary/10 text-primary" : "border-border bg-white text-foreground hover:bg-muted",
-                        currentAnswered && correctByStep[index] && selectedOption === option.id ? "answer-correct-pop" : "",
-                      )}
+                          "group flex min-h-[52px] items-center justify-between rounded-2xl border px-3 py-2.5 text-left text-sm font-semibold transition-all duration-150 ease-out xl:min-h-[56px] xl:py-3",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2",
+                          "active:scale-[0.985]",
+                          selectedOption === option.id ? "border-primary bg-primary/10 text-primary" : "border-[#DFE8F6] bg-white text-foreground hover:bg-[#F7FBFF]",
+                          currentAnswered && correctByStep[index] && selectedOption === option.id ? "answer-correct-pop" : "",
+                          currentAnswered && !correctByStep[index] && selectedOption === option.id ? "border-accent/55 bg-accent/10 text-accent-foreground" : "",
+                        )}
                         disabled={currentAnswered || energyBlocked || submitting}
                         onClick={() => void onPickOption(option.id)}
                       >
-                        {option.label}
+                        <span className="flex items-center gap-2.5">
+                          <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#D7E2F3] bg-[#F6FAFF] text-[11px] font-black text-[#6782A8]">
+                            {OPTION_LETTERS[optionIndex] ?? String(optionIndex + 1)}
+                          </span>
+                          <span>{option.label}</span>
+                        </span>
+                        {currentAnswered ? (
+                          option.id === correctOptionId ? (
+                            <CheckCircle2 className="h-4.5 w-4.5 text-secondary" aria-hidden />
+                          ) : selectedOption === option.id ? (
+                            <XCircle className="h-4.5 w-4.5 text-accent" aria-hidden />
+                          ) : null
+                        ) : null}
                       </button>
                     ))
                   ) : (
@@ -1268,27 +1712,34 @@ export default function AdaptiveLessonSessionPage() {
             <div className="flex gap-2">
               <Button
                 variant="secondary"
-                className="w-full"
-                disabled={index === 0 || submitting || finishing || Boolean(result)}
+                className="w-full border border-[#DDE7F6] bg-[#F7FBFF] text-[#4E678A] transition-all duration-150 ease-out hover:bg-[#EEF6FF] disabled:opacity-45"
+                disabled={!canGoPrevious}
                 onClick={() => {
                   setIndex((prev) => Math.max(0, prev - 1));
                   setQuestionStartedAt(Date.now());
                   setFeedback(null);
                   setSelectedOption(null);
                   setDragAssignments({});
+                  setOrderingIds([]);
                 }}
               >
                 Anterior
               </Button>
               <Button
-                className="w-full"
-                disabled={!currentAnswered || submitting || finishing || energyBlocked || Boolean(result) || loadingNextQuestion}
+                className={cn(
+                  "w-full bg-[#FF7A45] text-white shadow-[0_4px_0_rgba(212,91,49,0.7)] transition-all duration-150 ease-out hover:brightness-105 active:translate-y-[1px] active:shadow-[0_2px_0_rgba(212,91,49,0.75)]",
+                  shouldHighlightFinish ? "ring-2 ring-secondary/35 ring-offset-2 ring-offset-white" : "",
+                  canGoNext ? "opacity-60 saturate-75" : "",
+                )}
+                disabled={canGoNext}
                 onClick={() => void goNext()}
               >
                 {canFinishNow || canForceFinishNow
                   ? finishing
                     ? "Finalizando..."
-                    : "Finalizar sessão"
+                    : pendingCompletionResult
+                      ? "Salvar conclusão"
+                      : "Finalizar sessão"
                   : loadingNextQuestion
                     ? "Carregando..."
                     : "Próximo"}
@@ -1313,12 +1764,14 @@ export default function AdaptiveLessonSessionPage() {
               disabled={!session || submitting || questionRetrying}
               onClick={() => {
                 if (!session) return;
+                setQuestionError(null);
                 void loadQuestionBatchWithBackoff(session.subjectId).catch((err: unknown) => {
-                  const message =
-                    err instanceof ApiError
-                      ? getApiErrorMessage(err, "Não foi possível carregar as perguntas agora.")
-                      : "Não foi possível carregar as perguntas agora.";
-                  activateOfflineMode(`${message} Entramos no modo offline para você continuar.`);
+                  const message = resolveQuestionLoadMessage(err);
+                  if (shouldEnterOfflineFallback(err)) {
+                    activateOfflineMode(`${message} Entramos no modo offline para você continuar.`);
+                  } else {
+                    setQuestionError(message);
+                  }
                 });
               }}
             >
@@ -1336,7 +1789,7 @@ export default function AdaptiveLessonSessionPage() {
       {result ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4"
-          onClick={() => router.push(`/child/aprender?completedLessonId=${lessonId}&stars=${result.stars}&xp=${result.xpEarned}&coins=${result.coinsEarned}&levelUp=${result.leveledUp ? 1 : 0}`)}
+          onClick={() => pushPathWithResult(result)}
         >
           <div
             className="w-full max-w-md rounded-3xl border border-border bg-white p-5 shadow-[0_24px_60px_rgba(13,25,41,0.32)]"
@@ -1372,11 +1825,7 @@ export default function AdaptiveLessonSessionPage() {
             ) : null}
             <Button
               className="mt-4 w-full"
-              onClick={() =>
-                router.push(
-                  `/child/aprender?completedLessonId=${lessonId}&stars=${result.stars}&xp=${result.xpEarned}&coins=${result.coinsEarned}&levelUp=${result.leveledUp ? 1 : 0}`,
-                )
-              }
+              onClick={() => pushPathWithResult(result)}
             >
               Continuar
             </Button>
@@ -1432,10 +1881,10 @@ export default function AdaptiveLessonSessionPage() {
         }
         @keyframes answer-correct-pop {
           0% {
-            transform: scale(1);
+            transform: scale(0.96);
           }
-          40% {
-            transform: scale(1.02);
+          60% {
+            transform: scale(1.02) translateY(-1px);
           }
           100% {
             transform: scale(1);

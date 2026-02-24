@@ -25,6 +25,7 @@ import {
   ApiError,
   completeDailyMission,
   getDailyMission,
+  getAprenderLearningProfile,
   getAxionBrief,
   getApiErrorMessage,
   getMe,
@@ -51,6 +52,7 @@ import {
   type WalletSummaryResponse,
 } from "@/lib/api/client";
 import { enqueueDailyMissionComplete } from "@/lib/offline-queue";
+import { readRecentLearningReward } from "@/lib/learning/reward-cache";
 import { getSoundEnabled as getChildSoundEnabled, playSound, setSoundEnabled as setChildSoundEnabled } from "@/lib/sound-manager";
 import type { Mood } from "@/lib/types/mood";
 import { cn } from "@/lib/utils";
@@ -180,6 +182,9 @@ export default function ChildPage() {
   const [todayMood, setTodayMood] = useState<Mood | null>(null);
   const [moodError, setMoodError] = useState<string | null>(null);
   const [xpBarPercent, setXpBarPercent] = useState(0);
+  const [recentXpBonus, setRecentXpBonus] = useState(0);
+  const [learningLevel, setLearningLevel] = useState<number | null>(null);
+  const [learningXpPercent, setLearningXpPercent] = useState<number | null>(null);
   const [moodFeedback, setMoodFeedback] = useState<ActionFeedbackState>("idle");
   const [missionFeedback, setMissionFeedback] = useState<ActionFeedbackState>("idle");
   const [taskFeedback, setTaskFeedback] = useState<Record<number, ActionFeedbackState>>({});
@@ -231,6 +236,8 @@ export default function ChildPage() {
       setChildName(rawChildName);
     }
     setChildId(parsedChildId);
+    const rewardBonus = readRecentLearningReward(parsedChildId);
+    setRecentXpBonus(Math.max(0, rewardBonus.xp));
     setSoundEnabled(getChildSoundEnabled(parsedChildId));
     const savedTaskView = localStorage.getItem("axiora_task_view");
     if (savedTaskView === "journey" || savedTaskView === "list") {
@@ -312,6 +319,15 @@ export default function ChildPage() {
       .catch(() => {
         setLevel(null);
       });
+    getAprenderLearningProfile()
+      .then((data) => {
+        setLearningLevel(Math.max(1, Math.round(data.level ?? 1)));
+        setLearningXpPercent(Math.max(0, Math.min(100, Math.round(data.xpLevelPercent ?? 0))));
+      })
+      .catch(() => {
+        setLearningLevel(null);
+        setLearningXpPercent(null);
+      });
     getWeeklyMetrics(parsedChildId)
       .then((data) => setWeeklyMetrics(data))
       .catch(() => {
@@ -355,6 +371,9 @@ export default function ChildPage() {
         lastKnownLevelRef.current = data.level;
         setLevel(data);
         setAvatarStage(data.avatar_stage);
+        const profile = await getAprenderLearningProfile();
+        setLearningLevel(Math.max(1, Math.round(profile.level ?? 1)));
+        setLearningXpPercent(Math.max(0, Math.min(100, Math.round(profile.xpLevelPercent ?? 0))));
       } catch {
         // ignore poll errors in MVP
       }
@@ -399,13 +418,15 @@ export default function ChildPage() {
   }, [childId, levelUpOverlayLevel]);
 
   useEffect(() => {
-    if (!level) return;
-    const next = Math.max(0, Math.min(100, level.level_progress_percent));
+    const hasLearningSnapshot = learningXpPercent !== null;
+    const basePercent = hasLearningSnapshot ? learningXpPercent : (level?.level_progress_percent ?? 0);
+    const optimisticBonus = hasLearningSnapshot ? 0 : recentXpBonus;
+    const next = Math.max(0, Math.min(100, basePercent + optimisticBonus));
     const timer = window.setTimeout(() => {
       setXpBarPercent(next);
     }, 80);
     return () => window.clearTimeout(timer);
-  }, [level?.xp_total, level?.level_progress_percent]);
+  }, [learningXpPercent, level?.xp_total, level?.level_progress_percent, recentXpBonus]);
 
   useEffect(() => {
     return () => {
@@ -965,7 +986,7 @@ export default function ChildPage() {
                 <div className="mb-2 flex items-center justify-between text-sm">
                   <span className="font-medium text-foreground">XP</span>
                   <span className="font-medium text-muted-foreground">
-                    Nível {level?.level ?? 1} • {xpBarPercent.toFixed(0)}%
+                    Nível {learningLevel ?? level?.level ?? 1} • {xpBarPercent.toFixed(0)}%
                   </span>
                 </div>
                 <ProgressBar tone="secondary" value={xpBarPercent} />

@@ -18,6 +18,7 @@ import {
   claimMission,
   getApiErrorMessage,
   getAprenderSubjects,
+  getAprenderLearningProfile,
   getCurrentMissions,
   getLearningInsights,
   getLearningPath,
@@ -26,8 +27,8 @@ import {
   type LearningPathResponse,
   type MissionsCurrentResponse,
 } from "@/lib/api/client";
+import { readRecentLearningReward } from "@/lib/learning/reward-cache";
 
-const LOCAL_COMPLETED_LESSONS_KEY = "axiora_learning_completed_lessons";
 const DESKTOP_BREAKPOINT_PX = 1024;
 const DESKTOP_ACTIVE_THRESHOLD_PX = 188;
 const MOBILE_ACTIVE_THRESHOLD_OFFSET_PX = 146;
@@ -53,20 +54,6 @@ function normalizeUnitTitle(order: number, rawTitle: string): string {
   return `Unidade ${order}: ${cleaned || title}`;
 }
 
-function getOptimisticIdsValidForPath(path: LearningPathResponse, optimisticIds: Set<number>) {
-  const validIds = new Set<number>();
-  path.units.forEach((unit) => {
-    unit.nodes.forEach((node) => {
-      const lesson = node.lesson;
-      if (!lesson) return;
-      if (!lesson.completed && optimisticIds.has(lesson.id)) {
-        validIds.add(lesson.id);
-      }
-    });
-  });
-  return validIds;
-}
-
 function getCurrentUnitIndex(path: LearningPathResponse): number {
   const byUnlockedPending = path.units.findIndex((unit) =>
     unit.nodes.some((node) => node.lesson && node.lesson.unlocked && !node.lesson.completed),
@@ -77,7 +64,7 @@ function getCurrentUnitIndex(path: LearningPathResponse): number {
   return Math.max(0, path.units.length - 1);
 }
 
-function toTrailUnits(path: LearningPathResponse, optimisticCompletedLessonIds: Set<number>): TrailUnit[] {
+function toTrailUnits(path: LearningPathResponse): TrailUnit[] {
   const currentUnitIndex = getCurrentUnitIndex(path);
   let activeAssigned = false;
 
@@ -92,7 +79,7 @@ function toTrailUnits(path: LearningPathResponse, optimisticCompletedLessonIds: 
     let contiguousDoneCount = 0;
     for (let i = 0; i < sortedLessons.length; i += 1) {
       const lesson = sortedLessons[i];
-      const completed = lesson.completed || optimisticCompletedLessonIds.has(lesson.id);
+      const completed = lesson.completed;
       if (!completed) break;
       contiguousDoneCount += 1;
     }
@@ -131,7 +118,8 @@ export function TrailScreen() {
   const [path, setPath] = useState<LearningPathResponse | null>(null);
   const [subjects, setSubjects] = useState<AprenderSubjectOption[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
-  const [coins] = useState(277);
+  const [coins, setCoins] = useState(0);
+  const [xpPercent, setXpPercent] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [pathRefreshing, setPathRefreshing] = useState(false);
@@ -142,7 +130,6 @@ export function TrailScreen() {
   const [activeUnitIndex, setActiveUnitIndex] = useState(0);
   const [desktopUnitCardRect, setDesktopUnitCardRect] = useState<{ left: number; width: number } | null>(null);
   const [desktopRightPanelRect, setDesktopRightPanelRect] = useState<{ left: number; width: number } | null>(null);
-  const [optimisticCompletedLessons, setOptimisticCompletedLessons] = useState<Set<number>>(new Set());
   const [insights, setInsights] = useState<LearningInsightsResponse | null>(null);
   const [missions, setMissions] = useState<MissionsCurrentResponse | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(true);
@@ -150,37 +137,13 @@ export function TrailScreen() {
   const [claimingMissionId, setClaimingMissionId] = useState<string | null>(null);
   const hasLoadedPathRef = useRef(false);
   const lastAutoScrollKeyRef = useRef<string>("");
+  const completedLessonSignal = searchParams.get("completedLessonId") ?? "";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    try {
-      const raw = window.localStorage.getItem(LOCAL_COMPLETED_LESSONS_KEY);
-      const parsed = raw ? (JSON.parse(raw) as unknown) : [];
-      const list = Array.isArray(parsed) ? parsed.filter((item): item is number => typeof item === "number" && Number.isFinite(item)) : [];
-      setOptimisticCompletedLessons(new Set(list));
-    } catch {
-      setOptimisticCompletedLessons(new Set());
-    }
+    // Remove stale optimistic cache from previous versions to keep server truth only.
+    window.localStorage.removeItem("axiora_learning_completed_lessons");
   }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const completedLessonIdRaw = searchParams.get("completedLessonId");
-    const completedLessonId = completedLessonIdRaw ? Number(completedLessonIdRaw) : NaN;
-    if (!Number.isFinite(completedLessonId) || completedLessonId <= 0) return;
-
-    setOptimisticCompletedLessons((prev) => {
-      if (prev.has(completedLessonId)) return prev;
-      const next = new Set(prev);
-      next.add(completedLessonId);
-      try {
-        window.localStorage.setItem(LOCAL_COMPLETED_LESSONS_KEY, JSON.stringify(Array.from(next)));
-      } catch {
-        // no-op
-      }
-      return next;
-    });
-  }, [searchParams]);
 
   useEffect(() => {
     let active = true;
@@ -219,18 +182,6 @@ export function TrailScreen() {
         if (!active) return;
         setPath(data);
         hasLoadedPathRef.current = true;
-        setOptimisticCompletedLessons((prev) => {
-          const next = getOptimisticIdsValidForPath(data, prev);
-          const changed = next.size !== prev.size || Array.from(next).some((id) => !prev.has(id));
-          if (changed && typeof window !== "undefined") {
-            try {
-              window.localStorage.setItem(LOCAL_COMPLETED_LESSONS_KEY, JSON.stringify(Array.from(next)));
-            } catch {
-              // no-op
-            }
-          }
-          return changed ? next : prev;
-        });
         setError(null);
       } catch (err: unknown) {
         if (!active) return;
@@ -249,7 +200,37 @@ export function TrailScreen() {
     return () => {
       active = false;
     };
-  }, [selectedSubjectId]);
+  }, [selectedSubjectId, completedLessonSignal]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const rawChildId = window.localStorage.getItem("axiora_child_id");
+    const childId = rawChildId ? Number(rawChildId) : NaN;
+    if (!Number.isFinite(childId) || childId <= 0) {
+      setCoins(0);
+      setXpPercent(0);
+      return;
+    }
+    let active = true;
+    const rewardBonus = readRecentLearningReward(childId);
+    void getAprenderLearningProfile()
+      .then((data) => {
+        if (!active) return;
+        const baseCoins = Math.max(0, Math.round(data.axionCoins ?? 0));
+        const basePercent = Math.max(0, Math.min(100, Math.round(data.xpLevelPercent ?? 0)));
+        setCoins(baseCoins);
+        setXpPercent(basePercent);
+      })
+      .catch(() => {
+        if (!active) return;
+        setCoins(Math.max(0, rewardBonus.coins));
+        setXpPercent(Math.max(0, Math.min(100, rewardBonus.xp)));
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [searchParams]);
 
   useEffect(() => {
     let active = true;
@@ -269,7 +250,7 @@ export function TrailScreen() {
     };
   }, [selectedSubjectId]);
 
-  const units = useMemo(() => (path ? toTrailUnits(path, optimisticCompletedLessons) : []), [path, optimisticCompletedLessons]);
+  const units = useMemo(() => (path ? toTrailUnits(path) : []), [path]);
   const selectedSubjectName = useMemo(() => {
     if (path?.subjectName) return path.subjectName;
     const fallback = subjects.find((item) => item.id === selectedSubjectId);
@@ -474,9 +455,9 @@ export function TrailScreen() {
 
           <header className="sticky top-0 z-40 mb-3 lg:hidden">
             <SubjectSelector
-                streak={path?.streakDays ?? 1}
+                streak={path?.streakDays ?? 0}
                 gems={coins}
-                xp={Math.round((path?.masteryAverage ?? 0.31) * 100)}
+                xp={xpPercent}
                 selectedSubjectName={selectedSubjectName}
                 subjects={subjects}
                 selectedSubjectId={selectedSubjectId}
@@ -537,9 +518,9 @@ export function TrailScreen() {
             }
           >
             <DesktopRightRail
-              streak={path?.streakDays ?? 1}
+              streak={path?.streakDays ?? 0}
               gems={coins}
-              xp={Math.round((path?.masteryAverage ?? 0.31) * 100)}
+              xp={xpPercent}
               selectedSubjectName={selectedSubjectName}
               subjects={subjects}
               selectedSubjectId={selectedSubjectId}

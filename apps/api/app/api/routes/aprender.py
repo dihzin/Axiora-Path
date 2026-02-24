@@ -19,6 +19,7 @@ from app.models import (
 )
 from app.schemas.aprender import (
     GamificationSnapshotOut,
+    LearningGamificationProfileOut,
     LearningEnergyConsumeResponse,
     LearningEnergyStatusOut,
     LearningStreakOut,
@@ -57,6 +58,7 @@ from app.services.learning_energy import (
     refill_energy_with_wait,
 )
 from app.services.learning_streak import LearningStreakSnapshot, get_learning_streak
+from app.services.gamification import MAX_XP_PER_DAY, XP_PER_LEVEL, get_or_create_game_profile
 
 router = APIRouter(prefix="/api/aprender", tags=["aprender"])
 
@@ -188,6 +190,30 @@ def get_aprender_streak(
     snapshot = get_learning_streak(db, user_id=user.id)
     db.commit()
     return _to_learning_streak_out(snapshot)
+
+
+@router.get("/profile", response_model=LearningGamificationProfileOut)
+def get_aprender_profile(
+    db: DBSession,
+    _: Annotated[Tenant, Depends(get_current_tenant)],
+    user: Annotated[User, Depends(get_current_user)],
+    __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+) -> LearningGamificationProfileOut:
+    profile = get_or_create_game_profile(db, user_id=user.id)
+    xp_in_level = max(0, profile.xp % XP_PER_LEVEL)
+    xp_to_next_level = XP_PER_LEVEL
+    xp_level_percent = int(round((xp_in_level / xp_to_next_level) * 100)) if xp_to_next_level > 0 else 0
+    db.commit()
+    return LearningGamificationProfileOut(
+        xp=profile.xp,
+        level=profile.level,
+        dailyXp=profile.daily_xp,
+        axionCoins=profile.axion_coins,
+        xpLevelPercent=max(0, min(100, xp_level_percent)),
+        xpInLevel=xp_in_level,
+        xpToNextLevel=xp_to_next_level,
+        maxDailyXp=MAX_XP_PER_DAY,
+    )
 
 
 @router.post("/subjects", response_model=SubjectOut, status_code=status.HTTP_201_CREATED)

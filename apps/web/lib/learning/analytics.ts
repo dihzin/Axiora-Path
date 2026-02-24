@@ -4,6 +4,11 @@ export type AprenderEventName =
   | "path_loaded"
   | "subject_changed"
   | "lesson_opened"
+  | "question_viewed"
+  | "question_answered"
+  | "question_hint_opened"
+  | "question_skipped"
+  | "session_completed"
   | "event_opened"
   | "path_scrolled_to_active"
   | "mode_changed"
@@ -52,4 +57,3 @@ export function trackAprenderEvent(name: AprenderEventName, payload: AprenderEve
   saveEvents(next);
   window.dispatchEvent(new CustomEvent("axiora:aprender:analytics", { detail: entry }));
 }
-

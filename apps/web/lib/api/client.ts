@@ -672,6 +672,12 @@ export type AprenderLessonCompleteResponse = {
   };
   xpRequested: number;
   xpGranted: number;
+  coinsRequested: number;
+  coinsGranted: number;
+  coinMultiplierApplied: number;
+  unitBoostActivated: boolean;
+  unitBoostMultiplier: number;
+  unitBoostRemainingLessons: number;
   repeatRequired: boolean;
   variationSeed: string | null;
   unlockedAchievements: string[];
@@ -689,6 +695,17 @@ export type AprenderLearningStreak = {
   lastLessonDate: string | null;
   bonusCoinsGranted: number;
   unlocked30DayBadge: boolean;
+};
+
+export type AprenderLearningProfile = {
+  xp: number;
+  level: number;
+  dailyXp: number;
+  axionCoins: number;
+  xpLevelPercent: number;
+  xpInLevel: number;
+  xpToNextLevel: number;
+  maxDailyXp: number;
 };
 
 export type AprenderLearningEnergyStatus = {
@@ -1572,6 +1589,14 @@ export async function refillAprenderEnergyWithCoins(): Promise<AprenderLearningE
 
 export async function getAprenderLearningStreak(): Promise<AprenderLearningStreak> {
   return apiRequest<AprenderLearningStreak>("/api/aprender/streak", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAprenderLearningProfile(): Promise<AprenderLearningProfile> {
+  return apiRequest<AprenderLearningProfile>("/api/aprender/profile", {
     method: "GET",
     requireAuth: true,
     includeTenant: true,
