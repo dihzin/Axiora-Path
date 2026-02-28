@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+import json
+import logging
+import os
+from time import perf_counter
 from uuid import uuid4
 
 from sqlalchemy import func, select
@@ -20,8 +24,26 @@ from app.models import (
     UserLearningStatus,
 )
 from app.services.achievement_engine import evaluate_achievements_after_learning
+from app.services.child_age import get_child_age
 from app.services.gamification import addXP, get_or_create_game_profile
 from app.services.learning_streak import LearningStreakSnapshot, register_learning_lesson_completion
+
+logger = logging.getLogger("axiora.api.aprender")
+
+
+def _build_unit_completion_perf_logger() -> logging.Logger:
+    perf_logger = logging.getLogger("axiora.api.unit_completion_perf")
+    if perf_logger.handlers:
+        return perf_logger
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    perf_logger.addHandler(handler)
+    perf_logger.setLevel(logging.INFO)
+    perf_logger.propagate = False
+    return perf_logger
+
+
+unit_completion_perf_logger = _build_unit_completion_perf_logger()
 
 
 DEFAULT_MAX_DAILY_LEARNING_XP = 200
@@ -87,10 +109,10 @@ class CompleteLessonResult:
     learning_streak: LearningStreakSnapshot | None
 
 
-def age_group_from_birth_year(*, birth_year: int | None, now_year: int) -> SubjectAgeGroup:
-    if birth_year is None:
+def age_group_from_date_of_birth(*, date_of_birth: date | None, today: date | None = None) -> SubjectAgeGroup:
+    if date_of_birth is None:
         return SubjectAgeGroup.AGE_9_12
-    age = max(0, now_year - birth_year)
+    age = get_child_age(date_of_birth, today=today)
     if age <= 8:
         return SubjectAgeGroup.AGE_6_8
     if age <= 12:
@@ -98,11 +120,17 @@ def age_group_from_birth_year(*, birth_year: int | None, now_year: int) -> Subje
     return SubjectAgeGroup.AGE_13_15
 
 
-def get_child_age_group(db: Session, *, child_id: int, now_year: int) -> SubjectAgeGroup:
+def age_group_from_birth_year(*, birth_year: int | None, now_year: int) -> SubjectAgeGroup:
+    if birth_year is None:
+        return SubjectAgeGroup.AGE_9_12
+    return age_group_from_date_of_birth(date_of_birth=date(birth_year, 6, 30), today=date(now_year, 12, 31))
+
+
+def get_child_age_group(db: Session, *, child_id: int, now_date: date) -> SubjectAgeGroup:
     child = db.get(ChildProfile, child_id)
     if child is None:
         return SubjectAgeGroup.AGE_9_12
-    return age_group_from_birth_year(birth_year=child.birth_year, now_year=now_year)
+    return age_group_from_date_of_birth(date_of_birth=child.date_of_birth, today=now_date)
 
 
 def _difficulty_multiplier(difficulty: LessonDifficulty) -> float:
@@ -284,22 +312,36 @@ def _get_or_create_learning_status(db: Session, *, user_id: int) -> UserLearning
 
 
 def _is_unit_completed(db: Session, *, unit_id: int, user_id: int) -> bool:
-    total_lessons = db.scalar(select(func.count(Lesson.id)).where(Lesson.unit_id == unit_id)) or 0
-    if total_lessons <= 0:
-        return False
-    completed_lessons = (
-        db.scalar(
-            select(func.count(LessonProgress.id))
-            .join(Lesson, Lesson.id == LessonProgress.lesson_id)
-            .where(
-                Lesson.unit_id == unit_id,
-                LessonProgress.user_id == user_id,
-                LessonProgress.completed.is_(True),
-            ),
+    perf_enabled = os.getenv("PERF_MONITOR", "false").strip().lower() == "true"
+    started = perf_counter() if perf_enabled else None
+    try:
+        total_lessons = db.scalar(select(func.count(Lesson.id)).where(Lesson.unit_id == unit_id)) or 0
+        if total_lessons <= 0:
+            return False
+        completed_lessons = (
+            db.scalar(
+                select(func.count(LessonProgress.id))
+                .join(Lesson, Lesson.id == LessonProgress.lesson_id)
+                .where(
+                    Lesson.unit_id == unit_id,
+                    LessonProgress.user_id == user_id,
+                    LessonProgress.completed.is_(True),
+                ),
+            )
+            or 0
         )
-        or 0
-    )
-    return int(completed_lessons) >= int(total_lessons)
+        return int(completed_lessons) >= int(total_lessons)
+    finally:
+        if perf_enabled and started is not None:
+            unit_completion_perf_logger.info(
+                json.dumps(
+                    {
+                        "type": "unit_completion_check",
+                        "duration_ms": round((perf_counter() - started) * 1000, 1),
+                    },
+                    ensure_ascii=True,
+                )
+            )
 
 
 def complete_lesson(
@@ -402,7 +444,21 @@ def complete_lesson(
 
     db.flush()
     xp_granted = max(0, profile.xp - before_xp)
-    progress.xp_granted = xp_granted
+    # Preserve historical first-grant XP under idempotent replay.
+    progress.xp_granted = max(int(progress.xp_granted or 0), xp_granted)
+    logger.info(
+        "learning_lesson_xp_applied",
+        extra={
+            "user_id": user_id,
+            "lesson_id": lesson_id,
+            "xp_before": before_xp,
+            "xp_after": profile.xp,
+            "xp_delta": xp_granted,
+            "xp_requested": xp_requested,
+            "was_completed_before": was_completed,
+            "repeat_required": repeat_required,
+        },
+    )
     coins_requested = (
         int(round(THREE_STAR_BONUS_COINS * learning_coin_multiplier))
         if progress.completed and not was_completed and stars == 3 and grant_economy_rewards

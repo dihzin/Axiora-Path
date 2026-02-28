@@ -39,26 +39,40 @@ from app.core.csrf import CSRFMiddleware
 from app.core.exceptions import register_exception_handlers
 from app.core.feature_gate import DailyMissionsFeatureMiddleware
 from app.core.logging import setup_json_logging
+from app.core.performance_middleware import PerformanceMiddleware
 from app.core.privacy import PrivacyConsentMiddleware
+from app.core.query_counter import register_query_counter_listener
 from app.core.rate_limit import RateLimitMiddleware
 from app.core.request_logging import RequestLoggingMiddleware
+from app.jobs.axion_experiment_health_runner import start_axion_experiment_health_scheduler
+from app.services.schema_guard import enforce_schema_sync_on_startup
 from app.services.providers.config_validation import (
     validate_llm_provider_config_on_boot,
     validate_runtime_security_on_boot,
 )
 
 setup_json_logging()
+register_query_counter_listener()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     validate_llm_provider_config_on_boot()
     validate_runtime_security_on_boot()
+    enforce_schema_sync_on_startup()
     redis = Redis.from_url(settings.redis_url, encoding="utf-8", decode_responses=True)
+    health_scheduler = start_axion_experiment_health_scheduler()
     app.state.redis = redis
+    app.state.health_scheduler = health_scheduler
     try:
         yield
     finally:
+        scheduler = getattr(app.state, "health_scheduler", None)
+        if scheduler is not None:
+            try:
+                scheduler.shutdown(wait=False)
+            except Exception:
+                pass
         await redis.aclose()
 
 
@@ -70,6 +84,7 @@ app.add_middleware(PrivacyConsentMiddleware)
 app.add_middleware(DailyMissionsFeatureMiddleware)
 app.add_middleware(CSRFMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(PerformanceMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
