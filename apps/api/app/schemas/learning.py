@@ -55,6 +55,7 @@ class LearningPlanOut(BaseModel):
 
     focus_skills: list[LearningFocusSkillOut] = Field(alias="focusSkills")
     difficulty_mix: LearningDifficultyMixOut = Field(alias="difficultyMix")
+    diagnostics: dict[str, Any] | None = None
 
 
 class LearningNextResponse(BaseModel):
@@ -71,6 +72,7 @@ class LearningAnswerRequest(BaseModel):
     template_id: str | None = Field(default=None, alias="templateId")
     generated_variant_id: str | None = Field(default=None, alias="generatedVariantId")
     variant_id: str | None = Field(default=None, alias="variantId")
+    correlation_id: str | None = Field(default=None, alias="correlationId")
     wrong_answer: str | None = Field(default=None, alias="wrongAnswer")
     result: QuestionResult
     time_ms: int = Field(alias="timeMs", ge=0)
@@ -116,6 +118,7 @@ class LearningSessionFinishRequest(BaseModel):
     session_id: str = Field(alias="sessionId")
     total_questions: int = Field(alias="totalQuestions", ge=0)
     correct_count: int = Field(alias="correctCount", ge=0)
+    decision_id: str | None = Field(default=None, alias="decisionId")
 
 
 class LearningSessionFinishResponse(BaseModel):

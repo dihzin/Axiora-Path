@@ -37,7 +37,7 @@ export function MoodSelector({ value, onChange }: Props) {
             type="button"
             aria-label={`Selecionar humor ${MOOD_LABELS[mood]}`}
             className={cn(
-              "relative min-w-0 rounded-2xl border bg-white px-1.5 py-1.5 transition-all duration-150 ease-out",
+              "relative min-w-0 rounded-2xl border bg-white px-1.5 py-1.5 transition-transform transition-shadow transition-opacity duration-150 ease-out",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
               "hover:scale-[1.03] active:scale-[0.98]",
               selected ? "scale-[1.03] border-primary ring-2 ring-primary/35" : "border-border",
@@ -60,3 +60,4 @@ export function MoodSelector({ value, onChange }: Props) {
     </div>
   );
 }
+

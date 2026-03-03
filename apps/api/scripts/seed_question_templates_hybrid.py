@@ -116,7 +116,7 @@ def _template_specs(template_type: str, age_group: str, index: int) -> tuple[str
         words = ["janela", "caderno", "pipoca", "comunidade", "historia"]
         prompt = "Quantas sílabas tem a palavra '{{word}}'?"
         explanation = "Separando com calma, você encontrou a quantidade correta de sílabas."
-        generator = {"word": {"values": words, "weights": [1, 1, 1, 1, 1]}, "answer": {"min": 2, "max": 5}}
+        generator = {"word": {"values": words, "weights": [1, 1, 1, 1, 1]}}
         renderer = {"choices": {"count": 4, "strategy": "nearby_numbers"}, "correctKey": "answer"}
         return prompt, explanation, generator, renderer
 

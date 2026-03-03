@@ -20,7 +20,7 @@ from app.models import (
     WeeklyMission,
     WeeklyMissionType,
 )
-from app.services.aprender import age_group_from_birth_year
+from app.services.aprender import age_group_from_date_of_birth
 from app.services.gamification import addCoins, addXP
 
 
@@ -68,7 +68,7 @@ def _resolve_user_age_group(db: Session, *, user_id: int, tenant_id: int | None)
             .order_by(ChildProfile.id.asc())
         )
         if child is not None:
-            return age_group_from_birth_year(birth_year=child.birth_year, now_year=date.today().year)
+            return age_group_from_date_of_birth(date_of_birth=child.date_of_birth, today=date.today())
     return SubjectAgeGroup.AGE_9_12
 
 

@@ -8,6 +8,8 @@ from redis.asyncio import Redis
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
 
+from app.core.config import settings
+
 
 @dataclass(frozen=True)
 class RateLimitRule:
@@ -39,8 +41,16 @@ async def _increment_and_check(redis: Redis, *, rule: RateLimitRule, ip: str) ->
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        # Local/dev should never be throttled by global API limits during normal navigation.
+        if settings.app_env.strip().lower() == "development":
+            return await call_next(request)
+
         redis: Redis | None = request.app.state.redis
         if redis is None:
+            return await call_next(request)
+
+        # Do not consume rate-limit budget with CORS preflight requests.
+        if request.method.upper() == "OPTIONS":
             return await call_next(request)
 
         ip = _extract_ip(request)

@@ -30,41 +30,49 @@ class UnitBlueprint:
 
 
 AGE_GROUPS: tuple[str, ...] = ("6-8", "9-12", "13-15")
+AGE_BOUNDS: dict[str, tuple[int, int]] = {
+    "6-8": (6, 8),
+    "9-12": (9, 12),
+    "13-15": (13, 15),
+}
+
+REQUIRED_SUBJECTS: tuple[str, ...] = (
+    "Matemática",
+    "Português",
+    "Inglês",
+    "História",
+    "Geografia",
+    "Ciências",
+    "Física",
+    "Química",
+    "Filosofia",
+    "Artes",
+    "Educação Financeira",
+    "Lógica",
+    "Programação básica",
+    "Redação",
+)
+
+SUBJECT_META: dict[str, tuple[str, str]] = {
+    "Matemática": ("calculator", "#22C55E"),
+    "Português": ("book-open", "#0EA5E9"),
+    "Inglês": ("languages", "#F97316"),
+    "História": ("landmark", "#A855F7"),
+    "Geografia": ("map", "#06B6D4"),
+    "Ciências": ("leaf", "#F59E0B"),
+    "Física": ("atom", "#6366F1"),
+    "Química": ("flask-conical", "#14B8A6"),
+    "Filosofia": ("brain", "#8B5CF6"),
+    "Artes": ("palette", "#EC4899"),
+    "Educação Financeira": ("piggy-bank", "#F97316"),
+    "Lógica": ("puzzle", "#0F766E"),
+    "Programação básica": ("code-2", "#2563EB"),
+    "Redação": ("pen-tool", "#DC2626"),
+}
 
 SUBJECTS_BY_AGE: dict[str, list[tuple[str, str, str]]] = {
-    "6-8": [
-        ("Matemática", "calculator", "#22C55E"),
-        ("Português", "book-open", "#0EA5E9"),
-        ("Física", "atom", "#6366F1"),
-        ("Química", "flask-conical", "#14B8A6"),
-        ("História", "landmark", "#A855F7"),
-        ("Geografia", "map", "#06B6D4"),
-        ("Inglês", "languages", "#F97316"),
-        ("Ciências", "leaf", "#F59E0B"),
-        ("Educação Financeira", "piggy-bank", "#F97316"),
-    ],
-    "9-12": [
-        ("Matemática", "function-square", "#10B981"),
-        ("Português", "pen-tool", "#3B82F6"),
-        ("Física", "atom", "#4F46E5"),
-        ("Química", "flask-conical", "#0EA5A5"),
-        ("História", "landmark", "#9333EA"),
-        ("Geografia", "map", "#0891B2"),
-        ("Inglês", "languages", "#F97316"),
-        ("Educação Financeira", "wallet", "#D97706"),
-        ("Ciências", "microscope", "#EAB308"),
-    ],
-    "13-15": [
-        ("Matemática", "sigma", "#059669"),
-        ("Português", "scroll-text", "#2563EB"),
-        ("Física", "atom", "#4338CA"),
-        ("Química", "flask-conical", "#0F766E"),
-        ("História", "landmark", "#7E22CE"),
-        ("Geografia", "map", "#0E7490"),
-        ("Inglês", "globe-2", "#EA580C"),
-        ("Educação Financeira", "line-chart", "#B45309"),
-        ("Ciências", "microscope", "#CA8A04"),
-    ],
+    age_group: [(name, SUBJECT_META[name][0], SUBJECT_META[name][1]) for name in REQUIRED_SUBJECTS]
+    for age_group in AGE_GROUPS
 }
 
 UNIT_LIBRARY: dict[str, list[UnitBlueprint]] = {
@@ -168,6 +176,56 @@ UNIT_LIBRARY: dict[str, list[UnitBlueprint]] = {
         UnitBlueprint("Projeto de Vida Financeiro", "Conectar hábitos, metas e estratégia de longo prazo.", "Você está construindo uma mentalidade financeira forte."),
     ],
 }
+
+
+def _default_unit_library(subject_name: str) -> list[UnitBlueprint]:
+    return [
+        UnitBlueprint(
+            f"Fundamentos de {subject_name}",
+            f"Introdução progressiva aos conceitos centrais de {subject_name}.",
+            f"Comece com confiança e avance passo a passo em {subject_name}.",
+        ),
+        UnitBlueprint(
+            f"Conceitos essenciais de {subject_name}",
+            f"Explorar linguagem, ideias e conexões fundamentais de {subject_name}.",
+            f"Cada conceito dominado fortalece sua base em {subject_name}.",
+        ),
+        UnitBlueprint(
+            f"Aplicações práticas de {subject_name}",
+            f"Resolver situações reais com estratégias de {subject_name}.",
+            f"Aplicar no cotidiano torna o aprendizado mais sólido.",
+        ),
+        UnitBlueprint(
+            f"Análise em {subject_name}",
+            f"Interpretar informações e tomar decisões com base em {subject_name}.",
+            f"Pensar com método gera respostas melhores.",
+        ),
+        UnitBlueprint(
+            f"Desafios guiados de {subject_name}",
+            f"Praticar desafios progressivos para consolidar autonomia em {subject_name}.",
+            f"Persistência e revisão aceleram seu progresso.",
+        ),
+        UnitBlueprint(
+            f"Estratégias de resolução em {subject_name}",
+            f"Comparar caminhos para resolver tarefas com eficiência.",
+            f"Escolher bem a estratégia faz diferença no resultado.",
+        ),
+        UnitBlueprint(
+            f"Projeto orientado de {subject_name}",
+            f"Integrar conteúdos em missões com contexto prático.",
+            f"Agora é hora de transformar teoria em ação.",
+        ),
+        UnitBlueprint(
+            f"Comunicação em {subject_name}",
+            f"Explicar raciocínios e resultados com clareza e propósito.",
+            f"Aprender também é saber comunicar o que você descobriu.",
+        ),
+        UnitBlueprint(
+            f"Projeto final de {subject_name}",
+            f"Sintetizar conhecimentos para concluir a trilha de {subject_name}.",
+            f"Você está pronto para mostrar tudo que evoluiu.",
+        ),
+    ]
 
 
 def _build_subjects() -> list[SubjectSeed]:
@@ -359,6 +417,7 @@ def _lesson_blueprint(
 
 def _get_or_create_subject(*, seed: SubjectSeed) -> int:
     with SessionLocal() as db:
+        age_min, age_max = AGE_BOUNDS.get(seed.age_group, (9, 12))
         subject_id = db.scalar(
             text(
                 """
@@ -375,14 +434,16 @@ def _get_or_create_subject(*, seed: SubjectSeed) -> int:
             subject_id = db.scalar(
                 text(
                     """
-                    INSERT INTO subjects (name, age_group, icon, color, "order")
-                    VALUES (:name, :age_group, :icon, :color, :order)
+                    INSERT INTO subjects (name, age_group, age_min, age_max, icon, color, "order")
+                    VALUES (:name, :age_group, :age_min, :age_max, :icon, :color, :order)
                     RETURNING id
                     """
                 ),
                 {
                     "name": seed.name,
                     "age_group": seed.age_group,
+                    "age_min": age_min,
+                    "age_max": age_max,
                     "icon": seed.icon,
                     "color": seed.color,
                     "order": seed.order,
@@ -394,6 +455,8 @@ def _get_or_create_subject(*, seed: SubjectSeed) -> int:
                     """
                     UPDATE subjects
                     SET name = :name,
+                        age_min = :age_min,
+                        age_max = :age_max,
                         icon = :icon,
                         color = :color,
                         "order" = :order
@@ -403,6 +466,8 @@ def _get_or_create_subject(*, seed: SubjectSeed) -> int:
                 {
                     "id": int(subject_id),
                     "name": seed.name,
+                    "age_min": age_min,
+                    "age_max": age_max,
                     "icon": seed.icon,
                     "color": seed.color,
                     "order": seed.order,
@@ -420,7 +485,7 @@ def _upsert_content() -> None:
 
     for subject_seed in SUBJECTS:
         subject_id = _get_or_create_subject(seed=subject_seed)
-        unit_library = UNIT_LIBRARY[subject_seed.name]
+        unit_library = UNIT_LIBRARY.get(subject_seed.name, _default_unit_library(subject_seed.name))
         created_subjects += 1
 
         with SessionLocal() as db:

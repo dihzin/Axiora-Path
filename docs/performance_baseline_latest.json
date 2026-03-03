@@ -1,0 +1,64 @@
+{
+  "generated_at": "2026-02-28T16:08:03.556950+00:00",
+  "base_url": "http://127.0.0.1:8000",
+  "total_requests": 150,
+  "users": [
+    {
+      "name": "u6",
+      "age": 6,
+      "subject_id": 1,
+      "child_id": 1,
+      "headers": {}
+    },
+    {
+      "name": "u8",
+      "age": 8,
+      "subject_id": 2,
+      "child_id": 2,
+      "headers": {}
+    },
+    {
+      "name": "u10",
+      "age": 10,
+      "subject_id": 3,
+      "child_id": 3,
+      "headers": {}
+    },
+    {
+      "name": "u13",
+      "age": 13,
+      "subject_id": 4,
+      "child_id": 4,
+      "headers": {}
+    },
+    {
+      "name": "u16",
+      "age": 16,
+      "subject_id": 5,
+      "child_id": 5,
+      "headers": {}
+    }
+  ],
+  "metrics": {
+    "/trail": {
+      "avg_ms": 925.7240580010694,
+      "p95_ms": 2240.1548999769147,
+      "avg_queries": 0.0,
+      "sample_size": 50
+    },
+    "/lesson": {
+      "avg_ms": 2790.7010119990446,
+      "p95_ms": 4024.239199992735,
+      "avg_queries": 0.0,
+      "sample_size": 50
+    },
+    "/brain_state": {
+      "avg_ms": 4663.951530001941,
+      "p95_ms": 5480.9104000160005,
+      "avg_queries": 0.0,
+      "sample_size": 50
+    }
+  },
+  "performance_level": "NEEDS_ATTENTION",
+  "performance_score": 3.0
+}

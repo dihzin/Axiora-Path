@@ -50,14 +50,17 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="pt-BR">
       <body
         suppressHydrationWarning
-        className={`${nunito.variable} ${baloo.variable} min-h-screen bg-background text-foreground font-sans`}
+        className={`${nunito.variable} ${baloo.variable} relative min-h-screen bg-transparent text-foreground font-sans [background-image:none]`}
       >
+        <div className="fixed inset-0 -z-20 bg-[#FFF8F5]" />
         <ThemeProvider>
-          <PwaRegister />
-          <OfflineSyncBootstrap />
-          <OfflineBanner />
-          <PwaInstallPrompt />
-          {children}
+          <div className="relative z-10">
+            <PwaRegister />
+            <OfflineSyncBootstrap />
+            <OfflineBanner />
+            <PwaInstallPrompt />
+            {children}
+          </div>
         </ThemeProvider>
       </body>
     </html>

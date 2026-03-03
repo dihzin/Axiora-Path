@@ -4,21 +4,22 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import type { TrailLessonNode, TrailUnit } from "@/lib/trail-types";
+import type { TrailDomainSectionData, TrailNodeType, TrailUnit } from "@/lib/trail-types";
 import { AxionCharacter } from "@/components/axion-character";
 import { ChildNavIcon, type ChildNavIconKey } from "@/components/child-bottom-nav";
 import { BottomNav } from "@/components/trail/BottomNav";
-import { DesktopUnitHeader } from "@/components/trail/DesktopUnitHeader";
-import { DesktopRightRail } from "@/components/trail/DesktopRightRail";
+import { DailyMissionsPanel } from "@/components/trail/DailyMissionsPanel";
+import { DomainSection } from "@/components/trail/DomainSection";
+import { HeroMissionCard } from "@/components/trail/HeroMissionCard";
 import { SubjectSelector } from "@/components/trail/SubjectSelector";
-import { TrailPath } from "@/components/trail/TrailPath";
-import { UnitBanner } from "@/components/trail/UnitBanner";
+import { WeeklyGoalCard } from "@/components/trail/WeeklyGoalCard";
 import {
   ApiError,
   claimMission,
   getApiErrorMessage,
-  getAprenderSubjects,
+  getAprenderLearningStreak,
   getAprenderLearningProfile,
+  getAprenderSubjects,
   getCurrentMissions,
   getLearningInsights,
   getLearningPath,
@@ -27,17 +28,11 @@ import {
   type LearningPathResponse,
   type MissionsCurrentResponse,
 } from "@/lib/api/client";
+import { resolveDomainCompletion, resolveWeeklyGoalProgress } from "@/lib/gamification-derivations";
 import { readRecentLearningReward } from "@/lib/learning/reward-cache";
 
-const DESKTOP_BREAKPOINT_PX = 1024;
-const DESKTOP_ACTIVE_THRESHOLD_PX = 188;
-const MOBILE_ACTIVE_THRESHOLD_OFFSET_PX = 146;
-const ACTIVE_NODE_VIEWPORT_TARGET_RATIO = 0.35;
-
-function mapPosition(index: number): "left" | "center" | "right" {
-  const pattern: Array<"left" | "center" | "right" | "center"> = ["center", "right", "center", "left"];
-  return pattern[index % pattern.length];
-}
+const AREA_LABELS = ["Exatas", "Humanas", "Linguagens"] as const;
+type SubjectAreaLabel = (typeof AREA_LABELS)[number];
 
 function normalizeSubjectName(value: string): string {
   return value
@@ -47,68 +42,115 @@ function normalizeSubjectName(value: string): string {
     .toLowerCase();
 }
 
-function normalizeUnitTitle(order: number, rawTitle: string): string {
-  const title = rawTitle.trim();
-  const duplicatedPrefix = new RegExp(`^unidade\\s*${order}\\s*:\\s*`, "i");
-  const cleaned = title.replace(duplicatedPrefix, "").trim();
-  return `Unidade ${order}: ${cleaned || title}`;
+function resolveSubjectStorageKey(): string {
+  if (typeof window === "undefined") return "axiora_learning_selected_subject:anonymous";
+  const rawChildId = window.localStorage.getItem("axiora_child_id");
+  const childId = rawChildId ? Number(rawChildId) : NaN;
+  const scope = Number.isFinite(childId) && childId > 0 ? String(childId) : "anonymous";
+  return `axiora_learning_selected_subject:${scope}`;
 }
 
-function getCurrentUnitIndex(path: LearningPathResponse): number {
-  const byUnlockedPending = path.units.findIndex((unit) =>
-    unit.nodes.some((node) => node.lesson && node.lesson.unlocked && !node.lesson.completed),
-  );
-  if (byUnlockedPending >= 0) return byUnlockedPending;
-  const byIncomplete = path.units.findIndex((unit) => unit.completionRate < 1);
-  if (byIncomplete >= 0) return byIncomplete;
-  return Math.max(0, path.units.length - 1);
+function resolvePathCacheKey(subjectId: number | null): string {
+  return `axiora_learning_path_cache:${subjectId ?? "default"}`;
 }
 
-function toTrailUnits(path: LearningPathResponse): TrailUnit[] {
-  const currentUnitIndex = getCurrentUnitIndex(path);
-  let activeAssigned = false;
+function distributeSubjectsByArea(subjects: AprenderSubjectOption[], currentSubjectId: number | null): Record<SubjectAreaLabel, AprenderSubjectOption[]> {
+  const sorted = [...subjects].sort((a, b) => a.order - b.order || a.id - b.id);
+  if (sorted.length === 0) {
+    return { Exatas: [], Humanas: [], Linguagens: [] };
+  }
 
-  return path.units.map((unit, unitIndex) => {
-    const isFutureUnit = unitIndex > currentUnitIndex;
-    const sortedLessons = [...unit.nodes]
+  const currentIndex = sorted.findIndex((item) => item.id === currentSubjectId);
+  const pivot = currentIndex >= 0 ? currentIndex : 0;
+  const rotated = [...sorted.slice(pivot), ...sorted.slice(0, pivot)];
+
+  const base = Math.floor(rotated.length / AREA_LABELS.length);
+  const remainder = rotated.length % AREA_LABELS.length;
+  const chunks: AprenderSubjectOption[][] = [];
+  let offset = 0;
+  for (let i = 0; i < AREA_LABELS.length; i += 1) {
+    const size = base + (i < remainder ? 1 : 0);
+    chunks.push(rotated.slice(offset, offset + size));
+    offset += size;
+  }
+
+  return {
+    Exatas: chunks[0] ?? [],
+    Humanas: chunks[1] ?? [],
+    Linguagens: chunks[2] ?? [],
+  };
+}
+
+function resolveAreaForSubject(
+  grouped: Record<SubjectAreaLabel, AprenderSubjectOption[]>,
+  subjectId: number | null,
+): SubjectAreaLabel {
+  if (subjectId !== null) {
+    for (const area of AREA_LABELS) {
+      if (grouped[area].some((item) => item.id === subjectId)) return area;
+    }
+  }
+  for (const area of AREA_LABELS) {
+    if (grouped[area].length > 0) return area;
+  }
+  return "Exatas";
+}
+
+function getDomainData(path: LearningPathResponse, areaLabel: SubjectAreaLabel): TrailDomainSectionData {
+  let currentAssigned = false;
+  const units: TrailUnit[] = path.units.map((unit) => {
+    const lessons = [...unit.nodes]
       .sort((a, b) => a.orderIndex - b.orderIndex)
       .map((node) => node.lesson)
-      .filter((lesson): lesson is NonNullable<typeof lesson> => Boolean(lesson));
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
 
-    // Enforce contiguous progression to avoid visual states like done -> locked -> done.
-    let contiguousDoneCount = 0;
-    for (let i = 0; i < sortedLessons.length; i += 1) {
-      const lesson = sortedLessons[i];
-      const completed = lesson.completed;
-      if (!completed) break;
-      contiguousDoneCount += 1;
-    }
-
-    const lessonNodesRaw: TrailLessonNode[] = sortedLessons.map((lesson, index) => {
-      let type: TrailLessonNode["type"] = "locked";
-      if (!isFutureUnit && index < contiguousDoneCount) {
+    const mappedLessons = lessons.map((lesson) => {
+      let type: TrailNodeType = "locked";
+      if (lesson.completed) {
         type = "completed";
-      } else if (!isFutureUnit && !activeAssigned && index === contiguousDoneCount) {
-        type = "active";
-        activeAssigned = true;
+      } else if (lesson.unlocked && !currentAssigned) {
+        type = "current";
+        currentAssigned = true;
+      } else if (lesson.unlocked && currentAssigned) {
+        type = "future";
+      } else if (currentAssigned) {
+        type = "future";
       }
-
       return {
         id: `lesson-${lesson.id}`,
+        lessonId: lesson.id,
         title: lesson.title,
-        position: mapPosition(index),
+        order: lesson.order,
+        unlocked: lesson.unlocked,
+        completed: lesson.completed,
         type,
       };
     });
 
+    const hasUnlockedLesson = mappedLessons.some((item) => item.unlocked);
+    const isCompleted = mappedLessons.length > 0 && mappedLessons.every((item) => item.completed);
+    const unitLocked = !hasUnlockedLesson && !isCompleted;
+
     return {
       id: String(unit.id),
-      section: `Seção ${unit.order}, Unidade ${unit.order}`,
-      title: normalizeUnitTitle(unit.order, unit.title),
+      order: unit.order,
+      sectionLabel: `UNIDADE ${unit.order}`,
+      title: unit.title,
       progress: Math.round(Math.max(0, Math.min(100, unit.completionRate * 100))),
-      nodes: lessonNodesRaw,
+      locked: unitLocked,
+      prerequisiteText: unitLocked
+        ? unit.description?.trim() || "Conclua a unidade anterior para desbloquear."
+        : null,
+      nodes: mappedLessons,
     };
   });
+
+  return {
+    id: `domain-${path.subjectId}`,
+    name: path.subjectName,
+    areaLabel,
+    units,
+  };
 }
 
 export function TrailScreen() {
@@ -117,49 +159,87 @@ export function TrailScreen() {
   const searchParams = useSearchParams();
   const [path, setPath] = useState<LearningPathResponse | null>(null);
   const [subjects, setSubjects] = useState<AprenderSubjectOption[]>([]);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(resolveSubjectStorageKey());
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  });
+  const [selectedArea, setSelectedArea] = useState<SubjectAreaLabel>("Exatas");
   const [coins, setCoins] = useState(0);
   const [xpPercent, setXpPercent] = useState(0);
+  const [xpTotal, setXpTotal] = useState(0);
+  const [xpLevel, setXpLevel] = useState(1);
+  const [xpInLevel, setXpInLevel] = useState(0);
+  const [xpToNextLevel, setXpToNextLevel] = useState(100);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [pathRefreshing, setPathRefreshing] = useState(false);
-  const desktopMainColumnRef = useRef<HTMLDivElement | null>(null);
-  const desktopRightColumnRef = useRef<HTMLElement | null>(null);
-  const scrollRootRef = useRef<HTMLDivElement | null>(null);
-  const sectionRefs = useRef<Array<HTMLElement | null>>([]);
-  const [activeUnitIndex, setActiveUnitIndex] = useState(0);
-  const [desktopUnitCardRect, setDesktopUnitCardRect] = useState<{ left: number; width: number } | null>(null);
-  const [desktopRightPanelRect, setDesktopRightPanelRect] = useState<{ left: number; width: number } | null>(null);
   const [insights, setInsights] = useState<LearningInsightsResponse | null>(null);
   const [missions, setMissions] = useState<MissionsCurrentResponse | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(true);
   const [missionsLoading, setMissionsLoading] = useState(true);
   const [claimingMissionId, setClaimingMissionId] = useState<string | null>(null);
+  const [subjectStreakDays, setSubjectStreakDays] = useState(0);
+  const [pathRetryToken, setPathRetryToken] = useState(0);
   const hasLoadedPathRef = useRef(false);
-  const lastAutoScrollKeyRef = useRef<string>("");
+
   const completedLessonSignal = searchParams.get("completedLessonId") ?? "";
+  const subjectIdFromQueryRaw = searchParams.get("subjectId");
+  const subjectIdFromQuery = useMemo(() => {
+    const parsed = Number(subjectIdFromQueryRaw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }, [subjectIdFromQueryRaw]);
+
+  const subjectsForUi = useMemo(() => {
+    if (subjects.length > 0) return subjects;
+    if (!path) return [];
+    return [
+      {
+        id: path.subjectId,
+        name: path.subjectName || "Matéria",
+        ageGroup: "9-12",
+        order: 1,
+      },
+    ] as AprenderSubjectOption[];
+  }, [path, subjects]);
+  const groupedByArea = useMemo(
+    () => distributeSubjectsByArea(subjectsForUi, selectedSubjectId),
+    [selectedSubjectId, subjectsForUi],
+  );
+  const visibleSubjects = subjectsForUi;
+
+  useEffect(() => {
+    if (subjectIdFromQuery === null) return;
+    setSelectedSubjectId((prev) => (prev === subjectIdFromQuery ? prev : subjectIdFromQuery));
+  }, [subjectIdFromQuery]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    // Remove stale optimistic cache from previous versions to keep server truth only.
-    window.localStorage.removeItem("axiora_learning_completed_lessons");
-  }, []);
+    const key = resolveSubjectStorageKey();
+    if (selectedSubjectId === null) {
+      window.localStorage.removeItem(key);
+      return;
+    }
+    window.localStorage.setItem(key, String(selectedSubjectId));
+  }, [selectedSubjectId]);
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        const list = await getAprenderSubjects();
+        const rawChildId = typeof window !== "undefined" ? window.localStorage.getItem("axiora_child_id") : null;
+        const parsedChildId = rawChildId ? Number(rawChildId) : NaN;
+        const childId = Number.isFinite(parsedChildId) && parsedChildId > 0 ? parsedChildId : undefined;
+        let list: AprenderSubjectOption[] = [];
+        try {
+          list = await getAprenderSubjects(childId ? { childId } : undefined);
+        } catch {
+          // Fallback when a stale/invalid child id breaks filtered subject loading.
+          list = await getAprenderSubjects();
+        }
         if (!active) return;
-        const sorted = [...list].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name) || a.id - b.id);
-        const uniqByName = new Map<string, AprenderSubjectOption>();
-        sorted.forEach((item) => {
-          const key = normalizeSubjectName(item.name);
-          if (!uniqByName.has(key)) {
-            uniqByName.set(key, item);
-          }
-        });
-        setSubjects(Array.from(uniqByName.values()));
+        setSubjects([...list].sort((a, b) => a.order - b.order || normalizeSubjectName(a.name).localeCompare(normalizeSubjectName(b.name))));
       } catch {
         if (active) setSubjects([]);
       }
@@ -170,21 +250,84 @@ export function TrailScreen() {
   }, []);
 
   useEffect(() => {
+    if (subjectsForUi.length === 0) return;
+    const preferredArea = resolveAreaForSubject(groupedByArea, selectedSubjectId);
+    setSelectedArea((prev) => (prev === preferredArea ? prev : preferredArea));
+  }, [groupedByArea, selectedSubjectId, subjectsForUi.length]);
+
+  useEffect(() => {
+    if (subjectsForUi.length === 0) return;
+    if (subjectIdFromQuery !== null && !subjectsForUi.some((item) => item.id === subjectIdFromQuery)) {
+      const fallback = subjectsForUi[0]?.id ?? null;
+      if (fallback !== null) {
+        setSelectedSubjectId(fallback);
+        router.replace(`/child/aprender?subjectId=${fallback}`);
+      }
+      return;
+    }
+    if (selectedSubjectId !== null && !subjectsForUi.some((item) => item.id === selectedSubjectId)) {
+      setSelectedSubjectId(subjectsForUi[0]?.id ?? null);
+    }
+  }, [router, selectedSubjectId, subjectIdFromQuery, subjectsForUi]);
+
+  useEffect(() => {
+    if (visibleSubjects.length === 0) return;
+    if (selectedSubjectId !== null && visibleSubjects.some((item) => item.id === selectedSubjectId)) return;
+    const nextSubjectId = visibleSubjects[0]?.id ?? null;
+    if (nextSubjectId !== null) {
+      setSelectedSubjectId(nextSubjectId);
+      router.replace(`/child/aprender?subjectId=${nextSubjectId}`);
+    }
+  }, [router, selectedSubjectId, visibleSubjects]);
+
+  const onSelectSubject = (subjectId: number) => {
+    setSelectedSubjectId((prev) => (prev === subjectId ? prev : subjectId));
+    router.replace(`/child/aprender?subjectId=${subjectId}`);
+  };
+
+  useEffect(() => {
     let active = true;
     (async () => {
       try {
-        if (hasLoadedPathRef.current) {
-          setPathRefreshing(true);
-        } else {
-          setLoading(true);
+        if (hasLoadedPathRef.current) setPathRefreshing(true);
+        else setLoading(true);
+        let data: LearningPathResponse;
+        try {
+          data = await getLearningPath(selectedSubjectId ?? undefined);
+        } catch (primaryErr) {
+          if (selectedSubjectId === null) throw primaryErr;
+          // Fallback when stored subjectId is no longer valid for the child.
+          data = await getLearningPath();
+          if (!active) return;
+          setSelectedSubjectId(data.subjectId);
+          router.replace(`/child/aprender?subjectId=${data.subjectId}`);
         }
-        const data = await getLearningPath(selectedSubjectId ?? undefined);
         if (!active) return;
         setPath(data);
-        hasLoadedPathRef.current = true;
+        if (typeof window !== "undefined") {
+          window.sessionStorage.setItem(resolvePathCacheKey(data.subjectId), JSON.stringify(data));
+          window.sessionStorage.setItem(resolvePathCacheKey(null), JSON.stringify(data));
+        }
         setError(null);
+        hasLoadedPathRef.current = true;
       } catch (err: unknown) {
         if (!active) return;
+        if (typeof window !== "undefined") {
+          const cachedRaw =
+            window.sessionStorage.getItem(resolvePathCacheKey(selectedSubjectId)) ??
+            window.sessionStorage.getItem(resolvePathCacheKey(null));
+          if (cachedRaw) {
+            try {
+              const cached = JSON.parse(cachedRaw) as LearningPathResponse;
+              setPath(cached);
+              setError("Conexão instável. Exibindo trilha salva.");
+              hasLoadedPathRef.current = true;
+              return;
+            } catch {
+              // ignore corrupted cache
+            }
+          }
+        }
         const message =
           err instanceof ApiError
             ? getApiErrorMessage(err, "Nao foi possivel carregar a trilha.")
@@ -200,37 +343,51 @@ export function TrailScreen() {
     return () => {
       active = false;
     };
-  }, [selectedSubjectId, completedLessonSignal]);
+  }, [router, selectedSubjectId, completedLessonSignal, pathRetryToken]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const rawChildId = window.localStorage.getItem("axiora_child_id");
     const childId = rawChildId ? Number(rawChildId) : NaN;
-    if (!Number.isFinite(childId) || childId <= 0) {
-      setCoins(0);
-      setXpPercent(0);
-      return;
-    }
+    if (!Number.isFinite(childId) || childId <= 0) return;
+
     let active = true;
     const rewardBonus = readRecentLearningReward(childId);
-    void getAprenderLearningProfile()
-      .then((data) => {
+    const cacheBuster = completedLessonSignal.length > 0 ? `${completedLessonSignal}-${Date.now()}` : undefined;
+    void getAprenderLearningProfile(cacheBuster ? { cacheBuster } : undefined)
+      .then((profile) => {
         if (!active) return;
-        const baseCoins = Math.max(0, Math.round(data.axionCoins ?? 0));
-        const basePercent = Math.max(0, Math.min(100, Math.round(data.xpLevelPercent ?? 0)));
-        setCoins(baseCoins);
-        setXpPercent(basePercent);
+        setCoins(Math.max(0, Math.round(profile.axionCoins ?? rewardBonus.coins)));
+        setXpPercent(Math.max(0, Math.min(100, Math.round(profile.xpLevelPercent ?? 0))));
+        setXpTotal(Math.max(0, Math.floor(profile.xp ?? 0)));
+        setXpLevel(Math.max(1, Math.floor(profile.level ?? 1)));
+        setXpInLevel(Math.max(0, Math.floor(profile.xpInLevel ?? 0)));
+        setXpToNextLevel(Math.max(1, Math.floor(profile.xpToNextLevel ?? 100)));
       })
       .catch(() => {
         if (!active) return;
-        setCoins(Math.max(0, rewardBonus.coins));
-        setXpPercent(Math.max(0, Math.min(100, rewardBonus.xp)));
       });
 
     return () => {
       active = false;
     };
-  }, [searchParams]);
+  }, [completedLessonSignal]);
+
+  useEffect(() => {
+    let active = true;
+    void getAprenderLearningStreak()
+      .then((streak) => {
+        if (!active) return;
+        setSubjectStreakDays(Math.max(0, Math.floor(streak.currentStreak ?? 0)));
+      })
+      .catch(() => {
+        if (!active) return;
+        setSubjectStreakDays(Math.max(0, Math.floor(path?.streakDays ?? 0)));
+      });
+    return () => {
+      active = false;
+    };
+  }, [completedLessonSignal, path?.streakDays, selectedSubjectId]);
 
   useEffect(() => {
     let active = true;
@@ -250,12 +407,36 @@ export function TrailScreen() {
     };
   }, [selectedSubjectId]);
 
-  const units = useMemo(() => (path ? toTrailUnits(path) : []), [path]);
   const selectedSubjectName = useMemo(() => {
+    const selectedFromList = subjectsForUi.find((item) => item.id === selectedSubjectId)?.name;
+    if (selectedFromList) return selectedFromList;
     if (path?.subjectName) return path.subjectName;
-    const fallback = subjects.find((item) => item.id === selectedSubjectId);
-    return fallback?.name ?? "Matéria";
-  }, [path?.subjectName, selectedSubjectId, subjects]);
+    return "Matéria";
+  }, [path?.subjectName, selectedSubjectId, subjectsForUi]);
+
+  const domainData = useMemo(() => {
+    if (!path) return null;
+    return getDomainData(path, selectedArea);
+  }, [path, selectedArea]);
+  const domainCompletion = useMemo(() => resolveDomainCompletion(path), [path]);
+  const weeklyGoal = useMemo(() => resolveWeeklyGoalProgress(missions, 3), [missions]);
+  const encouragementText = useMemo(() => {
+    if (insightsLoading) return "Preparando sua próxima conquista...";
+    if (!insights) return "Continue assim!";
+    if (insights.dueReviewsCount > 0) return "Mais um passo e você desbloqueia novidades!";
+    return "Continue assim!";
+  }, [insights, insightsLoading]);
+
+  const onLessonClick = (lessonId: number, state: TrailNodeType) => {
+    if (state === "locked" || state === "future") return;
+    const activeSubjectId = selectedSubjectId ?? path?.subjectId ?? null;
+    if (activeSubjectId && Number.isFinite(activeSubjectId)) {
+      router.push(`/child/aprender/lesson/${lessonId}?subjectId=${activeSubjectId}`);
+      return;
+    }
+    router.push(`/child/aprender/lesson/${lessonId}`);
+  };
+
   const onClaimMission = async (missionId: string) => {
     if (!missionId || claimingMissionId) return;
     setClaimingMissionId(missionId);
@@ -280,153 +461,16 @@ export function TrailScreen() {
         };
       });
     } catch {
-      // keep silent to avoid visual noise in desktop side panel
+      // noop
     } finally {
       setClaimingMissionId(null);
     }
   };
 
-  const onNodeClick = (node: TrailLessonNode) => {
-    if (node.type === "locked") return;
-    if (node.id.startsWith("lesson-")) {
-      const id = Number(node.id.replace("lesson-", ""));
-      if (Number.isFinite(id) && id > 0) router.push(`/child/aprender/lesson/${id}`);
-    }
-  };
-
-  useEffect(() => {
-    if (units.length === 0) return;
-    const root = scrollRootRef.current;
-    const sections = sectionRefs.current.slice(0, units.length).filter((node): node is HTMLElement => Boolean(node));
-    if (sections.length === 0) return;
-
-    const isDesktop = typeof window !== "undefined" && window.matchMedia(`(min-width: ${DESKTOP_BREAKPOINT_PX}px)`).matches;
-
-    let rafId: number | null = null;
-    const pickActive = () => {
-      const threshold = isDesktop
-        ? DESKTOP_ACTIVE_THRESHOLD_PX
-        : root
-          ? root.getBoundingClientRect().top + MOBILE_ACTIVE_THRESHOLD_OFFSET_PX
-          : DESKTOP_ACTIVE_THRESHOLD_PX;
-      let selected = -1;
-      for (let i = 0; i < sections.length; i += 1) {
-        const top = sections[i].getBoundingClientRect().top;
-        if (top <= threshold) selected = i;
-      }
-      if (selected < 0) {
-        let nearestIndex = 0;
-        let nearestDistance = Number.POSITIVE_INFINITY;
-        for (let i = 0; i < sections.length; i += 1) {
-          const distance = Math.abs(sections[i].getBoundingClientRect().top - threshold);
-          if (distance < nearestDistance) {
-            nearestDistance = distance;
-            nearestIndex = i;
-          }
-        }
-        selected = nearestIndex;
-      }
-      setActiveUnitIndex((prev) => (prev === selected ? prev : selected));
-    };
-
-    const schedulePick = () => {
-      if (rafId !== null) return;
-      rafId = window.requestAnimationFrame(() => {
-        rafId = null;
-        pickActive();
-      });
-    };
-
-    pickActive();
-    if (isDesktop) {
-      window.addEventListener("scroll", schedulePick, { passive: true });
-    } else if (root) {
-      root.addEventListener("scroll", schedulePick, { passive: true });
-    }
-    window.addEventListener("resize", schedulePick);
-
-    return () => {
-      if (rafId !== null) window.cancelAnimationFrame(rafId);
-      if (isDesktop) {
-        window.removeEventListener("scroll", schedulePick);
-      } else if (root) {
-        root.removeEventListener("scroll", schedulePick);
-      }
-      window.removeEventListener("resize", schedulePick);
-    };
-  }, [units]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (loading || units.length === 0) return;
-    const autoKey = `${path?.subjectId ?? "none"}:${path?.units.length ?? 0}`;
-    if (lastAutoScrollKeyRef.current === autoKey) return;
-
-    const isDesktop = window.matchMedia(`(min-width: ${DESKTOP_BREAKPOINT_PX}px)`).matches;
-    const mobileRoot = scrollRootRef.current;
-    if (isDesktop && window.scrollY > 24) return;
-    if (!isDesktop && mobileRoot && mobileRoot.scrollTop > 24) return;
-
-    const searchRoot: ParentNode = isDesktop ? document : mobileRoot ?? document;
-    const activeNode = searchRoot.querySelector('button[data-node-state="active"]') as HTMLElement | null;
-    if (!activeNode) return;
-
-    const targetRect = activeNode.getBoundingClientRect();
-    const desiredTop = window.innerHeight * ACTIVE_NODE_VIEWPORT_TARGET_RATIO;
-    const delta = targetRect.top - desiredTop;
-
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const behavior: ScrollBehavior = prefersReducedMotion ? "auto" : "smooth";
-    if (isDesktop) {
-      window.scrollTo({ top: window.scrollY + delta, behavior });
-    } else if (mobileRoot) {
-      mobileRoot.scrollTo({ top: mobileRoot.scrollTop + delta, behavior });
-    }
-
-    lastAutoScrollKeyRef.current = autoKey;
-  }, [loading, path?.subjectId, path?.units.length, units.length]);
-
-  useEffect(() => {
-    const updateDesktopRect = () => {
-      if (typeof window === "undefined") return;
-      if (window.innerWidth < DESKTOP_BREAKPOINT_PX) {
-        setDesktopUnitCardRect(null);
-        setDesktopRightPanelRect(null);
-        return;
-      }
-      const mainRect = desktopMainColumnRef.current?.getBoundingClientRect();
-      if (mainRect) {
-        setDesktopUnitCardRect({ left: Math.round(mainRect.left), width: Math.round(mainRect.width) });
-      }
-      const rightRect = desktopRightColumnRef.current?.getBoundingClientRect();
-      if (rightRect) {
-        setDesktopRightPanelRect({ left: Math.round(rightRect.left), width: Math.round(rightRect.width) });
-      }
-    };
-
-    updateDesktopRect();
-    window.addEventListener("resize", updateDesktopRect);
-    const observer =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => {
-            updateDesktopRect();
-          })
-        : null;
-    if (observer) {
-      if (desktopMainColumnRef.current) observer.observe(desktopMainColumnRef.current);
-      if (desktopRightColumnRef.current) observer.observe(desktopRightColumnRef.current);
-    }
-
-    return () => {
-      window.removeEventListener("resize", updateDesktopRect);
-      observer?.disconnect();
-    };
-  }, []);
-
   return (
-    <div className="min-h-screen bg-[#F4F7FC]">
+    <div className="relative min-h-screen overflow-x-clip bg-transparent">
       <div className="w-full lg:pl-[208px]">
-        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-[#E2E8F2] lg:bg-[#F4F7FC] lg:px-3 lg:py-5">
+        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-[#E2E8F2] lg:bg-[#F4F7FC] lg:px-3 lg:py-5 lg:shadow-[var(--axiora-shadow-xs)]">
           <div className="mb-0.5 flex justify-center">
             <AxionCharacter stage={1} moodState="NEUTRAL" reducedMotion={false} />
           </div>
@@ -438,106 +482,130 @@ export function TrailScreen() {
           <DesktopNavItem href="/child/axion" active={pathname.startsWith("/child/axion")} iconName="axion" label="Axion" />
         </aside>
 
-        <div className="mx-auto w-full lg:grid lg:max-w-[1220px] lg:grid-cols-[minmax(620px,1fr)_320px] lg:gap-7 lg:px-5 xl:px-8">
-        {units.length > 0 ? <DesktopUnitHeader unit={units[activeUnitIndex] ?? units[0]} rect={desktopUnitCardRect} /> : null}
-        <div
-          ref={(node) => {
-            desktopMainColumnRef.current = node;
-            scrollRootRef.current = node;
-          }}
-          className="mx-auto h-[calc(100dvh-6rem)] w-full max-w-sm overflow-y-auto px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:h-auto lg:max-w-[760px] lg:overflow-x-visible lg:overflow-y-visible lg:px-0 lg:pb-10 lg:pt-5"
-        >
-          {units.length > 0 ? (
-            <div className="mb-4 hidden lg:block lg:opacity-0">
-              <UnitBanner unit={units[activeUnitIndex] ?? units[0]} />
-            </div>
-          ) : null}
+        <div className="mx-auto w-full lg:max-w-[980px] lg:px-5 xl:px-8">
+          <div className="mx-auto h-[calc(100dvh-6rem)] w-full max-w-sm overflow-y-auto px-4 pb-4 pt-3 md:max-w-4xl md:px-6 lg:h-auto lg:max-w-3xl lg:overflow-visible lg:px-0 lg:pb-12 lg:pt-6">
+            <header className="sticky top-0 z-50 space-y-2 bg-[rgba(255,248,245,0.64)] pb-2 [backdrop-filter:blur(2px)] lg:static lg:bg-transparent lg:pb-0">
+              <div className="motion-safe:animate-[fade-in-up_280ms_ease-out]">
+                <SubjectSelector
+                  streak={subjectStreakDays}
+                  gems={coins}
+                  xp={xpPercent}
+                  selectedSubjectName={selectedSubjectName}
+                  subjects={visibleSubjects}
+                  selectedSubjectId={selectedSubjectId}
+                  pathSubjectId={path?.subjectId ?? null}
+                  className="w-full max-w-none"
+                  onSelectSubject={onSelectSubject}
+                />
+              </div>
+            </header>
 
-          <header className="sticky top-0 z-40 mb-3 lg:hidden">
-            <SubjectSelector
-                streak={path?.streakDays ?? 0}
-                gems={coins}
-                xp={xpPercent}
-                selectedSubjectName={selectedSubjectName}
-                subjects={subjects}
-                selectedSubjectId={selectedSubjectId}
-                pathSubjectId={path?.subjectId ?? null}
-                className="max-w-sm md:max-w-3xl lg:max-w-[680px]"
-                onSelectSubject={setSelectedSubjectId}
+            <main className="space-y-5 lg:pt-4">
+              <div className="mx-auto mb-10 mt-4 max-w-3xl motion-safe:animate-[fade-in-up_340ms_ease-out]">
+                <HeroMissionCard
+                  subjectName={selectedSubjectName}
+                  areaLabel={selectedArea}
+                  streakDays={subjectStreakDays}
+                  medalTier={domainCompletion.medal}
+                  completionPercent={domainCompletion.completionPercent}
+                  xpTotal={xpTotal}
+                  level={xpLevel}
+                  xpPercent={xpPercent}
+                  xpInLevel={xpInLevel}
+                  xpToNextLevel={xpToNextLevel}
+                  encouragementText={encouragementText}
+                />
+              </div>
+              <div className="mx-auto max-w-3xl motion-safe:animate-[fade-in-up_380ms_ease-out]">
+                <WeeklyGoalCard completed={weeklyGoal.completed} target={weeklyGoal.target} weekLabel={weeklyGoal.weekLabel} />
+              </div>
+
+              {loading && !path ? (
+                <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm font-bold text-[#4E6992]">Carregando trilha...</div>
+              ) : null}
+              {pathRefreshing ? (
+                <div className="inline-flex items-center rounded-full border border-[#DCE5F3] bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.04em] text-[#6A7E9D]">
+                  Atualizando...
+                </div>
+              ) : null}
+              {error ? (
+                <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3">
+                  <p className="text-sm font-bold text-[#4E6992]">{error}</p>
+                  <button
+                    type="button"
+                    className="mt-2 inline-flex rounded-xl border border-[#C9D8EF] bg-[#F5FAFF] px-3 py-1.5 text-xs font-black uppercase tracking-[0.04em] text-[#3D5F8C] transition-colors hover:bg-[#EAF4FF]"
+                    onClick={() => setPathRetryToken((prev) => prev + 1)}
+                  >
+                    Tentar novamente
+                  </button>
+                </div>
+              ) : null}
+              {domainData ? (
+                <div className="pt-4">
+                  <DomainSection
+                    domain={domainData}
+                    onLessonClick={onLessonClick}
+                  />
+                </div>
+              ) : null}
+              <DailyMissionsPanel
+                missions={missions}
+                missionsLoading={missionsLoading}
+                claimingMissionId={claimingMissionId}
+                onClaimMission={(missionId) => void onClaimMission(missionId)}
               />
-          </header>
-
-          <main className="space-y-0">
-            {loading && !path ? (
-              <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm font-bold text-[#4E6992]">Carregando trilha...</div>
-            ) : null}
-            {pathRefreshing ? (
-              <div className="mb-2 inline-flex items-center rounded-full border border-[#DCE5F3] bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.04em] text-[#6A7E9D]">
-                Atualizando...
-              </div>
-            ) : null}
-            {error ? <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm font-bold text-[#4E6992]">{error}</div> : null}
-            {units.length > 0 ? (
-              <div className="relative">
-                <div className="sticky top-[88px] z-30 bg-[#F4F7FC]/95 pb-3 pt-1 [backdrop-filter:blur(1.5px)] lg:hidden">
-                  <UnitBanner unit={units[activeUnitIndex] ?? units[0]} />
-                </div>
-                <div className="space-y-10 md:space-y-12">
-                  {units.map((unit, unitIndex) => (
-                    <section
-                      key={unit.id}
-                      ref={(node) => {
-                        sectionRefs.current[unitIndex] = node;
-                      }}
-                      data-unit-index={unitIndex}
-                      className="scroll-mt-40 space-y-4"
-                    >
-                      {unitIndex > 0 ? (
-                        <p className="text-center text-xs font-black uppercase tracking-[0.1em] text-[#9AA8BD]">
-                          UNIDADE {unitIndex + 1}
-                        </p>
-                      ) : null}
-                      <TrailPath nodes={unit.nodes} onNodeClick={onNodeClick} />
-                    </section>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </main>
-        </div>
-
-        <aside ref={desktopRightColumnRef} className="hidden lg:block lg:py-5">
-          <div
-            className={`space-y-4 ${
-              desktopRightPanelRect ? "lg:fixed lg:top-5 lg:z-20" : "sticky top-5"
-            } lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1`}
-            style={
-              desktopRightPanelRect
-                ? { left: desktopRightPanelRect.left, width: desktopRightPanelRect.width }
-                : undefined
-            }
-          >
-            <DesktopRightRail
-              streak={path?.streakDays ?? 0}
-              gems={coins}
-              xp={xpPercent}
-              selectedSubjectName={selectedSubjectName}
-              subjects={subjects}
-              selectedSubjectId={selectedSubjectId}
-              pathSubjectId={path?.subjectId ?? null}
-              insights={insights}
-              insightsLoading={insightsLoading}
-              missions={missions}
-              missionsLoading={missionsLoading}
-              claimingMissionId={claimingMissionId}
-              onSelectSubject={setSelectedSubjectId}
-              onClaimMission={(missionId) => void onClaimMission(missionId)}
-            />
+            </main>
           </div>
-        </aside>
         </div>
       </div>
       <BottomNav />
+
+      <style jsx global>{`
+        @keyframes fade-in-up {
+          0% {
+            opacity: 0;
+            transform: translateY(6px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes hero-scale-in {
+          0% {
+            opacity: 0;
+            transform: scale(0.86);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        @keyframes hero-bounce-in {
+          0% {
+            opacity: 0;
+            transform: translateY(-8px) scale(0.9);
+          }
+          55% {
+            opacity: 1;
+            transform: translateY(3px) scale(1.04);
+          }
+          100% {
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes hero-streak-underline {
+          0%,
+          100% {
+            opacity: 0.45;
+            transform: scaleX(0.7);
+          }
+          50% {
+            opacity: 1;
+            transform: scaleX(1);
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -547,10 +615,12 @@ function DesktopNavItem({ href, iconName, label, active }: { href: string; iconN
     <Link
       href={href}
       className={`mx-1.5 inline-flex items-center gap-2.5 rounded-2xl px-4 py-[7px] text-[15px] font-black uppercase tracking-[0.04em] transition-colors ${
-        active ? "border border-[#96D9FF] bg-[#EAF7FF] text-[#1DA1F2]" : "text-[#4A5F80] hover:bg-white"
+        active
+          ? "border-l-[3px] border-l-[#FF6B3D] bg-[#FFEDE5] text-[#2B2F42]"
+          : "text-[#4A5F80] hover:bg-[#FFEDE5]"
       }`}
     >
-      <span className={`${active ? "opacity-100" : "opacity-75 grayscale-[35%]"}`}>
+      <span className="opacity-90 grayscale-[100%]">
         <ChildNavIcon name={iconName} active={active} size={42} />
       </span>
       {label}

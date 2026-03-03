@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { AxionCharacter } from "@/components/axion-character";
 import { ChildNavIcon, type ChildNavIconKey } from "@/components/child-bottom-nav";
 import { TopStatsBar } from "@/components/trail/TopStatsBar";
 import { getAprenderLearningProfile, getStreak } from "@/lib/api/client";
+import { enforceProfileCompletionRedirect } from "@/lib/profile-completion-middleware";
 
 type ChildDesktopShellProps = {
   children: ReactNode;
@@ -26,8 +27,31 @@ const NAV_ITEMS: Array<{ href: string; label: string; iconName: ChildNavIconKey 
 ];
 
 export function ChildDesktopShell({ children, activeNav, rightRail, rightRailAppend }: ChildDesktopShellProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const resolvedActive = activeNav ?? resolveActive(pathname);
+  const [profileGuardReady, setProfileGuardReady] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const rawChildId = window.localStorage.getItem("axiora_child_id");
+    const parsedChildId = rawChildId ? Number(rawChildId) : NaN;
+    const childId = Number.isFinite(parsedChildId) && parsedChildId > 0 ? parsedChildId : null;
+    let active = true;
+    void enforceProfileCompletionRedirect({
+      childId,
+      redirect: (target) => router.replace(target),
+    }).finally(() => {
+      if (active) setProfileGuardReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [router]);
+
+  if (!profileGuardReady) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-[#F4F7FC]">

@@ -48,7 +48,7 @@ function ChildBottomNavComponent({ spacer = true }: ChildBottomNavProps) {
               >
                 <div
                   className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
+                    "flex h-10 w-10 items-center justify-center rounded-xl transition-transform transition-shadow transition-opacity duration-200",
                     isActive ? "scale-[1.12]" : "opacity-45 grayscale-[60%]",
                   )}
                 >
@@ -151,3 +151,4 @@ function ProfileIcon({ active }: { active: boolean }) {
     </svg>
   );
 }
+

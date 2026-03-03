@@ -242,7 +242,16 @@ export type AuthTokens = {
 export type AuthMeResponse = {
   user: { id: number; email: string; name: string };
   membership: { role: string; tenant_id: number; tenant_slug: string; tenant_type: "FAMILY" | "SCHOOL"; onboarding_completed: boolean };
-  child_profiles: Array<{ id: number; display_name: string; avatar_key: string | null; birth_year: number | null; theme: ThemeName; avatar_stage: number }>;
+  child_profiles: Array<{
+    id: number;
+    display_name: string;
+    avatar_key: string | null;
+    date_of_birth: string | null;
+    birth_year: number | null;
+    needs_profile_completion: boolean;
+    theme: ThemeName;
+    avatar_stage: number;
+  }>;
 };
 
 export type OrganizationMembership = {
@@ -258,7 +267,9 @@ export type ChildProfileSummary = {
   id: number;
   display_name: string;
   avatar_key: string | null;
+  date_of_birth: string | null;
   birth_year: number | null;
+  needs_profile_completion: boolean;
   theme: ThemeName;
   avatar_stage: number;
 };
@@ -357,18 +368,37 @@ export type RoutineWeekLog = {
   id: number;
   child_id: number;
   task_id: number;
+  task_title: string;
+  task_weight: number;
   date: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   created_at: string;
   decided_at: string | null;
   decided_by_user_id: number | null;
   parent_comment: string | null;
+  xp_awarded: number;
+  xp_source: "TASK" | null;
+};
+
+export type RoutineTaskProgress = {
+  task_id: number;
+  task_title: string;
+  task_weight: number;
+  xp_per_approval: number;
+  marked_count_week: number;
+  approved_count_week: number;
+  pending_count_week: number;
+  rejected_count_week: number;
+  completion_percent_week: number;
+  completed_today: boolean;
+  xp_gained_week: number;
 };
 
 export type RoutineWeekResponse = {
   start_date: string;
   end_date: string;
   logs: RoutineWeekLog[];
+  task_progress: RoutineTaskProgress[];
 };
 
 export type MoodType = "HAPPY" | "OK" | "SAD" | "ANGRY" | "TIRED";
@@ -386,6 +416,16 @@ export type AxionStateResponse = {
 };
 
 export type AxionBriefResponse = {
+  decision_id: string;
+  tenant_id: number;
+  child_id: number;
+  experiment_key?: string | null;
+  variant?: string | null;
+  nba_enabled_final: boolean;
+  nba_reason: string;
+  actionType: string;
+  context: string;
+  cooldown_until?: string | null;
   stateSummary: {
     trend: "UP" | "DOWN" | "STABLE";
   };
@@ -410,6 +450,155 @@ export type AxionBriefResponse = {
     temporaryBoosts: Array<Record<string, unknown>>;
     templateChosen: number | null;
   } | null;
+};
+
+export type AxionBrainStateSubject = {
+  subject: string;
+  masteryScore: number;
+  trendLast7Days: number;
+  status: "improving" | "stable" | "needs_attention" | string;
+};
+
+export type AxionBrainStateResponse = {
+  subjects: AxionBrainStateSubject[];
+  weakestSubject: string | null;
+  strongestSubject: string | null;
+  averageMastery: number;
+};
+
+export type AxionRecentUnlock = {
+  contentId: number;
+  subject: string;
+  unlockedAt: string;
+  reason: string;
+};
+
+export type AxionGuardrailsSummaryResponse = {
+  repeats_blocked_last_7_days: number;
+  safety_blocks_last_7_days: number;
+  fallback_activations_last_7_days: number;
+};
+
+export type AxionPolicyStatusResponse = {
+  policyMode: string;
+  rolloutPercentage: number | null;
+};
+
+export type AxionExperimentDashboardVariant = {
+  variant: string;
+  exposures: number;
+  ctaToStartedPct: number;
+  d1RatePct: number;
+  sessionFrequency: number;
+  rawPValue: number | null;
+  adjustedPValue: number | null;
+  liftPctPoints: number;
+  significant: boolean;
+  correctionMethod: string;
+};
+
+export type AxionExperimentDashboardResponse = {
+  exposuresTotal: number;
+  uniqueExposuresPerDay: number;
+  ctaClicked: number;
+  sessionStarted: number;
+  ctaToSessionStartedPct: number;
+  d1RatePct: number;
+  d7RatePct: number | null;
+  avgSessionFrequency30d: number;
+  variants: AxionExperimentDashboardVariant[];
+};
+
+export type AxionExperimentRetentionVariantResponse = {
+  variant: string;
+  cohortUsers: number;
+  retainedD1Users: number;
+  retainedD7Users: number;
+  d1Rate: number;
+  d7Rate: number;
+};
+
+export type AxionExperimentRetentionResponse = {
+  experimentKey: string;
+  experimentStatus: "ACTIVE" | "PAUSED" | "AUTO_PAUSED" | string;
+  cohortUsers: number;
+  retainedD1Users: number;
+  retainedD7Users: number;
+  d1Rate: number;
+  d7Rate: number;
+  variants: AxionExperimentRetentionVariantResponse[];
+};
+
+export type AxionExecutiveWeeklyPoint = {
+  weekStart: string;
+  d1RatePct: number;
+  d7RatePct: number;
+  ctrPct: number;
+};
+
+export type AxionExecutiveExperimentSummary = {
+  experimentKey: string;
+  status: string;
+  liftPp: number;
+  significantPositive: boolean;
+  rolloutPercent: number;
+  indicator: "green" | "yellow" | "red";
+};
+
+export type AxionExecutiveDashboardResponse = {
+  activeExperiments: number;
+  pausedExperiments: number;
+  weightedAverageLiftPp: number;
+  aggregatedD1RatePct: number;
+  aggregatedD7RatePct: number;
+  experimentalSuccessRatePct: number;
+  averageRolloutPct: number;
+  experiments: AxionExecutiveExperimentSummary[];
+  weeklyRetention: AxionExecutiveWeeklyPoint[];
+  weeklyCtr: AxionExecutiveWeeklyPoint[];
+};
+
+export type AxionRetentionMetricsResponse = {
+  cohortUsers: number;
+  retainedD1Users: number;
+  retainedD7Users: number;
+  retainedD30Users: number;
+  d1Rate: number;
+  d7Rate: number;
+  d30Rate: number;
+  sessionFrequency: number;
+  ctaClickUsers: number;
+  sessionStartedUsers: number;
+  ctaSessionStartedConvertedUsers: number;
+  ctaToSessionStartedConversion: number;
+  ctaSessionConvertedUsers: number;
+  ctaToSessionConversion: number;
+  exposuresTotal: number;
+  uniqueExposuresPerDay: number;
+  lookbackDays: number;
+  filters: Record<string, unknown>;
+};
+
+export type ParentInsightCard = {
+  title: string;
+  summary: string;
+  tone: string;
+};
+
+export type ParentInsightSkill = {
+  skillName: string;
+  subjectName: string;
+  explanation: string;
+};
+
+export type ParentAxionInsightsResponse = {
+  learningRhythm: ParentInsightCard;
+  emotionalTrend: ParentInsightCard;
+  strengthSkills: ParentInsightSkill[];
+  reinforcementSkills: ParentInsightSkill[];
+  dropoutRisk: ParentInsightCard;
+  suggestedParentalActions: string[];
+  decisionId?: string | null;
 };
 
 export type AxionStudioPolicy = {
@@ -745,6 +934,13 @@ export type LearningNextResponse = {
   plan: {
     focusSkills: Array<{ skillId: string; mastery: number; priority: number }>;
     difficultyMix: { easy: number; medium: number; hard: number };
+    diagnostics?: {
+      candidates_raw?: number;
+      candidates_filtered?: number;
+      fallback_reason?: string | null;
+      block_reason?: string | null;
+      slots_with_no_candidates?: number;
+    } | null;
   };
 };
 
@@ -819,6 +1015,8 @@ export type AprenderSubjectOption = {
   id: number;
   name: string;
   ageGroup: string;
+  ageMin: number;
+  ageMax: number;
   icon: string | null;
   color: string | null;
   order: number;
@@ -1037,7 +1235,7 @@ export async function listChildren(): Promise<ChildProfileSummary[]> {
 
 export async function createChild(payload: {
   display_name: string;
-  birth_year?: number | null;
+  date_of_birth: string;
   theme: ThemeName;
   avatar_key?: string | null;
 }): Promise<ChildProfileSummary> {
@@ -1051,7 +1249,7 @@ export async function createChild(payload: {
 
 export async function updateChild(
   childId: number,
-  payload: { display_name: string; birth_year?: number | null; theme: ThemeName; avatar_key?: string | null },
+  payload: { display_name: string; date_of_birth: string; theme: ThemeName; avatar_key?: string | null },
 ): Promise<ChildProfileSummary> {
   return apiRequest<ChildProfileSummary>(`/children/${childId}`, {
     method: "PUT",
@@ -1303,12 +1501,258 @@ export async function getAxionState(childId: number): Promise<AxionStateResponse
   });
 }
 
-export async function getAxionBrief(params?: { context?: string; axionDebug?: boolean }): Promise<AxionBriefResponse> {
+export async function getAxionBrief(params?: { context?: string; childId?: number; axionDebug?: boolean }): Promise<AxionBriefResponse> {
   const query = new URLSearchParams();
   if (params?.context) query.set("context", params.context);
+  if (typeof params?.childId === "number") query.set("childId", String(params.childId));
   if (params?.axionDebug) query.set("axionDebug", "true");
   const suffix = query.size > 0 ? `?${query.toString()}` : "";
   return apiRequest<AxionBriefResponse>(`/api/axion/brief${suffix}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAxionBrainState(childId: number): Promise<AxionBrainStateResponse> {
+  return apiRequest<AxionBrainStateResponse>(`/axion/brain_state?childId=${childId}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAxionRecentUnlocks(childId: number): Promise<AxionRecentUnlock[]> {
+  return apiRequest<AxionRecentUnlock[]>(`/axion/recent_unlocks?childId=${childId}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAxionGuardrailsSummary(childId: number): Promise<AxionGuardrailsSummaryResponse> {
+  return apiRequest<AxionGuardrailsSummaryResponse>(`/axion/guardrails_summary?childId=${childId}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAxionPolicyStatus(childId: number): Promise<AxionPolicyStatusResponse> {
+  return apiRequest<AxionPolicyStatusResponse>(`/axion/policy_status?childId=${childId}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function trackAxionCtaClicked(payload: {
+  decisionId: string;
+  actionType: string;
+  context: string;
+}): Promise<{ status: string }> {
+  return apiRequest<{ status: string }>("/api/axion/cta/clicked", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function trackAxionCtaExecuted(payload: {
+  decisionId: string;
+  actionType: string;
+  context: string;
+}): Promise<{ status: string }> {
+  return apiRequest<{ status: string }>("/api/axion/cta/executed", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function trackAxionSessionStarted(payload: {
+  decisionId: string;
+  destination: "learning" | "games" | "missions" | "other";
+  context?: string;
+}): Promise<{ status: string }> {
+  return apiRequest<{ status: string }>("/api/axion/session/started", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function trackAxionSessionCompleted(payload: {
+  decisionId: string;
+  destination: "learning" | "games" | "missions" | "other";
+  context?: string;
+}): Promise<{ status: string }> {
+  return apiRequest<{ status: string }>("/api/axion/session/completed", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getParentAxionInsights(): Promise<ParentAxionInsightsResponse> {
+  try {
+    return await apiRequest<ParentAxionInsightsResponse>("/api/axion/parent_insights", {
+      method: "GET",
+      requireAuth: true,
+      includeTenant: true,
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return apiRequest<ParentAxionInsightsResponse>("/axion/parent-insights", {
+        method: "GET",
+        requireAuth: true,
+        includeTenant: true,
+      });
+    }
+    throw error;
+  }
+}
+
+export async function trackParentActionClicked(payload: {
+  actionLabel: string;
+  context?: string;
+  decisionId?: string | null;
+  childId?: number | null;
+}): Promise<{ status: string }> {
+  return apiRequest<{ status: string }>("/api/axion/parent/action-clicked", {
+    method: "POST",
+    body: {
+      actionLabel: payload.actionLabel,
+      context: payload.context ?? "parent_dashboard",
+      decisionId: payload.decisionId ?? null,
+      childId: payload.childId ?? null,
+    },
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getNbaExperimentDashboard(params?: {
+  dateFrom?: string;
+  dateTo?: string;
+  destination?: "learning" | "games" | "missions" | "other";
+  dedupeExposurePerDay?: boolean;
+}): Promise<AxionExperimentDashboardResponse> {
+  const query = new URLSearchParams();
+  if (params?.dateFrom) query.set("dateFrom", params.dateFrom);
+  if (params?.dateTo) query.set("dateTo", params.dateTo);
+  if (params?.destination) query.set("destination", params.destination);
+  query.set("dedupeExposurePerDay", String(params?.dedupeExposurePerDay ?? true));
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<AxionExperimentDashboardResponse>(`/api/axion/experiment/nba_retention_v1/dashboard${suffix}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAdminExperimentAccess(): Promise<{ ok: boolean; tenantId: number; userId: number; email: string }> {
+  // Source of truth for /platform-admin/experiments admin reads:
+  // - /admin/experiments/access
+  // - /admin/experiments/{key}/dashboard
+  // - /admin/experiments/{key}/retention
+  // - /admin/experiments/{key}/retention_metrics
+  // - /admin/experiments/executive
+  return apiRequest<{ ok: boolean; tenantId: number; userId: number; email: string }>("/admin/experiments/access", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAdminExecutiveDashboard(): Promise<AxionExecutiveDashboardResponse> {
+  return apiRequest<AxionExecutiveDashboardResponse>("/admin/experiments/executive", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAdminExperimentDashboard(
+  experimentKey: string,
+  params?: {
+    dateFrom?: string;
+    dateTo?: string;
+    destination?: "learning" | "games" | "missions" | "other";
+    dedupeExposurePerDay?: boolean;
+  },
+): Promise<AxionExperimentDashboardResponse> {
+  const query = new URLSearchParams();
+  if (params?.dateFrom) query.set("dateFrom", params.dateFrom);
+  if (params?.dateTo) query.set("dateTo", params.dateTo);
+  if (params?.destination) query.set("destination", params.destination);
+  query.set("dedupeExposurePerDay", String(params?.dedupeExposurePerDay ?? true));
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<AxionExperimentDashboardResponse>(`/admin/experiments/${encodeURIComponent(experimentKey)}/dashboard${suffix}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAdminExperimentRetention(
+  experimentKey: string,
+  params?: {
+    dateFrom?: string;
+    dateTo?: string;
+  },
+): Promise<AxionExperimentRetentionResponse> {
+  const query = new URLSearchParams();
+  if (params?.dateFrom) query.set("dateFrom", params.dateFrom);
+  if (params?.dateTo) query.set("dateTo", params.dateTo);
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<AxionExperimentRetentionResponse>(`/admin/experiments/${encodeURIComponent(experimentKey)}/retention${suffix}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAdminExperimentRetentionMetrics(
+  experimentKey: string,
+  params?: {
+    variant?: string;
+    destination?: "learning" | "games" | "missions" | "other";
+    dedupeExposurePerDay?: boolean;
+    lookbackDays?: number;
+  },
+): Promise<AxionRetentionMetricsResponse> {
+  const query = new URLSearchParams();
+  if (params?.variant) query.set("variant", params.variant);
+  if (params?.destination) query.set("destination", params.destination);
+  query.set("dedupeExposurePerDay", String(params?.dedupeExposurePerDay ?? true));
+  query.set("lookbackDays", String(params?.lookbackDays ?? 30));
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<AxionRetentionMetricsResponse>(`/admin/experiments/${encodeURIComponent(experimentKey)}/retention_metrics${suffix}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAxionRetentionMetrics(params?: {
+  experimentKey?: string;
+  variant?: string;
+  destination?: "learning" | "games" | "missions" | "other";
+  dedupeExposurePerDay?: boolean;
+  lookbackDays?: number;
+}): Promise<AxionRetentionMetricsResponse> {
+  const query = new URLSearchParams();
+  if (params?.experimentKey) query.set("experimentKey", params.experimentKey);
+  if (params?.variant) query.set("variant", params.variant);
+  if (params?.destination) query.set("destination", params.destination);
+  query.set("dedupeExposurePerDay", String(params?.dedupeExposurePerDay ?? true));
+  query.set("lookbackDays", String(params?.lookbackDays ?? 30));
+  return apiRequest<AxionRetentionMetricsResponse>(`/api/axion/retention_metrics?${query.toString()}`, {
     method: "GET",
     requireAuth: true,
     includeTenant: true,
@@ -1595,8 +2039,13 @@ export async function getAprenderLearningStreak(): Promise<AprenderLearningStrea
   });
 }
 
-export async function getAprenderLearningProfile(): Promise<AprenderLearningProfile> {
-  return apiRequest<AprenderLearningProfile>("/api/aprender/profile", {
+export async function getAprenderLearningProfile(params?: { cacheBuster?: string | number }): Promise<AprenderLearningProfile> {
+  const query = new URLSearchParams();
+  if (params?.cacheBuster !== undefined && params.cacheBuster !== null) {
+    query.set("t", String(params.cacheBuster));
+  }
+  const suffix = query.toString();
+  return apiRequest<AprenderLearningProfile>(`/api/aprender/profile${suffix ? `?${suffix}` : ""}`, {
     method: "GET",
     requireAuth: true,
     includeTenant: true,
@@ -1620,6 +2069,7 @@ export async function finishLearningSession(payload: {
   sessionId: string;
   totalQuestions: number;
   correctCount: number;
+  decisionId?: string;
 }): Promise<LearningSessionFinishResponse> {
   return apiRequest<LearningSessionFinishResponse>("/api/learning/session/finish", {
     method: "POST",

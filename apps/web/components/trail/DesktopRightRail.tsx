@@ -1,58 +1,27 @@
 "use client";
 
-import type { AprenderSubjectOption, LearningInsightsResponse, MissionProgress, MissionsCurrentResponse } from "@/lib/api/client";
-import { SubjectSelector } from "@/components/trail/SubjectSelector";
-
+import type { LearningInsightsResponse, MissionProgress, MissionsCurrentResponse } from "@/lib/api/client";
 type DesktopRightRailProps = {
-  streak: number;
-  gems: number;
-  xp: number;
-  selectedSubjectName: string;
-  subjects: AprenderSubjectOption[];
-  selectedSubjectId: number | null;
-  pathSubjectId?: number | null;
   insights: LearningInsightsResponse | null;
   insightsLoading: boolean;
   missions: MissionsCurrentResponse | null;
   missionsLoading: boolean;
   claimingMissionId: string | null;
-  onSelectSubject: (subjectId: number) => void;
   onClaimMission: (missionId: string) => void;
 };
 
 export function DesktopRightRail({
-  streak,
-  gems,
-  xp,
-  selectedSubjectName,
-  subjects,
-  selectedSubjectId,
-  pathSubjectId,
   insights,
   insightsLoading,
   missions,
   missionsLoading,
   claimingMissionId,
-  onSelectSubject,
   onClaimMission,
 }: DesktopRightRailProps) {
   const desktopMissions = missions?.missions?.length ? missions.missions.slice(0, 3) : [];
 
   return (
     <div className="space-y-3">
-      <SubjectSelector
-        streak={streak}
-        gems={gems}
-        xp={xp}
-        selectedSubjectName={selectedSubjectName}
-        subjects={subjects}
-        selectedSubjectId={selectedSubjectId}
-        pathSubjectId={pathSubjectId}
-        className="max-w-none"
-        menuClassName="w-[280px]"
-        onSelectSubject={onSelectSubject}
-      />
-
       <div className="rounded-2xl border border-[#DFE7F2] bg-white p-3.5 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
         <p className="text-xs font-black uppercase tracking-[0.08em] text-[#8A9BB4]">Progresso</p>
         <p className="mt-1 text-xl font-black leading-[1.2] text-[#1F3558]">
@@ -108,7 +77,7 @@ function DesktopMission({ mission, onClaim, claiming = false }: { mission: Missi
       </div>
       <div className="h-2 rounded-full bg-[#E9EFF8]">
         <div
-          className={`h-full rounded-full transition-all duration-300 ${mission.completed ? "bg-[#4DD9AC]" : "bg-[#8CC8FF]"}`}
+          className={`h-full rounded-full transition-transform transition-shadow transition-opacity duration-[180ms] ${mission.completed ? "bg-[#4DD9AC]" : "bg-[#8CC8FF]"}`}
           style={{ width: `${percent}%` }}
         />
       </div>
@@ -127,3 +96,4 @@ function DesktopMission({ mission, onClaim, claiming = false }: { mission: Missi
     </div>
   );
 }
+

@@ -21,7 +21,7 @@ const MOOD_LABELS: Record<Mood, string> = {
 
 export function AxioraAvatar({ mood, size = 48, clickable = false, onClick, className }: Props) {
   const sharedClassName = cn(
-    "inline-flex items-center justify-center rounded-full text-foreground transition-all duration-150 ease-out",
+    "inline-flex items-center justify-center rounded-full text-foreground transition-transform transition-shadow transition-opacity duration-150 ease-out",
     clickable && "cursor-pointer hover:scale-105 active:scale-[0.98]",
     className,
   );
@@ -60,3 +60,4 @@ export function AxioraAvatar({ mood, size = 48, clickable = false, onClick, clas
     </span>
   );
 }
+

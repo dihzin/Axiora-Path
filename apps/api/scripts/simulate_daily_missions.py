@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import concurrent.futures as futures
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from uuid import uuid4
 
 from sqlalchemy import Column, Integer, Table, func, select, text
@@ -56,6 +56,11 @@ def _is_deadlock_error(exc: Exception) -> bool:
 
 
 def _seed_data(children_count: int) -> SeedData:
+    today = date.today()
+    try:
+        default_child_dob = today.replace(year=today.year - 10)
+    except ValueError:
+        default_child_dob = today.replace(month=2, day=28, year=today.year - 10)
     with SessionLocal() as db:
         tenant = Tenant(type=TenantType.FAMILY, name="Load Test Family", slug=f"load-test-{uuid4().hex[:10]}")
         user = User(
@@ -79,7 +84,9 @@ def _seed_data(children_count: int) -> SeedData:
                 tenant_id=tenant.id,
                 display_name=f"Load Child {idx + 1}",
                 avatar_key=None,
+                date_of_birth=default_child_dob,
                 birth_year=None,
+                needs_profile_completion=False,
             )
             db.add(child)
             db.flush()

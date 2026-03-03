@@ -9,7 +9,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.models import ChildProfile, LLMCache, LLMUsageStatus, LLMUseCase, SubjectAgeGroup
-from app.services.aprender import age_group_from_birth_year
+from app.services.aprender import age_group_from_date_of_birth
 from app.services.axion_persona import resolve_user_persona
 from app.services.llm_gate import llmGate, log_llm_usage
 from app.services.llm_provider import get_llm_provider
@@ -56,7 +56,7 @@ def _resolve_age_group(db: Session, *, tenant_id: int) -> SubjectAgeGroup:
     )
     if child is None:
         return SubjectAgeGroup.AGE_9_12
-    return age_group_from_birth_year(birth_year=child.birth_year, now_year=datetime.now(UTC).year)
+    return age_group_from_date_of_birth(date_of_birth=child.date_of_birth, today=datetime.now(UTC).date())
 
 
 def _age_group_label(age_group: SubjectAgeGroup) -> str:
@@ -169,7 +169,10 @@ def enrich_axion_message(
     prompt_repr = str(prompt_input)
     estimated_tokens = max(1, len(prompt_repr) // 4)
 
-    if not gate.allowed:
+    allow_cache_only = gate.execution_mode == "rule_cache"
+    allow_llm = gate.allowed and gate.execution_mode == "llm"
+
+    if gate.execution_mode == "deterministic":
         log_llm_usage(
             db,
             tenant_id=tenant_id,
@@ -183,13 +186,28 @@ def enrich_axion_message(
         )
         return draft_message
 
-    _cleanup_cache(db)
-    cached = db.scalar(
-        select(LLMCache).where(
-            LLMCache.cache_key == cache_key,
-            LLMCache.expires_at > datetime.now(UTC),
+    cached = None
+    if allow_cache_only or allow_llm:
+        _cleanup_cache(db)
+        cached = db.scalar(
+            select(LLMCache).where(
+                LLMCache.cache_key == cache_key,
+                LLMCache.expires_at > datetime.now(UTC),
+            )
         )
-    )
+    if allow_cache_only and cached is None:
+        log_llm_usage(
+            db,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            use_case=LLMUseCase.REWRITE_MESSAGE,
+            prompt=prompt_repr,
+            cache_key=cache_key,
+            tokens_estimated=0,
+            latency_ms=0,
+            status=LLMUsageStatus.FALLBACK,
+        )
+        return draft_message
     if cached is not None and isinstance(cached.payload, dict):
         cached_message = str(cached.payload.get("message", "")).strip()
         if _valid_rewrite(cached_message, age_group=age_group):
@@ -205,6 +223,20 @@ def enrich_axion_message(
                 status=LLMUsageStatus.HIT,
             )
             return cached_message
+
+    if not allow_llm:
+        log_llm_usage(
+            db,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            use_case=LLMUseCase.REWRITE_MESSAGE,
+            prompt=prompt_repr,
+            cache_key=cache_key,
+            tokens_estimated=0,
+            latency_ms=0,
+            status=LLMUsageStatus.BLOCKED,
+        )
+        return draft_message
 
     provider = get_llm_provider(gate.settings.provider_key if gate.settings is not None else "noop")
     start = perf_counter()
@@ -225,6 +257,8 @@ def enrich_axion_message(
         )
         return draft_message
 
+    usage_tokens = provider.getLastUsageTokens()
+    billed_tokens = max(estimated_tokens, int(usage_tokens)) if isinstance(usage_tokens, int) else estimated_tokens
     rewritten_text = str(rewritten or "").strip()
     if not rewritten_text:
         log_llm_usage(
@@ -234,7 +268,7 @@ def enrich_axion_message(
             use_case=LLMUseCase.REWRITE_MESSAGE,
             prompt=prompt_repr,
             cache_key=cache_key,
-            tokens_estimated=estimated_tokens,
+            tokens_estimated=billed_tokens,
             latency_ms=latency_ms,
             status=LLMUsageStatus.MISS,
         )
@@ -248,7 +282,7 @@ def enrich_axion_message(
             use_case=LLMUseCase.REWRITE_MESSAGE,
             prompt=prompt_repr,
             cache_key=cache_key,
-            tokens_estimated=max(estimated_tokens, len(rewritten_text) // 4),
+            tokens_estimated=max(billed_tokens, len(rewritten_text) // 4),
             latency_ms=latency_ms,
             status=LLMUsageStatus.FALLBACK,
         )
@@ -274,9 +308,8 @@ def enrich_axion_message(
         use_case=LLMUseCase.REWRITE_MESSAGE,
         prompt=prompt_repr,
         cache_key=cache_key,
-        tokens_estimated=max(estimated_tokens, len(rewritten_text) // 4),
+        tokens_estimated=max(billed_tokens, len(rewritten_text) // 4),
         latency_ms=latency_ms,
         status=LLMUsageStatus.HIT,
     )
     return rewritten_text
-

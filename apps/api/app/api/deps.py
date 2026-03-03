@@ -55,6 +55,22 @@ def get_current_tenant(
     return tenant
 
 
+def get_current_tenant_optional(
+    db: DBSession,
+    request: Request,
+    x_tenant_slug: Annotated[str | None, Header(alias="X-Tenant-Slug")] = None,
+) -> Tenant | None:
+    if not x_tenant_slug:
+        request.state.tenant_id = None
+        return None
+    tenant = db.scalar(select(Tenant).where(Tenant.slug == x_tenant_slug, Tenant.deleted_at.is_(None)))
+    if tenant is None:
+        request.state.tenant_id = None
+        return None
+    request.state.tenant_id = tenant.id
+    return tenant
+
+
 def get_current_user(
     db: DBSession,
     request: Request,
@@ -103,6 +119,7 @@ def get_current_user(
             )
 
     request.state.user_id = user.id
+    request.state.auth_role = payload.get("role")
     return user
 
 

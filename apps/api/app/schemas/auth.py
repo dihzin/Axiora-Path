@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
@@ -61,7 +61,9 @@ class ChildProfileOut(BaseModel):
     id: int
     display_name: str
     avatar_key: str | None
+    date_of_birth: date
     birth_year: int | None
+    needs_profile_completion: bool
     theme: str
     avatar_stage: int
 

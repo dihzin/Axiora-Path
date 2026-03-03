@@ -17,7 +17,7 @@ export function PathMascot({ message, visible, onDismiss, x, y }: PathMascotProp
       onClick={onDismiss}
       aria-label="Axion"
       style={{ left: `${x}px`, top: `${y}px` }}
-      className={`path-axion-idle absolute z-30 inline-flex items-center gap-1 rounded-full border border-[#C9D4E6] bg-[color:var(--path-surface)] px-1.5 py-1 shadow-[var(--path-shadow-1)] transition-all duration-150 ${
+      className={`path-axion-idle absolute z-30 inline-flex items-center gap-1 rounded-full border border-[#C9D4E6] bg-[color:var(--path-surface)] px-1.5 py-1 shadow-[var(--path-shadow-1)] transition-transform transition-shadow transition-opacity duration-150 ${
         visible ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-1 opacity-0"
       }`}
     >
@@ -26,3 +26,4 @@ export function PathMascot({ message, visible, onDismiss, x, y }: PathMascotProp
     </button>
   );
 }
+

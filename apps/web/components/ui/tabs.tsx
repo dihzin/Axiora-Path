@@ -68,7 +68,7 @@ export function TabsTrigger({
     <button
       type="button"
       className={cn(
-        "inline-flex h-7 items-center justify-center rounded-md px-3 text-xs font-medium transition-all",
+        "inline-flex h-7 items-center justify-center rounded-md px-3 text-xs font-medium transition-transform transition-shadow transition-opacity",
         isActive ? "bg-background text-foreground shadow-sm" : "hover:bg-background/50",
         className,
       )}
@@ -98,4 +98,5 @@ export function TabsContent({
   }
   return <div className={cn("mt-3", className)}>{children}</div>;
 }
+
 

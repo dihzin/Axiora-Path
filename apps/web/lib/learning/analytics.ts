@@ -9,6 +9,7 @@ export type AprenderEventName =
   | "question_hint_opened"
   | "question_skipped"
   | "session_completed"
+  | "lesson_content_unavailable"
   | "event_opened"
   | "path_scrolled_to_active"
   | "mode_changed"

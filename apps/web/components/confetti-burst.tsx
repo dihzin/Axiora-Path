@@ -6,7 +6,12 @@ type ConfettiBurstProps = {
   trigger: number;
 };
 
-const COLORS = ["#22c55e", "#3b82f6", "#f97316", "#eab308", "#ef4444", "#a855f7"];
+const AXIORA_CONFETTI_COLORS = [
+  "#FF6B3D", // energia principal
+  "#FF8A63", // energia soft
+  "#FFD9CC", // claro quente
+  "#2B2F42", // contraste sofisticado
+];
 const PIECES_COUNT = 12;
 
 export function ConfettiBurst({ trigger }: ConfettiBurstProps) {
@@ -27,7 +32,7 @@ export function ConfettiBurst({ trigger }: ConfettiBurstProps) {
           ty: Math.sin(angle) * distance,
           rotate: Math.random() * 360,
           delay: Math.random() * 110,
-          color: COLORS[index % COLORS.length],
+          color: AXIORA_CONFETTI_COLORS[index % AXIORA_CONFETTI_COLORS.length],
         };
       }),
     [baseAngle],
@@ -35,9 +40,12 @@ export function ConfettiBurst({ trigger }: ConfettiBurstProps) {
 
   useEffect(() => {
     if (trigger === 0 || reducedMotion) return;
-    setActive(true);
-    const t = window.setTimeout(() => setActive(false), 900);
-    return () => window.clearTimeout(t);
+    const frame = window.requestAnimationFrame(() => setActive(true));
+    const t = window.setTimeout(() => setActive(false), 760);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(t);
+    };
   }, [trigger, reducedMotion]);
 
   if (!active) return null;

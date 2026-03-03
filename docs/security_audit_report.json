@@ -1,0 +1,16 @@
+{
+  "generated_at": "2026-02-28T16:11:58.439853+00:00",
+  "root": "C:\\DEV\\Axiora Path",
+  "summary": {
+    "total_findings": 0,
+    "by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 0,
+      "MEDIUM": 0,
+      "LOW": 0
+    },
+    "by_category": {},
+    "top_rules": {}
+  },
+  "findings": []
+}

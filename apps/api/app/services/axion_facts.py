@@ -115,6 +115,10 @@ class AxionFacts:
         }
 
 
+# Backward-compatible alias used by orchestrator typing.
+AxionFactsSnapshot = AxionFacts
+
+
 def _resolve_primary_child(db: Session, *, user_id: int) -> ChildProfile | None:
     tenant_ids = db.scalars(select(Membership.tenant_id).where(Membership.user_id == user_id)).all()
     if not tenant_ids:

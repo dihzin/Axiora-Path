@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -17,6 +18,14 @@ from app.schemas.onboarding import (
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 MAX_AVATAR_DATA_URL_CHARS = 1_500_000
+
+
+def _default_child_date_of_birth() -> date:
+    today = date.today()
+    try:
+        return today.replace(year=today.year - 4)
+    except ValueError:
+        return today.replace(month=2, day=28, year=today.year - 4)
 
 
 def _sanitize_avatar_key(raw_value: str | None) -> str | None:
@@ -49,7 +58,9 @@ def complete_onboarding(
         tenant_id=tenant.id,
         display_name=payload.child_name,
         avatar_key=_sanitize_avatar_key(payload.child_avatar_key),
+        date_of_birth=_default_child_date_of_birth(),
         birth_year=None,
+        needs_profile_completion=True,
         avatar_stage=1,
         xp_total=0,
     )

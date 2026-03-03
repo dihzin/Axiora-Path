@@ -105,3 +105,28 @@ Jobs suportados:
 - Middleware CSRF para rotas sensiveis.
 - Validacao de forca de senha no signup.
 - Lock de conta apos repetidas falhas de login.
+
+## Ops Runbooks
+
+- Axion Health Runner (cron externo + rotacao de segredo):
+  - `README.ops.axion_health_runner.md`
+- Axion Production Safe Deploy:
+  - `docs/axion_production_runbook.md`
+  - `scripts/axion_safe_deploy.sh`
+
+## CI Schema Gate (Axion)
+
+O pipeline de CI bloqueia merge/deploy quando schema estiver atrasado ou inconsistente:
+
+1. sobe Postgres
+2. roda `alembic upgrade head`
+3. roda `scripts/axion_db_migrate_and_audit.sh`
+4. roda testes criticos:
+   - `tests/test_axion_hardening.py`
+   - `tests/test_axion_policy_governance.py`
+
+Falha automatica se:
+
+- migrations nao aplicarem
+- auditoria SQL detectar inconsistencias
+- enforcement de single-writer falhar (incluido em `test_axion_hardening.py`)

@@ -20,6 +20,8 @@ class SubjectOut(BaseModel):
     id: int
     name: str
     age_group: SubjectAgeGroup = Field(alias="ageGroup")
+    age_min: int = Field(alias="ageMin")
+    age_max: int = Field(alias="ageMax")
     icon: str | None = None
     color: str | None = None
     order: int

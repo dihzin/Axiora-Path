@@ -21,7 +21,7 @@ from app.models import (
     Skill,
     SubjectAgeGroup,
 )
-from app.services.aprender import age_group_from_birth_year
+from app.services.aprender import age_group_from_date_of_birth
 from app.services.llm_gate import llmGate, log_llm_usage
 from app.services.llm_provider import get_llm_provider
 
@@ -66,7 +66,7 @@ def _resolve_age_group(db: Session, *, tenant_id: int) -> SubjectAgeGroup:
     )
     if child is None:
         return SubjectAgeGroup.AGE_9_12
-    return age_group_from_birth_year(birth_year=child.birth_year, now_year=datetime.now(UTC).year)
+    return age_group_from_date_of_birth(date_of_birth=child.date_of_birth, today=datetime.now(UTC).date())
 
 
 def _age_group_label(age_group: SubjectAgeGroup) -> str:
@@ -283,7 +283,9 @@ def maybe_enrich_wrong_answer_explanation(
         userId=user_id,
         useCase=LLMUseCase.EXPLAIN_MISTAKE,
     )
-    if not gate.allowed:
+    allow_cache_only = gate.execution_mode == "rule_cache"
+    allow_llm = gate.allowed and gate.execution_mode == "llm"
+    if gate.execution_mode == "deterministic":
         log_llm_usage(
             db,
             tenant_id=tenant_id,
@@ -297,13 +299,28 @@ def maybe_enrich_wrong_answer_explanation(
         )
         return fallback
 
-    _cleanup_cache(db)
-    cached = db.scalar(
-        select(LLMCache).where(
-            LLMCache.cache_key == cache_key,
-            LLMCache.expires_at > datetime.now(UTC),
+    cached = None
+    if allow_cache_only or allow_llm:
+        _cleanup_cache(db)
+        cached = db.scalar(
+            select(LLMCache).where(
+                LLMCache.cache_key == cache_key,
+                LLMCache.expires_at > datetime.now(UTC),
+            )
         )
-    )
+    if allow_cache_only and cached is None:
+        log_llm_usage(
+            db,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            use_case=LLMUseCase.EXPLAIN_MISTAKE,
+            prompt=prompt_repr,
+            cache_key=cache_key,
+            tokens_estimated=0,
+            latency_ms=0,
+            status=LLMUsageStatus.FALLBACK,
+        )
+        return fallback
     if cached is not None and isinstance(cached.payload, dict):
         text = str(cached.payload.get("text", "")).strip()
         if _valid_remediation(text, age_group=age_group):
@@ -319,6 +336,20 @@ def maybe_enrich_wrong_answer_explanation(
                 status=LLMUsageStatus.HIT,
             )
             return text
+
+    if not allow_llm:
+        log_llm_usage(
+            db,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            use_case=LLMUseCase.EXPLAIN_MISTAKE,
+            prompt=prompt_repr,
+            cache_key=cache_key,
+            tokens_estimated=0,
+            latency_ms=0,
+            status=LLMUsageStatus.BLOCKED,
+        )
+        return fallback
 
     provider = get_llm_provider(gate.settings.provider_key if gate.settings is not None else "noop")
     start = perf_counter()
@@ -339,6 +370,8 @@ def maybe_enrich_wrong_answer_explanation(
         )
         return fallback
 
+    usage_tokens = provider.getLastUsageTokens()
+    billed_tokens = max(estimated_tokens, int(usage_tokens)) if isinstance(usage_tokens, int) else estimated_tokens
     enriched_text = _sanitize_text(enriched, max_len=MAX_REMEDIATION_CHARS) if enriched else ""
     if not enriched_text:
         log_llm_usage(
@@ -348,7 +381,7 @@ def maybe_enrich_wrong_answer_explanation(
             use_case=LLMUseCase.EXPLAIN_MISTAKE,
             prompt=prompt_repr,
             cache_key=cache_key,
-            tokens_estimated=estimated_tokens,
+            tokens_estimated=billed_tokens,
             latency_ms=latency_ms,
             status=LLMUsageStatus.MISS,
         )
@@ -362,7 +395,7 @@ def maybe_enrich_wrong_answer_explanation(
             use_case=LLMUseCase.EXPLAIN_MISTAKE,
             prompt=prompt_repr,
             cache_key=cache_key,
-            tokens_estimated=max(estimated_tokens, len(enriched_text) // 4),
+            tokens_estimated=max(billed_tokens, len(enriched_text) // 4),
             latency_ms=latency_ms,
             status=LLMUsageStatus.FALLBACK,
         )
@@ -388,9 +421,8 @@ def maybe_enrich_wrong_answer_explanation(
         use_case=LLMUseCase.EXPLAIN_MISTAKE,
         prompt=prompt_repr,
         cache_key=cache_key,
-        tokens_estimated=max(estimated_tokens, len(enriched_text) // 4),
+        tokens_estimated=max(billed_tokens, len(enriched_text) // 4),
         latency_ms=latency_ms,
         status=LLMUsageStatus.HIT,
     )
     return enriched_text
-

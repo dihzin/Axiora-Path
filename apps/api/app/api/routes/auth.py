@@ -269,8 +269,11 @@ def platform_login(payload: LoginRequest, db: DBSession, response: Response) -> 
     if membership is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not in platform admin tenant")
 
-    if membership.role == MembershipRole.CHILD:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Children cannot login in platform admin")
+    if membership.role != MembershipRole.PLATFORM_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Platform admin role required for platform login",
+        )
 
     access_token = create_access_token(
         user_id=user.id,
@@ -370,7 +373,9 @@ def me(
                 id=child.id,
                 display_name=child.display_name,
                 avatar_key=child.avatar_key,
+                date_of_birth=child.date_of_birth,
                 birth_year=child.birth_year,
+                needs_profile_completion=child.needs_profile_completion,
                 theme=child.theme,
                 avatar_stage=child.avatar_stage,
             )

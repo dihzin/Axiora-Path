@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+from datetime import UTC, date, datetime
+import logging
 from typing import Annotated
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Query
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import exists, func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.api.deps import DBSession, get_current_tenant, get_current_user, require_role
-from app.models import Lesson, Membership, QuestionResult, Tenant, Unit, User
+from app.api.deps import DBSession, EventSvc, get_current_tenant, get_current_user, require_role
+from app.models import AxionDecision, ChildProfile, Lesson, Membership, Question, QuestionResult, QuestionTemplate, QuestionType, Skill, Subject, Tenant, Unit, User
 from app.schemas.learning import (
     LearningAnswerRequest,
     LearningAnswerResponse,
@@ -46,8 +49,153 @@ from app.services.adaptive_learning import (
 from app.services.learning_insights import get_learning_insights
 from app.services.learning_path_events import build_learning_path, complete_path_event, start_path_event
 from app.services.learning_remediation import maybe_enrich_wrong_answer_explanation
+from app.services.axion_child_profile import resolve_child_for_user
+from app.services.axion_subject_mastery import record_content_outcome
+from app.services.child_age import get_child_age
 
 router = APIRouter(prefix="/api/learning", tags=["learning"])
+logger = logging.getLogger("axiora.api.learning")
+
+
+def _resolve_subject_name_for_skill(db: DBSession, *, skill_id: str) -> str | None:
+    row = db.scalar(
+        select(Subject.name)
+        .select_from(Skill)
+        .join(Subject, Subject.id == Skill.subject_id)
+        .where(Skill.id == str(skill_id))
+        .limit(1)
+    )
+    if row is None:
+        return None
+    return str(row).strip().lower() or None
+
+
+def _to_mastery_outcome(result: QuestionResult) -> str:
+    if result == QuestionResult.CORRECT:
+        return "correct"
+    if result == QuestionResult.WRONG:
+        return "incorrect"
+    return "skipped"
+
+
+def _normalize_learning_correlation_id(raw_value: str | None) -> str:
+    token = str(raw_value or "").strip()
+    if not token:
+        return str(uuid4())
+    try:
+        return str(UUID(token))
+    except Exception:
+        return token
+
+
+def _apply_subject_mastery_once_per_decision(
+    db: DBSession,
+    *,
+    tenant_id: int,
+    user_id: int,
+    child_id: int,
+    subject: str,
+    outcome: str,
+    correlation_id: str,
+) -> float | None:
+    decision = db.scalar(
+        select(AxionDecision).where(
+            AxionDecision.tenant_id == int(tenant_id),
+            AxionDecision.user_id == int(user_id),
+            AxionDecision.correlation_id == correlation_id,
+        )
+    )
+    if decision is not None and bool(getattr(decision, "mastery_applied", False)):
+        return None
+    score = record_content_outcome(
+        db,
+        tenant_id=int(tenant_id),
+        child_id=int(child_id),
+        subject=subject,
+        outcome=outcome,
+        correlation_id=correlation_id,
+    )
+    if decision is not None:
+        decision.mastery_applied = True
+    return score
+
+
+def _subject_has_playable_content(db: DBSession, *, subject_id: int) -> bool:
+    row = db.scalar(
+        select(Skill.id)
+        .where(Skill.subject_id == int(subject_id))
+        .where(
+            or_(
+                exists(select(1).where(QuestionTemplate.skill_id == Skill.id)),
+                exists(
+                    select(1).where(
+                        Question.skill_id == Skill.id,
+                        Question.type != QuestionType.TEMPLATE,
+                    )
+                ),
+            )
+        )
+        .limit(1)
+    )
+    return row is not None
+
+
+def _remap_subject_id_for_child_age(
+    db: DBSession,
+    *,
+    tenant_id: int,
+    user_id: int,
+    requested_subject_id: int,
+) -> int | None:
+    child_id = resolve_child_for_user(db, user_id=user_id, tenant_id=tenant_id)
+    if child_id is None:
+        return requested_subject_id
+    child = db.get(ChildProfile, int(child_id))
+    requested_subject = db.get(Subject, int(requested_subject_id))
+    if child is None or requested_subject is None:
+        return requested_subject_id
+
+    child_age = get_child_age(child.date_of_birth, today=date.today())
+    if int(requested_subject.age_min) <= int(child_age) <= int(requested_subject.age_max):
+        return requested_subject_id
+
+    matched = db.scalar(
+        select(Subject.id)
+        .where(
+            func.lower(Subject.name) == str(requested_subject.name).lower(),
+            Subject.age_min <= int(child_age),
+            Subject.age_max >= int(child_age),
+        )
+        .order_by(Subject.order.asc(), Subject.id.asc())
+        .limit(1)
+    )
+    if matched is None:
+        return None
+    return int(matched)
+
+
+def _ensure_subject_allowed_for_child_age(
+    db: DBSession,
+    *,
+    tenant_id: int,
+    user_id: int,
+    subject_id: int,
+) -> None:
+    child_id = resolve_child_for_user(db, user_id=user_id, tenant_id=tenant_id)
+    if child_id is None:
+        return
+    child = db.get(ChildProfile, int(child_id))
+    if child is None:
+        return
+    subject = db.get(Subject, int(subject_id))
+    if subject is None:
+        return
+    child_age = get_child_age(child.date_of_birth, today=date.today())
+    if int(child_age) < int(subject.age_min) or int(child_age) > int(subject.age_max):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Este conteúdo não está disponível para a sua faixa etária.",
+        )
 
 
 @router.get("/path", response_model=LearningPathResponse)
@@ -58,11 +206,21 @@ def get_learning_path(
     __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
     subject_id: Annotated[int | None, Query(alias="subjectId")] = None,
 ) -> LearningPathResponse:
+    effective_subject_id = subject_id
+    if effective_subject_id is not None:
+        effective_subject_id = _remap_subject_id_for_child_age(
+            db,
+            tenant_id=_.id,
+            user_id=user.id,
+            requested_subject_id=int(effective_subject_id),
+        )
+    if effective_subject_id is not None and not _subject_has_playable_content(db, subject_id=effective_subject_id):
+        effective_subject_id = None
     try:
         snapshot = build_learning_path(
             db,
             user_id=user.id,
-            subject_id=subject_id,
+            subject_id=effective_subject_id,
         )
     except ValueError as exc:
         message = str(exc).strip().lower()
@@ -224,6 +382,21 @@ def get_learning_next_questions(
     user: Annotated[User, Depends(get_current_user)],
     __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> LearningNextResponse:
+    effective_subject_id = payload.subject_id
+    if effective_subject_id is None and payload.lesson_id is not None:
+        lesson = db.get(Lesson, payload.lesson_id)
+        if lesson is not None:
+            unit = db.get(Unit, lesson.unit_id)
+            if unit is not None:
+                effective_subject_id = unit.subject_id
+    if effective_subject_id is not None:
+        _ensure_subject_allowed_for_child_age(
+            db,
+            tenant_id=tenant.id,
+            user_id=user.id,
+            subject_id=int(effective_subject_id),
+        )
+
     try:
         plan = build_next_questions(
             db,
@@ -243,6 +416,21 @@ def get_learning_next_questions(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Adaptive question engine unavailable. Try again in a moment.",
         ) from exc
+    if len(plan.items) <= 0:
+        diagnostics = dict(plan.diagnostics or {})
+        logger.info(
+            "learning_next_empty_batch",
+            extra={
+                "user_id": user.id,
+                "tenant_id": tenant.id,
+                "subject_id": payload.subject_id,
+                "lesson_id": payload.lesson_id,
+                "candidates_raw": diagnostics.get("candidates_raw"),
+                "candidates_filtered": diagnostics.get("candidates_filtered"),
+                "fallback_reason": diagnostics.get("fallback_reason"),
+                "block_reason": diagnostics.get("block_reason"),
+            },
+        )
 
     return LearningNextResponse(
         items=[
@@ -274,6 +462,7 @@ def get_learning_next_questions(
                 medium=plan.difficulty_mix.medium,
                 hard=plan.difficulty_mix.hard,
             ),
+            diagnostics=(dict(plan.diagnostics) if plan.diagnostics else None),
         ),
     )
 
@@ -287,6 +476,7 @@ def submit_learning_answer(
     __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> LearningAnswerResponse:
     remediation_text: str | None = None
+    correlation_id = _normalize_learning_correlation_id(payload.correlation_id)
     try:
         result = track_question_answer(
             db,
@@ -299,6 +489,19 @@ def submit_learning_answer(
             time_ms=payload.time_ms,
             tenant_id=tenant.id,
         )
+        child_id = resolve_child_for_user(db, user_id=user.id, tenant_id=tenant.id)
+        if child_id is not None:
+            subject_name = _resolve_subject_name_for_skill(db, skill_id=result.skill_id)
+            if subject_name:
+                _apply_subject_mastery_once_per_decision(
+                    db,
+                    tenant_id=tenant.id,
+                    user_id=user.id,
+                    child_id=int(child_id),
+                    subject=subject_name,
+                    outcome=_to_mastery_outcome(payload.result),
+                    correlation_id=correlation_id,
+                )
         if payload.result == QuestionResult.WRONG:
             remediation_text = maybe_enrich_wrong_answer_explanation(
                 db,
@@ -356,6 +559,12 @@ def start_session(
         subject_id = db.scalar(select(Unit.subject_id).where(Unit.id == unit_id))
     if subject_id is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="subjectId or lessonId is required")
+    _ensure_subject_allowed_for_child_age(
+        db,
+        tenant_id=tenant.id,
+        user_id=user.id,
+        subject_id=int(subject_id),
+    )
 
     effective = resolve_effective_learning_settings(db, tenant_id=tenant.id)
     if lesson_id is not None:
@@ -389,6 +598,7 @@ def start_session(
 def finish_session(
     payload: LearningSessionFinishRequest,
     db: DBSession,
+    events: EventSvc,
     tenant: Annotated[Tenant, Depends(get_current_tenant)],
     user: Annotated[User, Depends(get_current_user)],
     __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
@@ -404,6 +614,32 @@ def finish_session(
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    if payload.decision_id:
+        decision = db.scalar(
+            select(AxionDecision).where(
+                AxionDecision.id == payload.decision_id,
+                AxionDecision.user_id == user.id,
+            )
+        )
+        if decision is not None and decision.tenant_id is not None and int(decision.tenant_id) == int(tenant.id):
+            child_id = int(decision.child_id) if decision.child_id is not None else None
+            completed_at = datetime.now(UTC)
+            events.emit(
+                type="axion_session_completed",
+                tenant_id=tenant.id,
+                actor_user_id=user.id,
+                child_id=child_id,
+                payload={
+                    "decision_id": payload.decision_id,
+                    "child_id": child_id,
+                    "tenant_id": tenant.id,
+                    "timestamp": completed_at.isoformat(),
+                    "session_completed_at": completed_at.isoformat(),
+                    "destination": "learning",
+                    "session_id": result.session.id,
+                },
+            )
 
     db.commit()
     return LearningSessionFinishResponse(

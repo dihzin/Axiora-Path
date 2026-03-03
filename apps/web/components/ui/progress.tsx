@@ -14,10 +14,11 @@ export function Progress({ value, className, indicatorClassName, ...props }: Pro
   return (
     <div className={cn("relative h-2 w-full overflow-hidden rounded-full bg-white/35", className)} {...props}>
       <div
-        className={cn("h-full rounded-full bg-white transition-all duration-500", indicatorClassName)}
+        className={cn("h-full rounded-full bg-white transition-transform transition-shadow transition-opacity duration-500", indicatorClassName)}
         style={{ width: `${safe}%` }}
       />
     </div>
   );
 }
+
 

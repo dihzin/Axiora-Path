@@ -27,6 +27,7 @@ from app.schemas.routine import (
     RoutineDecideRequest,
     RoutineMarkRequest,
     StreakResponse,
+    TaskWeeklyProgressOut,
     WeeklyMetricsResponse,
     RoutineWeekResponse,
     TaskCreateRequest,
@@ -42,6 +43,7 @@ from app.services.wallet import split_amount_by_pots
 
 router = APIRouter(tags=["routine"])
 XP_PER_WEIGHT = 10
+TASK_XP_SOURCE = "TASK"
 
 
 @router.get("/streak", response_model=StreakResponse)
@@ -339,7 +341,10 @@ def get_routine_week(
             TaskLog.decided_at,
             TaskLog.decided_by_user_id,
             TaskLog.parent_comment,
+            Task.title,
+            Task.weight,
         )
+        .join(Task, (Task.id == TaskLog.task_id) & (Task.tenant_id == TaskLog.tenant_id), isouter=True)
         .where(
             TaskLog.tenant_id == tenant.id,
             TaskLog.child_id == child_id,
@@ -349,23 +354,115 @@ def get_routine_week(
         .order_by(TaskLog.date.asc(), TaskLog.id.asc()),
     ).all()
 
-    return RoutineWeekResponse(
-        start_date=start_date,
-        end_date=end_date,
-        logs=[
+    active_task_rows = db.execute(
+        select(Task.id, Task.title, Task.weight)
+        .where(
+            Task.tenant_id == tenant.id,
+            Task.is_active.is_(True),
+            Task.deleted_at.is_(None),
+        )
+        .order_by(Task.title.asc(), Task.id.asc()),
+    ).all()
+
+    today_value = date.today()
+    logs_out: list[TaskLogOut] = []
+    progress_by_task: dict[int, dict[str, object]] = {}
+
+    for task_row in active_task_rows:
+        task_id = int(task_row[0])
+        task_weight = int(task_row[2] or 0)
+        progress_by_task[task_id] = {
+            "task_id": task_id,
+            "task_title": str(task_row[1] or f"Tarefa #{task_id}"),
+            "task_weight": task_weight,
+            "xp_per_approval": task_weight * XP_PER_WEIGHT,
+            "marked_count_week": 0,
+            "approved_count_week": 0,
+            "pending_count_week": 0,
+            "rejected_count_week": 0,
+            "completed_today": False,
+            "xp_gained_week": 0,
+        }
+
+    for row in rows:
+        task_id = int(row[2])
+        log_status = row[4]
+        task_title = str(row[9] or f"Tarefa #{task_id}")
+        task_weight = int(row[10] or 0)
+        is_approved = log_status == TaskLogStatus.APPROVED
+        xp_awarded = task_weight * XP_PER_WEIGHT if is_approved else 0
+
+        logs_out.append(
             TaskLogOut(
                 id=int(row[0]),
                 child_id=int(row[1]),
-                task_id=int(row[2]),
+                task_id=task_id,
+                task_title=task_title,
+                task_weight=task_weight,
                 date=row[3],
-                status=row[4].value,
+                status=log_status.value,
                 created_at=row[5],
                 decided_at=row[6],
                 decided_by_user_id=row[7],
                 parent_comment=row[8],
+                xp_awarded=xp_awarded,
+                xp_source=TASK_XP_SOURCE if is_approved else None,
             )
-            for row in rows
-        ],
+        )
+
+        if task_id not in progress_by_task:
+            progress_by_task[task_id] = {
+                "task_id": task_id,
+                "task_title": task_title,
+                "task_weight": task_weight,
+                "xp_per_approval": task_weight * XP_PER_WEIGHT,
+                "marked_count_week": 0,
+                "approved_count_week": 0,
+                "pending_count_week": 0,
+                "rejected_count_week": 0,
+                "completed_today": False,
+                "xp_gained_week": 0,
+            }
+
+        task_progress = progress_by_task[task_id]
+        task_progress["marked_count_week"] = int(task_progress["marked_count_week"]) + 1
+        if log_status == TaskLogStatus.APPROVED:
+            task_progress["approved_count_week"] = int(task_progress["approved_count_week"]) + 1
+            task_progress["xp_gained_week"] = int(task_progress["xp_gained_week"]) + xp_awarded
+            if row[3] == today_value:
+                task_progress["completed_today"] = True
+        elif log_status == TaskLogStatus.REJECTED:
+            task_progress["rejected_count_week"] = int(task_progress["rejected_count_week"]) + 1
+        else:
+            task_progress["pending_count_week"] = int(task_progress["pending_count_week"]) + 1
+
+    task_progress_out = []
+    for task_id in sorted(progress_by_task):
+        item = progress_by_task[task_id]
+        marked_count_week = int(item["marked_count_week"])
+        approved_count_week = int(item["approved_count_week"])
+        completion_percent_week = (approved_count_week / marked_count_week * 100) if marked_count_week > 0 else 0.0
+        task_progress_out.append(
+            TaskWeeklyProgressOut(
+                task_id=int(item["task_id"]),
+                task_title=str(item["task_title"]),
+                task_weight=int(item["task_weight"]),
+                xp_per_approval=int(item["xp_per_approval"]),
+                marked_count_week=marked_count_week,
+                approved_count_week=approved_count_week,
+                pending_count_week=int(item["pending_count_week"]),
+                rejected_count_week=int(item["rejected_count_week"]),
+                completion_percent_week=round(completion_percent_week, 2),
+                completed_today=bool(item["completed_today"]),
+                xp_gained_week=int(item["xp_gained_week"]),
+            )
+        )
+
+    return RoutineWeekResponse(
+        start_date=start_date,
+        end_date=end_date,
+        logs=logs_out,
+        task_progress=task_progress_out,
     )
 
 
@@ -435,12 +532,16 @@ def mark_routine(
         id=log.id,
         child_id=log.child_id,
         task_id=log.task_id,
+        task_title=task.title,
+        task_weight=task.weight,
         date=log.date,
         status=log.status.value,
         created_at=log.created_at,
         decided_at=log.decided_at,
         decided_by_user_id=log.decided_by_user_id,
         parent_comment=log.parent_comment,
+        xp_awarded=0,
+        xp_source=None,
     )
 
 
@@ -458,6 +559,7 @@ def decide_routine(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Routine log not found")
 
     if log.status != TaskLogStatus.PENDING:
+        # Idempotency guard: once decided, the same log cannot award XP again.
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Routine log already decided")
 
     task = db.scalar(
@@ -544,10 +646,14 @@ def decide_routine(
         id=log.id,
         child_id=log.child_id,
         task_id=log.task_id,
+        task_title=task.title,
+        task_weight=task.weight,
         date=log.date,
         status=log.status.value,
         created_at=log.created_at,
         decided_at=log.decided_at,
         decided_by_user_id=log.decided_by_user_id,
         parent_comment=log.parent_comment,
+        xp_awarded=(task.weight * XP_PER_WEIGHT) if log.status == TaskLogStatus.APPROVED else 0,
+        xp_source=TASK_XP_SOURCE if log.status == TaskLogStatus.APPROVED else None,
     )

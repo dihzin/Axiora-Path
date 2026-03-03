@@ -47,7 +47,9 @@ def list_children(
             id=child.id,
             display_name=child.display_name,
             avatar_key=child.avatar_key,
+            date_of_birth=child.date_of_birth,
             birth_year=child.birth_year,
+            needs_profile_completion=child.needs_profile_completion,
             theme=child.theme,
             avatar_stage=child.avatar_stage,
         )
@@ -68,7 +70,9 @@ def create_child(
         tenant_id=tenant.id,
         display_name=payload.display_name,
         avatar_key=_sanitize_avatar_key(payload.avatar_key),
-        birth_year=payload.birth_year,
+        date_of_birth=payload.date_of_birth,
+        birth_year=payload.date_of_birth.year,
+        needs_profile_completion=False,
         theme=payload.theme,
     )
     db.add(child)
@@ -85,7 +89,9 @@ def create_child(
         id=child.id,
         display_name=child.display_name,
         avatar_key=child.avatar_key,
+        date_of_birth=child.date_of_birth,
         birth_year=child.birth_year,
+        needs_profile_completion=child.needs_profile_completion,
         theme=child.theme,
         avatar_stage=child.avatar_stage,
     )
@@ -112,7 +118,9 @@ def update_child(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
 
     child.display_name = payload.display_name
-    child.birth_year = payload.birth_year
+    child.date_of_birth = payload.date_of_birth
+    child.birth_year = payload.date_of_birth.year
+    child.needs_profile_completion = False
     child.theme = payload.theme
     child.avatar_key = _sanitize_avatar_key(payload.avatar_key)
     events.emit(
@@ -127,7 +135,9 @@ def update_child(
         id=child.id,
         display_name=child.display_name,
         avatar_key=child.avatar_key,
+        date_of_birth=child.date_of_birth,
         birth_year=child.birth_year,
+        needs_profile_completion=child.needs_profile_completion,
         theme=child.theme,
         avatar_stage=child.avatar_stage,
     )

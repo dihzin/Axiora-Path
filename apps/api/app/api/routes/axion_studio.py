@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 
-from app.api.deps import DBSession, get_current_user
+from app.api.deps import DBSession, get_current_user, require_role
 from app.core.config import settings
 from app.core.security import hash_password, validate_password_strength
 from app.models import (
@@ -51,7 +51,10 @@ from app.services.axion_core_v2 import computeAxionState, evaluate_policies
 from app.services.axion_facts import buildAxionFacts
 from app.services.axion_messaging import generate_axion_message
 
-router = APIRouter(tags=["axion-studio"])
+router = APIRouter(
+    tags=["axion-studio"],
+    dependencies=[Depends(require_role(["PLATFORM_ADMIN"]))],
+)
 
 ALLOWED_OPERATORS = {"gt", "gte", "lt", "lte", "eq", "in"}
 ALLOWED_ACTION_TYPES = {
@@ -67,6 +70,22 @@ ALLOWED_ACTION_TYPES = {
 SCORE_KEYS = {"rhythmScore", "frustrationScore", "confidenceScore", "dropoutRiskScore"}
 
 
+def _safe_child_dob_from_birth_year(birth_year: int | None) -> tuple[date, bool]:
+    today = date.today()
+    min_year = today.year - 18
+    max_year = today.year - 4
+    def _safe_date(year: int) -> date:
+        try:
+            return today.replace(year=year)
+        except ValueError:
+            return date(year, 2, 28)
+    if birth_year is None:
+        return _safe_date(max_year), True
+    clamped_year = min(max(int(birth_year), min_year), max_year)
+    needs_completion = clamped_year != int(birth_year)
+    return _safe_date(clamped_year), needs_completion
+
+
 def _is_platform_admin(user: User) -> bool:
     allowlist = {item.strip().lower() for item in settings.platform_admin_emails.split(",") if item.strip()}
     email = user.email.lower().strip()
@@ -79,8 +98,6 @@ def _is_platform_admin(user: User) -> bool:
 
 
 def _require_platform_admin(user: User) -> None:
-    if settings.app_env.lower() != "production":
-        return
     if not _is_platform_admin(user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Apenas administradores da plataforma podem acessar o Axion Studio")
 
@@ -420,11 +437,14 @@ def create_tenant(
 
     test_child_created = False
     if payload.createTestChild and tenant_type == TenantType.FAMILY:
+        child_dob, needs_completion = _safe_child_dob_from_birth_year(payload.testChildBirthYear)
         db.add(
             ChildProfile(
                 tenant_id=tenant.id,
                 display_name=payload.testChildName.strip(),
+                date_of_birth=child_dob,
                 birth_year=payload.testChildBirthYear,
+                needs_profile_completion=needs_completion,
             )
         )
         test_child_created = True

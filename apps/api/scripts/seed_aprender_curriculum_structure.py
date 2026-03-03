@@ -24,26 +24,49 @@ class SkillSeed:
 
 
 AGE_GROUPS: tuple[str, ...] = ("6-8", "9-12", "13-15")
+AGE_BOUNDS: dict[str, tuple[int, int]] = {
+    "6-8": (6, 8),
+    "9-12": (9, 12),
+    "13-15": (13, 15),
+}
+
+REQUIRED_SUBJECTS: tuple[str, ...] = (
+    "Matemática",
+    "Português",
+    "Inglês",
+    "História",
+    "Geografia",
+    "Ciências",
+    "Física",
+    "Química",
+    "Filosofia",
+    "Artes",
+    "Educação Financeira",
+    "Lógica",
+    "Programação básica",
+    "Redação",
+)
+
+SUBJECT_META: dict[str, tuple[str, str]] = {
+    "Matemática": ("calculator", "#22C55E"),
+    "Português": ("book-open", "#0EA5E9"),
+    "Inglês": ("languages", "#FB923C"),
+    "História": ("landmark", "#A855F7"),
+    "Geografia": ("map", "#06B6D4"),
+    "Ciências": ("leaf", "#F59E0B"),
+    "Física": ("atom", "#6366F1"),
+    "Química": ("flask-conical", "#14B8A6"),
+    "Filosofia": ("brain", "#8B5CF6"),
+    "Artes": ("palette", "#EC4899"),
+    "Educação Financeira": ("piggy-bank", "#F97316"),
+    "Lógica": ("puzzle", "#0F766E"),
+    "Programação básica": ("code-2", "#2563EB"),
+    "Redação": ("pen-tool", "#DC2626"),
+}
 
 SUBJECTS_BY_AGE: dict[str, list[tuple[str, str, str]]] = {
-    "6-8": [
-        ("Matemática", "calculator", "#22C55E"),
-        ("Português", "book-open", "#0EA5E9"),
-        ("Ciências", "leaf", "#F59E0B"),
-        ("Educação Financeira", "piggy-bank", "#F97316"),
-    ],
-    "9-12": [
-        ("Matemática", "function-square", "#10B981"),
-        ("Português", "pen-tool", "#3B82F6"),
-        ("Inglês", "languages", "#FB923C"),
-        ("Educação Financeira", "wallet", "#D97706"),
-    ],
-    "13-15": [
-        ("Matemática", "sigma", "#059669"),
-        ("Português", "scroll-text", "#2563EB"),
-        ("Inglês", "globe-2", "#EA580C"),
-        ("Educação Financeira", "line-chart", "#B45309"),
-    ],
+    age_group: [(name, SUBJECT_META[name][0], SUBJECT_META[name][1]) for name in REQUIRED_SUBJECTS]
+    for age_group in AGE_GROUPS
 }
 
 UNITS_PER_SUBJECT = 10  # 8-12 requerido; 10 garante 120+ units no total
@@ -219,15 +242,44 @@ def _subject_rows() -> list[SubjectSeed]:
 
 
 def _skill_rows_for_subject(subject_name: str) -> list[SkillSeed]:
-    raw = SKILLS_BY_SUBJECT[subject_name]
+    raw = SKILLS_BY_SUBJECT.get(subject_name)
+    if raw is None:
+        raw = [
+            (f"Fundamentos de {subject_name}", f"Introdução progressiva em {subject_name}."),
+            (f"Aplicações de {subject_name}", f"Exercícios práticos de {subject_name}."),
+            (f"Leitura crítica em {subject_name}", f"Interpretação orientada de conteúdos de {subject_name}."),
+            (f"Resolução de problemas em {subject_name}", f"Estratégias para desafios de {subject_name}."),
+            (f"Projeto de {subject_name}", f"Síntese prática para consolidar {subject_name}."),
+            (f"Habilidades essenciais de {subject_name}", f"Competências centrais de {subject_name}."),
+            (f"Comunicação em {subject_name}", f"Expressão clara dos conceitos de {subject_name}."),
+            (f"Autonomia em {subject_name}", f"Tomada de decisão com base em {subject_name}."),
+            (f"Colaboração em {subject_name}", f"Atividades em equipe com foco em {subject_name}."),
+            (f"Síntese final de {subject_name}", f"Consolidação completa dos conhecimentos de {subject_name}."),
+        ]
     return [
         SkillSeed(order=index + 1, name=item[0], description=item[1])
         for index, item in enumerate(raw)
     ]
 
 
+def _default_unit_themes(subject_name: str) -> list[str]:
+    return [
+        f"Fundamentos de {subject_name}",
+        f"Conceitos essenciais de {subject_name}",
+        f"Aplicações práticas de {subject_name}",
+        f"Análise e interpretação em {subject_name}",
+        f"Desafios guiados de {subject_name}",
+        f"Estratégias de resolução em {subject_name}",
+        f"Projeto orientado de {subject_name}",
+        f"Comunicação e síntese em {subject_name}",
+        f"Integração de habilidades em {subject_name}",
+        f"Projeto final de {subject_name}",
+    ]
+
+
 def _upsert_subject(*, age_group: str, order: int, name: str, icon: str, color: str) -> int:
     with SessionLocal() as db:
+        age_min, age_max = AGE_BOUNDS.get(age_group, (9, 12))
         subject_id = db.scalar(
             text(
                 """
@@ -244,14 +296,16 @@ def _upsert_subject(*, age_group: str, order: int, name: str, icon: str, color: 
             subject_id = db.scalar(
                 text(
                     """
-                    INSERT INTO subjects (name, age_group, icon, color, "order")
-                    VALUES (:name, :age_group, :icon, :color, :order)
+                    INSERT INTO subjects (name, age_group, age_min, age_max, icon, color, "order")
+                    VALUES (:name, :age_group, :age_min, :age_max, :icon, :color, :order)
                     RETURNING id
                     """
                 ),
                 {
                     "name": name,
                     "age_group": age_group,
+                    "age_min": age_min,
+                    "age_max": age_max,
                     "icon": icon,
                     "color": color,
                     "order": order,
@@ -263,6 +317,8 @@ def _upsert_subject(*, age_group: str, order: int, name: str, icon: str, color: 
                     """
                     UPDATE subjects
                     SET name = :name,
+                        age_min = :age_min,
+                        age_max = :age_max,
                         icon = :icon,
                         color = :color
                     WHERE id = :id
@@ -271,6 +327,8 @@ def _upsert_subject(*, age_group: str, order: int, name: str, icon: str, color: 
                 {
                     "id": int(subject_id),
                     "name": name,
+                    "age_min": age_min,
+                    "age_max": age_max,
                     "icon": icon,
                     "color": color,
                 },
@@ -533,7 +591,7 @@ def run_seed() -> None:
             skills_processed += 1
             skill_ids_by_order.append(skill_id)
 
-        unit_themes = UNIT_THEMES_BY_SUBJECT[subject.name]
+        unit_themes = UNIT_THEMES_BY_SUBJECT.get(subject.name, _default_unit_themes(subject.name))
         for unit_order in range(1, UNITS_PER_SUBJECT + 1):
             theme = unit_themes[unit_order - 1]
             title = f"Unidade {unit_order}: {theme}"

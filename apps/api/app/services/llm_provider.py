@@ -16,6 +16,8 @@ class LLMProvider(Protocol):
 
     def parentInsight(self, input: dict[str, Any]) -> str | None: ...
 
+    def getLastUsageTokens(self) -> int | None: ...
+
 
 def get_llm_provider(provider_key: str | None) -> LLMProvider:
     normalized = (provider_key or settings.llm_provider_key or "noop").strip().lower()
@@ -24,4 +26,3 @@ def get_llm_provider(provider_key: str | None) -> LLMProvider:
             return NoopLLMProvider(reason="openai_misconfigured")
         return OpenAIProvider(api_key=settings.llm_api_key, model=settings.llm_model)
     return NoopLLMProvider()
-

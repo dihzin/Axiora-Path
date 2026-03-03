@@ -25,3 +25,5 @@ class NoopLLMProvider:
         _ = input
         return None
 
+    def getLastUsageTokens(self) -> int | None:
+        return None

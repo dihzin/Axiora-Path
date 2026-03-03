@@ -4,13 +4,18 @@ from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import exists, or_, select
 
 from app.api.deps import DBSession, get_current_tenant, get_current_user, require_role
 from app.models import (
+    ChildProfile,
     Lesson,
     LessonContent,
     Membership,
+    Question,
+    QuestionTemplate,
+    QuestionType,
+    Skill,
     Subject,
     SubjectAgeGroup,
     Tenant,
@@ -48,6 +53,7 @@ from app.services.aprender import (
     is_difficulty_allowed_for_age_group,
     list_lesson_contents,
 )
+from app.services.child_age import get_child_age
 from app.services.learning_energy import (
     EnergySnapshot,
     EnergyWaitRequiredError,
@@ -68,6 +74,12 @@ _GENERIC_SUBJECT_NAMES = {
     "padrao",
     "default",
     "trilha",
+}
+
+_AGE_GROUP_BOUNDS: dict[SubjectAgeGroup, tuple[int, int]] = {
+    SubjectAgeGroup.AGE_6_8: (6, 8),
+    SubjectAgeGroup.AGE_9_12: (9, 12),
+    SubjectAgeGroup.AGE_13_15: (13, 15),
 }
 
 
@@ -92,6 +104,35 @@ def _normalize_subject_name(value: str | None) -> str:
     for source, target in replacements.items():
         normalized = normalized.replace(source, target)
     return normalized
+
+
+def _resolve_child_age(db: DBSession, *, child_id: int) -> int | None:
+    child = db.get(ChildProfile, child_id)
+    if child is None:
+        return None
+    return get_child_age(child.date_of_birth, today=date.today())
+
+
+def _subject_ids_with_playable_content(db: DBSession, *, subject_ids: list[int]) -> set[int]:
+    if not subject_ids:
+        return set()
+    rows = db.scalars(
+        select(Skill.subject_id)
+        .where(Skill.subject_id.in_(subject_ids))
+        .where(
+            or_(
+                exists(select(1).where(QuestionTemplate.skill_id == Skill.id)),
+                exists(
+                    select(1).where(
+                        Question.skill_id == Skill.id,
+                        Question.type != QuestionType.TEMPLATE,
+                    )
+                ),
+            )
+        )
+        .distinct()
+    ).all()
+    return {int(item) for item in rows}
 
 
 def _to_energy_out(snapshot: EnergySnapshot) -> LearningEnergyStatusOut:
@@ -227,6 +268,8 @@ def create_subject(
     subject = Subject(
         name=payload.name,
         age_group=payload.age_group,
+        age_min=_AGE_GROUP_BOUNDS[payload.age_group][0],
+        age_max=_AGE_GROUP_BOUNDS[payload.age_group][1],
         icon=payload.icon,
         color=payload.color,
         order=payload.order,
@@ -238,6 +281,8 @@ def create_subject(
         id=subject.id,
         name=subject.name,
         ageGroup=subject.age_group,
+        ageMin=subject.age_min,
+        ageMax=subject.age_max,
         icon=subject.icon,
         color=subject.color,
         order=subject.order,
@@ -254,6 +299,7 @@ def list_subjects(
     child_id: Annotated[int | None, Query(alias="childId")] = None,
 ) -> list[SubjectOut]:
     target_age_group = age_group
+    resolved_child_age: int | None = None
     if target_age_group is None:
         if child_id is None and membership.role.value == "CHILD":
             raise HTTPException(
@@ -261,24 +307,35 @@ def list_subjects(
                 detail="childId is required for CHILD role",
             )
         if child_id is not None:
+            resolved_child_age = _resolve_child_age(db, child_id=child_id)
             target_age_group = get_child_age_group(
                 db,
                 child_id=child_id,
-                now_year=date.today().year,
+                now_date=date.today(),
             )
 
     query = select(Subject).order_by(Subject.order.asc())
-    if target_age_group is not None:
+    if resolved_child_age is not None:
+        query = query.where(
+            Subject.age_min <= int(resolved_child_age),
+            Subject.age_max >= int(resolved_child_age),
+        )
+    elif target_age_group is not None:
         query = query.where(Subject.age_group == target_age_group)
     subjects = db.scalars(query).all()
     non_generic = [item for item in subjects if _normalize_subject_name(item.name) not in _GENERIC_SUBJECT_NAMES]
     if non_generic:
         subjects = non_generic
+    playable_subject_ids = _subject_ids_with_playable_content(db, subject_ids=[int(item.id) for item in subjects])
+    if playable_subject_ids:
+        subjects = [item for item in subjects if int(item.id) in playable_subject_ids]
     return [
         SubjectOut(
             id=subject.id,
             name=subject.name,
             ageGroup=subject.age_group,
+            ageMin=subject.age_min,
+            ageMax=subject.age_max,
             icon=subject.icon,
             color=subject.color,
             order=subject.order,
@@ -435,7 +492,7 @@ def get_subject_path(
 ) -> SubjectPathResponse:
     target_age_group: SubjectAgeGroup | None = None
     if child_id is not None:
-        target_age_group = get_child_age_group(db, child_id=child_id, now_year=date.today().year)
+        target_age_group = get_child_age_group(db, child_id=child_id, now_date=date.today())
     elif membership.role.value == "CHILD":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -457,6 +514,8 @@ def get_subject_path(
             id=path.subject.id,
             name=path.subject.name,
             ageGroup=path.subject.age_group,
+            ageMin=path.subject.age_min,
+            ageMax=path.subject.age_max,
             icon=path.subject.icon,
             color=path.subject.color,
             order=path.subject.order,

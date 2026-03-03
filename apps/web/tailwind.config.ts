@@ -61,6 +61,16 @@ const config: Config = {
         "pop-in": "pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both",
         "pulse-ring": "pulse-ring 1.2s ease-out infinite",
       },
+      boxShadow: {
+        xs: "2px 2px 4px rgba(43, 47, 66, 0.06)",
+        sm: "4px 4px 10px rgba(43, 47, 66, 0.08)",
+        md: "8px 8px 20px rgba(43, 47, 66, 0.10)",
+        lg: "14px 14px 32px rgba(43, 47, 66, 0.14)",
+      },
+      transitionDuration: {
+        180: "180ms",
+        280: "280ms",
+      },
     },
   },
   plugins: [],

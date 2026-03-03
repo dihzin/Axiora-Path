@@ -1,7 +1,6 @@
 "use client";
 
-import type { TrailLessonNode } from "@/lib/trail-types";
-
+import type { TrailLessonNode, TrailNodePosition } from "@/lib/trail-types";
 import { LessonNode } from "@/components/trail/LessonNode";
 
 type TrailPathProps = {
@@ -9,15 +8,20 @@ type TrailPathProps = {
   onNodeClick?: (node: TrailLessonNode) => void;
 };
 
-const X_MAP = {
+const X_MAP: Record<TrailNodePosition, number> = {
   left: 25,
   center: 50,
   right: 75,
-} as const;
+};
 
 const NODE_STEP = 130;
 const TOP_OFFSET = 64;
 const SVG_W = 360;
+
+function mapPosition(index: number): TrailNodePosition {
+  const pattern: TrailNodePosition[] = ["center", "right", "center", "left"];
+  return pattern[index % pattern.length];
+}
 
 function toSvgX(percent: number) {
   return (percent / 100) * SVG_W;
@@ -26,13 +30,14 @@ function toSvgX(percent: number) {
 function buildBezierPath(nodes: TrailLessonNode[]) {
   if (nodes.length === 0) return "";
   if (nodes.length === 1) {
-    const x = toSvgX(X_MAP[nodes[0].position]);
+    const x = toSvgX(X_MAP[nodes[0].position ?? "center"]);
     return `M ${x} ${TOP_OFFSET}`;
   }
 
   let d = "";
   nodes.forEach((node, idx) => {
-    const x = toSvgX(X_MAP[node.position]);
+    const pos = node.position ?? mapPosition(idx);
+    const x = toSvgX(X_MAP[pos]);
     const y = TOP_OFFSET + idx * NODE_STEP;
 
     if (idx === 0) {
@@ -41,7 +46,8 @@ function buildBezierPath(nodes: TrailLessonNode[]) {
     }
 
     const prev = nodes[idx - 1];
-    const px = toSvgX(X_MAP[prev.position]);
+    const prevPos = prev.position ?? mapPosition(idx - 1);
+    const px = toSvgX(X_MAP[prevPos]);
     const py = TOP_OFFSET + (idx - 1) * NODE_STEP;
     const midY = (py + y) / 2;
     d += ` C ${px} ${midY}, ${x} ${midY}, ${x} ${y}`;
@@ -56,11 +62,9 @@ export function TrailPath({ nodes, onNodeClick }: TrailPathProps) {
   const lastContiguousReachedIndex = (() => {
     let idx = -1;
     for (let i = 0; i < nodes.length; i += 1) {
-      if (nodes[i].type === "completed" || nodes[i].type === "active") {
-        idx = i;
-      } else {
-        break;
-      }
+      const state = nodes[i].type;
+      if (state === "completed" || state === "active" || state === "current") idx = i;
+      else break;
     }
     return idx;
   })();
@@ -69,14 +73,14 @@ export function TrailPath({ nodes, onNodeClick }: TrailPathProps) {
   return (
     <div className="relative w-full" style={{ height: totalHeight }}>
       <svg className="absolute inset-0 h-full w-full" viewBox={`0 0 ${SVG_W} ${totalHeight}`} preserveAspectRatio="none" aria-hidden>
-        <path d={pathD} fill="none" stroke="rgba(120,137,161,0.25)" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" transform="translate(0 1)" />
-        <path d={pathD} fill="none" stroke="#C5D0DF" strokeWidth="6.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={pathD} fill="none" stroke="rgba(129,120,111,0.2)" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" transform="translate(0 1)" />
+        <path d={pathD} fill="none" stroke="#E5D8CE" strokeWidth="6.5" strokeLinecap="round" strokeLinejoin="round" />
         {progress > 0 ? (
           <>
             <path
               d={pathD}
               fill="none"
-              stroke="#B8F5E0"
+              stroke="#E4F5D3"
               strokeWidth="10"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -90,7 +94,7 @@ export function TrailPath({ nodes, onNodeClick }: TrailPathProps) {
             <path
               d={pathD}
               fill="none"
-              stroke="#4DD9AC"
+              stroke="#7EC24E"
               strokeWidth="6.5"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -106,11 +110,11 @@ export function TrailPath({ nodes, onNodeClick }: TrailPathProps) {
       </svg>
 
       {nodes.map((node, index) => {
-        const x = X_MAP[node.position];
+        const x = X_MAP[node.position ?? mapPosition(index)];
         const y = TOP_OFFSET + index * NODE_STEP;
         return (
           <div key={node.id} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${x}%`, top: y }}>
-            <LessonNode type={node.type} title={node.title} index={index} onClick={() => onNodeClick?.(node)} />
+            <LessonNode type={node.type} title={node.title} index={index} variant="path" onClick={() => onNodeClick?.(node)} />
           </div>
         );
       })}

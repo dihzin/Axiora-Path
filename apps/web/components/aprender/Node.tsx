@@ -119,7 +119,7 @@ export function Node({
       className={cn(
         "path-badge-button relative inline-flex shrink-0 items-center justify-center rounded-full",
         sizeClass,
-        "transition-[transform,filter,box-shadow] duration-[120ms] ease-out hover:scale-[1.04] active:scale-[0.97]",
+        "transition-[transform,box-shadow] duration-[120ms] ease-out hover:scale-[1.04] active:scale-[0.97]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--path-secondary)] focus-visible:ring-offset-2",
         disabled ? "cursor-not-allowed" : "hover:brightness-105",
         state === "active" ? "path-badge-active-idle scale-[1.03]" : "",
@@ -168,7 +168,7 @@ export function Node({
       <span className="sr-only">{label}</span>
       <span
         aria-hidden
-        className="relative z-[1] inline-flex items-center justify-center [filter:drop-shadow(0_1px_0_rgba(255,255,255,0.32))]"
+        className="relative z-[1] inline-flex items-center justify-center shadow-xs"
         style={{ color: "var(--node-icon-color)", opacity: visual.iconOpacity }}
       >
         {state === "done"

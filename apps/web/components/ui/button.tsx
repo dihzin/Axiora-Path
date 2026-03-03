@@ -2,9 +2,10 @@ import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { axioraMotionClasses } from "@/theme/motion";
 
 const buttonVariants = cva(
-  "relative inline-flex items-center justify-center gap-1.5 rounded-2xl border-b-4 text-sm font-extrabold tracking-wide transition-all duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:translate-y-[2px] active:border-b-2",
+  `axiora-hover-magic relative inline-flex items-center justify-center gap-1.5 rounded-2xl border-b-4 text-sm font-extrabold tracking-wide transition-transform transition-shadow transition-opacity duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:translate-y-[2px] active:border-b-2 ${axioraMotionClasses.transition} ${axioraMotionClasses.hoverScale} ${axioraMotionClasses.clickScale}`,
   {
     variants: {
       variant: {
@@ -31,13 +32,32 @@ const buttonVariants = cva(
 );
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
-  VariantProps<typeof buttonVariants>;
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean;
+  };
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => {
-    return <button className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
+  ({ className, variant, size, asChild = false, children, ...props }, ref) => {
+    const mergedClassName = cn(buttonVariants({ variant, size, className }));
+    if (asChild) {
+      const child = React.Children.only(children);
+      if (React.isValidElement(child)) {
+        const childElement = child as React.ReactElement<{ className?: string }>;
+        const childClassName = childElement.props.className;
+        return React.cloneElement(childElement, {
+          ...(props as object),
+          className: cn(mergedClassName, childClassName),
+        });
+      }
+    }
+    return (
+      <button className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props}>
+        {children}
+      </button>
+    );
   },
 );
 Button.displayName = "Button";
 
 export { Button, buttonVariants };
+
