@@ -11,92 +11,70 @@ type DailyMissionsPanelProps = {
 };
 
 export function DailyMissionsPanel({ missions, missionsLoading, claimingMissionId, onClaimMission }: DailyMissionsPanelProps) {
-  const [expanded, setExpanded] = useState(false);
+  void claimingMissionId;
+  void onClaimMission;
+  const [expanded, setExpanded] = useState(true);
   const dailyMissions = useMemo(() => missions?.missions ?? [], [missions]);
 
   return (
-    <section className="rounded-3xl bg-[linear-gradient(145deg,#22B7B2_0%,#2D99E8_100%)] p-[1.5px] shadow-[0_12px_24px_rgba(24,78,140,0.2)]">
-      <div className="rounded-[22px] bg-[linear-gradient(180deg,#F9FCFF_0%,#EFF6FF_100%)] p-3.5">
-        <button
-          type="button"
-          onClick={() => setExpanded((prev) => !prev)}
-          className="flex w-full items-center justify-between gap-2 rounded-2xl border border-[#D4E4F8] bg-white px-3 py-2.5 text-left shadow-[0_4px_10px_rgba(41,86,148,0.1)]"
-          aria-expanded={expanded}
-          aria-controls="daily-missions-content"
+    <section className="rounded-2xl border border-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.88)] px-5 py-1 backdrop-blur-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.04)]">
+      <button
+        type="button"
+        onClick={() => setExpanded((prev) => !prev)}
+        className="flex w-full items-center justify-between gap-3 text-left"
+        aria-expanded={expanded}
+        aria-controls="daily-missions-content"
+      >
+        <div className="flex min-w-0 flex-col justify-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#536F91]">Missões do dia</p>
+          <p className="truncate text-[18px] font-black leading-none tracking-[-0.01em] text-[#1B3E67]">Pronto para avançar?</p>
+        </div>
+        <span
+          className={`inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#D2DCEB] bg-[#F5F8FC] text-[#2F75B7] transition-transform ${
+            expanded ? "rotate-180" : "rotate-0"
+          }`}
+          aria-hidden
         >
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.08em] text-[#6183AA]">Missões do dia</p>
-            <p className="text-[22px] font-black leading-none text-[#143E6D]">Pronto para avançar?</p>
-          </div>
-          <span
-            className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#CCE0FA] bg-[#ECF5FF] text-[#2D7FCB] transition-transform ${
-              expanded ? "rotate-180" : "rotate-0"
-            }`}
-            aria-hidden
-          >
-            ▼
-          </span>
-        </button>
+          ▼
+        </span>
+      </button>
 
-        <div
-          id="daily-missions-content"
-          className={`grid transition-transform transition-shadow transition-opacity duration-[180ms] ease-out ${expanded ? "mt-3 grid-rows-[1fr] opacity-100" : "mt-0 grid-rows-[0fr] opacity-0"}`}
-        >
-          <div className="overflow-hidden">
-            {dailyMissions.length > 0 ? (
-              <div className="space-y-2.5">
-                {dailyMissions.map((mission) => (
-                  <MissionItem
-                    key={mission.missionId}
-                    mission={mission}
-                    claiming={claimingMissionId === mission.missionId}
-                    onClaim={() => onClaimMission(mission.missionId)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="rounded-2xl border border-[#D6E5F8] bg-white px-3 py-2 text-sm font-semibold text-[#5F7A9D]">
-                {missionsLoading ? "Carregando missões..." : "Sem missões disponíveis no momento."}
-              </p>
-            )}
-          </div>
+      <div
+        id="daily-missions-content"
+        className={`grid transition-transform transition-shadow transition-opacity duration-[180ms] ease-out ${expanded ? "mt-1.5 grid-rows-[1fr] opacity-100" : "mt-0 grid-rows-[0fr] opacity-0"}`}
+      >
+        <div className="overflow-hidden">
+          {dailyMissions.length > 0 ? (
+            <div className="divide-y divide-[rgba(0,0,0,0.05)] pb-1">
+              {dailyMissions.map((mission) => (
+                <MissionLine key={mission.missionId} mission={mission} />
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-xl border border-[#D1DFEE] bg-[#F9FCFF] px-3 py-1.5 text-sm font-semibold text-[#4E6F95]">
+              {missionsLoading ? "Carregando missões..." : "Sem missões disponíveis no momento."}
+            </p>
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-function MissionItem({ mission, claiming, onClaim }: { mission: MissionProgress; claiming: boolean; onClaim: () => void }) {
+function MissionLine({ mission }: { mission: MissionProgress }) {
   const safeTotal = Math.max(1, mission.targetValue);
   const safeValue = Math.max(0, mission.currentValue);
-  const percent = Math.max(0, Math.min(100, Number.isFinite(mission.progressPercent) ? mission.progressPercent : (safeValue / safeTotal) * 100));
-  const claimable = mission.completed && !mission.rewardGranted;
+  const done = mission.completed || safeValue >= safeTotal;
 
   return (
-    <div className="rounded-2xl border border-[#D6E5F8] bg-white px-3 py-2.5 shadow-[0_4px_10px_rgba(34,75,131,0.08)]">
+    <div className="flex items-center justify-between gap-3 px-1 py-1.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="truncate text-[14px] font-bold text-[#2A4F7E]">{mission.title}</p>
-        <p className="text-[12px] font-black text-[#5E7EA5]">
-          {safeValue}/{safeTotal}
-        </p>
+        <p className="truncate text-[13px] font-semibold text-[#23486F]/90">{mission.title}</p>
       </div>
-      <div className="mt-2 h-2.5 overflow-hidden rounded-full border border-[#D6E5F8] bg-[#EAF1FB]">
-        <div className={`h-full rounded-full transition-transform transition-shadow transition-opacity duration-[180ms] ${mission.completed ? "bg-[#34C2AE]" : "bg-[#4CA6F2]"}`} style={{ width: `${percent}%` }} />
-      </div>
-      {claimable ? (
-        <button
-          type="button"
-          onClick={onClaim}
-          disabled={claiming}
-          className="mt-2 w-full rounded-full border border-[#8DDDC4] bg-[#E7FAF2] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.05em] text-[#178B71] transition-colors hover:bg-[#DAF4E9] disabled:cursor-default disabled:opacity-70"
-        >
-          {claiming ? "Resgatando..." : "Resgatar"}
-        </button>
-      ) : mission.rewardGranted ? (
-        <p className="mt-2 text-[11px] font-black uppercase tracking-[0.05em] text-[#5A7A9F]">Recompensa recebida</p>
-      ) : null}
+      <p className={`text-[12px] font-bold ${done ? "text-[#2B9A7D]" : "text-[#587BA2]"}`}>
+        {safeValue}/{safeTotal}
+      </p>
     </div>
   );
 }
-
 

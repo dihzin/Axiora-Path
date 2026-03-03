@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --app-bg-color: #fff6f2;
+  --app-bg-color: #0f172a;
   --app-fg-color: #1a2d4a;
   --app-bg-gradient: radial-gradient(circle at 50% -12%, rgba(255, 107, 61, 0.15) 0%, transparent 70%);
   --theme-primary-rgb: 255 107 61;
@@ -57,7 +57,7 @@ body {
   font-weight: 600;
   color: var(--app-fg-color);
   background-color: var(--app-bg-color);
-  background-image: var(--app-bg-gradient);
+  background-image: none;
   background-attachment: fixed;
   background-repeat: no-repeat;
   transition:
@@ -66,12 +66,14 @@ body {
   max-width: 100%;
   overflow-x: hidden;
   width: 100%;
+  margin: 0;
 }
 
 html {
   max-width: 100%;
   overflow-x: hidden;
   width: 100%;
+  background-color: #0f172a;
 }
 
 img,

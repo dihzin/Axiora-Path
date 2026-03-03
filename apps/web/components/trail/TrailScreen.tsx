@@ -485,11 +485,15 @@ export function TrailScreen() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-x-clip bg-transparent">
+    <div className="relative min-h-screen overflow-x-hidden bg-transparent">
       <div className="w-full lg:pl-[208px]">
-        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-[#E2E8F2] lg:bg-[#F4F7FC] lg:px-3 lg:py-5 lg:shadow-[var(--axiora-shadow-xs)]">
+        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/5 lg:border-t-white/5 lg:bg-[linear-gradient(180deg,#0F172A_0%,#0D1626_100%)] lg:px-3 lg:py-5">
           <div className="mb-0.5 flex justify-center">
-            <AxionCharacter stage={1} moodState="NEUTRAL" reducedMotion={false} />
+            <div className="rounded-2xl bg-[#12213D]/80 p-1.5 shadow-[inset_0_1px_12px_rgba(0,0,0,0.35)]">
+              <div className="scale-90">
+                <AxionCharacter stage={1} moodState="NEUTRAL" reducedMotion={false} />
+              </div>
+            </div>
           </div>
           <DesktopNavItem href="/child" active={pathname === "/child"} iconName="inicio" label="Início" />
           <DesktopNavItem href="/child/aprender" active={pathname.startsWith("/child/aprender")} iconName="aprender" label="Aprender" />
@@ -500,78 +504,84 @@ export function TrailScreen() {
         </aside>
 
         <div className="mx-auto w-full lg:max-w-[980px] lg:px-5 xl:px-8">
-          <div className="mx-auto h-[calc(100dvh-6rem)] w-full max-w-sm overflow-y-auto px-4 pb-4 pt-3 md:max-w-4xl md:px-6 lg:h-auto lg:max-w-3xl lg:overflow-visible lg:px-0 lg:pb-12 lg:pt-6">
-            <header className="sticky top-0 z-50 space-y-2 bg-[rgba(255,248,245,0.64)] pb-2 [backdrop-filter:blur(2px)] lg:static lg:bg-transparent lg:pb-0">
-              <div className="motion-safe:animate-[fade-in-up_280ms_ease-out]">
-                <SubjectSelector
-                  streak={subjectStreakDays}
-                  gems={coins}
-                  xp={xpPercent}
-                  selectedSubjectName={selectedSubjectName}
-                  subjects={visibleSubjects}
-                  selectedSubjectId={selectedSubjectId}
-                  pathSubjectId={path?.subjectId ?? null}
-                  className="w-full max-w-none"
-                  onSelectSubject={onSelectSubject}
-                />
-              </div>
-            </header>
-
-            <main className="space-y-5 lg:pt-4">
-              <div className="mx-auto mb-10 mt-4 max-w-3xl motion-safe:animate-[fade-in-up_340ms_ease-out]">
-                <HeroMissionCard
-                  subjectName={selectedSubjectName}
-                  areaLabel={selectedArea}
-                  streakDays={subjectStreakDays}
-                  medalTier={domainCompletion.medal}
-                  completionPercent={domainCompletion.completionPercent}
-                  xpTotal={xpTotal}
-                  level={xpLevel}
-                  xpPercent={xpPercent}
-                  xpInLevel={xpInLevel}
-                  xpToNextLevel={xpToNextLevel}
-                  encouragementText={encouragementText}
-                />
-              </div>
-              <div className="mx-auto max-w-3xl motion-safe:animate-[fade-in-up_380ms_ease-out]">
-                <WeeklyGoalCard completed={weeklyGoal.completed} target={weeklyGoal.target} weekLabel={weeklyGoal.weekLabel} />
-              </div>
-
-              {loading && !path ? (
-                <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm font-bold text-[#4E6992]">Carregando trilha...</div>
-              ) : null}
-              {pathRefreshing ? (
-                <div className="inline-flex items-center rounded-full border border-[#DCE5F3] bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.04em] text-[#6A7E9D]">
-                  Atualizando...
-                </div>
-              ) : null}
-              {error ? (
-                <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3">
-                  <p className="text-sm font-bold text-[#4E6992]">{error}</p>
-                  <button
-                    type="button"
-                    className="mt-2 inline-flex rounded-xl border border-[#C9D8EF] bg-[#F5FAFF] px-3 py-1.5 text-xs font-black uppercase tracking-[0.04em] text-[#3D5F8C] transition-colors hover:bg-[#EAF4FF]"
-                    onClick={() => setPathRetryToken((prev) => prev + 1)}
-                  >
-                    Tentar novamente
-                  </button>
-                </div>
-              ) : null}
-              {domainData ? (
-                <div className="pt-4">
-                  <DomainSection
-                    domain={domainData}
-                    onLessonClick={onLessonClick}
+          <div className="mx-auto h-[calc(100dvh-6rem)] w-full max-w-sm overflow-y-auto pb-4 pt-1 md:max-w-4xl lg:h-auto lg:max-w-3xl lg:overflow-visible lg:pb-12 lg:pt-6">
+            <div className="mx-auto w-full max-w-[760px] px-6">
+              <header className="sticky top-0 z-50 space-y-2 bg-[rgba(15,23,42,0.08)] pb-2 [backdrop-filter:blur(2px)] lg:static lg:bg-transparent lg:pb-0">
+                <div className="motion-safe:animate-[fade-in-up_280ms_ease-out]">
+                  <SubjectSelector
+                    streak={subjectStreakDays}
+                    gems={coins}
+                    xp={xpPercent}
+                    selectedSubjectName={selectedSubjectName}
+                    subjects={visibleSubjects}
+                    selectedSubjectId={selectedSubjectId}
+                    pathSubjectId={path?.subjectId ?? null}
+                    className="w-full"
+                    onSelectSubject={onSelectSubject}
                   />
                 </div>
-              ) : null}
-              <DailyMissionsPanel
-                missions={missions}
-                missionsLoading={missionsLoading}
-                claimingMissionId={claimingMissionId}
-                onClaimMission={(missionId) => void onClaimMission(missionId)}
-              />
-            </main>
+              </header>
+
+              <main className="lg:pt-4">
+                <div className="flex w-full flex-col gap-8">
+                  <div className="w-full motion-safe:animate-[fade-in-up_320ms_ease-out]">
+                    <DailyMissionsPanel
+                      missions={missions}
+                      missionsLoading={missionsLoading}
+                      claimingMissionId={claimingMissionId}
+                      onClaimMission={(missionId) => void onClaimMission(missionId)}
+                    />
+                  </div>
+                  <div className="w-full motion-safe:animate-[fade-in-up_340ms_ease-out]">
+                    <HeroMissionCard
+                      subjectName={selectedSubjectName}
+                      areaLabel={selectedArea}
+                      streakDays={subjectStreakDays}
+                      medalTier={domainCompletion.medal}
+                      completionPercent={domainCompletion.completionPercent}
+                      xpTotal={xpTotal}
+                      level={xpLevel}
+                      xpPercent={xpPercent}
+                      xpInLevel={xpInLevel}
+                      xpToNextLevel={xpToNextLevel}
+                      encouragementText={encouragementText}
+                    />
+                  </div>
+                  <div className="mt-10 w-full motion-safe:animate-[fade-in-up_380ms_ease-out]">
+                    <WeeklyGoalCard completed={weeklyGoal.completed} target={weeklyGoal.target} weekLabel={weeklyGoal.weekLabel} />
+                  </div>
+                </div>
+
+                {loading && !path ? (
+                  <div className="mt-6 rounded-2xl border border-black/5 bg-[#F1EAE3] p-3 text-sm font-semibold text-slate-700/80">Carregando trilha...</div>
+                ) : null}
+                {pathRefreshing ? (
+                  <div className="mt-6 inline-flex items-center rounded-full border border-black/5 bg-[#ECE4DC] px-3 py-1 text-xs font-semibold uppercase tracking-[0.04em] text-slate-700/75">
+                    Atualizando...
+                  </div>
+                ) : null}
+                {error ? (
+                  <div className="mt-6 rounded-2xl border border-black/5 bg-[#F1EAE3] p-3">
+                    <p className="text-sm font-semibold text-slate-700/85">{error}</p>
+                    <button
+                      type="button"
+                      className="mt-2 inline-flex rounded-xl border border-black/5 bg-[#E8DFD6] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.04em] text-slate-700/80 transition-colors hover:bg-[#DFD4CA]"
+                      onClick={() => setPathRetryToken((prev) => prev + 1)}
+                    >
+                      Tentar novamente
+                    </button>
+                  </div>
+                ) : null}
+                {domainData ? (
+                  <div className="pt-4">
+                    <DomainSection
+                      domain={domainData}
+                      onLessonClick={onLessonClick}
+                    />
+                  </div>
+                ) : null}
+              </main>
+            </div>
           </div>
         </div>
       </div>
@@ -631,13 +641,13 @@ function DesktopNavItem({ href, iconName, label, active }: { href: string; iconN
   return (
     <Link
       href={href}
-      className={`mx-1.5 inline-flex items-center gap-2.5 rounded-2xl px-4 py-[7px] text-[15px] font-black uppercase tracking-[0.04em] transition-colors ${
+      className={`mx-1.5 inline-flex items-center gap-2.5 rounded-2xl px-4 py-[7px] text-[15px] font-semibold uppercase tracking-[0.04em] text-slate-200/85 transition-all duration-200 ${
         active
-          ? "border-l-[3px] border-l-[#FF6B3D] bg-[#FFEDE5] text-[#2B2F42]"
-          : "text-[#4A5F80] hover:bg-[#FFEDE5]"
+          ? "border-l-[3px] border-l-orange-400/90 bg-white/5 text-slate-100/90"
+          : "text-slate-300/80 hover:bg-white/5 hover:text-slate-100/90"
       }`}
     >
-      <span className="opacity-90 grayscale-[100%]">
+      <span className="opacity-85 grayscale-[80%]">
         <ChildNavIcon name={iconName} active={active} size={42} />
       </span>
       {label}

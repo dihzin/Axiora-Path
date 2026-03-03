@@ -71,7 +71,7 @@ export function SubjectSelector({
       <div className="mt-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex min-w-full items-center gap-2" role="tablist" aria-label="Selecionar matéria">
           {subjects.length === 0 ? (
-            <p className="px-2 text-sm font-semibold text-[#5C5C5C]">Sem matérias</p>
+            <p className="px-2 text-sm font-normal text-slate-300/60">Sem matérias</p>
           ) : (
             subjects.map((subject, index) => {
               const activeSubject =
@@ -89,14 +89,14 @@ export function SubjectSelector({
                   tabIndex={activeSubject || (selectedIndex < 0 && index === 0) ? 0 : -1}
                   onClick={() => onSelectSubject(subject.id)}
                   onKeyDown={(event) => onChipKeyDown(event, index)}
-                  className={`axiora-hover-magic inline-flex h-11 shrink-0 items-center gap-2 rounded-[24px_16px_22px_14px] px-3.5 text-sm font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF8A63] focus-visible:ring-offset-2 ${axioraMotionClasses.interactive} ${
+                  className={`axiora-hover-magic inline-flex h-11 shrink-0 items-center gap-2 rounded-[24px_16px_22px_14px] px-3.5 text-sm font-semibold leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF8A63] focus-visible:ring-offset-2 ${axioraMotionClasses.interactive} ${
                     activeSubject
-                      ? "bg-[linear-gradient(135deg,#FF6B3D_0%,#FF8A63_100%)] text-white shadow-[0_8px_14px_rgba(255,107,61,0.24)]"
-                      : "bg-[#FFEDE5] text-[#2B2F42] hover:bg-[#FFE1D5]"
+                      ? "bg-[linear-gradient(135deg,rgba(249,115,22,0.9)_0%,rgba(251,146,60,0.85)_100%)] text-white/90"
+                      : "bg-[#F1EAE3] text-slate-900/85 hover:bg-[#EBE2D9]"
                   }`}
                 >
                   <span
-                    className={`inline-flex h-6 w-6 items-center justify-center rounded-[10px] bg-white/80 ${getSubjectTextColor(
+                    className={`inline-flex h-6 w-6 items-center justify-center rounded-[10px] bg-white/70 ${getSubjectTextColor(
                       normalizeSubjectName(subject.name),
                       activeSubject,
                     )}`}
@@ -110,7 +110,7 @@ export function SubjectSelector({
           )}
         </div>
         {subjects.length === 1 ? (
-          <p className="mt-1 px-1 text-xs font-semibold text-[#7A6E68]">Sem outras matérias disponíveis para troca.</p>
+          <p className="mt-1 px-1 text-xs font-normal text-slate-300/60">Sem outras matérias disponíveis para troca.</p>
         ) : null}
       </div>
     </div>

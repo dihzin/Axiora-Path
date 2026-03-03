@@ -55,11 +55,12 @@ Web (`apps/web/.env.local`):
 
 ## Execucao Local (3 Terminais)
 
+Fluxo recomendado: abrir 3 terminais PowerShell e executar os comandos abaixo.
+
 ### Terminal 1 - Infra (Postgres + Redis)
 
 ```powershell
 cd "c:\DEV\Axiora Path"
-$env:Path += ";C:\Program Files\Docker\Docker\resources\bin"
 docker compose -f infra/docker/docker-compose.yml up -d
 docker compose -f infra/docker/docker-compose.yml ps
 ```
@@ -73,12 +74,14 @@ docker compose -f infra/docker/docker-compose.yml up -d
 docker compose -f infra/docker/docker-compose.yml ps
 ```
 
-### Terminal 2 - API (FastAPI)
+### Terminal 2 - API (FastAPI + migrate/audit)
 
 ```powershell
 cd "c:\DEV\Axiora Path\apps\api"
 .venv\Scripts\Activate.ps1
-alembic upgrade head
+cd "c:\DEV\Axiora Path"
+.\scripts\axion_db_migrate_and_audit.ps1
+cd "c:\DEV\Axiora Path\apps\api"
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -93,8 +96,7 @@ curl http://localhost:8000/health
 ```powershell
 cd "c:\DEV\Axiora Path"
 npm install
-cd "c:\DEV\Axiora Path\apps\web"
-npm run dev
+npm run dev --workspace @axiora/web
 ```
 
 Acessos locais:

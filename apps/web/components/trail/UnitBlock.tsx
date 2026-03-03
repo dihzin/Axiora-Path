@@ -17,17 +17,17 @@ export function UnitBlock({ unit, index, onLessonClick }: UnitBlockProps) {
   return (
     <section
       className={cn(
-        "border border-[#F7DCCF] bg-[linear-gradient(180deg,#FFFDFB_0%,#FFF7F2_100%)] p-4",
-        hasActiveLesson ? "shadow-[var(--axiora-shadow-md)]" : "shadow-[var(--axiora-shadow-xs)]",
+        "border border-black/5 bg-[#F1EAE3] p-4",
+        hasActiveLesson ? "shadow-[0_20px_60px_rgba(0,0,0,0.15)]" : "shadow-[0_10px_30px_rgba(0,0,0,0.08)]",
         organicRadius,
       )}
     >
       <header className="mb-3">
-        <p className="text-[10px] font-black uppercase tracking-[0.08em] text-[#7C706A]">{unit.sectionLabel}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-700/85">{unit.sectionLabel}</p>
         <h3 className="mt-1 text-lg font-black text-[#16345B]">{unit.title}</h3>
-        <p className="mt-1 text-xs font-semibold text-[#685F5A]">Progresso da unidade: {unit.progress}%</p>
+        <p className="mt-1 text-xs font-normal text-slate-700/80">Progresso da unidade: {unit.progress}%</p>
         {unit.locked ? (
-          <p className="mt-2 rounded-xl border border-[#F2DED4] bg-[#FFF5EF] px-3 py-2 text-xs font-semibold text-[#756A63]">
+          <p className="mt-2 rounded-xl border border-black/5 bg-[#EEE5DD] px-3 py-2 text-xs font-normal text-slate-700/75">
             {unit.prerequisiteText ?? "Conclua a unidade anterior para desbloquear."}
           </p>
         ) : null}

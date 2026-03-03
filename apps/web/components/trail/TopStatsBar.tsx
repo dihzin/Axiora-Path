@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { FlameIcon } from "@/components/ui/icons/FlameIcon";
-import { GemIcon } from "@/components/ui/icons/GemIcon";
 import { StarIcon } from "@/components/ui/icons/StarIcon";
 
 type TopStatsBarProps = {
@@ -20,28 +19,27 @@ export function TopStatsBar({ streak, gems, xp, className, action }: TopStatsBar
   return (
     <div
       className={cn(
-        "relative z-20 mx-auto flex w-full max-w-sm items-center justify-between gap-1.5 px-0.5 py-0.5",
+        "relative z-20 mx-auto flex w-full items-center justify-between gap-2",
         className,
       )}
     >
-      <StatItem
-        label="streak"
-        value={Math.max(0, Math.floor(streak))}
-        valueClassName="text-[#FF6B3D]"
-        icon={<FlameIcon className="h-5 w-5 text-[#2B2F42]" />}
-      />
-      <StatItem
-        label="gemas"
-        value={Math.max(0, Math.floor(gems))}
-        valueClassName="text-[#2B2F42]"
-        icon={<GemIcon className="h-5 w-5 text-[#2B2F42]" />}
-      />
-      <StatItem
-        label="progresso"
-        value={`${safeXp}%`}
-        valueClassName="text-[#FF6B3D]"
-        icon={<StarIcon className="h-5 w-5 text-[#2B2F42]" />}
-      />
+      <div className="flex h-10 items-center gap-6 rounded-[20px] border border-white/5 bg-[rgba(15,23,42,0.20)] px-4 py-1.5 backdrop-blur-[6px]">
+        <StatItem
+          label="streak"
+          value={Math.max(0, Math.floor(streak))}
+          icon={<FlameIcon className="h-[18px] w-[18px] text-orange-400/90" />}
+        />
+        <StatItem
+          label="pontos"
+          value={Math.max(0, Math.floor(gems))}
+          icon={<StarIcon className="h-[18px] w-[18px] text-amber-300/90" />}
+        />
+        <StatItem
+          label="progresso"
+          value={`${safeXp}%`}
+          icon={<span className="text-[13px] font-semibold leading-none text-slate-100/90">%</span>}
+        />
+      </div>
       {action}
     </div>
   );
@@ -59,12 +57,12 @@ function StatItem({
   valueClassName?: string;
 }) {
   return (
-    <div
-      className="inline-flex h-8 items-center gap-1.5 rounded-[12px] px-2 text-[#2B2F42] transition duration-[180ms] [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] hover:scale-[1.02] hover:bg-[#FF8A63]/12"
-      aria-label={label}
-    >
+    <div className="inline-flex items-center gap-1.5 rounded-full px-1 leading-none" aria-label={label}>
       {icon}
-      <span className={cn("text-[15px] font-black leading-none text-[#2B2F42]", valueClassName)}>{value}</span>
+      <div className="inline-flex items-baseline gap-1">
+        <span className={cn("text-[15px] font-semibold leading-none text-slate-100/90", valueClassName)}>{value}</span>
+        <span className="text-[11px] font-normal uppercase leading-none tracking-[0.02em] text-slate-300/60">{label}</span>
+      </div>
     </div>
   );
 }

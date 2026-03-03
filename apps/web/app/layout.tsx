@@ -47,12 +47,11 @@ const baloo = Baloo_2({
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" className="bg-[#0F172A]">
       <body
         suppressHydrationWarning
-        className={`${nunito.variable} ${baloo.variable} relative min-h-screen bg-transparent text-foreground font-sans [background-image:none]`}
+        className={`${nunito.variable} ${baloo.variable} relative min-h-screen bg-[#0F172A] text-foreground font-sans [background-image:none]`}
       >
-        <div className="fixed inset-0 -z-20 bg-[#FFF8F5]" />
         <ThemeProvider>
           <div className="relative z-10">
             <PwaRegister />
