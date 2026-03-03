@@ -17,7 +17,9 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.execute("ALTER TYPE membership_role ADD VALUE IF NOT EXISTS 'PLATFORM_ADMIN';")
+    ctx = op.get_context()
+    with ctx.autocommit_block():
+        op.execute("ALTER TYPE membership_role ADD VALUE IF NOT EXISTS 'PLATFORM_ADMIN';")
     op.execute(
         """
         UPDATE memberships m
@@ -34,4 +36,3 @@ def downgrade() -> None:
     # PostgreSQL enums do not support dropping a single value safely in-place.
     # Keep downgrade as no-op to preserve data integrity.
     return
-

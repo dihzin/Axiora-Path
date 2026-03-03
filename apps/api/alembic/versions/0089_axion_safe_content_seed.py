@@ -42,9 +42,16 @@ def upgrade() -> None:
             INSERT INTO axion_content_catalog
                 (content_type, subject, difficulty, content_fingerprint, age_min, age_max, safety_tags, is_active)
             SELECT
-                :content_type, :subject, :difficulty, :fingerprint, :age_min, :age_max, '[]'::jsonb, true
+                CAST(:content_type AS varchar(32)),
+                CAST(:subject AS varchar(64)),
+                CAST(:difficulty AS integer),
+                CAST(:fingerprint AS varchar(64)),
+                CAST(:age_min AS integer),
+                CAST(:age_max AS integer),
+                '[]'::jsonb,
+                true
             WHERE NOT EXISTS (
-                SELECT 1 FROM axion_content_catalog WHERE content_fingerprint = :fingerprint
+                SELECT 1 FROM axion_content_catalog WHERE content_fingerprint = CAST(:fingerprint AS varchar(64))
             );
             """
             ),
