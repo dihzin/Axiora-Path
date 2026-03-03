@@ -170,7 +170,7 @@ def _clear_previous_seed() -> tuple[int, int, int]:
             return 0, 0, 0
 
         generated_ids = db.execute(
-            text("SELECT id::text FROM generated_variants WHERE template_id = ANY(:template_ids::uuid[])"),
+            text("SELECT id::text FROM generated_variants WHERE template_id = ANY(CAST(:template_ids AS uuid[]))"),
             {"template_ids": template_ids},
         ).scalars().all()
 
@@ -178,8 +178,8 @@ def _clear_previous_seed() -> tuple[int, int, int]:
             text(
                 """
                 DELETE FROM user_question_history
-                WHERE template_id = ANY(:template_ids::uuid[])
-                   OR generated_variant_id = ANY(:generated_ids::uuid[])
+                WHERE template_id = ANY(CAST(:template_ids AS uuid[]))
+                   OR generated_variant_id = ANY(CAST(:generated_ids AS uuid[]))
                 """
             ),
             {
@@ -188,11 +188,11 @@ def _clear_previous_seed() -> tuple[int, int, int]:
             },
         ).rowcount or 0
         variants_deleted = db.execute(
-            text("DELETE FROM generated_variants WHERE template_id = ANY(:template_ids::uuid[])"),
+            text("DELETE FROM generated_variants WHERE template_id = ANY(CAST(:template_ids AS uuid[]))"),
             {"template_ids": template_ids},
         ).rowcount or 0
         templates_deleted = db.execute(
-            text("DELETE FROM question_templates WHERE id = ANY(:template_ids::uuid[])"),
+            text("DELETE FROM question_templates WHERE id = ANY(CAST(:template_ids AS uuid[]))"),
             {"template_ids": template_ids},
         ).rowcount or 0
         db.commit()

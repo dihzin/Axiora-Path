@@ -983,15 +983,30 @@ def _creates_type_streak(items: list[NextQuestionItem], candidate_type: Question
     return all(item.type == candidate_type for item in recent)
 
 
+def _syllable_count_pt(word: str) -> int:
+    cleaned = "".join(ch for ch in str(word or "").strip().lower() if ch.isalpha())
+    if not cleaned:
+        return 1
+    vowels = "aeiouáéíóúâêôãõàü"
+    count = 0
+    prev_vowel = False
+    for ch in cleaned:
+        is_vowel = ch in vowels
+        if is_vowel and not prev_vowel:
+            count += 1
+        prev_vowel = is_vowel
+    return max(1, count)
+
+
 def _build_template_item(*, template: QuestionTemplate, generated_variant: GeneratedVariant) -> NextQuestionItem:
     payload = generated_variant.variant_data or {}
     metadata = dict(payload.get("metadata", {}))
     metadata["signature"] = payload.get("signature")
     prompt = str(payload.get("prompt", ""))
     explanation = payload.get("explanation") if isinstance(payload.get("explanation"), str) else None
+    variables = payload.get("variables") if isinstance(payload.get("variables"), dict) else {}
 
     if template.template_type == QuestionTemplateType.MATH_WORDPROB:
-        variables = payload.get("variables") if isinstance(payload.get("variables"), dict) else {}
         name = str(variables.get("name", "A criança"))
         a = int(variables.get("a", 0))
         b = int(variables.get("b", 0))
@@ -1002,8 +1017,12 @@ def _build_template_item(*, template: QuestionTemplate, generated_variant: Gener
         context_answer = _label_with_count_pt(answer, context)
         prompt = f"{name} tinha {a} {context_a} e ganhou {b} {context_b}. Quantos {context_answer} tem agora?"
         explanation = f"{name} somou {a} com {b} e chegou a {answer} {context_answer}."
+    elif template.template_type == QuestionTemplateType.PT_SYLLABLES:
+        word = str(variables.get("word", "")).strip() if isinstance(variables, dict) else ""
+        if word:
+            prompt = prompt.strip() or f"Quantas sílabas tem a palavra '{word}'?"
+            metadata["answer"] = int(metadata.get("answer", _syllable_count_pt(word)))
 
-    variables = payload.get("variables") if isinstance(payload.get("variables"), dict) else {}
     inferred_type = _infer_item_type_from_metadata(metadata, QuestionType.MCQ)
 
     # Diversify interaction format for arithmetic templates to avoid quiz-only sessions.

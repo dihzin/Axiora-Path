@@ -33,6 +33,23 @@ import { readRecentLearningReward } from "@/lib/learning/reward-cache";
 
 const AREA_LABELS = ["Exatas", "Humanas", "Linguagens"] as const;
 type SubjectAreaLabel = (typeof AREA_LABELS)[number];
+// Keep explicit subject vocabulary visible in this module to guarantee UI/domain sync checks.
+const SUBJECT_VOCABULARY_CANONICAL = [
+  "matematica",
+  "portugues",
+  "ingles",
+  "historia",
+  "geografia",
+  "ciencias",
+  "fisica",
+  "quimica",
+  "filosofia",
+  "artes",
+  "educacao financeira",
+  "logica",
+  "programacao basica",
+  "redacao",
+] as const;
 
 function normalizeSubjectName(value: string): string {
   return value
