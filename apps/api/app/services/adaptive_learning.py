@@ -1548,8 +1548,9 @@ def finish_adaptive_learning_session(
                 profile.axion_coins += reward_coins
                 session.coins_earned += reward_coins
         if action_type == "NUDGE_PARENT":
+            decision_cls = AxionDecision
             db.add(
-                AxionDecision(
+                decision_cls(
                     user_id=user_id,
                     context=AxionDecisionContext.AFTER_LEARNING,
                     decisions=[action],

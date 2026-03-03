@@ -654,6 +654,7 @@ class ChildProfile(Base):
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
     avatar_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     date_of_birth: Mapped[date] = mapped_column(Date, nullable=False)
+    axion_nba_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     birth_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     needs_profile_completion: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     theme: Mapped[str] = mapped_column(String(32), nullable=False, server_default="default")
@@ -1694,6 +1695,12 @@ class AxionFeatureRegistry(Base):
     __tablename__ = "axion_feature_registry"
     __table_args__ = (
         Index("ix_axion_feature_registry_active_created_at", "active", "created_at"),
+        Index(
+            "uq_axion_feature_registry_single_active",
+            "active",
+            unique=True,
+            postgresql_where=text("active IS TRUE"),
+        ),
     )
 
     version: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -1750,6 +1757,12 @@ class AxionRewardContract(Base):
     __tablename__ = "axion_reward_contract"
     __table_args__ = (
         Index("ix_axion_reward_contract_active_created_at", "active", "created_at"),
+        Index(
+            "uq_axion_reward_contract_single_active",
+            "active",
+            unique=True,
+            postgresql_where=text("active IS TRUE"),
+        ),
     )
 
     version: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -1876,6 +1889,21 @@ class AxionDecision(Base):
     __tablename__ = "axion_decisions"
     __table_args__ = (
         Index("ix_axion_decisions_user_context_created_at", "user_id", "context", "created_at"),
+        Index("ix_axion_decisions_tenant_child_context_created_at", "tenant_id", "child_id", "context", "created_at"),
+        Index("ix_axion_decisions_cooldown_until", "cooldown_until"),
+        Index("ix_axion_decisions_experiment_variant_created_at", "experiment_id", "variant", "created_at"),
+        Index("ix_axion_decisions_experiment_key_variant_created_at", "experiment_key", "variant", "created_at"),
+        Index("ix_axion_decisions_nba_reason_created_at", "nba_reason", "created_at"),
+        Index("ix_axion_decisions_experiment_user_created_at", "experiment_key", "user_id", "created_at"),
+        Index("ix_axion_decisions_experiment_id_user_created_at", "experiment_id", "user_id", "created_at"),
+        Index("ix_axion_decisions_experiment_key_decided_at", "experiment_key", "decided_at"),
+        Index(
+            "uq_axion_decisions_tenant_correlation_id",
+            "tenant_id",
+            "correlation_id",
+            unique=True,
+            postgresql_where=text("correlation_id IS NOT NULL"),
+        ),
     )
 
     id: Mapped[str] = mapped_column(
@@ -1884,11 +1912,30 @@ class AxionDecision(Base):
         nullable=False,
         server_default=text("gen_random_uuid()"),
     )
+    tenant_id: Mapped[int | None] = mapped_column(ForeignKey("tenants.id"), nullable=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    child_id: Mapped[int | None] = mapped_column(ForeignKey("child_profiles.id"), nullable=True)
     context: Mapped[AxionDecisionContext] = mapped_column(
         SqlEnum(AxionDecisionContext, name="axion_decision_context", values_callable=_enum_values),
         nullable=False,
     )
+    experiment_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    experiment_key: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    variant: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    chosen_variant: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    action_type: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    source: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    cooldown_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    decision_mode: Mapped[str] = mapped_column(String(20), nullable=False, server_default="level4")
+    policy_state: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    policy_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    exploration_flag: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    reason_code: Mapped[str] = mapped_column(String(80), nullable=False, server_default="default")
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    nba_enabled_final: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    nba_reason: Mapped[str] = mapped_column(String(40), nullable=False, server_default="default")
+    correlation_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), nullable=True)
     decisions: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB,
         nullable=False,

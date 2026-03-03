@@ -681,7 +681,8 @@ def decide_axion_actions(
         else "axion.keep_going"
     )
 
-    decision_row = AxionDecision(
+    decision_cls = AxionDecision
+    decision_row = decision_cls(
         user_id=user_id,
         context=context,
         decisions=actions,
@@ -818,8 +819,9 @@ def run_axion_nightly(
                 },
                 record_history=False,
             )
+            decision_cls = AxionDecision
             db.add(
-                AxionDecision(
+                decision_cls(
                     user_id=user_id,
                     context=AxionDecisionContext.CHILD_TAB,
                     decisions=actions,

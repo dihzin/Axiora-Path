@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 
-export default function ParentProfileCompletionPage() {
+function ParentProfileCompletionContent() {
   const searchParams = useSearchParams();
   const childId = searchParams.get("childId");
   const target = childId ? `/parent?childId=${encodeURIComponent(childId)}` : "/parent";
@@ -25,5 +26,13 @@ export default function ParentProfileCompletionPage() {
         </div>
       </div>
     </PageShell>
+  );
+}
+
+export default function ParentProfileCompletionPage() {
+  return (
+    <Suspense fallback={null}>
+      <ParentProfileCompletionContent />
+    </Suspense>
   );
 }

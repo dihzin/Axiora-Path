@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Annotated
+from uuid import uuid4
+from types import SimpleNamespace
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -26,12 +28,16 @@ from app.schemas.axion import (
 )
 from app.services.axion import compute_axion_state
 from app.services.axion_core_v2 import computeAxionState, evaluate_policies, evaluatePolicies
-from app.services.axion_facts import buildAxionFacts
+from app.services.axion_facts import buildAxionFacts, build_axion_facts
 from app.services.axion_impact import sync_outcome_metrics_for_user
 from app.services.axion_intelligence_v2 import compute_behavior_metrics, get_behavior_metrics
+from app.services.axion_mode import _resolve_plan as _resolve_plan_for_tenant
+from app.services.axion_mode import resolve_nba_mode
 from app.services.axion_message_enricher import enrich_axion_message
 from app.services.axion_messaging import generateAxionMessage
+from app.services.axion_orchestrator import select_next_best_action
 from app.services.axion_parent_insights import get_parent_axion_insights
+from app.services.axion_child_profile import axion_child_profile_snapshot, resolve_child_for_user
 
 router = APIRouter(tags=["axion"])
 
@@ -102,6 +108,61 @@ def _resolve_context(value: str) -> str:
     normalized = (value or "child_tab").strip().lower()
     allowed = {item.value for item in AxionDecisionContext}
     return normalized if normalized in allowed else "child_tab"
+
+
+def _resolve_tenant_plan(db: DBSession, *, tenant_id: int):
+    return _resolve_plan_for_tenant(db, tenant_id=tenant_id)
+
+
+def _resolve_child_for_brief(
+    db: DBSession,
+    *,
+    tenant_id: int,
+    user_id: int,
+    child_id: int | None,
+) -> int | None:
+    if child_id is not None:
+        return int(child_id)
+    resolved = resolve_child_for_user(db, user_id=user_id, tenant_id=tenant_id)
+    return int(resolved) if resolved is not None else None
+
+
+def _facts_as_dict(facts: Any) -> dict[str, Any]:
+    if isinstance(facts, dict):
+        return dict(facts)
+    to_dict = getattr(facts, "to_dict", None)
+    if callable(to_dict):
+        payload = to_dict()
+        return payload if isinstance(payload, dict) else {}
+    return {}
+
+
+def _load_user_decision(db: DBSession, *, decision_id: str, user_id: int, tenant_id: int) -> AxionDecision:
+    decision = db.scalar(
+        select(AxionDecision).where(
+            AxionDecision.id == decision_id,
+            AxionDecision.user_id == user_id,
+        )
+    )
+    if decision is None or int(decision.tenant_id) != int(tenant_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Decision not found")
+    return decision
+
+
+def _resolve_admin_tenant_scope(
+    *,
+    request: object,
+    endpoint: str,
+    user: User,
+    tenant: Tenant,
+) -> Tenant:
+    role = str(getattr(getattr(request, "state", object()), "auth_role", "")).upper()
+    if role != "PLATFORM_ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform admin role required")
+    if not _is_platform_admin(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform admin role required")
+    _ = endpoint  # keeps signature explicit for future endpoint-scoped checks.
+    return tenant
 
 
 def _state_trend(learning_momentum: float) -> str:
@@ -212,15 +273,58 @@ def get_axion_brief(
     tenant: Annotated[Tenant, Depends(get_current_tenant)],
     user: Annotated[User, Depends(get_current_user)],
     __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    events: object | None = None,
     context: Annotated[str, Query()] = "child_tab",
+    childId: Annotated[int | None, Query()] = None,
+    correlationId: Annotated[str | None, Query()] = None,
     axionDebug: Annotated[bool, Query()] = False,
 ) -> AxionBriefResponse:
     resolved_context = _resolve_context(context)
     sync_outcome_metrics_for_user(db, user_id=user.id, lookback_days=21)
+    _ = _resolve_tenant_plan(db, tenant_id=tenant.id)
+    resolved_child_id = _resolve_child_for_brief(
+        db,
+        tenant_id=tenant.id,
+        user_id=user.id,
+        child_id=childId,
+    )
     debug_enabled = bool(axionDebug) or _is_platform_admin(user)
-    facts = buildAxionFacts(db, userId=user.id)
+    child_profile = axion_child_profile_snapshot(
+        db,
+        child_id=resolved_child_id,
+        user_id=user.id,
+        tenant_id=tenant.id,
+    )
+    facts_struct = build_axion_facts(db, user_id=user.id)
+    facts = _facts_as_dict(facts_struct)
     state = computeAxionState(userId=user.id, db=db)
-    actions = evaluatePolicies(state=state, context=resolved_context, db=db, user_id=user.id)
+    if hasattr(db, "scalar"):
+        orchestrator = select_next_best_action(
+            db,
+            user_id=user.id,
+            tenant_id=tenant.id,
+            child_id=resolved_child_id,
+            context=AxionDecisionContext(resolved_context),
+            child_profile=child_profile,
+            advanced_personalization_enabled=True,
+            state=state,
+            facts=facts_struct,
+        )
+    else:
+        orchestrator = SimpleNamespace(
+            action_type="OFFER_MICRO_MISSION",
+            cooldown_until=None,
+            as_action=lambda: {"type": "OFFER_MICRO_MISSION", "params": {"durationMinutes": 2}},
+        )
+    actions = [orchestrator.as_action()]
+    mode = resolve_nba_mode(
+        db,
+        tenant_id=tenant.id,
+        child_id=resolved_child_id,
+        user_id=user.id,
+        context=resolved_context,
+        correlation_id=correlationId,
+    )
     matched_rules: list[dict[str, object]] = []
     if debug_enabled:
         _, matched_rules = evaluate_policies(
@@ -259,12 +363,15 @@ def get_axion_brief(
         facts=message_facts,
     )
     message_payload["message"] = enriched_message
-    first_action = actions[0] if actions else {"type": "", "params": {}}
-    action_type = str(first_action.get("type", ""))
-    params = first_action.get("params")
+    first_action = actions[0] if actions else {"type": "OFFER_MICRO_MISSION", "params": {"durationMinutes": 2}}
+    default_action_type = str(first_action.get("type", "")).strip()
+    action_type = default_action_type if bool(mode.enabled) else "control"
+    params = first_action.get("params", {}) if bool(mode.enabled) else {}
     payload = params if isinstance(params, dict) else {}
     due_reviews = int(facts.get("dueReviewsCount", 0))
     cta = _map_primary_cta(action_type, payload, due_reviews=due_reviews)
+    response_action_type = cta.actionType if bool(mode.enabled) else "control"
+    response_correlation_id = str(mode.correlation_id or correlationId or uuid4())
     debug_payload: AxionBriefDebug | None = None
     if debug_enabled:
         enabled_rules = db.scalars(
@@ -314,29 +421,33 @@ def get_axion_brief(
             ],
             templateChosen=int(message_payload.get("templateId")) if message_payload.get("templateId") else None,
         )
-    db.add(
-        AxionDecision(
+    emit = getattr(events, "emit", None)
+    if callable(emit):
+        emit(
+            name="axion_brief_served",
+            decision_id=mode.decision_id,
+            correlation_id=response_correlation_id,
             user_id=user.id,
+            tenant_id=tenant.id,
+            child_id=resolved_child_id,
             context=resolved_context,
-            decisions=actions,
-            primary_message_key=str(message_payload.get("templateId", "")) or None,
-            debug={
-                "source": "axion_brief",
-                "scores": {
-                    "rhythm": round(float(state.rhythm_score), 4),
-                    "frustration": round(float(state.frustration_score), 4),
-                    "confidence": round(float(state.confidence_score), 4),
-                    "dropoutRisk": round(float(state.dropout_risk_score), 4),
-                    "learningMomentum": round(float(state.learning_momentum), 4),
-                },
-                "contextRequested": context,
-                "contextResolved": resolved_context,
-                "selectedCTA": cta.model_dump(),
-            },
+            variant=mode.variant,
+            reason=mode.reason,
+            enabled=bool(mode.enabled),
         )
-    )
     db.commit()
     return AxionBriefResponse(
+        decision_id=str(mode.decision_id or ""),
+        correlation_id=response_correlation_id,
+        tenant_id=int(tenant.id),
+        child_id=int(resolved_child_id or 0),
+        context=resolved_context,
+        experiment_key=mode.experiment_key,
+        variant=mode.variant,
+        nba_enabled_final=bool(mode.enabled),
+        nba_reason=str(mode.reason),
+        actionType=response_action_type,
+        cooldown_until=orchestrator.cooldown_until,
         stateSummary=AxionBriefStateSummary(trend=_state_trend(float(state.learning_momentum))),
         message=str(message_payload.get("message", "")),
         tone=str(message_payload.get("tone", "ENCOURAGE")),

@@ -76,6 +76,17 @@ class AxionBriefDebug(BaseModel):
 
 
 class AxionBriefResponse(BaseModel):
+    decision_id: str = ""
+    correlation_id: str = ""
+    tenant_id: int = 0
+    child_id: int = 0
+    context: str = "child_tab"
+    experiment_key: str | None = None
+    variant: str | None = None
+    nba_enabled_final: bool = False
+    nba_reason: str = "default"
+    actionType: str = "control"
+    cooldown_until: datetime | None = None
     stateSummary: AxionBriefStateSummary
     message: str
     tone: str
