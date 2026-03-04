@@ -11,6 +11,7 @@ import { BottomNav } from "@/components/trail/BottomNav";
 import { DailyMissionsPanel } from "@/components/trail/DailyMissionsPanel";
 import { DomainSection } from "@/components/trail/DomainSection";
 import { HeroMissionCard } from "@/components/trail/HeroMissionCard";
+import ProgressionMap, { type MapNode, type MapSection } from "@/components/trail/ProgressionMap";
 import { SubjectSelector } from "@/components/trail/SubjectSelector";
 import { WeeklyGoalCard } from "@/components/trail/WeeklyGoalCard";
 import {
@@ -170,7 +171,12 @@ function getDomainData(path: LearningPathResponse, areaLabel: SubjectAreaLabel):
   };
 }
 
-export function TrailScreen() {
+type TrailScreenProps = {
+  progressionSections?: MapSection[];
+  progressionActiveNodeId?: string;
+};
+
+export function TrailScreen({ progressionSections, progressionActiveNodeId }: TrailScreenProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -198,6 +204,7 @@ export function TrailScreen() {
   const [missionsLoading, setMissionsLoading] = useState(true);
   const [claimingMissionId, setClaimingMissionId] = useState<string | null>(null);
   const [subjectStreakDays, setSubjectStreakDays] = useState(0);
+  const [selectedNode, setSelectedNode] = useState<MapNode | null>(null);
   const [pathRetryToken, setPathRetryToken] = useState(0);
   const hasLoadedPathRef = useRef(false);
 
@@ -443,6 +450,52 @@ export function TrailScreen() {
     if (insights.dueReviewsCount > 0) return "Mais um passo e você desbloqueia novidades!";
     return "Continue assim!";
   }, [insights, insightsLoading]);
+  const progressionNodes = useMemo(() => progressionSections?.flatMap((section) => section.nodes) ?? [], [progressionSections]);
+  const hasProgressionMap = (progressionSections?.length ?? 0) > 0;
+  const resolvedActiveMapNodeId = useMemo(() => {
+    if (!hasProgressionMap) return undefined;
+    if (progressionActiveNodeId) return progressionActiveNodeId;
+    return progressionNodes.find((node) => node.status === "current")?.id;
+  }, [hasProgressionMap, progressionActiveNodeId, progressionNodes]);
+  const currentMapNode = useMemo(() => {
+    if (progressionNodes.length === 0) return null;
+    if (resolvedActiveMapNodeId) {
+      return progressionNodes.find((node) => node.id === resolvedActiveMapNodeId) ?? progressionNodes[0];
+    }
+    return progressionNodes.find((node) => node.status === "current") ?? progressionNodes[0];
+  }, [progressionNodes, resolvedActiveMapNodeId]);
+  const nodeForHeroMission = selectedNode ?? currentMapNode;
+  const mapHighlightedNodeId = selectedNode?.id ?? resolvedActiveMapNodeId;
+  const weeklyRemaining = Math.max(0, weeklyGoal.target - weeklyGoal.completed);
+
+  useEffect(() => {
+    if (!selectedNode) return;
+    if (progressionNodes.some((node) => node.id === selectedNode.id)) return;
+    setSelectedNode(null);
+  }, [progressionNodes, selectedNode]);
+
+  const handleContinueLearning = () => {
+    if (!resolvedActiveMapNodeId) return;
+    document.getElementById(`map-node-${resolvedActiveMapNodeId}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
+  const handleStartMission = () => {
+    const missionNode = nodeForHeroMission;
+    if (!missionNode || missionNode.status === "locked") return;
+    setSelectedNode(missionNode);
+    if (missionNode.id.startsWith("lesson-")) {
+      const lessonId = Number(missionNode.id.replace("lesson-", ""));
+      if (Number.isFinite(lessonId) && lessonId > 0) {
+        const activeSubjectId = selectedSubjectId ?? path?.subjectId ?? null;
+        if (activeSubjectId && Number.isFinite(activeSubjectId)) {
+          router.push(`/child/aprender/lesson/${lessonId}?subjectId=${activeSubjectId}`);
+          return;
+        }
+        router.push(`/child/aprender/lesson/${lessonId}`);
+        return;
+      }
+    }
+    document.getElementById(`map-node-${missionNode.id}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
 
   const onLessonClick = (lessonId: number, state: TrailNodeType) => {
     if (state === "locked" || state === "future") return;
@@ -504,9 +557,9 @@ export function TrailScreen() {
         </aside>
 
         <div className="mx-auto w-full lg:max-w-[980px] lg:px-5 xl:px-8">
-          <div className="mx-auto h-[calc(100dvh-6rem)] w-full max-w-sm overflow-y-auto pb-4 pt-1 md:max-w-4xl lg:h-auto lg:max-w-3xl lg:overflow-visible lg:pb-12 lg:pt-6">
+          <div className="mx-auto w-full max-w-sm pb-4 pt-1 md:max-w-4xl lg:max-w-3xl lg:pb-12 lg:pt-6">
             <div className="mx-auto w-full max-w-[760px] px-6">
-              <header className="sticky top-0 z-50 space-y-2 bg-[rgba(15,23,42,0.08)] pb-2 [backdrop-filter:blur(2px)] lg:static lg:bg-transparent lg:pb-0">
+              <header className="relative z-50 space-y-2 bg-[rgba(15,23,42,0.08)] pb-2 [backdrop-filter:blur(2px)] lg:bg-transparent lg:pb-0">
                 <div className="motion-safe:animate-[fade-in-up_280ms_ease-out]">
                   <SubjectSelector
                     streak={subjectStreakDays}
@@ -520,18 +573,15 @@ export function TrailScreen() {
                     onSelectSubject={onSelectSubject}
                   />
                 </div>
+                <div className="flex items-center gap-4 text-xs font-medium text-slate-300">
+                  <span className="flex items-center gap-1">
+                    🔥 {weeklyRemaining} missões restantes esta semana
+                  </span>
+                </div>
               </header>
 
               <main className="lg:pt-4">
-                <div className="flex w-full flex-col gap-8">
-                  <div className="w-full motion-safe:animate-[fade-in-up_320ms_ease-out]">
-                    <DailyMissionsPanel
-                      missions={missions}
-                      missionsLoading={missionsLoading}
-                      claimingMissionId={claimingMissionId}
-                      onClaimMission={(missionId) => void onClaimMission(missionId)}
-                    />
-                  </div>
+                <div className="flex w-full flex-col">
                   <div className="w-full motion-safe:animate-[fade-in-up_340ms_ease-out]">
                     <HeroMissionCard
                       subjectName={selectedSubjectName}
@@ -544,10 +594,35 @@ export function TrailScreen() {
                       xpPercent={xpPercent}
                       xpInLevel={xpInLevel}
                       xpToNextLevel={xpToNextLevel}
+                      currentMission={{
+                        title: nodeForHeroMission?.title ?? "Adição no Cotidiano",
+                        xp: nodeForHeroMission?.xp ?? 30,
+                      }}
                       encouragementText={encouragementText}
+                      onContinue={handleContinueLearning}
+                      onStartMission={handleStartMission}
                     />
                   </div>
+                  {hasProgressionMap ? (
+                    <div className="mt-6 w-full motion-safe:animate-[fade-in-up_360ms_ease-out]">
+                      <ProgressionMap
+                        nodes={progressionNodes}
+                        activeNodeId={resolvedActiveMapNodeId}
+                        selectedNodeId={mapHighlightedNodeId}
+                        onNodeClick={(node) => setSelectedNode(node)}
+                        className="mx-auto w-full max-w-[1400px]"
+                      />
+                    </div>
+                  ) : null}
                   <div className="mt-10 w-full motion-safe:animate-[fade-in-up_380ms_ease-out]">
+                    <DailyMissionsPanel
+                      missions={missions}
+                      missionsLoading={missionsLoading}
+                      claimingMissionId={claimingMissionId}
+                      onClaimMission={(missionId) => void onClaimMission(missionId)}
+                    />
+                  </div>
+                  <div className="mt-10 w-full motion-safe:animate-[fade-in-up_320ms_ease-out]">
                     <WeeklyGoalCard completed={weeklyGoal.completed} target={weeklyGoal.target} weekLabel={weeklyGoal.weekLabel} />
                   </div>
                 </div>
@@ -572,7 +647,7 @@ export function TrailScreen() {
                     </button>
                   </div>
                 ) : null}
-                {domainData ? (
+                {!hasProgressionMap && domainData ? (
                   <div className="pt-4">
                     <DomainSection
                       domain={domainData}

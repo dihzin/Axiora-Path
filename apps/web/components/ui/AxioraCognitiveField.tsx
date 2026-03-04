@@ -472,7 +472,7 @@ export default function AxioraCognitiveField() {
       const atmosphericAlpha =
         1 + Math.sin((timeMs / atmosphericCycleMs) * Math.PI * 2 + atmosphericPhase) * ATMOSPHERIC_ALPHA_VARIATION;
       drawBackground(atmosphericAlpha);
-      drawConnections(timeMs, atmosphericAlpha);
+      // Keep the learning map as the only visible path line in APRENDER.
       drawNodes(timeMs, atmosphericAlpha);
     };
 

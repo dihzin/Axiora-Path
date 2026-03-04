@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
-import { LevelUpIcon } from "@/components/ui/icons/LevelUpIcon";
 import { StreakFlameIcon } from "@/components/ui/icons/StreakFlameIcon";
 import { axioraMotionClasses } from "@/theme/motion";
 
@@ -20,7 +19,13 @@ type HeroMissionCardProps = {
   xpPercent: number;
   xpInLevel: number;
   xpToNextLevel: number;
+  currentMission?: {
+    title: string;
+    xp: number;
+  } | null;
   encouragementText?: string;
+  onContinue?: () => void;
+  onStartMission?: () => void;
   className?: string;
 };
 
@@ -32,6 +37,8 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
     xpPercent,
     xpInLevel,
     xpToNextLevel,
+    currentMission,
+    onStartMission,
     className,
   } = props;
   const safeXpPercent = Math.max(0, Math.min(100, Math.round(xpPercent)));
@@ -39,6 +46,9 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
   const safeStreak = Math.max(0, Math.floor(streakDays));
   const safeInLevel = Math.max(0, Math.floor(xpInLevel));
   const safeToNext = Math.max(1, Math.floor(xpToNextLevel));
+  const remainingXp = Math.max(0, safeToNext - safeInLevel);
+  const nextLevel = safeLevel + 1;
+  const missionsToUnlock = Math.max(1, Math.ceil(remainingXp / 30));
   const compactStreak = `${safeStreak}d`;
   const [xpPulse, setXpPulse] = useState(false);
   const [levelGlow, setLevelGlow] = useState(false);
@@ -73,7 +83,7 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
   return (
     <section
       className={cn(
-        `relative z-0 overflow-visible rounded-[26px] border border-[rgba(255,255,255,0.35)] bg-[rgba(248,250,255,0.92)] px-6 py-12 shadow-[0_10px_24px_rgba(26,38,60,0.08),0_2px_6px_rgba(26,38,60,0.05)] backdrop-blur-[6px] transition-[transform,box-shadow] duration-300 ease-out will-change-transform hover:-translate-y-[2px] hover:shadow-[0_12px_28px_rgba(26,38,60,0.10),0_3px_8px_rgba(26,38,60,0.06)] before:pointer-events-none before:absolute before:inset-[-60px] before:-z-10 before:bg-[radial-gradient(circle_at_20%_20%,rgba(79,126,219,0.18),transparent_60%)] before:blur-[24px] before:content-[''] sm:px-7 sm:py-12 ${axioraMotionClasses.transition}`,
+        `relative z-0 overflow-visible rounded-[26px] border border-[rgba(255,255,255,0.35)] bg-[rgba(248,250,255,0.92)] px-7 py-[3.25rem] shadow-[0_10px_24px_rgba(26,38,60,0.08),0_2px_6px_rgba(26,38,60,0.05)] backdrop-blur-[6px] transition-[transform,box-shadow] duration-300 ease-out will-change-transform hover:-translate-y-[2px] hover:shadow-[0_12px_28px_rgba(26,38,60,0.10),0_3px_8px_rgba(26,38,60,0.06)] before:pointer-events-none before:absolute before:inset-[-60px] before:-z-10 before:bg-[radial-gradient(circle_at_20%_20%,rgba(79,126,219,0.18),transparent_60%)] before:blur-[24px] before:content-[''] sm:px-8 sm:py-14 ${axioraMotionClasses.transition}`,
         levelGlow ? "hero-level-glow" : "",
         className,
       )}
@@ -105,10 +115,12 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
           <div className="mb-4 flex items-start justify-between gap-4">
             <div className="max-w-[76%]">
               <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#52698E]/82">Trilha ativa</p>
-              <h2 className="mt-1.5 ml-0.5 max-w-[94%] text-[32px] font-bold leading-[0.94] tracking-[-0.02em] text-[#18263A] [text-shadow:0_2px_8px_rgba(0,0,0,0.08)]">{subjectName}</h2>
-              <p className="mt-2 inline-flex items-center gap-1.5 text-lg font-semibold leading-tight text-[#2A3C56]/80">
-                <LevelUpIcon className="h-5 w-5" />
-                Nível {safeLevel}
+              <h2 className="mt-1.5 ml-0.5 max-w-[94%] text-[34px] font-bold leading-[0.94] tracking-[-0.02em] text-slate-900 [text-shadow:0_2px_8px_rgba(0,0,0,0.08)]">{subjectName}</h2>
+              <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[#52698E]/82">
+                Progresso atual
+              </p>
+              <p className="mt-1 text-[15px] font-medium text-slate-600">
+                Nível {safeLevel} · Explorador Analítico
               </p>
             </div>
             <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-[22px] border border-[#D3DEEC] bg-[linear-gradient(160deg,#F3F6FB_0%,#E6ECF5_100%)] shadow-[0_7px_16px_rgba(34,46,68,0.12)]">
@@ -131,15 +143,51 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
             <span className="text-xs font-bold text-transparent">.</span>
             <span className="text-xs font-semibold text-[#2B3F5E]/78">{safeXpPercent}%</span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full border border-[#CBD8E8] bg-[linear-gradient(180deg,#E4EBF5_0%,#DEE7F2_100%)] shadow-[inset_0_1px_3px_rgba(41,58,86,0.12)]">
+          <div className="relative h-2 w-full overflow-hidden rounded-full border border-[#CBD8E8] bg-[linear-gradient(180deg,#E4EBF5_0%,#DEE7F2_100%)] shadow-[inset_0_1px_3px_rgba(41,58,86,0.12)]">
+            <div aria-hidden className="pointer-events-none absolute inset-0 z-10">
+              <span className="absolute left-1/4 top-0 h-full w-px bg-[#1F3552]/20" />
+              <span className="absolute left-1/2 top-0 h-full w-px bg-[#1F3552]/20" />
+              <span className="absolute left-3/4 top-0 h-full w-px bg-[#1F3552]/20" />
+            </div>
             <div
-              className="h-full rounded-full bg-[linear-gradient(90deg,#4F7EDB_0%,#5C8FF5_50%,#3A6ED1_100%)] shadow-[0_0_10px_rgba(79,126,219,0.35)] transition-transform transition-shadow transition-opacity duration-[400ms] ease-out"
+              className="relative z-0 h-full rounded-full bg-[linear-gradient(90deg,#4F7EDB_0%,#5C8FF5_50%,#3A6ED1_100%)] shadow-[0_0_10px_rgba(79,126,219,0.35)] transition-transform transition-shadow transition-opacity duration-[400ms] ease-out"
               style={{ width: `${safeXpPercent}%` }}
             />
           </div>
-          <p className="mt-2.5 text-sm font-medium text-[#435876]/80">
-            {safeInLevel} / {safeToNext} XP para subir
+          <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.08em] text-[#52698E]/82">
+            Próximo marco
           </p>
+          <p className="mt-1 text-sm font-medium text-[#405878]/78">
+            Nível {nextLevel} · Estruturas Numéricas
+          </p>
+          <p className="mt-2.5 text-sm font-medium text-[#435876]/86">
+            Faltam {remainingXp} XP
+          </p>
+          <p className="mt-0.5 text-xs font-medium text-[#567296]/75">
+            ≈ {missionsToUnlock} missões para desbloquear
+          </p>
+          <div className="mt-6 border-t border-slate-200/60 pt-5">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Missão atual
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-slate-800">
+                  {currentMission?.title ?? "Missão indisponível"}
+                </div>
+                <div className="text-xs text-slate-500">
+                  +{currentMission?.xp ?? 0} XP
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onStartMission}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                Iniciar missão
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
