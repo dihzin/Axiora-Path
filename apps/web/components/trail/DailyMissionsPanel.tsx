@@ -17,7 +17,7 @@ export function DailyMissionsPanel({ missions, missionsLoading, claimingMissionI
   const dailyMissions = useMemo(() => missions?.missions ?? [], [missions]);
 
   return (
-    <section className="rounded-2xl border border-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.88)] px-5 py-1 backdrop-blur-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.04)]">
+    <section className="rounded-2xl border border-white/10 bg-[rgba(15,23,42,0.85)] bg-gradient-to-b from-white/10 to-white/5 p-4 backdrop-blur-xl shadow-[0_0_30px_rgba(56,189,248,0.1)] transition-all duration-500 hover:shadow-[0_0_30px_rgba(56,189,248,0.25)]">
       <button
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
@@ -26,8 +26,8 @@ export function DailyMissionsPanel({ missions, missionsLoading, claimingMissionI
         aria-controls="daily-missions-content"
       >
         <div className="flex min-w-0 flex-col justify-center">
-          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#536F91]">Missões do dia</p>
-          <p className="truncate text-[18px] font-black leading-none tracking-[-0.01em] text-[#1B3E67]">Pronto para avançar?</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-white">Missões do dia</p>
+          <p className="truncate text-[18px] font-semibold leading-none tracking-[-0.01em] text-white">Pronto para avançar?</p>
         </div>
         <span
           className={`inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#D2DCEB] bg-[#F5F8FC] text-[#2F75B7] transition-transform ${
@@ -45,13 +45,13 @@ export function DailyMissionsPanel({ missions, missionsLoading, claimingMissionI
       >
         <div className="overflow-hidden">
           {dailyMissions.length > 0 ? (
-            <div className="divide-y divide-[rgba(0,0,0,0.05)] pb-1">
+            <div className="divide-y divide-white/10 pb-1">
               {dailyMissions.map((mission) => (
                 <MissionLine key={mission.missionId} mission={mission} />
               ))}
             </div>
           ) : (
-            <p className="rounded-xl border border-[#D1DFEE] bg-[#F9FCFF] px-3 py-1.5 text-sm font-semibold text-[#4E6F95]">
+            <p className="rounded-xl border border-white/20 bg-[rgba(15,23,42,0.65)] px-3 py-1.5 text-sm font-semibold text-white">
               {missionsLoading ? "Carregando missões..." : "Sem missões disponíveis no momento."}
             </p>
           )}
@@ -69,9 +69,9 @@ function MissionLine({ mission }: { mission: MissionProgress }) {
   return (
     <div className="flex items-center justify-between gap-3 px-1 py-1.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="truncate text-[13px] font-semibold text-[#23486F]/90">{mission.title}</p>
+        <p className="truncate text-[13px] font-semibold text-white">{mission.title}</p>
       </div>
-      <p className={`text-[12px] font-bold ${done ? "text-[#2B9A7D]" : "text-[#587BA2]"}`}>
+      <p className={`text-[12px] font-bold ${done ? "text-white" : "text-white"}`}>
         {safeValue}/{safeTotal}
       </p>
     </div>

@@ -976,6 +976,43 @@ h2 {
   opacity: 0.7;
 }
 
+.parallax-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.layer-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(56, 189, 248, 0.12), transparent 60%),
+    radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.12), transparent 60%);
+  filter: blur(80px);
+  z-index: 0;
+}
+
+.layer-stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 10% 20%, white, transparent),
+    radial-gradient(2px 2px at 30% 70%, white, transparent),
+    radial-gradient(2px 2px at 80% 40%, white, transparent),
+    radial-gradient(2px 2px at 60% 90%, white, transparent);
+  opacity: 0.6;
+  z-index: 1;
+}
+
+.axiora-parallax::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(14, 165, 233, 0.08), transparent 70%);
+  pointer-events: none;
+}
+
 @keyframes driftSlow {
   0% {
     transform: translateY(0px);

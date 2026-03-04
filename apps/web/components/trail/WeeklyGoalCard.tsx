@@ -20,15 +20,17 @@ export function WeeklyGoalCard({ completed, target, weekLabel, className }: Week
   return (
     <section
       className={cn(
-        "axiora-hover-magic relative overflow-hidden rounded-[25px] border border-[rgba(255,255,255,0.25)] bg-[rgba(255,255,255,0.85)] px-4 py-2 shadow-[0_4px_10px_rgba(15,23,42,0.04)]",
+        "axiora-hover-magic relative overflow-hidden rounded-2xl border border-white/10 bg-[rgba(15,23,42,0.85)] bg-gradient-to-b from-white/10 to-white/5 p-4 backdrop-blur-xl shadow-[0_0_30px_rgba(56,189,248,0.1)] transition-all duration-500 hover:shadow-[0_0_30px_rgba(56,189,248,0.25)]",
         className,
       )}
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-[#4A6385]">Meta da semana</p>
-          <p className="mt-1 text-[21px] font-semibold leading-tight text-[#243956]">{statusText}</p>
-          <p className="mt-1 text-[13px] font-medium text-[#526A8A]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-white">Meta da semana</p>
+          <p className="mt-1 text-[21px] font-semibold leading-tight text-white">{
+            statusText
+          }</p>
+          <p className="mt-1 text-[13px] font-medium text-white/80">
             Você já concluiu {safeCompleted} de {safeTarget}.
           </p>
         </div>
@@ -38,7 +40,7 @@ export function WeeklyGoalCard({ completed, target, weekLabel, className }: Week
       </div>
 
       <div className="mt-2.5">
-        <div className="mb-1.5 flex items-center justify-between text-[12px] font-semibold text-[#415B7C]">
+        <div className="mb-1.5 flex items-center justify-between text-[12px] font-semibold text-white">
           <span>Progresso da semana</span>
           <span className="rounded-full bg-[#DFE6F1] px-2 py-0.5 text-[11px] text-[#2B2F42]">{percent}%</span>
         </div>

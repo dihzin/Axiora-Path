@@ -538,7 +538,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   };
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-transparent">
+    <div className="relative overflow-hidden min-h-screen bg-transparent">
       <div className="w-full lg:pl-[208px]">
         <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/5 lg:border-t-white/5 lg:bg-[linear-gradient(180deg,#0F172A_0%,#0D1626_100%)] lg:px-3 lg:py-5">
           <div className="mb-0.5 flex justify-center">
@@ -557,8 +557,8 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
         </aside>
 
         <div className="mx-auto w-full lg:max-w-[980px] lg:px-5 xl:px-8">
-          <div className="mx-auto w-full max-w-sm pb-4 pt-1 md:max-w-4xl lg:max-w-3xl lg:pb-12 lg:pt-6">
-            <div className="mx-auto w-full max-w-[760px] px-6">
+          <div className="mx-auto w-full max-w-sm pb-24 pt-1 md:max-w-4xl md:pb-8 lg:max-w-3xl lg:pb-12 lg:pt-6">
+            <div className="mx-auto w-full max-w-[760px] px-4 sm:px-6">
               <header className="relative z-50 space-y-2 bg-[rgba(15,23,42,0.08)] pb-2 [backdrop-filter:blur(2px)] lg:bg-transparent lg:pb-0">
                 <div className="motion-safe:animate-[fade-in-up_280ms_ease-out]">
                   <SubjectSelector
@@ -604,7 +604,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
                     />
                   </div>
                   {hasProgressionMap ? (
-                    <div className="mt-6 w-full motion-safe:animate-[fade-in-up_360ms_ease-out]">
+                    <div className="mt-4 w-full motion-safe:animate-[fade-in-up_360ms_ease-out]">
                       <ProgressionMap
                         nodes={progressionNodes}
                         activeNodeId={resolvedActiveMapNodeId}
