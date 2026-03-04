@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Lock, Star } from "lucide-react";
 
 import { useParallax } from "@/hooks/useParallax";
@@ -98,9 +98,11 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, pointY, onCl
           isCurrent ? "animate-[pulse_3s_ease-in-out_infinite]" : "",
           "hover:scale-110 hover:shadow-[0_0_12px_rgba(56,189,248,0.4)]",
         )}
+        style={{ transition: "all 0.4s ease" }}
         aria-current={isActive ? "step" : undefined}
         aria-label={node.title}
       >
+        {isCurrent ? <span aria-hidden className="pointer-events-none absolute inset-[-12px] rounded-full border-2 border-sky-400/40 animate-[pulse_2.6s_ease-out_infinite]" /> : null}
         {isDone ? <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_26px_rgba(16,185,129,0.55)]" /> : null}
         {isCurrent ? <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_30px_rgba(56,189,248,0.58)]" /> : null}
         {isCurrent && (
@@ -135,9 +137,10 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, pointY, onCl
           backdropFilter: "blur(6px)",
           WebkitBackdropFilter: "blur(6px)",
           filter: "url(#badgeGlow)",
+          transition: "all 0.4s ease",
         }}
       >
-        {node.title}
+        <span className="font-medium text-[#e2e8f0]">{node.title}</span>
       </div>
     </div>
   );
@@ -257,6 +260,16 @@ export default function ProgressionMap({
     y: point.y,
     delay: index * 0.4,
   }));
+  const stars = useMemo(
+    () =>
+      Array.from({ length: 30 }).map((_, index) => ({
+        id: `star-${index}`,
+        x: Math.random() * trackWidth,
+        y: Math.random() * mapHeight,
+        opacity: 0.1 + Math.random() * 0.2,
+      })),
+    [trackWidth, mapHeight],
+  );
 
   const showDebugOverlay = debug && process.env.NODE_ENV !== "production";
   // TODO: V2: trocar connectors verticais por SVG path curvo.
@@ -288,6 +301,19 @@ export default function ProgressionMap({
             aria-hidden
           >
             <defs>
+              <radialGradient id="nebulaGradient" cx="50%" cy="40%" r="70%">
+                <stop offset="0%" stopColor="#1d4ed8" stopOpacity="0.35" />
+                <stop offset="60%" stopColor="#0ea5e9" stopOpacity="0.18" />
+                <stop offset="100%" stopColor="#020617" stopOpacity="0" />
+              </radialGradient>
+              <linearGradient id="trailEnergy" x1="0%" y1="0%" x2="100%" y2="0%" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#60a5fa" />
+                <stop offset="50%" stopColor="#38bdf8" />
+                <stop offset="100%" stopColor="#6366f1" />
+              </linearGradient>
+              <filter id="routeGlow">
+                <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#38bdf8" floodOpacity="0.8" />
+              </filter>
               <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#38bdf8" />
                 <stop offset="100%" stopColor="#6366f1" />
@@ -296,15 +322,28 @@ export default function ProgressionMap({
                 <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#38bdf8" floodOpacity="0.7" />
               </filter>
             </defs>
-            <path d={curvedPath} stroke={isMobile ? "rgba(255,255,255,0.26)" : "rgba(255,255,255,0.16)"} strokeWidth={isMobile ? 6 : 3} fill="none" strokeLinecap="round" />
+            <rect x={0} y={0} width={trackWidth} height={mapHeight} fill="url(#nebulaGradient)" />
+            {stars.map((star) => (
+              <circle key={star.id} cx={star.x} cy={star.y} r={1} fill="white" opacity={star.opacity} />
+            ))}
+            <path
+              d={curvedPath}
+              stroke={isMobile ? "rgba(255,255,255,0.26)" : "rgba(255,255,255,0.16)"}
+              strokeWidth={isMobile ? 6 : 3}
+              fill="none"
+              strokeLinecap="round"
+              filter="url(#routeGlow)"
+              style={{ transition: "all 0.4s ease" }}
+            />
             {progressPath ? (
               <path
                 d={progressPath}
-                stroke="url(#progressGradient)"
+                stroke="url(#trailEnergy)"
                 strokeWidth={isMobile ? 7 : 4}
                 fill="none"
                 strokeLinecap="round"
-                style={{ filter: "drop-shadow(0 0 22px rgba(56,189,248,0.8))" }}
+                filter="url(#routeGlow)"
+                style={{ filter: "drop-shadow(0 0 22px rgba(56,189,248,0.8))", transition: "all 0.4s ease" }}
               />
             ) : null}
           </svg>
