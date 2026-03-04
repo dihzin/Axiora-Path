@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Lock, Star } from "lucide-react";
 
 import { useParallax } from "@/hooks/useParallax";
@@ -33,41 +33,13 @@ type ProgressionMapProps = {
   className?: string;
 };
 
-const NODE_GAP = 70;
-const NODE_GAP_MOBILE = 100;
-const TOP_PAD = 40;
-const BOTTOM_LABEL_PAD = 0;
-const TRACK_WIDTH = 760;
+const NODE_GAP = 120;
+const START_Y = 160;
 const NODE_SIZE = 48;
 const NODE_RADIUS = NODE_SIZE / 2;
-
-function getTrackWidth(viewportWidth: number) {
-  if (viewportWidth < 480) return Math.max(320, viewportWidth - 28);
-  if (viewportWidth < 768) return 500;
-  if (viewportWidth < 1024) return 680;
-  return TRACK_WIDTH;
-}
-
-function getNodeX(index: number, viewportWidth: number) {
-  if (viewportWidth < 480) {
-    const mobilePattern = [0, 130, -130, 100, -100, 74, -74, 50, -50];
-    return mobilePattern[index % mobilePattern.length] ?? 0;
-  }
-  const pattern = [0, 260, -260, 190, -190, 135, -135, 92, -92];
-  return pattern[index % pattern.length] ?? 0;
-}
-
-function getOffsetScale(viewportWidth: number) {
-  if (viewportWidth < 480) return 0.82;
-  if (viewportWidth < 768) return 0.8;
-  if (viewportWidth < 1024) return 0.82;
-  return 1;
-}
-
-function clampNodeOffset(offset: number, viewportWidth: number) {
-  const maxOffset = Math.max(84, viewportWidth / 2 - 72);
-  return Math.max(-maxOffset, Math.min(maxOffset, offset));
-}
+const SAFE_TOP = 70;
+const SAFE_BOTTOM = 120;
+const SAFE_MARGIN = 90;
 
 type CurvedPathPoint = {
   x: number;
@@ -87,8 +59,8 @@ type MapNodeItemProps = {
   node: MapNode;
   isActive: boolean;
   displayIndex: number;
-  labelPosition: "left" | "center" | "right";
   compactMobile: boolean;
+  pointY: number;
   onClick?: () => void;
 };
 
@@ -98,17 +70,12 @@ const statusLabel: Record<NodeStatus, string> = {
   locked: "Bloqueada",
 };
 
-function MapNodeItem({ node, isActive, displayIndex, labelPosition, compactMobile, onClick }: MapNodeItemProps) {
+function MapNodeItem({ node, isActive, displayIndex, compactMobile, pointY, onClick }: MapNodeItemProps) {
   const isCurrent = node.status === "current";
   const isLocked = node.status === "locked";
   const isDone = node.status === "done";
-  const labelPlacementClass = compactMobile
-    ? labelPosition === "right"
-      ? "left-auto right-0 translate-x-0"
-      : labelPosition === "left"
-        ? "left-0 -translate-x-0"
-        : "left-1/2 -translate-x-1/2"
-    : "left-1/2 -translate-x-1/2";
+  const badgeWidth = Math.max(140, node.title.length * 7);
+  const badgeOffsetY = pointY < 120 ? 36 : -42;
 
   return (
     <div className="group relative">
@@ -157,15 +124,21 @@ function MapNodeItem({ node, isActive, displayIndex, labelPosition, compactMobil
           </span>
         ) : null}
       </button>
-      <p
+      <div
         className={cn(
-          "pointer-events-none absolute bottom-[calc(100%+0.5rem)] w-max rounded-md bg-slate-950/45 px-1.5 py-0.5 text-center font-semibold tracking-tight text-white drop-shadow-[0_0_6px_rgba(56,189,248,0.6)] backdrop-blur-[1px]",
-          compactMobile ? "max-w-[104px] text-[10px] leading-snug" : "max-w-[160px] text-[12px] leading-tight",
-          labelPlacementClass,
+          "pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 rounded-[14px] border border-sky-300/50 bg-slate-900/65 text-center text-slate-200 shadow-[0_0_22px_rgba(56,189,248,0.45)]",
+          compactMobile ? "px-2 py-1 text-[10px] leading-snug" : "px-3 py-1.5 text-[12px] leading-tight",
         )}
+        style={{
+          width: `${badgeWidth}px`,
+          top: `${badgeOffsetY}px`,
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
+          filter: "url(#badgeGlow)",
+        }}
       >
         {node.title}
-      </p>
+      </div>
     </div>
   );
 }
@@ -198,7 +171,6 @@ function renderNode(
 ) {
   const isActive = highlightedNodeId === node.id;
   const nodeX = point.x - trackCenter;
-  const labelPosition: "left" | "center" | "right" = nodeX > 64 ? "right" : nodeX < -64 ? "left" : "center";
 
   return (
     <div
@@ -215,8 +187,8 @@ function renderNode(
           node={node}
           isActive={isActive}
           displayIndex={nodeIndex + 1}
-          labelPosition={labelPosition}
           compactMobile={compactMobile}
+          pointY={point.y}
           onClick={() => onNodeClick?.(node)}
         />
       </div>
@@ -234,28 +206,41 @@ export default function ProgressionMap({
 }: ProgressionMapProps) {
   useParallax();
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
   const totalNodes = nodes.length;
-  const [offsetScale, setOffsetScale] = useState(1);
-  const [viewportWidth, setViewportWidth] = useState(1200);
+
   useEffect(() => {
-    const applyScale = () => {
-      const width = window.innerWidth;
-      setViewportWidth(width);
-      setOffsetScale(getOffsetScale(width));
+    const updateSize = () => {
+      if (containerRef.current) {
+        setWidth(containerRef.current.clientWidth);
+      }
     };
-    applyScale();
-    window.addEventListener("resize", applyScale);
-    return () => window.removeEventListener("resize", applyScale);
+
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
   }, []);
-  const trackWidth = useMemo(() => getTrackWidth(viewportWidth), [viewportWidth]);
+
+  const trackWidth = Math.max(320, width);
   const trackCenter = trackWidth / 2;
-  const isMobile = viewportWidth < 768;
-  const compactMobile = viewportWidth < 480;
-  const nodeGap = isMobile ? NODE_GAP_MOBILE : NODE_GAP;
-  const points = nodes.map((_, gi) => ({
-    x: trackCenter + clampNodeOffset(Math.round(getNodeX(gi, viewportWidth) * offsetScale), viewportWidth),
-    y: TOP_PAD + gi * nodeGap + NODE_RADIUS,
-  }));
+  const isMobile = trackWidth < 768;
+  const compactMobile = trackWidth < 480;
+  const amplitude = Math.min(160, trackWidth * 0.28);
+  const pattern = [-1, 1, -0.6, 0.8, -0.4, 0.6];
+  const mapHeight = Math.max(520, START_Y + Math.max(totalNodes - 1, 0) * NODE_GAP + SAFE_BOTTOM + NODE_RADIUS);
+
+  const points = nodes.map((_, gi) => {
+    let x = trackCenter + pattern[gi % pattern.length] * amplitude;
+    x = Math.max(SAFE_MARGIN, x);
+    x = Math.min(trackWidth - SAFE_MARGIN, x);
+
+    let y = START_Y + gi * NODE_GAP;
+    y = Math.max(SAFE_TOP, y);
+    y = Math.min(mapHeight - SAFE_BOTTOM, y);
+
+    return { x, y };
+  });
   const activeIndex = (() => {
     if (!nodes.length) return -1;
     if (activeNodeId) {
@@ -272,16 +257,7 @@ export default function ProgressionMap({
     y: point.y,
     delay: index * 0.4,
   }));
-  const mapHeight = TOP_PAD * 2 + (Math.max(totalNodes, 1) - 1) * nodeGap + BOTTOM_LABEL_PAD;
-  const maxOffsetX = useMemo(
-    () =>
-      nodes.reduce(
-        (acc, _, gi) =>
-          Math.max(acc, Math.abs(clampNodeOffset(Math.round(getNodeX(gi, viewportWidth) * offsetScale), viewportWidth))),
-        0,
-      ),
-    [nodes, offsetScale, viewportWidth],
-  );
+
   const showDebugOverlay = debug && process.env.NODE_ENV !== "production";
   // TODO: V2: trocar connectors verticais por SVG path curvo.
   void buildCurvedPathPoints([]);
@@ -292,7 +268,7 @@ export default function ProgressionMap({
   }, [activeNodeId]);
 
   return (
-    <div className={cn("axiora-parallax relative w-full overflow-hidden pb-2 pt-10", className)} style={{ maxHeight: "none" }}>
+    <div ref={containerRef} className={cn("axiora-parallax relative w-full overflow-hidden pb-2 pt-10", className)} style={{ maxHeight: "none" }}>
       <div className="parallax-layer layer-bg" data-depth="0.2" />
       <div className="parallax-layer layer-stars" data-depth="0.5" />
 
@@ -308,6 +284,7 @@ export default function ProgressionMap({
             height={mapHeight}
             viewBox={`0 0 ${trackWidth} ${mapHeight}`}
             preserveAspectRatio="xMidYMin meet"
+            style={{ overflow: "visible" }}
             aria-hidden
           >
             <defs>
@@ -315,6 +292,9 @@ export default function ProgressionMap({
                 <stop offset="0%" stopColor="#38bdf8" />
                 <stop offset="100%" stopColor="#6366f1" />
               </linearGradient>
+              <filter id="badgeGlow">
+                <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#38bdf8" floodOpacity="0.7" />
+              </filter>
             </defs>
             <path d={curvedPath} stroke={isMobile ? "rgba(255,255,255,0.26)" : "rgba(255,255,255,0.16)"} strokeWidth={isMobile ? 6 : 3} fill="none" strokeLinecap="round" />
             {progressPath ? (
@@ -356,8 +336,8 @@ export default function ProgressionMap({
         <div className="pointer-events-none absolute right-2 top-2 z-40 rounded-lg border border-amber-300/35 bg-amber-50/90 px-3 py-2 text-[11px] leading-tight text-amber-900 shadow-sm">
           <p>mapHeight: {mapHeight}</p>
           <p>NODE_GAP: {NODE_GAP}</p>
-          <p>offsetScale: {offsetScale.toFixed(2)}</p>
-          <p>maxOffsetX: {maxOffsetX}</p>
+          <p>width: {trackWidth.toFixed(0)}</p>
+          <p>amplitude: {amplitude.toFixed(1)}</p>
         </div>
       ) : null}
     </div>
