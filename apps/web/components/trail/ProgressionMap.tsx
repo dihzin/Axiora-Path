@@ -30,6 +30,7 @@ type ProgressionMapProps = {
   selectedNodeId?: string;
   onNodeClick?: (node: MapNode) => void;
   debug?: boolean;
+  viewportHeight?: number;
   className?: string;
 };
 
@@ -53,27 +54,6 @@ type PhysicsParticle = {
   vx: number;
   vy: number;
   size: number;
-};
-
-type CameraDebugData = {
-  viewW: number;
-  viewH: number;
-  rectH: number;
-  effectiveH: number;
-  bottomSafeAreaPx: number;
-  worldW: number;
-  worldH: number;
-  scale: number;
-  tx: number;
-  ty: number;
-  targetX: number;
-  targetY: number;
-  allowClampX: boolean;
-  allowClampY: boolean;
-  currentNodeX: number;
-  currentNodeY: number;
-  currentScreenX: number;
-  currentScreenY: number;
 };
 
 type PersistedMapData = {
@@ -101,10 +81,8 @@ const EMPTY_MAP_DATA: PersistedMapData = {
 const MAX_PARTICLES = 50;
 const SAFE_PAD = { top: 90, right: 110, bottom: 130, left: 110 };
 const BADGE_ALLOW = 52;
-const WORLD_PADDING_BOTTOM = 120;
-const MIN_SCALE = 0.82;
-const MAX_SCALE = 1.22;
-const COMPOSE_Y = 0.46;
+const WORLD_END_PADDING = 220;
+const VIEWPORT_HEIGHT = 640;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -247,6 +225,7 @@ function renderNode(
     <div
       key={node.id}
       id={`map-node-${node.id}`}
+      data-progression-node="true"
       className="absolute z-20"
       style={{
         left: point.x,
@@ -274,75 +253,39 @@ export default function ProgressionMap({
   selectedNodeId,
   onNodeClick,
   debug = false,
+  viewportHeight = VIEWPORT_HEIGHT,
   className,
 }: ProgressionMapProps) {
   useParallax();
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  const cameraRootRef = useRef<HTMLDivElement>(null);
-  const cameraStateRef = useRef({ x: 0, y: 0, s: 1 });
-  const cameraTargetRef = useRef({ x: 0, y: 0, s: 1 });
-  const mouseRef = useRef({ x: 0, y: 0 });
-  const [view, setView] = useState({ w: 0, h: 0 });
-  const [width, setWidth] = useState(0);
-  const [mounted, setMounted] = useState(false);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const worldRef = useRef<HTMLDivElement>(null);
+  const [viewportW, setViewportW] = useState(1024);
+  const [viewportHeightPx, setViewportHeightPx] = useState(viewportHeight);
+  const [cameraY, setCameraY] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [physicsParticles, setPhysicsParticles] = useState<PhysicsParticle[]>([]);
-  const [cameraDebug, setCameraDebug] = useState<CameraDebugData | null>(null);
-  const [bottomSafeAreaPx, setBottomSafeAreaPx] = useState(180);
-  const [viewportRectH, setViewportRectH] = useState(0);
-  const [lastMeasuredRect, setLastMeasuredRect] = useState({ width: 0, height: 0 });
-  const [lastComputedEffective, setLastComputedEffective] = useState({ w: 0, h: 0 });
   const pointsRef = useRef<PersistedMapData | null>(null);
-  const totalNodes = nodes.length;
+  const mapFinalAuditLoggedRef = useRef(false);
+  const cameraRangeLoggedRef = useRef(false);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    const element = viewportRef.current;
-    if (!element) return;
-    let raf = 0;
-    let retryCount = 0;
-
-    const updateSize = () => {
-      const rect = element.getBoundingClientRect();
-      setLastMeasuredRect({ width: rect.width, height: rect.height });
-      const missionsCard = document.getElementById("daily-missions-content");
-      const measuredSafeArea =
-        missionsCard && Number.isFinite(missionsCard.getBoundingClientRect().height) && missionsCard.getBoundingClientRect().height > 0
-          ? Math.round(missionsCard.getBoundingClientRect().height + 24)
-          : 180;
-      const fallbackW = Math.max(1, window.innerWidth);
-      const fallbackH = Math.max(1, window.innerHeight);
-      const rawW = rect.width === 0 ? fallbackW : rect.width || element.offsetWidth || fallbackW;
-      const rawH = rect.height === 0 ? fallbackH : rect.height || element.offsetHeight || fallbackH;
-      const effectiveH = Math.max(320, rawH - measuredSafeArea);
-
-      setBottomSafeAreaPx(measuredSafeArea);
-      setViewportRectH(rawH);
-      setWidth(rawW);
-      setLastComputedEffective({ w: rawW, h: effectiveH });
-      setView({ w: rawW, h: effectiveH });
-
-      if ((rect.width === 0 || rect.height === 0) && retryCount < 8) {
-        retryCount += 1;
-        raf = window.requestAnimationFrame(updateSize);
-      }
+    if (typeof window === "undefined") return;
+    const updateViewportSize = () => {
+      setViewportW(Math.max(320, Math.floor(window.innerWidth * 0.92)));
+      const nextH = viewportRef.current?.clientHeight ?? viewportHeight;
+      setViewportHeightPx(Math.max(1, nextH));
     };
-
-    updateSize();
-    const observer = new ResizeObserver(updateSize);
-    observer.observe(element);
+    updateViewportSize();
+    window.addEventListener("resize", updateViewportSize);
     return () => {
-      observer.disconnect();
-      if (raf) window.cancelAnimationFrame(raf);
+      window.removeEventListener("resize", updateViewportSize);
     };
-  }, []);
+  }, [viewportHeight]);
 
-  const trackWidth = Math.max(320, width);
+  const view = { w: viewportW, h: viewportHeightPx };
+  const trackWidth = Math.max(320, viewportW);
   const trackCenter = trackWidth / 2;
   const isMobile = trackWidth < 768;
   const compactMobile = trackWidth < 480;
@@ -393,7 +336,13 @@ export default function ProgressionMap({
     const trailWidth = trailMaxX - trailMinX;
     const worldCenterOffsetX = (worldWidth - trailWidth) / 2 - trailMinX;
     const points = rawPoints.map((point) => ({ x: point.x + offsetX + worldCenterOffsetX, y: point.y + offsetY }));
-    const worldHeight = Math.max(1, maxY - minY + WORLD_PADDING_BOTTOM);
+    const minPointX = Math.min(...points.map((point) => point.x));
+    const minPointY = Math.min(...points.map((point) => point.y));
+    const normalizedPoints = points.map((point) => ({
+      x: point.x - minPointX,
+      y: point.y - minPointY,
+    }));
+    const worldHeight = Math.max(1, maxY - minY + WORLD_END_PADDING);
     const activeIndex = (() => {
       if (!nodes.length) return -1;
       if (activeNodeId) {
@@ -403,9 +352,9 @@ export default function ProgressionMap({
       const byStatus = nodes.findIndex((node) => node.status === "current");
       return byStatus >= 0 ? byStatus : 0;
     })();
-    const curvedPath = buildPath(points);
-    const progressPath = buildProgressPath(points, activeIndex);
-    const routeParticles = points.slice(0, Math.max(activeIndex + 1, 0)).map((point, index) => ({
+    const curvedPath = buildPath(normalizedPoints);
+    const progressPath = buildProgressPath(normalizedPoints, activeIndex);
+    const routeParticles = normalizedPoints.slice(0, Math.max(activeIndex + 1, 0)).map((point, index) => ({
       x: point.x,
       y: point.y,
       delay: index * 0.4,
@@ -413,7 +362,7 @@ export default function ProgressionMap({
 
     return {
       nodes,
-      points,
+      points: normalizedPoints,
       worldWidth,
       worldHeight,
       activeIndex,
@@ -467,128 +416,23 @@ export default function ProgressionMap({
     setPhysicsParticles(newParticles);
   }, [trackWidth, worldHeight, reducedMotion]);
 
-  useEffect(() => {
-    if (!view || view.w === 0 || view.h === 0) return;
-    if (!points.length || view.w <= 0 || view.h <= 0) return;
-    if (!Number.isFinite(worldWidth) || !Number.isFinite(worldHeight) || worldWidth <= 0 || worldHeight <= 0) return;
-
-    const targetIndex = renderNodes.findIndex((node) => node.status === "current");
-    if (!points.length) return;
-
-    const worldW = worldWidth;
-    const worldH = worldHeight;
-    let scaleFit = Math.min(view.w / worldW, view.h / worldH);
-    scaleFit = clamp(scaleFit, MIN_SCALE, MAX_SCALE);
-    if (targetIndex >= 0) scaleFit *= 1.03;
-    if (renderNodes.every((node) => node.status === "locked")) scaleFit *= 0.98;
-    const scale = clamp(scaleFit, MIN_SCALE, MAX_SCALE);
-
-    const minX = Math.min(...points.map((point) => point.x));
-    const maxX = Math.max(...points.map((point) => point.x));
-    const minY = Math.min(...points.map((point) => point.y));
-    const maxY = Math.max(...points.map((point) => point.y));
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
-    const offsetX = view.w / 2 - centerX;
-    const offsetY = view.h / 2 - centerY;
-    const tx = offsetX;
-    const ty = offsetY;
-    const allowClampX = false;
-    const allowClampY = false;
-
-    const currentPoint = points[Math.max(activeIndex, 0)] ?? points[0];
-    if (showDebugOverlay && currentPoint) {
-      const curr = cameraStateRef.current;
-      const debugScale = reducedMotion ? scale : curr.s;
-      const debugTx = reducedMotion ? tx : curr.x;
-      const debugTy = reducedMotion ? ty : curr.y;
-      setCameraDebug({
-        viewW: view.w,
-        viewH: view.h,
-        rectH: viewportRectH,
-        effectiveH: view.h,
-        bottomSafeAreaPx,
-        worldW: worldW,
-        worldH: worldH,
-        scale: debugScale,
-        tx: debugTx,
-        ty: debugTy,
-        targetX: centerX,
-        targetY: centerY,
-        allowClampX,
-        allowClampY,
-        currentNodeX: currentPoint.x,
-        currentNodeY: currentPoint.y,
-        currentScreenX: currentPoint.x * debugScale + debugTx,
-        currentScreenY: currentPoint.y * debugScale + debugTy,
-      });
+  const cameraRange = useMemo(() => {
+    if (!points.length || view.h <= 0 || worldHeight <= 0) {
+      return { clampedCamera: 0, minCamera: 0, maxCamera: 0 };
     }
-
-    cameraTargetRef.current = { x: tx, y: ty, s: scale };
-
-    const applyCamera = (x: number, y: number, s: number) => {
-      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-      if (cameraRootRef.current) {
-        cameraRootRef.current.style.transformOrigin = "0 0";
-        cameraRootRef.current.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
-      }
+    const safeIndex = clamp(activeIndex, 0, points.length - 1);
+    const activeNodeY = points[safeIndex]?.y ?? points[0]?.y ?? 0;
+    const targetY = view.h / 2 - activeNodeY;
+    const minCamera = view.h - worldHeight;
+    const maxCamera = 0;
+    return {
+      clampedCamera: Math.max(minCamera, Math.min(maxCamera, targetY)),
+      minCamera,
+      maxCamera,
     };
+  }, [activeIndex, points, view.h, worldHeight]);
+  const clampedCamera = cameraRange.clampedCamera;
 
-    if (reducedMotion) {
-      cameraStateRef.current = { x: tx, y: ty, s: scale };
-      applyCamera(tx, ty, scale);
-      return;
-    }
-
-    let raf = 0;
-    const tick = () => {
-      const current = cameraStateRef.current;
-      const target = cameraTargetRef.current;
-      current.x += (target.x - current.x) * 0.1;
-      current.y += (target.y - current.y) * 0.1;
-      current.s += (target.s - current.s) * 0.08;
-      applyCamera(current.x, current.y, current.s);
-      const currentPoint = points[Math.max(activeIndex, 0)] ?? points[0];
-      if (showDebugOverlay && currentPoint) {
-        setCameraDebug({
-          viewW: view.w,
-          viewH: view.h,
-          rectH: viewportRectH,
-          effectiveH: view.h,
-          bottomSafeAreaPx,
-          worldW: worldW,
-          worldH: worldH,
-          scale: current.s,
-          tx: current.x,
-          ty: current.y,
-          targetX: centerX,
-          targetY: centerY,
-          allowClampX,
-          allowClampY,
-          currentNodeX: currentPoint.x,
-          currentNodeY: currentPoint.y,
-          currentScreenX: currentPoint.x * current.s + current.x,
-          currentScreenY: currentPoint.y * current.s + current.y,
-        });
-      }
-      raf = window.requestAnimationFrame(tick);
-    };
-
-    raf = window.requestAnimationFrame(tick);
-    return () => window.cancelAnimationFrame(raf);
-  }, [activeIndex, bottomSafeAreaPx, points, reducedMotion, renderNodes, view.h, view.w, viewportRectH, worldHeight, worldWidth]);
-
-  useEffect(() => {
-    const onMouseMove = (event: MouseEvent) => {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      mouseRef.current.x = event.clientX - rect.left;
-      mouseRef.current.y = event.clientY - rect.top;
-    };
-
-    window.addEventListener("mousemove", onMouseMove);
-    return () => window.removeEventListener("mousemove", onMouseMove);
-  }, []);
   const stars = useMemo(
     () =>
       Array.from({ length: 30 }).map((_, index) => ({
@@ -600,64 +444,102 @@ export default function ProgressionMap({
     [trackWidth, worldHeight],
   );
 
-  const showDebugOverlay = debug && process.env.NODE_ENV !== "production";
-  const showDevDebugOverlay = process.env.NODE_ENV !== "production";
+  useEffect(() => {
+    let raf = 0;
+    const updateCamera = () => {
+      setCameraY((prev) => prev + (clampedCamera - prev) * 0.12);
+      raf = window.requestAnimationFrame(updateCamera);
+    };
+    updateCamera();
+    return () => window.cancelAnimationFrame(raf);
+  }, [clampedCamera]);
+
+  useEffect(() => {
+    if (mapFinalAuditLoggedRef.current || !points.length) return;
+    const minX = Math.min(...points.map((point) => point.x));
+    const minY = Math.min(...points.map((point) => point.y));
+    console.log("MAP_FINAL_AUDIT", {
+      nodes: points.length,
+      minX,
+      minY,
+      worldHeight,
+      trackWidth,
+    });
+    mapFinalAuditLoggedRef.current = true;
+  }, [points, worldHeight, trackWidth]);
+
+  useEffect(() => {
+    if (cameraRangeLoggedRef.current || !points.length) return;
+    console.log("CAMERA_RANGE", {
+      minCamera: cameraRange.minCamera,
+      maxCamera: cameraRange.maxCamera,
+    });
+    cameraRangeLoggedRef.current = true;
+  }, [cameraRange.maxCamera, cameraRange.minCamera, points.length]);
+
+  void debug;
   // TODO: V2: trocar connectors verticais por SVG path curvo.
   void buildCurvedPathPoints([]);
 
-  useEffect(() => {
-    if (!activeNodeId || renderNodes.length === 0) return;
-    document.getElementById(`map-node-${activeNodeId}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, [activeNodeId, renderNodes.length]);
-
-  const mapReady = mounted && view.w > 0 && view.h > 0 && points.length > 0;
-  if (!mounted || points.length === 0) {
+  if (!points || points.length === 0) {
     return (
-      <>
-        <div className="progression-map-loading">Loading trail...</div>
-        {showDevDebugOverlay ? (
-          <div
-            className="pointer-events-none z-[9999] whitespace-pre rounded-md border border-white/20 bg-black/75 px-3 py-2 font-mono text-[11px] leading-tight text-white"
-            style={{ position: "fixed", top: 8, left: 8 }}
-          >
-            <p>mounted: {String(mounted)}</p>
-            <p>nodes.length: {nodes.length}</p>
-            <p>points.length: {points.length}</p>
-            <p>view.w, view.h: {view.w}, {view.h}</p>
-            <p>raw rect.width, rect.height: {lastMeasuredRect.width}, {lastMeasuredRect.height}</p>
-            <p>bottomSafeAreaPx: {bottomSafeAreaPx}</p>
-            <p>effectiveW, effectiveH: {lastComputedEffective.w}, {lastComputedEffective.h}</p>
-            <p>mapReady: {String(mapReady)}</p>
-          </div>
-        ) : null}
-      </>
+      <div
+        style={{
+          height: `${viewportHeight}px`,
+          position: "relative",
+        }}
+      />
     );
   }
 
+  if (nodes.length === 0) {
+    return <div className="progression-map-loading">Loading trail...</div>;
+  }
+
   return (
-    <div ref={containerRef} className={cn("axiora-parallax relative w-full overflow-visible pb-2 pt-10 min-h-[520px] h-[620px]", className)} style={{ maxHeight: "none" }}>
+    <div
+      ref={containerRef}
+      className={cn("axiora-parallax relative w-full", className)}
+      style={{
+        position: "relative",
+        width: "100%",
+        height: `${viewportHeight}px`,
+        overflow: "hidden",
+      }}
+    >
       <div className="parallax-layer layer-bg" data-depth="0.2" />
       <div className="parallax-layer layer-stars" data-depth="0.5" />
 
-      <div className="relative z-10 w-full min-h-[520px]">
+      <div className="relative z-10 h-full w-full">
         <div
           ref={viewportRef}
           className="progression-map-viewport"
           style={{
             position: "relative",
             width: "100%",
-            height: "640px",
-            maxHeight: "70vh",
+            height: `${viewportHeight}px`,
             overflow: "hidden",
           }}
         >
           <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-transparent via-sky-900/10 to-transparent" />
           <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[900px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-500/10 blur-[160px]" />
           <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[1100px] w-[1100px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/10 blur-[220px]" />
-          <div className="progression-map-world" style={{ position: "absolute", inset: 0 }}>
+          <div
+            ref={worldRef}
+            className="progression-map-world"
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              width: `${trackWidth}px`,
+              height: `${worldHeight}px`,
+              willChange: "transform",
+              transform: `translateY(${cameraY}px)`,
+              transition: reducedMotion ? "none" : "transform 520ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+            }}
+          >
             <TrailConstellation isCurrent={activeIndex >= 0} />
             <div
-              ref={cameraRootRef}
               className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2"
               style={{ width: `${trackWidth}px`, height: `${worldHeight}px` }}
             >
@@ -806,42 +688,20 @@ export default function ProgressionMap({
             {renderNodes.map((node, index) => {
               const point = points[index];
               if (!point) return null;
-              return renderNode(node, point, index, compactMobile, selectedNodeId ?? activeNodeId, onNodeClick);
+              return renderNode(
+                node,
+                point,
+                index,
+                compactMobile,
+                selectedNodeId ?? activeNodeId,
+                onNodeClick,
+              );
             })}
             </div>
             </div>
           </div>
         </div>
       </div>
-      {showDebugOverlay && cameraDebug ? (
-        <div className="pointer-events-none absolute left-2 top-2 z-40 rounded-lg border border-amber-300/35 bg-amber-50/90 px-3 py-2 text-[11px] leading-tight text-amber-900 shadow-sm">
-          <p>view: {cameraDebug.viewW.toFixed(1)} x {cameraDebug.viewH.toFixed(1)}</p>
-          <p>rectH/effectiveH: {cameraDebug.rectH.toFixed(1)} / {cameraDebug.effectiveH.toFixed(1)}</p>
-          <p>bottomSafeAreaPx: {cameraDebug.bottomSafeAreaPx.toFixed(1)}</p>
-          <p>world: {cameraDebug.worldW.toFixed(1)} x {cameraDebug.worldH.toFixed(1)}</p>
-          <p>scale: {cameraDebug.scale.toFixed(4)}</p>
-          <p>tx/ty: {cameraDebug.tx.toFixed(2)}, {cameraDebug.ty.toFixed(2)}</p>
-          <p>target: {cameraDebug.targetX.toFixed(2)}, {cameraDebug.targetY.toFixed(2)}</p>
-          <p>allowClampX/Y: {String(cameraDebug.allowClampX)} / {String(cameraDebug.allowClampY)}</p>
-          <p>current node: {cameraDebug.currentNodeX.toFixed(2)}, {cameraDebug.currentNodeY.toFixed(2)}</p>
-          <p>current screen: {cameraDebug.currentScreenX.toFixed(2)}, {cameraDebug.currentScreenY.toFixed(2)}</p>
-        </div>
-      ) : null}
-      {showDevDebugOverlay ? (
-        <div
-          className="pointer-events-none z-[9999] whitespace-pre rounded-md border border-white/20 bg-black/75 px-3 py-2 font-mono text-[11px] leading-tight text-white"
-          style={{ position: "fixed", top: 8, left: 8 }}
-        >
-          <p>mounted: {String(mounted)}</p>
-          <p>nodes.length: {nodes.length}</p>
-          <p>points.length: {points.length}</p>
-          <p>view.w, view.h: {view.w}, {view.h}</p>
-          <p>raw rect.width, rect.height: {lastMeasuredRect.width}, {lastMeasuredRect.height}</p>
-          <p>bottomSafeAreaPx: {bottomSafeAreaPx}</p>
-          <p>effectiveW, effectiveH: {lastComputedEffective.w}, {lastComputedEffective.h}</p>
-          <p>mapReady: {String(mapReady)}</p>
-        </div>
-      ) : null}
       <style jsx>{`
         .progression-map-viewport {
           position: relative;
