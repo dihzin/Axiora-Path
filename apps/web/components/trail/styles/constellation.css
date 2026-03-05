@@ -1,0 +1,42 @@
+/* Shared constellation visual tokens */
+.path-energy {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #7dd3fc, #0284c7);
+  box-shadow: 0 0 8px #38bdf8, 0 0 16px #0284c7;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.nebula-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.orbital-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform;
+}
+
+@keyframes orbit {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes orbitReverse {
+  from { transform: translate(-50%, -50%) rotate(360deg); }
+  to { transform: translate(-50%, -50%) rotate(0deg); }
+}
+
+@keyframes pulseHalo {
+  0%, 100% { transform: translate(-50%, -50%) scale(0.98); opacity: 0.55; }
+  50% { transform: translate(-50%, -50%) scale(1.05); opacity: 0.85; }
+}

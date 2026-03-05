@@ -22,7 +22,14 @@ type RenderNodeOptions = {
   onNodeClick?: (node: RenderableMapNode) => void;
   quality: "low" | "high";
   reducedMotion?: boolean;
+  enterProgress?: number;
+  unlockBurstProgress?: number;
 };
+
+function smoothstep(edge0: number, edge1: number, x: number) {
+  const t = Math.max(0, Math.min(1, (x - edge0) / Math.max(0.0001, edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
 
 const statusLabel: Record<RenderNodeStatus, string> = {
   done: "Concluída",
@@ -45,7 +52,7 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, pointY, onCl
   const isDone = node.status === "done";
   const badgeWidth = Math.max(140, node.title.length * 7);
   const badgeOffsetY = pointY < 120 ? 36 : -42;
-  const showOrbital = isCurrent || isActive;
+  const showOrbital = isActive;
 
   return (
     <div className="group relative">
@@ -60,15 +67,15 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, pointY, onCl
         type="button"
         onClick={onClick}
         className={cn(
-          "relative z-20 flex h-12 w-12 items-center justify-center rounded-full transition-all duration-300 transition-transform active:scale-105",
+          "relative z-20 flex h-12 w-12 items-center justify-center rounded-full transition-transform duration-200 active:scale-105",
           isDone ? "animate-[softGlow_4s_ease-in-out_infinite] border-2 border-emerald-300 bg-emerald-500 text-white shadow-[0_0_18px_rgba(16,185,129,0.45)]" : "",
           isCurrent ? "animate-[beacon_3s_ease-in-out_infinite] border-2 border-sky-300 bg-sky-500 text-white shadow-[0_0_14px_rgba(56,189,248,0.32)]" : "",
           isLocked ? "border border-white/20 bg-slate-700/60 text-white backdrop-blur" : "",
           isActive && !isCurrent ? "ring-2 ring-white/25 ring-offset-2 ring-offset-transparent" : "",
-          isCurrent ? "animate-[pulse_3s_ease-in-out_infinite]" : "",
-          "hover:scale-110 hover:shadow-[0_0_12px_rgba(56,189,248,0.4)]",
+          isActive ? "animate-[pulse_2.8s_ease-in-out_infinite]" : "",
+          "hover:scale-[1.12] hover:shadow-[0_0_18px_rgba(56,189,248,0.55)]",
         )}
-        style={{ transition: "all 0.4s ease" }}
+        style={{ transition: "transform 220ms ease, filter 220ms ease, opacity 200ms ease" }}
         aria-current={isActive ? "step" : undefined}
         aria-label={node.title}
       >
@@ -113,8 +120,15 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, pointY, onCl
   );
 }
 
-export function renderNode({ node, point, nodeIndex, compactMobile, highlightedNodeId, onNodeClick, quality, reducedMotion }: RenderNodeOptions) {
+export function renderNode({ node, point, nodeIndex, compactMobile, highlightedNodeId, onNodeClick, quality, reducedMotion, enterProgress = 1, unlockBurstProgress = 0 }: RenderNodeOptions) {
   const isActive = highlightedNodeId === node.id;
+  const delay = nodeIndex * 0.03;
+  const nodeAppear = smoothstep(delay, delay + 0.25, enterProgress);
+  const scale = 0.92 + (1 - 0.92) * nodeAppear;
+  const burstA = 0.9 + 0.45 * unlockBurstProgress;
+  const burstB = 1 + 0.55 * unlockBurstProgress;
+  const burstAOpacity = (1 - unlockBurstProgress) * 0.9;
+  const burstBOpacity = (1 - unlockBurstProgress) * 0.7;
 
   return (
     <div
@@ -125,10 +139,27 @@ export function renderNode({ node, point, nodeIndex, compactMobile, highlightedN
       style={{
         left: point.x,
         top: point.y,
-        transform: "translate(-50%, -50%)",
+        transform: `translate(-50%, -50%) scale(${scale})`,
+        opacity: nodeAppear,
+        filter: `drop-shadow(0 0 ${6 + nodeAppear * 8}px rgba(56,189,248,${0.18 + nodeAppear * 0.25}))`,
+        transition: "transform 160ms linear, opacity 160ms linear, filter 160ms linear",
       }}
     >
       <div className="relative flex flex-col items-center">
+        {unlockBurstProgress > 0 ? (
+          <>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute left-1/2 top-1/2 h-[84px] w-[84px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-300/70"
+              style={{ transform: `translate(-50%, -50%) scale(${burstA})`, opacity: burstAOpacity }}
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute left-1/2 top-1/2 h-[84px] w-[84px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/55"
+              style={{ transform: `translate(-50%, -50%) scale(${burstB})`, opacity: burstBOpacity }}
+            />
+          </>
+        ) : null}
         <MapNodeItem
           node={node}
           isActive={isActive}

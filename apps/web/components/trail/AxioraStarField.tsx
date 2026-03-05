@@ -9,6 +9,7 @@ type AxioraStarFieldProps = {
   height: number;
   cameraY: number;
   quality: QualityTier;
+  densityScale?: number;
 };
 
 type Star = {
@@ -46,12 +47,13 @@ function createStars(count: number, width: number, height: number): Star[] {
   });
 }
 
-const AxioraStarField = forwardRef<AxioraStarFieldHandle, AxioraStarFieldProps>(function AxioraStarField({ width, height, cameraY, quality }, ref) {
+const AxioraStarField = forwardRef<AxioraStarFieldHandle, AxioraStarFieldProps>(function AxioraStarField({ width, height, cameraY, quality, densityScale = 1 }, ref) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const dprRef = useRef(1);
 
-  const starCount = quality === "high" ? 120 : 70;
+  const baseCount = quality === "high" ? 120 : 70;
+  const starCount = Math.max(32, Math.floor(baseCount * densityScale));
   const stars = useMemo(() => createStars(starCount, width, height), [height, starCount, width]);
   const starsRef = useRef<Star[]>(stars);
 
@@ -105,8 +107,7 @@ const AxioraStarField = forwardRef<AxioraStarFieldHandle, AxioraStarFieldProps>(
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const dprCap = quality === "high" ? 2 : 1.25;
-    const dpr = typeof window === "undefined" ? 1 : Math.min(window.devicePixelRatio || 1, dprCap);
+    const dpr = typeof window === "undefined" ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
     dprRef.current = dpr;
     canvas.width = Math.max(1, Math.floor(width * dpr));
     canvas.height = Math.max(1, Math.floor(height * dpr));

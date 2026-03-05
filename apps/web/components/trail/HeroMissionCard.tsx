@@ -31,7 +31,6 @@ type HeroMissionCardProps = {
 export function HeroMissionCard(props: HeroMissionCardProps) {
   const {
     subjectName,
-    streakDays,
     level,
     xpPercent,
     xpInLevel,
@@ -42,7 +41,6 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
   } = props;
   const safeXpPercent = Math.max(0, Math.min(100, Math.round(xpPercent)));
   const safeLevel = Math.max(1, Math.floor(level));
-  const safeStreak = Math.max(0, Math.floor(streakDays));
   const safeInLevel = Math.max(0, Math.floor(xpInLevel));
   const safeToNext = Math.max(1, Math.floor(xpToNextLevel));
   const remainingXp = Math.max(0, safeToNext - safeInLevel);
@@ -81,7 +79,7 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
   return (
     <section
       className={cn(
-        `relative z-0 mx-auto w-full max-w-[720px] overflow-visible rounded-2xl border border-white/15 bg-[rgba(15,23,42,0.85)] p-6 shadow-[0_0_40px_rgba(56,189,248,0.15)] backdrop-blur-xl transition-all duration-500 will-change-transform hover:-translate-y-[2px] hover:shadow-[0_0_30px_rgba(56,189,248,0.25)] ${axioraMotionClasses.transition}`,
+        `relative z-0 mx-auto w-full max-w-[720px] overflow-visible rounded-2xl border border-white/12 bg-[rgba(15,23,42,0.72)] p-6 shadow-[0_10px_28px_rgba(2,12,35,0.32)] backdrop-blur-lg transition-all duration-500 will-change-transform hover:-translate-y-[1px] hover:shadow-[0_12px_32px_rgba(2,12,35,0.36)] ${axioraMotionClasses.transition}`,
         levelGlow ? "hero-level-glow" : "",
         className,
       )}
@@ -100,11 +98,11 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
           <div className="mb-4 flex items-start justify-between gap-4">
             <div className="max-w-full">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-white">Trilha ativa</p>
-              <h2 className="mt-1.5 ml-0.5 max-w-[94%] text-[22px] font-semibold leading-[0.94] tracking-tight text-white drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]">{subjectName}</h2>
+              <h2 className="mt-1.5 ml-0.5 max-w-[94%] text-[22px] font-semibold leading-[0.96] tracking-tight text-white">{subjectName}</h2>
               <p className="mt-3 text-[11px] font-semibold uppercase tracking-widest text-white">
                 Progresso atual
               </p>
-              <p className="mt-1 text-[15px] font-medium text-white opacity-85">
+              <p className="mt-1 text-[15px] font-medium text-white/85">
                 Nível {safeLevel} · Explorador Analítico
               </p>
             </div>
@@ -128,7 +126,7 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
               <span className="absolute left-3/4 top-0 h-full w-px bg-[#1F3552]/20" />
             </div>
             <div
-              className="relative z-0 h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 shadow-[0_0_16px_rgba(56,189,248,0.8)] transition-transform transition-shadow transition-opacity duration-[400ms] ease-out"
+              className="relative z-0 h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 shadow-[0_0_10px_rgba(56,189,248,0.5)] transition-transform transition-shadow transition-opacity duration-[400ms] ease-out"
               style={{ width: `${safeXpPercent}%` }}
             />
           </div>
@@ -160,7 +158,7 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
               <button
                 type="button"
                 onClick={onStartMission}
-                className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-[0_0_14px_rgba(56,189,248,0.7)] transition hover:bg-sky-400"
+                className="rounded-lg border border-sky-300/35 bg-sky-500/90 px-4 py-2 text-sm font-semibold text-white shadow-[0_0_10px_rgba(56,189,248,0.4)] transition hover:bg-sky-400/95"
               >
                 Iniciar missão
               </button>
