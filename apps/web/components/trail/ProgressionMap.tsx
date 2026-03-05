@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Lock, Star } from "lucide-react";
 
 import { useParallax } from "@/hooks/useParallax";
 import { cn } from "@/lib/utils";
+import AxioraStarField, { type AxioraStarFieldHandle } from "./AxioraStarField";
+import { renderNode } from "./renderNode";
 import TrailConstellation from "./TrailConstellation";
 
 export type NodeStatus = "done" | "current" | "locked";
@@ -42,19 +43,12 @@ const SAFE_TOP = 70;
 const SAFE_BOTTOM = 120;
 const SAFE_MARGIN = 90;
 
-type CurvedPathPoint = {
-  x: number;
-  y: number;
-};
-
-type PhysicsParticle = {
-  id: number;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  size: number;
-};
+const SAFE_PAD = { top: 90, right: 110, bottom: 130, left: 110 };
+const BADGE_ALLOW = 52;
+const WORLD_END_PADDING = 220;
+const VIEWPORT_HEIGHT = 640;
+const MAX_ENERGY_PARTICLES = 12;
+const PATH_PATTERN = [-1, 1, -0.6, 0.8, -0.4, 0.6];
 
 type PersistedMapData = {
   nodes: MapNode[];
@@ -64,7 +58,19 @@ type PersistedMapData = {
   activeIndex: number;
   curvedPath: string;
   progressPath: string;
-  routeParticles: Array<{ x: number; y: number; delay: number }>;
+};
+
+type SampledPathPoint = {
+  x: number;
+  y: number;
+};
+
+type EnergyParticle = {
+  t: number;
+  speed: number;
+  size: number;
+  jitter: number;
+  alive: boolean;
 };
 
 const EMPTY_MAP_DATA: PersistedMapData = {
@@ -75,123 +81,20 @@ const EMPTY_MAP_DATA: PersistedMapData = {
   activeIndex: -1,
   curvedPath: "",
   progressPath: "",
-  routeParticles: [],
 };
-
-const MAX_PARTICLES = 50;
-const SAFE_PAD = { top: 90, right: 110, bottom: 130, left: 110 };
-const BADGE_ALLOW = 52;
-const WORLD_END_PADDING = 220;
-const VIEWPORT_HEIGHT = 640;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function lerp(start: number, end: number, alpha: number) {
+  return start + (end - start) * alpha;
 }
 
 function getNodeRadiusByStatus(status: NodeStatus) {
   if (status === "current") return NODE_RADIUS + 4;
   if (status === "done") return NODE_RADIUS + 2;
   return NODE_RADIUS;
-}
-
-function buildCurvedPathPoints(_offsets: number[]): CurvedPathPoint[] {
-  // TODO: V2: trocar connectors verticais por SVG path curvo.
-  // Placeholder intencional para evolucao sem impacto no V1.
-  // FUTURE V3
-  // nodes podem virar estrelas
-  // conexão vira constelação
-  return [];
-}
-
-type MapNodeItemProps = {
-  node: MapNode;
-  isActive: boolean;
-  displayIndex: number;
-  compactMobile: boolean;
-  pointY: number;
-  onClick?: () => void;
-};
-
-const statusLabel: Record<NodeStatus, string> = {
-  done: "Concluída",
-  current: "Atual",
-  locked: "Bloqueada",
-};
-
-function MapNodeItem({ node, isActive, displayIndex, compactMobile, pointY, onClick }: MapNodeItemProps) {
-  const isCurrent = node.status === "current";
-  const isLocked = node.status === "locked";
-  const isDone = node.status === "done";
-  const badgeWidth = Math.max(140, node.title.length * 7);
-  const badgeOffsetY = pointY < 120 ? 36 : -42;
-
-  return (
-    <div className="group relative">
-      <div className="pointer-events-none absolute -top-2 left-1/2 z-30 w-max max-w-[240px] -translate-x-1/2 -translate-y-full rounded-xl border border-white/16 bg-black/40 px-3 py-2 text-center text-[11px] text-white opacity-0 shadow-[0_6px_18px_rgba(0,0,0,0.2)] backdrop-blur-md transition-opacity duration-150 group-hover:opacity-100">
-        <p className="truncate text-xs font-semibold text-white">{node.title}</p>
-        <p className="mt-0.5 font-medium text-white">
-          {typeof node.xp === "number" ? `+${node.xp} XP · ` : ""}
-          {statusLabel[node.status]}
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={onClick}
-        className={cn(
-          "relative flex h-12 w-12 items-center justify-center rounded-full transition-all duration-300 transition-transform active:scale-105",
-          isDone ? "animate-[softGlow_4s_ease-in-out_infinite] border-2 border-emerald-300 bg-emerald-500 text-white shadow-[0_0_18px_rgba(16,185,129,0.45)]" : "",
-          isCurrent ? "animate-[beacon_3s_ease-in-out_infinite] border-2 border-sky-300 bg-sky-500 text-white shadow-[0_0_14px_rgba(56,189,248,0.32)]" : "",
-          isLocked ? "border border-white/20 bg-slate-700/60 text-white backdrop-blur" : "",
-          isActive && !isCurrent ? "ring-2 ring-white/25 ring-offset-2 ring-offset-transparent" : "",
-          isCurrent ? "animate-[pulse_3s_ease-in-out_infinite]" : "",
-          "hover:scale-110 hover:shadow-[0_0_12px_rgba(56,189,248,0.4)]",
-        )}
-        style={{ transition: "all 0.4s ease" }}
-        aria-current={isActive ? "step" : undefined}
-        aria-label={node.title}
-      >
-        {isCurrent ? <span aria-hidden className="pointer-events-none absolute inset-[-12px] rounded-full border-2 border-sky-400/40 animate-[pulse_2.6s_ease-out_infinite]" /> : null}
-        {isDone ? <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_26px_rgba(16,185,129,0.55)]" /> : null}
-        {isCurrent ? <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_30px_rgba(56,189,248,0.58)]" /> : null}
-        {isCurrent && (
-          <div className="pointer-events-none absolute inset-[-18px]">
-            <div className="orbit-ring absolute inset-0 rounded-full border border-sky-400/30" />
-            <div className="orbit-dot absolute h-[6px] w-[6px] rounded-full bg-sky-300" />
-          </div>
-        )}
-        {isCurrent ? <div className="pointer-events-none absolute inset-0 rounded-full border-2 border-sky-300/30" /> : null}
-        {isDone && (
-          <div className="pointer-events-none absolute inset-[-12px]">
-            <div className="orbit-dot-small" />
-          </div>
-        )}
-        {isDone ? <Check className="h-6 w-6" strokeWidth={2.6} aria-hidden /> : null}
-        {isLocked ? <Lock className="h-5 w-5" strokeWidth={2.2} aria-hidden /> : null}
-        {!isDone && !isLocked ? <span className="text-base font-bold leading-none">{displayIndex}</span> : null}
-        {node.isCheckpoint ? (
-          <span className="absolute -right-1 -top-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/25 bg-[#0F172A]/75 text-[#D9E2EF]">
-            <Star className="h-2.5 w-2.5" strokeWidth={2} aria-hidden />
-          </span>
-        ) : null}
-      </button>
-      <div
-        className={cn(
-          "pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 rounded-[14px] border border-sky-300/50 bg-slate-900/65 text-center text-slate-200 shadow-[0_0_22px_rgba(56,189,248,0.45)]",
-          compactMobile ? "px-2 py-1 text-[10px] leading-snug" : "px-3 py-1.5 text-[11px] leading-tight",
-        )}
-        style={{
-          width: `${badgeWidth}px`,
-          top: `${badgeOffsetY}px`,
-          backdropFilter: "blur(6px)",
-          WebkitBackdropFilter: "blur(6px)",
-          boxShadow: "0 0 14px rgba(56,189,248,0.45)",
-          transition: "all 0.4s ease",
-        }}
-      >
-        <span className="font-medium text-[#e2e8f0]">{node.title}</span>
-      </div>
-    </div>
-  );
 }
 
 function buildPath(points: { x: number; y: number }[]) {
@@ -211,40 +114,21 @@ function buildProgressPath(points: { x: number; y: number }[], currentIndex: num
   return buildPath(points.slice(0, currentIndex + 1));
 }
 
-function renderNode(
-  node: MapNode,
-  point: { x: number; y: number },
-  nodeIndex: number,
-  compactMobile: boolean,
-  highlightedNodeId?: string,
-  onNodeClick?: (node: MapNode) => void,
-) {
-  const isActive = highlightedNodeId === node.id;
+function randomSpawnDelay(quality: "low" | "high") {
+  if (quality === "high") {
+    return 280 + Math.random() * 170;
+  }
+  return 450 + Math.random() * 200;
+}
 
-  return (
-    <div
-      key={node.id}
-      id={`map-node-${node.id}`}
-      data-progression-node="true"
-      className="absolute z-20"
-      style={{
-        left: point.x,
-        top: point.y,
-        transform: "translate(-50%, -50%)",
-      }}
-    >
-      <div className="relative flex flex-col items-center">
-        <MapNodeItem
-          node={node}
-          isActive={isActive}
-          displayIndex={nodeIndex + 1}
-          compactMobile={compactMobile}
-          pointY={point.y}
-          onClick={() => onNodeClick?.(node)}
-        />
-      </div>
-    </div>
-  );
+function randomParticle(quality: "low" | "high"): EnergyParticle {
+  return {
+    t: 0,
+    speed: quality === "high" ? 0.00019 + Math.random() * 0.00017 : 0.00011 + Math.random() * 0.00012,
+    size: quality === "high" ? 5 + Math.random() * 2 : 4 + Math.random() * 1.8,
+    jitter: (Math.random() - 0.5) * (quality === "high" ? 3.5 : 2.6),
+    alive: true,
+  };
 }
 
 export default function ProgressionMap({
@@ -261,24 +145,42 @@ export default function ProgressionMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<HTMLDivElement>(null);
+  const nebulaRef = useRef<HTMLDivElement>(null);
+  const starFieldRef = useRef<AxioraStarFieldHandle | null>(null);
+  const pathRef = useRef<SVGPathElement | null>(null);
+  const energyParticleElsRef = useRef<Array<HTMLDivElement | null>>([]);
+  const sampledPathRef = useRef<SampledPathPoint[]>([]);
+  const energyParticlesRef = useRef<EnergyParticle[]>(Array.from({ length: MAX_ENERGY_PARTICLES }, () => ({ t: 0, speed: 0, size: 0, jitter: 0, alive: false })));
+  const spawnAccumulatorRef = useRef(0);
+  const nextSpawnDelayRef = useRef(320);
+
+  const cameraYRef = useRef(0);
+  const focusImpulseRef = useRef(0);
+  const focusTimeRef = useRef(0);
+  const targetCameraRef = useRef(0);
+  const minCameraRef = useRef(0);
+  const maxCameraRef = useRef(0);
+  const worldOffsetXRef = useRef(0);
+  const verticalOpticalOffsetRef = useRef(0);
+
   const [viewportW, setViewportW] = useState(1024);
   const [viewportWidth, setViewportWidth] = useState(0);
   const [viewportHeightPx, setViewportHeightPx] = useState(viewportHeight);
-  const [cameraY, setCameraY] = useState(0);
+  const [devicePixelRatio, setDevicePixelRatio] = useState(1);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [physicsParticles, setPhysicsParticles] = useState<PhysicsParticle[]>([]);
   const pointsRef = useRef<PersistedMapData | null>(null);
-  const mapFinalAuditLoggedRef = useRef(false);
-  const cameraRangeLoggedRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     const updateViewportSize = () => {
       const nextW = viewportRef.current?.clientWidth ?? Math.floor(window.innerWidth * 0.92);
       setViewportW(Math.max(320, nextW));
       const nextH = viewportRef.current?.clientHeight ?? viewportHeight;
       setViewportHeightPx(Math.max(1, nextH));
+      setDevicePixelRatio(window.devicePixelRatio || 1);
     };
+
     updateViewportSize();
     window.addEventListener("resize", updateViewportSize);
     return () => {
@@ -291,19 +193,29 @@ export default function ProgressionMap({
     setViewportWidth(viewportRef.current.clientWidth);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReducedMotion(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
   const view = { w: viewportW, h: viewportHeightPx };
   const trackWidth = Math.max(320, viewportW);
   const trackCenter = trackWidth / 2;
   const isMobile = trackWidth < 768;
   const compactMobile = trackWidth < 480;
+  const quality: "low" | "high" = isMobile || devicePixelRatio > 2 ? "low" : "high";
+
   const amplitude = Math.min(160, trackWidth * 0.28);
-  const pattern = [-1, 1, -0.6, 0.8, -0.4, 0.6];
   const computedPoints = useMemo<PersistedMapData>(() => {
     if (!nodes || nodes.length === 0) return EMPTY_MAP_DATA;
 
     const estimatedWorldHeight = Math.max(START_Y + Math.max(nodes.length - 1, 0) * NODE_GAP + SAFE_BOTTOM + NODE_RADIUS, 780);
     const rawPoints = nodes.map((_, gi) => {
-      let x = trackCenter + pattern[gi % pattern.length] * amplitude;
+      let x = trackCenter + PATH_PATTERN[gi % PATH_PATTERN.length] * amplitude;
       x = Math.max(SAFE_MARGIN, x);
       x = Math.min(trackWidth - SAFE_MARGIN, x);
 
@@ -313,6 +225,7 @@ export default function ProgressionMap({
 
       return { x, y };
     });
+
     if (rawPoints.length === 0) return EMPTY_MAP_DATA;
 
     let minX = Number.POSITIVE_INFINITY;
@@ -350,6 +263,7 @@ export default function ProgressionMap({
       y: point.y - minPointY,
     }));
     const worldHeight = Math.max(1, maxY - minY + WORLD_END_PADDING);
+
     const activeIndex = (() => {
       if (!nodes.length) return -1;
       if (activeNodeId) {
@@ -359,13 +273,9 @@ export default function ProgressionMap({
       const byStatus = nodes.findIndex((node) => node.status === "current");
       return byStatus >= 0 ? byStatus : 0;
     })();
+
     const curvedPath = buildPath(normalizedPoints);
     const progressPath = buildProgressPath(normalizedPoints, activeIndex);
-    const routeParticles = normalizedPoints.slice(0, Math.max(activeIndex + 1, 0)).map((point, index) => ({
-      x: point.x,
-      y: point.y,
-      delay: index * 0.4,
-    }));
 
     return {
       nodes,
@@ -375,53 +285,23 @@ export default function ProgressionMap({
       activeIndex,
       curvedPath,
       progressPath,
-      routeParticles,
     };
-  }, [activeNodeId, amplitude, nodes, pattern, trackCenter, trackWidth]);
+  }, [activeNodeId, amplitude, nodes, trackCenter, trackWidth]);
 
   useEffect(() => {
-    if (computedPoints && computedPoints.points.length > 0) {
+    if (computedPoints.points.length > 0) {
       pointsRef.current = computedPoints;
     }
   }, [computedPoints]);
 
   const mapData = computedPoints ?? pointsRef.current;
-  const renderNodes = mapData?.nodes ?? [];
-  const points = mapData?.points ?? [];
+  const renderNodes = mapData?.nodes ?? EMPTY_MAP_DATA.nodes;
+  const points = mapData?.points ?? EMPTY_MAP_DATA.points;
   const worldWidth = mapData?.worldWidth ?? 1;
   const worldHeight = mapData?.worldHeight ?? 1;
   const activeIndex = mapData?.activeIndex ?? -1;
   const curvedPath = mapData?.curvedPath ?? "";
   const progressPath = mapData?.progressPath ?? "";
-  const routeParticles = mapData?.routeParticles ?? [];
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setReducedMotion(media.matches);
-    sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
-  }, []);
-
-  useEffect(() => {
-    if (trackWidth <= 0 || worldHeight <= 0 || reducedMotion) {
-      setPhysicsParticles([]);
-      return;
-    }
-
-    const count = Math.min(MAX_PARTICLES, 40);
-    const newParticles: PhysicsParticle[] = Array.from({ length: count }).map((_, i) => ({
-      id: i,
-      x: Math.random() * trackWidth,
-      y: Math.random() * worldHeight,
-      vx: (Math.random() - 0.5) * 0.2,
-      vy: (Math.random() - 0.5) * 0.2,
-      size: Math.random() * 1.8 + 0.5,
-    }));
-
-    setPhysicsParticles(newParticles);
-  }, [trackWidth, worldHeight, reducedMotion]);
 
   const cameraRange = useMemo(() => {
     if (!points.length || view.h <= 0 || worldHeight <= 0) {
@@ -438,7 +318,7 @@ export default function ProgressionMap({
       maxCamera,
     };
   }, [activeIndex, points, view.h, worldHeight]);
-  const clampedCamera = cameraRange.clampedCamera;
+
   const minNodeX = points.length ? Math.min(...points.map((point) => point.x)) : 0;
   const maxNodeX = points.length ? Math.max(...points.map((point) => point.x)) : 0;
   const nodesCenterX = (minNodeX + maxNodeX) / 2;
@@ -447,57 +327,175 @@ export default function ProgressionMap({
   const opticalOffset = -viewportWidth * 0.01;
   const finalOffsetX = worldOffsetX + opticalOffset;
   const verticalOpticalOffset = view.h * 0.12;
-  const finalOffsetY = cameraY + verticalOpticalOffset;
-  const snappedOffsetX = Math.round(finalOffsetX);
-  const snappedOffsetY = Math.round(finalOffsetY);
-
-  const stars = useMemo(
-    () =>
-      Array.from({ length: 30 }).map((_, index) => ({
-        id: `star-${index}`,
-        x: Math.random() * trackWidth,
-        y: Math.random() * worldHeight,
-        opacity: 0.1 + Math.random() * 0.2,
-      })),
-    [trackWidth, worldHeight],
-  );
 
   useEffect(() => {
-    let raf = 0;
-    const updateCamera = () => {
-      setCameraY((prev) => prev + (clampedCamera - prev) * 0.12);
-      raf = window.requestAnimationFrame(updateCamera);
+    targetCameraRef.current = cameraRange.clampedCamera;
+    minCameraRef.current = cameraRange.minCamera;
+    maxCameraRef.current = cameraRange.maxCamera;
+  }, [cameraRange.clampedCamera, cameraRange.maxCamera, cameraRange.minCamera]);
+
+  useEffect(() => {
+    worldOffsetXRef.current = finalOffsetX;
+    verticalOpticalOffsetRef.current = verticalOpticalOffset;
+  }, [finalOffsetX, verticalOpticalOffset]);
+
+  const focusNodeKey = selectedNodeId ?? activeNodeId ?? (activeIndex >= 0 ? `${activeIndex}` : "none");
+  useEffect(() => {
+    focusImpulseRef.current = 1;
+    focusTimeRef.current = 0;
+  }, [focusNodeKey]);
+
+  useEffect(() => {
+    if (!pathRef.current || !curvedPath) {
+      sampledPathRef.current = [];
+      return;
+    }
+
+    const path = pathRef.current;
+    const total = path.getTotalLength();
+    const sampleCount = quality === "high" ? 300 : 180;
+
+    if (!Number.isFinite(total) || total <= 0 || sampleCount < 2) {
+      sampledPathRef.current = [];
+      return;
+    }
+
+    const sampled: SampledPathPoint[] = [];
+    for (let i = 0; i < sampleCount; i += 1) {
+      const lengthAt = total * (i / (sampleCount - 1));
+      const point = path.getPointAtLength(lengthAt);
+      sampled.push({ x: point.x, y: point.y });
+    }
+
+    sampledPathRef.current = sampled;
+  }, [curvedPath, quality]);
+
+  useEffect(() => {
+    if (reducedMotion || sampledPathRef.current.length < 2) {
+      energyParticlesRef.current = Array.from({ length: MAX_ENERGY_PARTICLES }, () => ({ t: 0, speed: 0, size: 0, jitter: 0, alive: false }));
+      energyParticleElsRef.current.forEach((el) => {
+        if (el) {
+          el.style.opacity = "0";
+        }
+      });
+      return;
+    }
+
+    energyParticlesRef.current = Array.from({ length: MAX_ENERGY_PARTICLES }, () => ({ t: 0, speed: 0, size: 0, jitter: 0, alive: false }));
+    spawnAccumulatorRef.current = 0;
+    nextSpawnDelayRef.current = randomSpawnDelay(quality);
+  }, [quality, reducedMotion, curvedPath]);
+
+  useEffect(() => {
+    if (!worldRef.current) return;
+    const initialY = Math.round(cameraYRef.current + verticalOpticalOffsetRef.current);
+    worldRef.current.style.transform = `translate3d(${Math.round(worldOffsetXRef.current)}px, ${initialY}px, 0)`;
+  }, [worldWidth, worldHeight]);
+
+  useEffect(() => {
+    let rafId = 0;
+    let lastTs = 0;
+
+    const tick = (ts: number) => {
+      if (!lastTs) {
+        lastTs = ts;
+      }
+      const dt = Math.min(50, ts - lastTs || 16.67);
+      lastTs = ts;
+
+      const cameraDamping = reducedMotion ? 1 : 0.08;
+      const alpha = reducedMotion ? 1 : 1 - Math.pow(1 - cameraDamping, dt / 16.67);
+      const impulse = focusImpulseRef.current;
+      const overshootAmplitude = isMobile ? 7 : 12;
+      focusTimeRef.current = Math.min(1, focusTimeRef.current + dt / 480);
+      focusImpulseRef.current *= Math.pow(0.9, dt / 16.67);
+      const overshoot = reducedMotion ? 0 : Math.sin(focusTimeRef.current * Math.PI) * overshootAmplitude * impulse;
+      const targetWithOvershoot = targetCameraRef.current + overshoot;
+      cameraYRef.current = lerp(cameraYRef.current, targetWithOvershoot, alpha);
+
+      const snappedOffsetX = Math.round(worldOffsetXRef.current);
+      const snappedOffsetY = Math.round(cameraYRef.current + verticalOpticalOffsetRef.current);
+      if (worldRef.current) {
+        worldRef.current.style.transform = `translate3d(${snappedOffsetX}px, ${snappedOffsetY}px, 0)`;
+      }
+
+      if (nebulaRef.current) {
+        nebulaRef.current.style.transform = `translate3d(0, ${Math.round(cameraYRef.current * 0.15)}px, 0)`;
+      }
+
+      if (!reducedMotion) {
+        starFieldRef.current?.renderFrame(ts, cameraYRef.current);
+      }
+
+      const sampled = sampledPathRef.current;
+      if (!reducedMotion && sampled.length > 1) {
+        spawnAccumulatorRef.current += dt;
+        if (spawnAccumulatorRef.current >= nextSpawnDelayRef.current) {
+          spawnAccumulatorRef.current = 0;
+          nextSpawnDelayRef.current = randomSpawnDelay(quality);
+
+          const availableSlot = energyParticlesRef.current.findIndex((particle) => !particle.alive);
+          if (availableSlot >= 0) {
+            energyParticlesRef.current[availableSlot] = randomParticle(quality);
+          }
+        }
+
+        for (let i = 0; i < energyParticlesRef.current.length; i += 1) {
+          const particle = energyParticlesRef.current[i];
+          const el = energyParticleElsRef.current[i];
+          if (!particle || !el) continue;
+
+          if (!particle.alive) {
+            el.style.opacity = "0";
+            continue;
+          }
+
+          particle.t += particle.speed * dt;
+          if (particle.t > 1) {
+            energyParticlesRef.current[i] = randomParticle(quality);
+            continue;
+          }
+
+          const idxFloat = particle.t * (sampled.length - 1);
+          const idxA = Math.floor(idxFloat);
+          const idxB = Math.min(sampled.length - 1, idxA + 1);
+          const frac = idxFloat - idxA;
+
+          const pointA = sampled[idxA];
+          const pointB = sampled[idxB];
+          if (!pointA || !pointB) {
+            el.style.opacity = "0";
+            continue;
+          }
+
+          const x = pointA.x + (pointB.x - pointA.x) * frac;
+          const y = pointA.y + (pointB.y - pointA.y) * frac + Math.sin((ts / 1000 + i) * 3.2) * particle.jitter;
+          const localOpacity = 0.35 + (1 - particle.t) * 0.65;
+
+          el.style.width = `${particle.size}px`;
+          el.style.height = `${particle.size}px`;
+          el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+          el.style.opacity = localOpacity.toFixed(3);
+        }
+      } else {
+        for (let i = 0; i < energyParticleElsRef.current.length; i += 1) {
+          const el = energyParticleElsRef.current[i];
+          if (el) {
+            el.style.opacity = "0";
+          }
+        }
+      }
+
+      rafId = window.requestAnimationFrame(tick);
     };
-    updateCamera();
-    return () => window.cancelAnimationFrame(raf);
-  }, [clampedCamera]);
 
-  useEffect(() => {
-    if (mapFinalAuditLoggedRef.current || !points.length) return;
-    const minX = Math.min(...points.map((point) => point.x));
-    const minY = Math.min(...points.map((point) => point.y));
-    console.log("MAP_FINAL_AUDIT", {
-      nodes: points.length,
-      minX,
-      minY,
-      worldHeight,
-      trackWidth,
-    });
-    mapFinalAuditLoggedRef.current = true;
-  }, [points, worldHeight, trackWidth]);
-
-  useEffect(() => {
-    if (cameraRangeLoggedRef.current || !points.length) return;
-    console.log("CAMERA_RANGE", {
-      minCamera: cameraRange.minCamera,
-      maxCamera: cameraRange.maxCamera,
-    });
-    cameraRangeLoggedRef.current = true;
-  }, [cameraRange.maxCamera, cameraRange.minCamera, points.length]);
+    rafId = window.requestAnimationFrame(tick);
+    return () => {
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [isMobile, quality, reducedMotion]);
 
   void debug;
-  // TODO: V2: trocar connectors verticais por SVG path curvo.
-  void buildCurvedPathPoints([]);
 
   if (!points || points.length === 0) {
     return (
@@ -525,9 +523,6 @@ export default function ProgressionMap({
         overflow: "hidden",
       }}
     >
-      <div className="parallax-layer layer-bg" data-depth="0.2" />
-      <div className="parallax-layer layer-stars" data-depth="0.5" />
-
       <div className="relative z-10 h-full w-full">
         <div
           ref={viewportRef}
@@ -539,9 +534,12 @@ export default function ProgressionMap({
             overflow: "hidden",
           }}
         >
-          <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-transparent via-sky-900/10 to-transparent" />
-          <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[900px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-500/10 blur-[160px]" />
-          <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[1100px] w-[1100px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/10 blur-[220px]" />
+          <div ref={nebulaRef} className={cn("nebula-layer pointer-events-none absolute inset-0 z-[0]", quality === "high" ? "nebula-high" : "nebula-low")} />
+
+          <div className="pointer-events-none absolute inset-0 z-[1] will-change-transform" aria-hidden>
+            <AxioraStarField ref={starFieldRef} width={view.w} height={view.h} cameraY={cameraYRef.current} quality={quality} />
+          </div>
+
           <div
             ref={worldRef}
             className="progression-map-world"
@@ -552,94 +550,61 @@ export default function ProgressionMap({
               width: `${trackWidth}px`,
               height: `${worldHeight}px`,
               willChange: "transform",
-              transform: `translate(${snappedOffsetX}px, ${snappedOffsetY}px)`,
-              transition: reducedMotion ? "none" : "transform 520ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+              transform: `translate3d(${Math.round(finalOffsetX)}px, ${Math.round(cameraYRef.current + verticalOpticalOffset)}px, 0)`,
             }}
           >
             <TrailConstellation isCurrent={activeIndex >= 0} />
+
             <div
-              className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2"
+              className="pointer-events-none absolute left-1/2 top-0 z-[5] -translate-x-1/2"
               style={{ width: `${trackWidth}px`, height: `${worldHeight}px` }}
             >
-            <svg
-              className="absolute left-0 top-0"
-              width={trackWidth}
-              height={worldHeight}
-              viewBox={`0 0 ${trackWidth} ${worldHeight}`}
-              preserveAspectRatio="xMidYMin meet"
-              style={{ overflow: "visible" }}
-              aria-hidden
-            >
-              <defs>
-              <radialGradient id="nebulaGradient" cx="50%" cy="40%" r="70%">
-                <stop offset="0%" stopColor="#1d4ed8" stopOpacity="0.35" />
-                <stop offset="60%" stopColor="#0ea5e9" stopOpacity="0.18" />
-                <stop offset="100%" stopColor="#020617" stopOpacity="0" />
-              </radialGradient>
-              <linearGradient id="energyGradient" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="#38bdf8" stopOpacity="0" />
-                <stop offset="40%" stopColor="#60a5fa" />
-                <stop offset="60%" stopColor="#22d3ee" />
-                <stop offset="100%" stopColor="#38bdf8" stopOpacity="0" />
-              </linearGradient>
-              <linearGradient id="trailEnergy" x1="0%" y1="0%" x2="100%" y2="0%" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="#60a5fa" />
-                <stop offset="50%" stopColor="#38bdf8" />
-                <stop offset="100%" stopColor="#6366f1" />
-              </linearGradient>
-              <filter id="energyGlow">
-                <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#38bdf8" floodOpacity="0.9" />
-              </filter>
-              <filter id="routeGlow">
-                <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#38bdf8" floodOpacity="0.8" />
-              </filter>
-              <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#38bdf8" />
-                <stop offset="100%" stopColor="#6366f1" />
-              </linearGradient>
-              <filter id="badgeGlow">
-                <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#38bdf8" floodOpacity="0.7" />
-              </filter>
-              </defs>
-              <g className="camera">
-              {stars.map((star) => (
-                <circle key={star.id} cx={star.x} cy={star.y} r={1} fill="white" opacity={star.opacity} />
-              ))}
-              {!reducedMotion
-                ? physicsParticles.map((particle) => (
-                    <circle
-                      key={`physics-${particle.id}`}
-                      cx={particle.x}
-                      cy={particle.y}
-                      r={particle.size}
-                      fill="#e0f2fe"
-                      opacity={0.25}
-                    />
-                  ))
-                : null}
-              <path
-                d={curvedPath}
-                stroke={isMobile ? "rgba(255,255,255,0.26)" : "rgba(255,255,255,0.16)"}
-                strokeWidth={isMobile ? 6 : 3}
-                fill="none"
-                strokeLinecap="round"
-                filter="url(#routeGlow)"
-                style={{ transition: "all 0.4s ease" }}
-              />
-              <path
-                d={curvedPath}
-                fill="none"
-                stroke="url(#energyGradient)"
-                strokeWidth={4}
-                strokeLinecap="round"
-                strokeDasharray="12 18"
-                className="energy-flow"
-                filter="url(#energyGlow)"
-                opacity={0.35}
-                style={{ transition: "all 0.4s ease" }}
-              />
-              {progressPath ? (
-                <>
+              <svg
+                className="absolute left-0 top-0"
+                width={trackWidth}
+                height={worldHeight}
+                viewBox={`0 0 ${trackWidth} ${worldHeight}`}
+                preserveAspectRatio="xMidYMin meet"
+                style={{ overflow: "visible" }}
+                aria-hidden
+              >
+                <defs>
+                  <linearGradient id="energyGradient" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#38bdf8" stopOpacity="0" />
+                    <stop offset="40%" stopColor="#60a5fa" />
+                    <stop offset="60%" stopColor="#22d3ee" />
+                    <stop offset="100%" stopColor="#38bdf8" stopOpacity="0" />
+                  </linearGradient>
+                  <linearGradient id="trailEnergy" x1="0%" y1="0%" x2="100%" y2="0%" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#60a5fa" />
+                    <stop offset="50%" stopColor="#38bdf8" />
+                    <stop offset="100%" stopColor="#6366f1" />
+                  </linearGradient>
+                  <filter id="routeGlow">
+                    <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#38bdf8" floodOpacity="0.8" />
+                  </filter>
+                </defs>
+
+                <path
+                  ref={pathRef}
+                  d={curvedPath}
+                  stroke={isMobile ? "rgba(255,255,255,0.26)" : "rgba(255,255,255,0.16)"}
+                  strokeWidth={isMobile ? 6 : 3}
+                  fill="none"
+                  strokeLinecap="round"
+                  filter="url(#routeGlow)"
+                />
+                <path
+                  d={curvedPath}
+                  fill="none"
+                  stroke="url(#energyGradient)"
+                  strokeWidth={4}
+                  strokeLinecap="round"
+                  strokeDasharray="12 18"
+                  className="energy-flow"
+                  opacity={0.35}
+                />
+                {progressPath ? (
                   <path
                     d={progressPath}
                     stroke="url(#trailEnergy)"
@@ -647,79 +612,46 @@ export default function ProgressionMap({
                     fill="none"
                     strokeLinecap="round"
                     filter="url(#routeGlow)"
-                    style={{ filter: "drop-shadow(0 0 22px rgba(56,189,248,0.8))", transition: "all 0.4s ease" }}
+                    style={{ filter: "drop-shadow(0 0 22px rgba(56,189,248,0.8))" }}
                   />
-                  <path
-                    d={progressPath}
-                    fill="none"
-                    stroke="url(#energyGradient)"
-                    strokeWidth={5}
-                    strokeLinecap="round"
-                    strokeDasharray="12 18"
-                    className="energy-flow"
-                    filter="url(#energyGlow)"
-                    style={{ transition: "all 0.4s ease" }}
-                  />
-                  <circle r={2} fill="#7dd3fc" opacity={0.8} className="energy-particle">
-                    <animateMotion dur="4s" repeatCount="indefinite" path={progressPath} />
-                  </circle>
-                </>
-              ) : null}
-              {!reducedMotion
-                ? points.map((point, index) => {
-                    const node = nodes[index];
-                    if (!node || node.status !== "current") return null;
-                    return (
-                      <g key={`current-aura-${node.id}`}>
-                        <circle
-                          cx={point.x}
-                          cy={point.y}
-                          r={NODE_RADIUS + 18}
-                          fill="none"
-                          stroke="#22d3ee"
-                          strokeWidth={2}
-                          opacity={0.35}
-                        />
-                        <circle cx={point.x} cy={point.y} r={NODE_RADIUS + 6} fill="none" stroke="#38bdf8">
-                          <animate attributeName="r" values={`${NODE_RADIUS + 6};${NODE_RADIUS + 20}`} dur="2.2s" repeatCount="indefinite" />
-                          <animate attributeName="opacity" values="0.7;0" dur="2.2s" repeatCount="indefinite" />
-                        </circle>
-                      </g>
-                    );
-                  })
-                : null}
-              </g>
-            </svg>
-            <div className="pointer-events-none absolute left-0 top-0 z-[11]" style={{ width: `${trackWidth}px`, height: `${worldHeight}px` }} aria-hidden>
-              {routeParticles.map((particle, index) => (
+                ) : null}
+              </svg>
+            </div>
+
+            <div className="pointer-events-none absolute left-1/2 top-0 z-[6] -translate-x-1/2" style={{ width: `${trackWidth}px`, height: `${worldHeight}px` }} aria-hidden>
+              {Array.from({ length: MAX_ENERGY_PARTICLES }).map((_, index) => (
                 <div
-                  key={`energy-particle-${index}`}
-                  className="path-energy -translate-x-1/2 -translate-y-1/2"
-                  style={{
-                    left: `${particle.x}px`,
-                    top: `${particle.y}px`,
-                    animationDelay: `${particle.delay}s`,
+                  key={`energy-slot-${index}`}
+                  ref={(el) => {
+                    energyParticleElsRef.current[index] = el;
                   }}
+                  className="path-energy"
+                  style={{ transform: "translate3d(-9999px,-9999px,0)", opacity: 0 }}
                 />
               ))}
-            {renderNodes.map((node, index) => {
-              const point = points[index];
-              if (!point) return null;
-              return renderNode(
-                node,
-                point,
-                index,
-                compactMobile,
-                selectedNodeId ?? activeNodeId,
-                onNodeClick,
-              );
-            })}
             </div>
+
+            <div className="absolute left-1/2 top-0 z-[11] -translate-x-1/2" style={{ width: `${trackWidth}px`, height: `${worldHeight}px` }}>
+              {renderNodes.map((node, index) => {
+                const point = points[index];
+                if (!point) return null;
+                return renderNode({
+                  node,
+                  point,
+                  nodeIndex: index,
+                  compactMobile,
+                  highlightedNodeId: selectedNodeId ?? activeNodeId,
+                  onNodeClick,
+                  quality,
+                  reducedMotion,
+                });
+              })}
             </div>
           </div>
         </div>
       </div>
-      <style jsx>{`
+
+      <style jsx global>{`
         .progression-map-viewport {
           position: relative;
           width: 100%;
@@ -733,8 +665,34 @@ export default function ProgressionMap({
           min-height: 520px;
         }
 
+        .nebula-layer {
+          opacity: 0.55;
+          background:
+            radial-gradient(circle at 14% 18%, rgba(56, 189, 248, 0.24), transparent 44%),
+            radial-gradient(circle at 82% 26%, rgba(14, 165, 233, 0.2), transparent 48%),
+            radial-gradient(circle at 48% 76%, rgba(59, 130, 246, 0.17), transparent 58%);
+          will-change: transform;
+        }
+
+        .nebula-low {
+          opacity: 0.4;
+        }
+
         .energy-flow {
           animation: energyMove 3s linear infinite;
+        }
+
+        .path-energy {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 6px;
+          height: 6px;
+          border-radius: 9999px;
+          background: radial-gradient(circle, #7dd3fc, #0284c7);
+          box-shadow: 0 0 8px rgba(56, 189, 248, 0.9), 0 0 16px rgba(2, 132, 199, 0.85);
+          will-change: transform, opacity;
+          pointer-events: none;
         }
 
         @keyframes energyMove {
@@ -746,13 +704,104 @@ export default function ProgressionMap({
           }
         }
 
-        @media (prefers-reduced-motion: reduce) {
-          .energy-flow {
-            animation: none;
+        @keyframes orbit {
+          from {
+            transform: translate(-50%, -50%) rotate(0deg);
+          }
+          to {
+            transform: translate(-50%, -50%) rotate(360deg);
+          }
+        }
+
+        @keyframes orbitReverse {
+          from {
+            transform: translate(-50%, -50%) rotate(360deg);
+          }
+          to {
+            transform: translate(-50%, -50%) rotate(0deg);
+          }
+        }
+
+        @keyframes pulseHalo {
+          0%,
+          100% {
+            transform: translate(-50%, -50%) scale(0.98);
+            opacity: 0.55;
+          }
+          50% {
+            transform: translate(-50%, -50%) scale(1.05);
+            opacity: 0.85;
+          }
+        }
+
+        .active-halo {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          width: 84px;
+          height: 84px;
+          border-radius: 9999px;
+          background: radial-gradient(circle, rgba(56, 189, 248, 0.25), transparent 65%);
+          animation: pulseHalo 2.4s ease-in-out infinite;
+          will-change: transform, opacity;
+          pointer-events: none;
+        }
+
+        .orbital-ring {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          border: 1px solid rgba(56, 189, 248, 0.38);
+          border-radius: 9999px;
+          will-change: transform, opacity;
+          pointer-events: none;
+        }
+
+        .orbital-ring::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          top: -2px;
+          width: 5px;
+          height: 5px;
+          transform: translateX(-50%);
+          border-radius: 9999px;
+          background: rgba(125, 211, 252, 0.95);
+          box-shadow: 0 0 10px rgba(56, 189, 248, 0.85);
+        }
+
+        .orbital-ring-1 {
+          animation: orbit 6s linear infinite;
+        }
+
+        .orbital-ring-2 {
+          animation: orbitReverse 9s linear infinite;
+          opacity: 0.9;
+        }
+
+        .orbital-ring-3 {
+          animation: orbit 14s linear infinite;
+          opacity: 0.52;
+        }
+
+        @media (max-width: 767px) {
+          .orbital-ring-1 {
+            animation-duration: 8s;
           }
 
-          .energy-particle {
-            display: none;
+          .orbital-ring-2 {
+            animation-duration: 12s;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .energy-flow,
+          .active-halo,
+          .orbital-ring,
+          .orbital-ring-1,
+          .orbital-ring-2,
+          .orbital-ring-3 {
+            animation: none !important;
           }
         }
       `}</style>
