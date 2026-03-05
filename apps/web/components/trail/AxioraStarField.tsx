@@ -105,7 +105,8 @@ const AxioraStarField = forwardRef<AxioraStarFieldHandle, AxioraStarFieldProps>(
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const dpr = typeof window === "undefined" ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+    const dprCap = quality === "high" ? 2 : 1.25;
+    const dpr = typeof window === "undefined" ? 1 : Math.min(window.devicePixelRatio || 1, dprCap);
     dprRef.current = dpr;
     canvas.width = Math.max(1, Math.floor(width * dpr));
     canvas.height = Math.max(1, Math.floor(height * dpr));
@@ -118,7 +119,7 @@ const AxioraStarField = forwardRef<AxioraStarFieldHandle, AxioraStarFieldProps>(
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctxRef.current = ctx;
     drawFrame(performance.now(), cameraY);
-  }, [cameraY, drawFrame, height, width]);
+  }, [cameraY, drawFrame, height, quality, width]);
 
   return <canvas ref={canvasRef} className="pointer-events-none h-full w-full" aria-hidden />;
 });

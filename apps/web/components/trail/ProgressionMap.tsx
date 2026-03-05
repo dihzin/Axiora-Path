@@ -145,6 +145,7 @@ export default function ProgressionMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<HTMLDivElement>(null);
+  const viewportMeasureRafRef = useRef<number | null>(null);
   const nebulaRef = useRef<HTMLDivElement>(null);
   const starFieldRef = useRef<AxioraStarFieldHandle | null>(null);
   const pathRef = useRef<SVGPathElement | null>(null);
@@ -157,6 +158,8 @@ export default function ProgressionMap({
   const cameraYRef = useRef(0);
   const focusImpulseRef = useRef(0);
   const focusTimeRef = useRef(0);
+  const hasHydratedCameraRef = useRef(false);
+  const lastFocusNodeKeyRef = useRef<string | null>(null);
   const targetCameraRef = useRef(0);
   const minCameraRef = useRef(0);
   const maxCameraRef = useRef(0);
@@ -164,34 +167,67 @@ export default function ProgressionMap({
   const verticalOpticalOffsetRef = useRef(0);
 
   const [viewportW, setViewportW] = useState(1024);
-  const [viewportWidth, setViewportWidth] = useState(0);
   const [viewportHeightPx, setViewportHeightPx] = useState(viewportHeight);
   const [devicePixelRatio, setDevicePixelRatio] = useState(1);
+  const [hasMeasuredViewport, setHasMeasuredViewport] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const pointsRef = useRef<PersistedMapData | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    const readViewportSize = () => {
+      const measuredW = viewportRef.current?.getBoundingClientRect().width ?? 0;
+      const measuredH = viewportRef.current?.getBoundingClientRect().height ?? 0;
+      const fallbackW = Math.floor(window.innerWidth * 0.92);
+      const fallbackH = viewportHeight;
+      return {
+        width: measuredW > 0 ? measuredW : fallbackW,
+        height: measuredH > 0 ? measuredH : fallbackH,
+      };
+    };
+
     const updateViewportSize = () => {
-      const nextW = viewportRef.current?.clientWidth ?? Math.floor(window.innerWidth * 0.92);
+      const measuredW = viewportRef.current?.getBoundingClientRect().width ?? 0;
+      const { width: nextW, height: nextH } = readViewportSize();
       setViewportW(Math.max(320, nextW));
-      const nextH = viewportRef.current?.clientHeight ?? viewportHeight;
+      if (measuredW > 0) {
+        setHasMeasuredViewport(true);
+      }
       setViewportHeightPx(Math.max(1, nextH));
       setDevicePixelRatio(window.devicePixelRatio || 1);
     };
 
     updateViewportSize();
+    // Re-measure for a few frames after mount; parent layout may settle after first paint.
+    let settleFrames = 0;
+    const settleViewport = () => {
+      updateViewportSize();
+      settleFrames += 1;
+      if (settleFrames < 30) {
+        viewportMeasureRafRef.current = window.requestAnimationFrame(settleViewport);
+      } else {
+        viewportMeasureRafRef.current = null;
+      }
+    };
+    viewportMeasureRafRef.current = window.requestAnimationFrame(settleViewport);
+
+    const observer = new ResizeObserver(() => {
+      updateViewportSize();
+    });
+    if (viewportRef.current) {
+      observer.observe(viewportRef.current);
+    }
     window.addEventListener("resize", updateViewportSize);
     return () => {
+      if (viewportMeasureRafRef.current !== null) {
+        window.cancelAnimationFrame(viewportMeasureRafRef.current);
+        viewportMeasureRafRef.current = null;
+      }
+      observer.disconnect();
       window.removeEventListener("resize", updateViewportSize);
     };
   }, [viewportHeight]);
-
-  useEffect(() => {
-    if (!viewportRef.current) return;
-    setViewportWidth(viewportRef.current.clientWidth);
-  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -322,9 +358,9 @@ export default function ProgressionMap({
   const minNodeX = points.length ? Math.min(...points.map((point) => point.x)) : 0;
   const maxNodeX = points.length ? Math.max(...points.map((point) => point.x)) : 0;
   const nodesCenterX = (minNodeX + maxNodeX) / 2;
-  const viewportCenterX = viewportWidth / 2;
+  const viewportCenterX = view.w / 2;
   const worldOffsetX = viewportCenterX - nodesCenterX;
-  const opticalOffset = -viewportWidth * 0.01;
+  const opticalOffset = -view.w * 0.01;
   const finalOffsetX = worldOffsetX + opticalOffset;
   const verticalOpticalOffset = view.h * 0.12;
 
@@ -332,7 +368,18 @@ export default function ProgressionMap({
     targetCameraRef.current = cameraRange.clampedCamera;
     minCameraRef.current = cameraRange.minCamera;
     maxCameraRef.current = cameraRange.maxCamera;
-  }, [cameraRange.clampedCamera, cameraRange.maxCamera, cameraRange.minCamera]);
+
+    // Avoid bad first paint on refresh: snap camera to first valid target before RAF smoothing.
+    if (!hasHydratedCameraRef.current) {
+      hasHydratedCameraRef.current = true;
+      cameraYRef.current = cameraRange.clampedCamera;
+      if (worldRef.current) {
+        const snappedOffsetX = Math.round(finalOffsetX);
+        const snappedOffsetY = Math.round(cameraYRef.current + verticalOpticalOffset);
+        worldRef.current.style.transform = `translate3d(${snappedOffsetX}px, ${snappedOffsetY}px, 0)`;
+      }
+    }
+  }, [cameraRange.clampedCamera, cameraRange.maxCamera, cameraRange.minCamera, finalOffsetX, verticalOpticalOffset]);
 
   useEffect(() => {
     worldOffsetXRef.current = finalOffsetX;
@@ -341,6 +388,12 @@ export default function ProgressionMap({
 
   const focusNodeKey = selectedNodeId ?? activeNodeId ?? (activeIndex >= 0 ? `${activeIndex}` : "none");
   useEffect(() => {
+    if (lastFocusNodeKeyRef.current === null) {
+      lastFocusNodeKeyRef.current = focusNodeKey;
+      return;
+    }
+    if (lastFocusNodeKeyRef.current === focusNodeKey) return;
+    lastFocusNodeKeyRef.current = focusNodeKey;
     focusImpulseRef.current = 1;
     focusTimeRef.current = 0;
   }, [focusNodeKey]);
@@ -540,6 +593,7 @@ export default function ProgressionMap({
             <AxioraStarField ref={starFieldRef} width={view.w} height={view.h} cameraY={cameraYRef.current} quality={quality} />
           </div>
 
+          {!hasMeasuredViewport ? null : (
           <div
             ref={worldRef}
             className="progression-map-world"
@@ -648,6 +702,7 @@ export default function ProgressionMap({
               })}
             </div>
           </div>
+          )}
         </div>
       </div>
 
