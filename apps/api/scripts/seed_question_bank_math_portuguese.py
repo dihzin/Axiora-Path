@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from typing import Any
 
 from sqlalchemy import text
@@ -368,7 +369,7 @@ def _insert_question(
             text(
                 """
                 INSERT INTO questions (skill_id, lesson_id, type, difficulty, prompt, explanation, metadata, tags)
-                VALUES (CAST(:skill_id AS uuid), NULL, :type, :difficulty, :prompt, :explanation, :metadata, :tags)
+                VALUES (CAST(:skill_id AS uuid), NULL, :type, :difficulty, :prompt, :explanation, CAST(:metadata AS jsonb), :tags)
                 RETURNING id::text
                 """
             ),
@@ -378,7 +379,7 @@ def _insert_question(
                 "difficulty": difficulty,
                 "prompt": prompt,
                 "explanation": explanation,
-                "metadata": metadata,
+                "metadata": json.dumps(metadata, ensure_ascii=False),
                 "tags": tags,
             },
         ).scalar_one()
@@ -397,12 +398,12 @@ def _insert_variant(
             text(
                 """
                 INSERT INTO question_variants (question_id, variant_data, difficulty_override)
-                VALUES (CAST(:question_id AS uuid), :variant_data, :difficulty_override)
+                VALUES (CAST(:question_id AS uuid), CAST(:variant_data AS jsonb), :difficulty_override)
                 """
             ),
             {
                 "question_id": question_id,
-                "variant_data": variant_data,
+                "variant_data": json.dumps(variant_data, ensure_ascii=False),
                 "difficulty_override": difficulty_override,
             },
         )

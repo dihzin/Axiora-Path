@@ -53,6 +53,12 @@ powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap_local.ps1 -SkipPyth
 powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap_local.ps1 -SkipSeeds
 ```
 
+- limpar cache de build do web (`apps/web/.next`), util para corrigir erros intermitentes de render/build:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap_local.ps1 -CleanWebCache
+```
+
 ## 3) Infra local (Postgres + Redis)
 
 Subir infraestrutura:

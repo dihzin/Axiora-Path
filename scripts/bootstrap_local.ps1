@@ -1,15 +1,27 @@
-$ErrorActionPreference = "Stop"
-
 param(
   [switch]$ResetDb,
+  [switch]$CleanWebCache,
   [switch]$SkipNpmInstall,
   [switch]$SkipPythonInstall,
   [switch]$SkipSeeds
 )
 
+$ErrorActionPreference = "Stop"
+
 function Write-Step($message) {
   Write-Host ""
   Write-Host "[bootstrap-local] $message" -ForegroundColor Cyan
+}
+
+function Invoke-NativeStep {
+  param(
+    [Parameter(Mandatory = $true)][string]$Label,
+    [Parameter(Mandatory = $true)][scriptblock]$Command
+  )
+  & $Command
+  if ($LASTEXITCODE -ne 0) {
+    throw "[bootstrap-local] Failed at step: $Label (exit code $LASTEXITCODE)"
+  }
 }
 
 function Set-Or-AppendEnvVar {
@@ -44,6 +56,7 @@ $ApiEnvFile = Join-Path $ApiDir ".env"
 $ApiEnvExample = Join-Path $ApiDir ".env.example"
 $WebEnvFile = Join-Path $WebDir ".env.local"
 $WebEnvExample = Join-Path $WebDir ".env.example"
+$WebNextDir = Join-Path $WebDir ".next"
 $VenvPython = Join-Path $ApiDir ".venv\Scripts\python.exe"
 
 Write-Step "Root: $RootDir"
@@ -51,10 +64,10 @@ Set-Location $RootDir
 
 Write-Step "Starting infrastructure (Postgres + Redis)"
 if ($ResetDb) {
-  docker compose -f $DockerComposeFile down -v
+  Invoke-NativeStep -Label "docker compose down -v" -Command { docker compose -f $DockerComposeFile down -v }
 }
-docker compose -f $DockerComposeFile up -d
-docker compose -f $DockerComposeFile ps
+Invoke-NativeStep -Label "docker compose up -d" -Command { docker compose -f $DockerComposeFile up -d }
+Invoke-NativeStep -Label "docker compose ps" -Command { docker compose -f $DockerComposeFile ps }
 
 Write-Step "Preparing env files"
 if (!(Test-Path $ApiEnvFile)) {
@@ -70,34 +83,41 @@ Set-Or-AppendEnvVar -FilePath $ApiEnvFile -Key "AXIORA_AUTH_COOKIE_SAMESITE" -Va
 Set-Or-AppendEnvVar -FilePath $ApiEnvFile -Key "AXIORA_CORS_ALLOWED_ORIGINS" -Value "http://localhost:3000"
 Set-Or-AppendEnvVar -FilePath $WebEnvFile -Key "NEXT_PUBLIC_API_URL" -Value "http://localhost:8000"
 
+if ($CleanWebCache) {
+  Write-Step "Cleaning web build cache (.next)"
+  if (Test-Path $WebNextDir) {
+    Remove-Item -Recurse -Force $WebNextDir
+  }
+}
+
 if (!$SkipNpmInstall) {
   Write-Step "Installing monorepo npm dependencies"
   Set-Location $RootDir
-  npm install
+  Invoke-NativeStep -Label "npm install" -Command { npm install }
 }
 
 if (!$SkipPythonInstall) {
   Write-Step "Preparing Python virtualenv"
   Set-Location $ApiDir
   if (!(Test-Path (Join-Path $ApiDir ".venv\Scripts\Activate.ps1"))) {
-    python -m venv .venv
+    Invoke-NativeStep -Label "python -m venv .venv" -Command { python -m venv .venv }
   }
-  & $VenvPython -m pip install --upgrade pip
-  & $VenvPython -m pip install -e ".[dev]"
+  Invoke-NativeStep -Label "pip install --upgrade pip" -Command { & $VenvPython -m pip install --upgrade pip }
+  Invoke-NativeStep -Label "pip install -e .[dev]" -Command { & $VenvPython -m pip install -e ".[dev]" }
 }
 
 Write-Step "Running migrations + schema audit"
 Set-Location $RootDir
-powershell -ExecutionPolicy Bypass -File (Join-Path $RootDir "scripts/axion_db_migrate_and_audit.ps1")
+Invoke-NativeStep -Label "axion_db_migrate_and_audit.ps1" -Command { powershell -ExecutionPolicy Bypass -File (Join-Path $RootDir "scripts/axion_db_migrate_and_audit.ps1") }
 
 if (!$SkipSeeds) {
   Write-Step "Running recommended learning seeds"
   Set-Location $ApiDir
-  & $VenvPython "scripts/seed_aprender_curriculum_structure.py"
-  & $VenvPython "scripts/seed_aprender_content.py"
-  & $VenvPython "scripts/bootstrap_learning_retention.py"
-  & $VenvPython "scripts/seed_question_bank_math_portuguese.py"
-  & $VenvPython "scripts/seed_question_templates_hybrid.py"
+  Invoke-NativeStep -Label "seed_aprender_curriculum_structure.py" -Command { & $VenvPython "scripts/seed_aprender_curriculum_structure.py" }
+  Invoke-NativeStep -Label "seed_aprender_content.py" -Command { & $VenvPython "scripts/seed_aprender_content.py" }
+  Invoke-NativeStep -Label "bootstrap_learning_retention.py" -Command { & $VenvPython "scripts/bootstrap_learning_retention.py" }
+  Invoke-NativeStep -Label "seed_question_bank_math_portuguese.py" -Command { & $VenvPython "scripts/seed_question_bank_math_portuguese.py" }
+  Invoke-NativeStep -Label "seed_question_templates_hybrid.py" -Command { & $VenvPython "scripts/seed_question_templates_hybrid.py" }
 }
 
 Write-Step "Done"
