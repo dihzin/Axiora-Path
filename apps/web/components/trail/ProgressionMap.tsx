@@ -177,14 +177,14 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, pointY, onCl
       <div
         className={cn(
           "pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 rounded-[14px] border border-sky-300/50 bg-slate-900/65 text-center text-slate-200 shadow-[0_0_22px_rgba(56,189,248,0.45)]",
-          compactMobile ? "px-2 py-1 text-[10px] leading-snug" : "px-3 py-1.5 text-[12px] leading-tight",
+          compactMobile ? "px-2 py-1 text-[10px] leading-snug" : "px-3 py-1.5 text-[11px] leading-tight",
         )}
         style={{
           width: `${badgeWidth}px`,
           top: `${badgeOffsetY}px`,
           backdropFilter: "blur(6px)",
           WebkitBackdropFilter: "blur(6px)",
-          filter: "url(#badgeGlow)",
+          boxShadow: "0 0 14px rgba(56,189,248,0.45)",
           transition: "all 0.4s ease",
         }}
       >
@@ -262,6 +262,7 @@ export default function ProgressionMap({
   const viewportRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<HTMLDivElement>(null);
   const [viewportW, setViewportW] = useState(1024);
+  const [viewportWidth, setViewportWidth] = useState(0);
   const [viewportHeightPx, setViewportHeightPx] = useState(viewportHeight);
   const [cameraY, setCameraY] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -273,7 +274,8 @@ export default function ProgressionMap({
   useEffect(() => {
     if (typeof window === "undefined") return;
     const updateViewportSize = () => {
-      setViewportW(Math.max(320, Math.floor(window.innerWidth * 0.92)));
+      const nextW = viewportRef.current?.clientWidth ?? Math.floor(window.innerWidth * 0.92);
+      setViewportW(Math.max(320, nextW));
       const nextH = viewportRef.current?.clientHeight ?? viewportHeight;
       setViewportHeightPx(Math.max(1, nextH));
     };
@@ -283,6 +285,11 @@ export default function ProgressionMap({
       window.removeEventListener("resize", updateViewportSize);
     };
   }, [viewportHeight]);
+
+  useEffect(() => {
+    if (!viewportRef.current) return;
+    setViewportWidth(viewportRef.current.clientWidth);
+  }, []);
 
   const view = { w: viewportW, h: viewportHeightPx };
   const trackWidth = Math.max(320, viewportW);
@@ -432,6 +439,17 @@ export default function ProgressionMap({
     };
   }, [activeIndex, points, view.h, worldHeight]);
   const clampedCamera = cameraRange.clampedCamera;
+  const minNodeX = points.length ? Math.min(...points.map((point) => point.x)) : 0;
+  const maxNodeX = points.length ? Math.max(...points.map((point) => point.x)) : 0;
+  const nodesCenterX = (minNodeX + maxNodeX) / 2;
+  const viewportCenterX = viewportWidth / 2;
+  const worldOffsetX = viewportCenterX - nodesCenterX;
+  const opticalOffset = -viewportWidth * 0.01;
+  const finalOffsetX = worldOffsetX + opticalOffset;
+  const verticalOpticalOffset = view.h * 0.12;
+  const finalOffsetY = cameraY + verticalOpticalOffset;
+  const snappedOffsetX = Math.round(finalOffsetX);
+  const snappedOffsetY = Math.round(finalOffsetY);
 
   const stars = useMemo(
     () =>
@@ -534,7 +552,7 @@ export default function ProgressionMap({
               width: `${trackWidth}px`,
               height: `${worldHeight}px`,
               willChange: "transform",
-              transform: `translateY(${cameraY}px)`,
+              transform: `translate(${snappedOffsetX}px, ${snappedOffsetY}px)`,
               transition: reducedMotion ? "none" : "transform 520ms cubic-bezier(0.2, 0.8, 0.2, 1)",
             }}
           >
@@ -584,7 +602,6 @@ export default function ProgressionMap({
               </filter>
               </defs>
               <g className="camera">
-              <rect x={0} y={0} width={trackWidth} height={worldHeight} fill="url(#nebulaGradient)" />
               {stars.map((star) => (
                 <circle key={star.id} cx={star.x} cy={star.y} r={1} fill="white" opacity={star.opacity} />
               ))}
