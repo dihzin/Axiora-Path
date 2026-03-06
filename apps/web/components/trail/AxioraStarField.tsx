@@ -53,7 +53,7 @@ const AxioraStarField = forwardRef<AxioraStarFieldHandle, AxioraStarFieldProps>(
   const dprRef = useRef(1);
   const cameraYRef = useRef(cameraY);
 
-  const baseCount = quality === "high" ? 176 : 96;
+  const baseCount = quality === "high" ? 156 : 92;
   const starCount = Math.max(32, Math.floor(baseCount * densityScale));
   const stars = useMemo(() => createStars(starCount, width, height), [height, starCount, width]);
   const starsRef = useRef<Star[]>(stars);
@@ -82,8 +82,8 @@ const AxioraStarField = forwardRef<AxioraStarFieldHandle, AxioraStarFieldProps>(
 
       if (star.r > 2.8) {
         ctx.beginPath();
-        ctx.fillStyle = `rgba(160, 220, 255, ${alpha * 0.35})`;
-        ctx.arc(star.x, y, star.r * 1.8, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(160, 220, 255, ${alpha * 0.26})`;
+        ctx.arc(star.x, y, star.r * 1.5, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -91,6 +91,11 @@ const AxioraStarField = forwardRef<AxioraStarFieldHandle, AxioraStarFieldProps>(
       ctx.fillStyle = `rgba(235, 248, 255, ${alpha})`;
       ctx.arc(star.x, y, star.r, 0, Math.PI * 2);
       ctx.fill();
+
+      if (star.r > 2.8) {
+        ctx.fillStyle = `rgba(255,255,255,${Math.min(0.95, alpha + 0.14)})`;
+        ctx.fillRect(star.x - 0.6, y - 0.6, 1.2, 1.2);
+      }
     }
   }, [height, width]);
 

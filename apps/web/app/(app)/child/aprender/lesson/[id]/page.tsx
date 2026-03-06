@@ -244,31 +244,31 @@ function LessonDesktopRail({
   const safeMastery = Math.max(0, Math.min(100, Math.round(masteryPercent)));
   return (
     <div className="space-y-2.5 xl:space-y-3">
-      <div className="rounded-2xl border border-[#E5ECF7] bg-white p-3.5 shadow-[0_3px_10px_rgba(0,0,0,0.05)] xl:p-4">
-        <p className="text-xs font-black uppercase tracking-[0.08em] text-[#8A9BB4]">Sessão</p>
-        <p className="mt-1 text-lg font-black text-[#1F3558]">
+      <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(160deg,rgba(15,23,42,0.86)_0%,rgba(12,25,54,0.82)_55%,rgba(10,19,46,0.92)_100%)] p-3.5 shadow-[0_10px_28px_rgba(2,12,35,0.32),inset_0_1px_0_rgba(255,255,255,0.08)] xl:p-4">
+        <p className="text-xs font-black uppercase tracking-[0.08em] text-slate-400">Sessão</p>
+        <p className="mt-1 text-lg font-black text-slate-100">
           {answered}/{Math.max(1, target)} etapas
         </p>
-        <p className="mt-1 text-sm font-semibold text-[#5F7393]">{waitClock ? `Energia recarrega em ${waitClock}` : `Energia ${energyLabel}`}</p>
+        <p className="mt-1 text-sm font-semibold text-slate-300">{waitClock ? `Energia recarrega em ${waitClock}` : `Energia ${energyLabel}`}</p>
       </div>
-      <div className="rounded-2xl border border-[#E5ECF7] bg-white p-3.5 shadow-[0_3px_10px_rgba(0,0,0,0.05)] xl:p-4">
+      <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(160deg,rgba(15,23,42,0.84)_0%,rgba(12,25,54,0.8)_55%,rgba(10,19,46,0.9)_100%)] p-3.5 shadow-[0_10px_28px_rgba(2,12,35,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] xl:p-4">
         <div className="space-y-2.5">
           <div>
-            <div className="mb-1 flex items-center justify-between text-xs font-bold text-[#5F7393]">
+            <div className="mb-1 flex items-center justify-between text-xs font-bold text-slate-300">
               <span>Progresso da sessão</span>
               <span>{safeSession}%</span>
             </div>
-            <div className="h-2 rounded-full bg-[#EAF0FA]">
-              <div className="h-full rounded-full bg-[#4DD9AC] transition-transform transition-shadow transition-opacity duration-[180ms]" style={{ width: `${safeSession}%` }} />
+            <div className="h-2 rounded-full bg-white/10">
+              <div className="h-full rounded-full bg-[linear-gradient(90deg,#4DD9AC_0%,#38BDF8_100%)] transition-transform transition-shadow transition-opacity duration-[180ms]" style={{ width: `${safeSession}%` }} />
             </div>
           </div>
           <div>
-            <div className="mb-1 flex items-center justify-between text-xs font-bold text-[#5F7393]">
+            <div className="mb-1 flex items-center justify-between text-xs font-bold text-slate-300">
               <span>Domínio atual</span>
               <span>{safeMastery}%</span>
             </div>
-            <div className="h-2 rounded-full bg-[#EAF0FA]">
-              <div className="h-full rounded-full bg-[#38BDF8] transition-transform transition-shadow transition-opacity duration-[180ms]" style={{ width: `${safeMastery}%` }} />
+            <div className="h-2 rounded-full bg-white/10">
+              <div className="h-full rounded-full bg-[linear-gradient(90deg,#38BDF8_0%,#2563EB_100%)] transition-transform transition-shadow transition-opacity duration-[180ms]" style={{ width: `${safeMastery}%` }} />
             </div>
           </div>
         </div>
@@ -928,6 +928,69 @@ export default function AdaptiveLessonSessionPage() {
     }
   }, []);
 
+  const hydrateLessonContext = useCallback(async (subjectId: number | null) => {
+    if (!subjectId || !Number.isFinite(subjectId) || subjectId <= 0) {
+      setOfflineSubjectName(null);
+      setLessonContextLabel(null);
+      setUnitProgressPercent(0);
+      return;
+    }
+
+    try {
+      const learningPath = await getLearningPath(subjectId);
+      setOfflineSubjectName(learningPath.subjectName ?? null);
+      let contextLabel: string | null = null;
+      let nextUnitProgress = 0;
+
+      for (const unit of learningPath.units) {
+        const lessonNode = unit.nodes.find((node) => node.lesson?.id === lessonId);
+        if (lessonNode?.lesson) {
+          contextLabel = `Unidade ${unit.order} • Lição ${lessonNode.lesson.order}`;
+          nextUnitProgress = Math.max(0, Math.min(100, Math.round((unit.completionRate ?? 0) * 100)));
+          break;
+        }
+      }
+
+      setLessonContextLabel(contextLabel);
+      setUnitProgressPercent(nextUnitProgress);
+    } catch {
+      setOfflineSubjectName(null);
+      setLessonContextLabel(null);
+      setUnitProgressPercent(0);
+    }
+  }, [lessonId]);
+
+  const buildOfflineSession = useCallback((subjectId: number | null): LearningSessionStartResponse => {
+    const resolvedSubjectId = subjectId && Number.isFinite(subjectId) && subjectId > 0 ? subjectId : routeSubjectId ?? 0;
+    return {
+      sessionId: `offline-${lessonId}-${Date.now()}`,
+      subjectId: resolvedSubjectId,
+      unitId: null,
+      lessonId,
+      startedAt: new Date().toISOString(),
+    };
+  }, [lessonId, routeSubjectId]);
+
+  const startLearningSessionWithBackoff = useCallback(async () => {
+    const retryDelays = [0, 1200, 2500];
+    let lastErr: unknown = null;
+
+    for (let attempt = 0; attempt < retryDelays.length; attempt += 1) {
+      const waitMs = retryDelays[attempt];
+      if (waitMs > 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, waitMs));
+      }
+
+      try {
+        return await startLearningSession({ lessonId });
+      } catch (err: unknown) {
+        lastErr = err;
+      }
+    }
+
+    throw lastErr ?? new Error("Learning session start failed");
+  }, [lessonId]);
+
   const loadQuestionBatch = useCallback(async (subjectId: number) => {
     const firstBatch = await getAdaptiveLearningNext({
       subjectId,
@@ -1069,31 +1132,14 @@ export default function AdaptiveLessonSessionPage() {
         setLoading(true);
         setError(null);
         setQuestionError(null);
-        const sessionStart = await startLearningSession({ lessonId });
+        const sessionStart = await startLearningSessionWithBackoff();
         setSession(sessionStart);
         trackAprenderEvent("lesson_opened", {
           lessonId,
           sessionId: sessionStart.sessionId,
           subjectId: sessionStart.subjectId,
         });
-        try {
-          const learningPath = await getLearningPath(sessionStart.subjectId);
-          setOfflineSubjectName(learningPath.subjectName ?? null);
-          let contextLabel: string | null = null;
-          for (const unit of learningPath.units) {
-            const lessonNode = unit.nodes.find((node) => node.lesson?.id === lessonId);
-            if (lessonNode?.lesson) {
-              contextLabel = `Unidade ${unit.order} • Lição ${lessonNode.lesson.order}`;
-              setUnitProgressPercent(Math.max(0, Math.min(100, Math.round((unit.completionRate ?? 0) * 100))));
-              break;
-            }
-          }
-          setLessonContextLabel(contextLabel);
-        } catch {
-          setOfflineSubjectName(null);
-          setLessonContextLabel(null);
-          setUnitProgressPercent(0);
-        }
+        await hydrateLessonContext(sessionStart.subjectId);
         try {
           await loadQuestionBatchWithBackoff(sessionStart.subjectId);
         } catch (batchErr: unknown) {
@@ -1111,6 +1157,29 @@ export default function AdaptiveLessonSessionPage() {
           activateOfflineMode(`${message} Entramos no modo offline para você continuar.`);
         }
       } catch (err: unknown) {
+        const errorPayload = err instanceof ApiError ? asRecord(err.payload) : {};
+        const isTransientSessionFailure =
+          err instanceof ApiError &&
+          (err.status === 0 ||
+            toStringSafe(errorPayload.code) === "NETWORK_ERROR" ||
+            (typeof navigator !== "undefined" && navigator.onLine === false));
+
+        if (isTransientSessionFailure) {
+          const fallbackSubjectId = routeSubjectId ?? null;
+          const offlineSession = buildOfflineSession(fallbackSubjectId);
+          setSession(offlineSession);
+          await hydrateLessonContext(fallbackSubjectId);
+          trackAprenderEvent("lesson_opened", {
+            lessonId,
+            sessionId: offlineSession.sessionId,
+            subjectId: fallbackSubjectId ?? undefined,
+            mode: "offline_fallback",
+            reason: toStringSafe(errorPayload.code, `status_${err.status}`),
+          });
+          activateOfflineMode("Conexão instável. Entramos no modo offline para você continuar.");
+          return;
+        }
+
         const message =
           err instanceof ApiError
             ? getApiErrorMessage(err, "Não foi possível iniciar a sessão adaptativa.")
@@ -1127,7 +1196,17 @@ export default function AdaptiveLessonSessionPage() {
     void getAprenderLearningStreak()
       .then((data) => setLearningStreak(data))
       .catch(() => setLearningStreak(null));
-  }, [activateOfflineMode, applyEmptyBatchUnavailableState, lessonId, loadQuestionBatchWithBackoff, refreshWeeklyGoal]);
+  }, [
+    activateOfflineMode,
+    applyEmptyBatchUnavailableState,
+    buildOfflineSession,
+    hydrateLessonContext,
+    lessonId,
+    loadQuestionBatchWithBackoff,
+    refreshWeeklyGoal,
+    routeSubjectId,
+    startLearningSessionWithBackoff,
+  ]);
 
   useEffect(() => {
     if (loading || offlineMode || questionRetrying) return;
@@ -1709,14 +1788,15 @@ export default function AdaptiveLessonSessionPage() {
   return (
     <ChildDesktopShell activeNav="aprender" rightRailAppend={lessonRightRail}>
       <PageShell tone="child" width="content">
+      <div className="lesson-cosmic">
       <div className="mb-2 flex flex-wrap items-center gap-1.5 xl:mb-2.5">
         <button
           type="button"
-          className="inline-flex w-full items-center gap-1.5 rounded-2xl border border-[#DCE6F4] bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_1px_0_rgba(184,200,239,0.58)] transition hover:bg-muted"
+          className="inline-flex w-full items-center gap-1.5 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] px-2.5 py-1.5 text-sm font-semibold text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:bg-white/10"
           onClick={() => void onBackToPath()}
           disabled={backSaving}
         >
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-muted">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-white/10">
             <ArrowLeft className="h-4 w-4 stroke-[2.6]" />
           </span>
           {backSaving ? "Salvando..." : "Voltar ao caminho"}
@@ -1767,43 +1847,43 @@ export default function AdaptiveLessonSessionPage() {
       </div>
 
       {offlineMode ? (
-        <div className="sticky top-2 z-40 mb-3 rounded-2xl border border-amber-300/60 bg-amber-100/80 px-3 py-2 text-xs font-semibold text-amber-900 shadow-[0_2px_0_rgba(180,83,9,0.16)] backdrop-blur">
+        <div className="sticky top-2 z-40 mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/12 px-3 py-2 text-xs font-semibold text-amber-100 shadow-[0_8px_18px_rgba(20,10,0,0.18)] backdrop-blur">
           Modo offline ativo: conexão instável. Suas respostas continuam normalmente.
         </div>
       ) : null}
 
       <ConfettiBurst trigger={confettiTrigger} />
 
-      <Card className="mb-2.5 overflow-hidden border border-[#DEE8F6] bg-[radial-gradient(circle_at_86%_12%,rgba(45,212,191,0.1),transparent_44%),linear-gradient(180deg,#ffffff_0%,#f8fcff_100%)] shadow-[0_1px_0_rgba(184,200,239,0.62),0_8px_16px_rgba(34,63,107,0.08)] xl:mb-3">
+      <Card className="mb-2.5 overflow-hidden border border-white/10 bg-[radial-gradient(circle_at_86%_12%,rgba(45,212,191,0.1),transparent_44%),linear-gradient(180deg,rgba(14,24,52,0.92)_0%,rgba(10,19,42,0.88)_100%)] shadow-[0_10px_28px_rgba(2,12,35,0.32),inset_0_1px_0_rgba(255,255,255,0.08)] xl:mb-3">
         <CardHeader className="pb-1.5 pt-3.5 xl:pt-4">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <CardTitle className="text-[15px] xl:text-base">Sessão adaptativa</CardTitle>
-              <p className="mt-0.5 text-[11px] font-semibold text-muted-foreground">{lessonContextLabel ?? "Lição em andamento"}</p>
+              <CardTitle className="text-[15px] text-slate-100 xl:text-base">Sessão adaptativa</CardTitle>
+              <p className="mt-0.5 text-[11px] font-semibold text-slate-300">{lessonContextLabel ?? "Lição em andamento"}</p>
             </div>
-            <span className="inline-flex items-center gap-1 rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-xs font-semibold text-accent-foreground">
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/25 bg-amber-400/10 px-2 py-0.5 text-xs font-semibold text-amber-100">
               <Flame className="h-3.5 w-3.5 text-accent" />
               {learningStreak?.currentStreak ?? 0}
             </span>
           </div>
         </CardHeader>
         <CardContent className="space-y-1.5 pb-3.5 text-sm xl:pb-4">
-          <div className="flex items-center justify-between rounded-2xl border border-[#E4EBF7] bg-white/92 px-3 py-1.5">
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+          <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.05] px-3 py-1.5">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300">
               <Zap className="h-4 w-4 text-accent" />
               Energia
             </span>
             <div className="text-right text-xs font-semibold">
-              <p className="text-foreground">{energyLoading ? "..." : energyStatus ? `${energyStatus.energy}/${energyStatus.maxEnergy}` : "--/--"}</p>
-              {!energyLoading && energyBlocked ? <p className="text-muted-foreground">Libera em {waitClock}</p> : null}
+              <p className="text-slate-100">{energyLoading ? "..." : energyStatus ? `${energyStatus.energy}/${energyStatus.maxEnergy}` : "--/--"}</p>
+              {!energyLoading && energyBlocked ? <p className="text-slate-400">Libera em {waitClock}</p> : null}
             </div>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-muted-foreground">Progresso da sessão</span>
-            <span className="font-semibold text-foreground">{Math.round(progressPercent)}%</span>
+            <span className="font-semibold text-slate-300">Progresso da sessão</span>
+            <span className="font-semibold text-slate-100">{Math.round(progressPercent)}%</span>
           </div>
           <ProgressBar value={progressPercent} tone="secondary" />
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
             <span className="font-semibold">Domínio {masteryPercent}%</span>
             <span className="font-semibold">{answeredCount}/{stepTotal}</span>
           </div>
@@ -1811,19 +1891,19 @@ export default function AdaptiveLessonSessionPage() {
       </Card>
 
       {loading ? (
-        <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">Preparando sessão adaptativa...</CardContent>
+        <Card className="border border-white/10 bg-[linear-gradient(180deg,rgba(14,24,52,0.86),rgba(10,19,42,0.82))] shadow-[0_10px_28px_rgba(2,12,35,0.28)]">
+          <CardContent className="p-6 text-sm text-slate-300">Preparando sessão adaptativa...</CardContent>
         </Card>
       ) : null}
 
       {error ? (
-        <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">{error}</CardContent>
+        <Card className="border border-white/10 bg-[linear-gradient(180deg,rgba(14,24,52,0.86),rgba(10,19,42,0.82))] shadow-[0_10px_28px_rgba(2,12,35,0.28)]">
+          <CardContent className="p-6 text-sm text-slate-300">{error}</CardContent>
         </Card>
       ) : null}
 
       {!loading && !error && current ? (
-        <Card className="mb-4 border border-[#DFE8F6] bg-white shadow-[0_2px_0_rgba(184,200,239,0.64),0_12px_24px_rgba(18,52,86,0.08)]">
+        <Card className="mb-4 border border-white/10 bg-[linear-gradient(180deg,rgba(12,22,48,0.92),rgba(10,19,42,0.9))] shadow-[0_12px_30px_rgba(2,12,35,0.34),inset_0_1px_0_rgba(255,255,255,0.06)]">
           <CardContent className="space-y-3.5 p-4 md:p-5 xl:space-y-4 xl:p-5">
             {energyBlocked ? (
               <div className="rounded-2xl border border-accent/40 bg-accent/10 p-3">
@@ -2015,7 +2095,9 @@ export default function AdaptiveLessonSessionPage() {
                           "group flex min-h-[52px] items-center justify-between rounded-2xl border px-3 py-2.5 text-left text-sm font-semibold transition-transform transition-shadow transition-opacity duration-150 ease-out xl:min-h-[56px] xl:py-3",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2",
                           "active:scale-[0.985]",
-                          selectedOption === option.id ? "border-primary bg-primary/10 text-primary" : "border-[#DFE8F6] bg-white text-foreground hover:bg-[#F7FBFF]",
+                          selectedOption === option.id
+                            ? "border-cyan-300/70 bg-cyan-400/12 text-slate-50 shadow-[0_0_0_1px_rgba(103,232,249,0.18)]"
+                            : "border-white/12 bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86))] text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-cyan-300/30 hover:bg-[linear-gradient(180deg,rgba(30,41,59,0.98),rgba(51,65,85,0.9))]",
                           currentAnswered && correctByStep[index] && selectedOption === option.id ? "answer-correct-pop" : "",
                           currentAnswered && !correctByStep[index] && selectedOption === option.id ? "border-accent/55 bg-accent/10 text-accent-foreground" : "",
                         )}
@@ -2026,7 +2108,7 @@ export default function AdaptiveLessonSessionPage() {
                           <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#D7E2F3] bg-[#F6FAFF] text-[11px] font-black text-[#6782A8]">
                             {OPTION_LETTERS[optionIndex] ?? String(optionIndex + 1)}
                           </span>
-                          <span>{option.label}</span>
+                          <span className="text-[15px] font-bold leading-5 text-inherit">{option.label}</span>
                         </span>
                         {currentAnswered ? (
                           option.id === correctOptionId ? (
@@ -2098,16 +2180,16 @@ export default function AdaptiveLessonSessionPage() {
       ) : null}
 
       {!loading && !error && !current ? (
-        <Card className="mb-4">
+        <Card className="mb-4 border border-white/10 bg-[linear-gradient(180deg,rgba(12,22,48,0.92),rgba(10,19,42,0.9))] shadow-[0_12px_30px_rgba(2,12,35,0.34)]">
           <CardContent className="space-y-3 p-5">
             {contentUnavailableReason ? (
-              <p className="text-base font-extrabold text-foreground">{contentUnavailableReason.title}</p>
+              <p className="text-base font-extrabold text-slate-100">{contentUnavailableReason.title}</p>
             ) : null}
-            <p className="text-sm font-semibold text-muted-foreground">
+            <p className="text-sm font-semibold text-slate-300">
               {questionError ?? "Ainda não foi possível carregar esta lição."}
             </p>
             {questionRetrying ? (
-              <p className="text-xs font-semibold text-muted-foreground">Tentando reconectar...</p>
+              <p className="text-xs font-semibold text-slate-400">Tentando reconectar...</p>
             ) : null}
             <Button
               type="button"
@@ -2166,13 +2248,13 @@ export default function AdaptiveLessonSessionPage() {
           onClick={() => pushPathWithResult(result)}
         >
           <div
-            className="w-full max-w-md rounded-3xl border border-border bg-white p-5 shadow-[0_24px_60px_rgba(13,25,41,0.32)]"
+            className="w-full max-w-md rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(12,22,48,0.96),rgba(10,19,42,0.94))] p-5 shadow-[0_24px_60px_rgba(13,25,41,0.48)]"
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
           >
-            <p className="text-lg font-extrabold text-foreground">Recompensas da sessão</p>
-            <p className="mt-1 text-xs text-muted-foreground">{starMessage(result.stars)}</p>
+            <p className="text-lg font-extrabold text-slate-100">Recompensas da sessão</p>
+            <p className="mt-1 text-xs text-slate-300">{starMessage(result.stars)}</p>
             <div className="mt-3 flex items-center justify-center gap-1">
               {[1, 2, 3].map((slot) => (
                 <Star key={slot} className={cn("h-7 w-7", slot <= result.stars ? "star-pop fill-amber-400 text-amber-400" : "text-slate-300")} />
@@ -2239,6 +2321,33 @@ export default function AdaptiveLessonSessionPage() {
       <ChildBottomNav />
 
       <style jsx global>{`
+        .lesson-cosmic {
+          color: rgba(240, 249, 255, 0.92);
+        }
+
+        .lesson-cosmic .text-foreground {
+          color: rgba(240, 249, 255, 0.96) !important;
+        }
+
+        .lesson-cosmic .text-muted-foreground {
+          color: rgba(203, 213, 225, 0.82) !important;
+        }
+
+        .lesson-cosmic .bg-white,
+        .lesson-cosmic .bg-white\\/90,
+        .lesson-cosmic .bg-white\\/92 {
+          background: rgba(255, 255, 255, 0.04) !important;
+        }
+
+        .lesson-cosmic .border-border,
+        .lesson-cosmic .border-\[\#DFE8F6\],
+        .lesson-cosmic .border-\[\#DDE7F6\],
+        .lesson-cosmic .border-\[\#DCE7F6\],
+        .lesson-cosmic .border-\[\#DCE6F4\],
+        .lesson-cosmic .border-\[\#E4EBF7\] {
+          border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
         @keyframes lesson-feedback-pop {
           0% {
             transform: scale(0.96);
@@ -2340,6 +2449,7 @@ export default function AdaptiveLessonSessionPage() {
           }
         }
       `}</style>
+      </div>
       </PageShell>
     </ChildDesktopShell>
   );

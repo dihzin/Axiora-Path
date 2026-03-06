@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from hashlib import sha256
+import logging
 from string import Template
 from typing import Any
 
@@ -70,6 +71,7 @@ DEFAULT_MAX_LESSONS_PER_DAY = 5
 DEFAULT_XP_MULTIPLIER = 1.0
 THREE_STAR_BONUS_COINS = 10
 ANTI_REPEAT_DAYS = 7
+logger = logging.getLogger("axiora.services.adaptive_learning")
 
 PT_NOUN_FORMS: dict[str, tuple[str, str]] = {
     "figurinhas": ("figurinha", "figurinhas"),
@@ -362,34 +364,46 @@ def start_learning_session(
     lesson_id: int | None,
     tenant_id: int | None = None,
 ) -> LearningSession:
-    state = compute_axion_state(db, user_id=user_id)
-    facts = build_axion_facts(db, user_id=user_id)
-    actions, _ = evaluate_policies(
-        db,
-        state=state,
-        context=AxionDecisionContext.BEFORE_LEARNING,
-        extra={
-            "dueReviews": int(facts.due_reviews_count),
-            "weeklyCompletionRate": float(facts.weekly_completion_rate),
-            "streakDays": int(facts.streak_days),
-            "energyCurrent": int(facts.energy.current),
-            "recentApproved": int(facts.recent_approvals.approved),
-            "recentRejected": int(facts.recent_approvals.rejected),
-        },
-        user_id=user_id,
-    )
-    apply_actions_to_temporary_boosts(db, user_id=user_id, actions=actions)
-    for action in actions:
-        action_type = str(action.get("type", "")).strip().upper()
-        if action_type not in {"OFFER_MICRO_MISSION", "INSERT_MICRO_MISSION"}:
-            continue
-        params = action.get("params", {}) if isinstance(action.get("params"), dict) else {}
-        mission_kind_raw = params.get("missionKind")
-        inject_axion_micro_mission(
+    try:
+        state = compute_axion_state(db, user_id=user_id)
+        facts = build_axion_facts(db, user_id=user_id)
+        actions, _ = evaluate_policies(
             db,
+            state=state,
+            context=AxionDecisionContext.BEFORE_LEARNING,
+            extra={
+                "dueReviews": int(facts.due_reviews_count),
+                "weeklyCompletionRate": float(facts.weekly_completion_rate),
+                "streakDays": int(facts.streak_days),
+                "energyCurrent": int(facts.energy.current),
+                "recentApproved": int(facts.recent_approvals.approved),
+                "recentRejected": int(facts.recent_approvals.rejected),
+            },
             user_id=user_id,
-            tenant_id=tenant_id,
-            mission_kind=str(mission_kind_raw) if mission_kind_raw else None,
+        )
+        apply_actions_to_temporary_boosts(db, user_id=user_id, actions=actions)
+        for action in actions:
+            action_type = str(action.get("type", "")).strip().upper()
+            if action_type not in {"OFFER_MICRO_MISSION", "INSERT_MICRO_MISSION"}:
+                continue
+            params = action.get("params", {}) if isinstance(action.get("params"), dict) else {}
+            mission_kind_raw = params.get("missionKind")
+            inject_axion_micro_mission(
+                db,
+                user_id=user_id,
+                tenant_id=tenant_id,
+                mission_kind=str(mission_kind_raw) if mission_kind_raw else None,
+            )
+    except Exception:
+        logger.exception(
+            "adaptive_session_axion_prefetch_failed",
+            extra={
+                "user_id": user_id,
+                "tenant_id": tenant_id,
+                "subject_id": subject_id,
+                "unit_id": unit_id,
+                "lesson_id": lesson_id,
+            },
         )
     session = LearningSession(
         user_id=user_id,
@@ -1176,41 +1190,55 @@ def build_next_questions(
         templates = db.scalars(templates_query).all()
         template_candidates: list[NextQuestionItem] = []
         for template in templates:
-            used_signatures = _recent_template_signatures(
-                db,
-                user_id=user_id,
-                template_id=str(template.id),
-                since=since,
-            )
-            selected_variant: GeneratedVariant | None = None
-            for attempt in range(6):
-                candidate = generate_variant(
+            try:
+                used_signatures = _recent_template_signatures(
                     db,
-                    template=template,
                     user_id=user_id,
-                    day_bucket=day_bucket,
-                    attempt_index=(idx * 10) + attempt,
+                    template_id=str(template.id),
+                    since=since,
                 )
-                signature = str((candidate.variant_data or {}).get("signature", ""))
-                if signature and signature not in used_signatures:
-                    selected_variant = candidate
-                    break
-                db.delete(candidate)
-                db.flush()
-            if selected_variant is None:
-                llm_generated = _generate_llm_variants_for_template(
-                    db,
-                    tenant_id=tenant_id,
-                    user_id=user_id,
-                    template=template,
-                    used_signatures=used_signatures,
-                    day_bucket=day_bucket,
-                    count=5,
+                selected_variant: GeneratedVariant | None = None
+                for attempt in range(6):
+                    candidate = generate_variant(
+                        db,
+                        template=template,
+                        user_id=user_id,
+                        day_bucket=day_bucket,
+                        attempt_index=(idx * 10) + attempt,
+                    )
+                    signature = str((candidate.variant_data or {}).get("signature", ""))
+                    if signature and signature not in used_signatures:
+                        selected_variant = candidate
+                        break
+                    db.delete(candidate)
+                    db.flush()
+                if selected_variant is None:
+                    llm_generated = _generate_llm_variants_for_template(
+                        db,
+                        tenant_id=tenant_id,
+                        user_id=user_id,
+                        template=template,
+                        used_signatures=used_signatures,
+                        day_bucket=day_bucket,
+                        count=5,
+                    )
+                    if llm_generated:
+                        selected_variant = llm_generated[0]
+                if selected_variant is not None:
+                    template_candidates.append(_build_template_item(template=template, generated_variant=selected_variant))
+            except Exception:
+                db.rollback()
+                logger.exception(
+                    "adaptive_template_candidate_failed",
+                    extra={
+                        "user_id": user_id,
+                        "tenant_id": tenant_id,
+                        "template_id": str(template.id),
+                        "lesson_id": lesson_id,
+                        "subject_id": subject_id,
+                    },
                 )
-                if llm_generated:
-                    selected_variant = llm_generated[0]
-            if selected_variant is not None:
-                template_candidates.append(_build_template_item(template=template, generated_variant=selected_variant))
+                continue
 
         q_query = (
             select(Question)
@@ -1239,11 +1267,24 @@ def build_next_questions(
         if questions:
             sorted_questions = sorted(questions, key=lambda item: 1 if str(item.id) in recent_qids else 0)
             for question in sorted_questions[:4]:
-                variants = db.scalars(select(QuestionVariant).where(QuestionVariant.question_id == question.id)).all()
-                preferred_variant = next((item for item in variants if str(item.id) not in recent_vids), None)
-                fallback_variant = variants[0] if variants else None
-                candidate_item = _build_question_item(question=question, variant=preferred_variant or fallback_variant)
-                question_candidates.append(candidate_item)
+                try:
+                    variants = db.scalars(select(QuestionVariant).where(QuestionVariant.question_id == question.id)).all()
+                    preferred_variant = next((item for item in variants if str(item.id) not in recent_vids), None)
+                    fallback_variant = variants[0] if variants else None
+                    candidate_item = _build_question_item(question=question, variant=preferred_variant or fallback_variant)
+                    question_candidates.append(candidate_item)
+                except Exception:
+                    logger.exception(
+                        "adaptive_question_candidate_failed",
+                        extra={
+                            "user_id": user_id,
+                            "tenant_id": tenant_id,
+                            "question_id": str(question.id),
+                            "lesson_id": lesson_id,
+                            "subject_id": subject_id,
+                        },
+                    )
+                    continue
 
         all_candidates = [*question_candidates, *template_candidates]
         if not all_candidates:

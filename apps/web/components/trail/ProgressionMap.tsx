@@ -54,12 +54,12 @@ const LOW_TIER_PARTICLES = 8;
 const MAX_UNLOCK_COMETS = 10;
 const MAX_SPARKS = 3;
 const PATH_PATTERN = [-1, 1, -0.6, 0.8, -0.4, 0.6];
-const DEBUG_PERF = true;
+const DEBUG_PERF = false;
 const TEXT_PRIMARY = "rgba(240,249,255,0.92)";
 const TEXT_MUTED = "rgba(226,232,240,0.72)";
 const DESKTOP_TARGET_FRAME_MS = 18.5;
 const MOBILE_DEGRADE_FRAME_MS = 36;
-const DESKTOP_GRAPHICS_PRESET: "ultra" | "balanced" | "safe" = "ultra";
+const DESKTOP_GRAPHICS_PRESET: "ultra" | "balanced" | "safe" = "balanced";
 
 type PersistedMapData = {
   nodes: MapNode[];
@@ -1068,19 +1068,6 @@ export default function ProgressionMap({
                     <stop offset="100%" stopColor="#fde68a" />
                   </linearGradient>
                 </defs>
-
-                {constellationLinks.map((link, index) => (
-                  <line
-                    key={`constellation-link-${index}`}
-                    x1={link.from.x}
-                    y1={link.from.y}
-                    x2={link.to.x}
-                    y2={link.to.y}
-                    stroke="rgba(148,197,255,0.24)"
-                    strokeWidth={1}
-                    vectorEffect="non-scaling-stroke"
-                  />
-                ))}
 
                 <path
                   ref={pathRef}

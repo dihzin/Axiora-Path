@@ -91,23 +91,20 @@ export default function SelectTenantPage() {
   };
 
   return (
-    <div
-      className="min-h-screen bg-[#f6f6f3] bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: "url('/axiora/home/login-background.svg')" }}
-    >
-      <main className="safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md items-center overflow-x-clip p-4 md:p-6">
-        <Card className="w-full">
+    <div className="axiora-brand-page">
+      <main className="axiora-brand-content safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md items-center overflow-x-clip p-4 md:p-6">
+        <Card className="axiora-glass-card w-full text-slate-100">
           <CardHeader>
-            <CardTitle>Selecionar organização</CardTitle>
-            <CardDescription>Confirme a organização ativa antes de escolher o perfil infantil.</CardDescription>
+            <CardTitle className="text-slate-100">Selecionar organização</CardTitle>
+            <CardDescription className="text-slate-300">Confirme a organização ativa antes de escolher o perfil infantil.</CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-3" onSubmit={onSubmit}>
               {loadingMemberships ? (
-                <p className="text-sm text-muted-foreground">Carregando organizações...</p>
+                <p role="status" aria-live="polite" className="text-sm text-slate-300">Carregando organizações...</p>
               ) : memberships.length > 0 ? (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="organization-select">
+                  <label className="text-sm font-medium text-slate-200" htmlFor="organization-select">
                     Organização
                   </label>
                   <NativeSelect
@@ -125,9 +122,21 @@ export default function SelectTenantPage() {
                   </NativeSelect>
                 </div>
               ) : (
-                <Input placeholder="ex: familia-silva" value={slug} onChange={(e) => setSlug(e.target.value)} required disabled={loading} />
+                <>
+                  <label className="text-sm font-medium text-slate-200" htmlFor="slug">Organização</label>
+                  <Input
+                    id="slug"
+                    placeholder="ex: familia-silva"
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value)}
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={error ? "tenant-error" : undefined}
+                    required
+                    disabled={loading}
+                  />
+                </>
               )}
-              {error ? <p className="text-sm text-destructive">{error}</p> : null}
+              {error ? <p id="tenant-error" role="alert" aria-live="polite" className="text-sm text-rose-300">{error}</p> : null}
               <Button className="w-full" type="submit" disabled={loading || loadingMemberships}>
                 {loading ? "Continuando..." : "Continuar"}
               </Button>

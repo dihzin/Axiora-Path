@@ -18,6 +18,23 @@ const contentSecurityPolicy = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  webpack(config) {
+    const fileLoaderRule = config.module.rules.find((rule: { test?: RegExp }) => rule.test?.test?.(".svg")) as
+      | { exclude?: RegExp }
+      | undefined;
+
+    if (fileLoaderRule) {
+      fileLoaderRule.exclude = /\.svg$/i;
+    }
+
+    config.module.rules.push({
+      test: /\.svg$/i,
+      issuer: /\.[jt]sx?$/,
+      use: ["@svgr/webpack"],
+    });
+
+    return config;
+  },
   async headers() {
     return [
       {
@@ -30,6 +47,23 @@ const nextConfig: NextConfig = {
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
           { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
         ],
+      },
+    ];
+  },
+  async rewrites() {
+    if (!apiUrl) {
+      return [];
+    }
+
+    const normalizedApiUrl = apiUrl.replace(/\/+$/, "");
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${normalizedApiUrl}/api/:path*`,
+      },
+      {
+        source: "/auth/:path*",
+        destination: `${normalizedApiUrl}/auth/:path*`,
       },
     ];
   },

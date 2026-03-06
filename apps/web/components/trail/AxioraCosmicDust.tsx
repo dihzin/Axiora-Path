@@ -45,7 +45,7 @@ const AxioraCosmicDust = forwardRef<AxioraCosmicDustHandle, AxioraCosmicDustProp
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const cameraYRef = useRef(cameraY);
 
-  const baseCount = quality === "high" ? 56 : 26;
+  const baseCount = quality === "high" ? 40 : 22;
   const count = Math.max(8, Math.floor(baseCount * densityScale));
   const dust = useMemo(() => createDust(count, width, height), [count, height, width]);
   const dustRef = useRef<Dust[]>(dust);
@@ -68,10 +68,10 @@ const AxioraCosmicDust = forwardRef<AxioraCosmicDustHandle, AxioraCosmicDustProp
 
       const y = ((d.y + t * d.driftY + parallax) % wrapH + wrapH) % wrapH - 4;
       const x = d.x + Math.sin(t * d.phaseSpeed + d.phase) * 4;
-      const alpha = d.baseAlpha + Math.sin(t * d.phaseSpeed + d.phase) * 0.03;
+      const alpha = d.baseAlpha + Math.sin(t * d.phaseSpeed + d.phase) * 0.025;
 
       ctx.beginPath();
-      ctx.fillStyle = `rgba(180, 220, 255, ${Math.max(0.05, Math.min(0.18, alpha))})`;
+      ctx.fillStyle = `rgba(180, 220, 255, ${Math.max(0.04, Math.min(0.14, alpha))})`;
       ctx.arc(x, y, d.r, 0, Math.PI * 2);
       ctx.fill();
     }

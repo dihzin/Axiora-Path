@@ -26,6 +26,7 @@ type HeroMissionCardProps = {
   onContinue?: () => void;
   onStartMission?: () => void;
   className?: string;
+  compact?: boolean;
 };
 
 const TEXT_PRIMARY = "rgba(240,249,255,0.92)";
@@ -41,6 +42,7 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
     currentMission,
     onStartMission,
     className,
+    compact = false,
   } = props;
   const safeXpPercent = Math.max(0, Math.min(100, Math.round(xpPercent)));
   const safeLevel = Math.max(1, Math.floor(level));
@@ -79,10 +81,14 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
     previousLevelRef.current = safeLevel;
   }, [safeLevel]);
 
+  const missionTitle = currentMission?.title ?? "Missão indisponível";
+  const missionXp = currentMission?.xp ?? 0;
+
   return (
     <section
       className={cn(
-        `relative z-0 mx-auto w-full max-w-[720px] overflow-hidden rounded-2xl border border-white/14 bg-[linear-gradient(160deg,rgba(15,23,42,0.86)_0%,rgba(12,25,54,0.82)_55%,rgba(10,19,46,0.92)_100%)] p-4 md:p-5 shadow-[0_10px_28px_rgba(2,12,35,0.32),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-all duration-500 will-change-transform hover:-translate-y-[1px] hover:shadow-[0_14px_36px_rgba(2,12,35,0.42)] ${axioraMotionClasses.transition}`,
+        `relative z-0 mx-auto w-full max-w-[760px] overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(155deg,rgba(9,18,42,0.86)_0%,rgba(10,28,60,0.8)_54%,rgba(8,19,47,0.88)_100%)] shadow-[0_16px_40px_rgba(2,8,28,0.32),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-500 will-change-transform hover:-translate-y-[1px] hover:shadow-[0_22px_48px_rgba(2,8,28,0.42)] ${axioraMotionClasses.transition}`,
+        compact ? "p-3.5 md:p-4" : "p-4 md:p-5",
         levelGlow ? "hero-level-glow" : "",
         className,
       )}
@@ -91,23 +97,35 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
         if (levelGlow) setLevelGlow(false);
       }}
     >
-      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/5 via-white/[0.03] to-transparent" />
-      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[linear-gradient(180deg,rgba(2,6,23,0)_0%,rgba(2,6,23,0.16)_56%,rgba(2,6,23,0.35)_100%)]" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[radial-gradient(70%_90%_at_50%_0%,rgba(56,189,248,0.16),transparent_65%)]" />
+      <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-gradient-to-b from-white/5 via-white/[0.03] to-transparent" />
+      <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-[linear-gradient(180deg,rgba(2,6,23,0)_0%,rgba(2,6,23,0.1)_52%,rgba(2,6,23,0.3)_100%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(70%_90%_at_50%_0%,rgba(56,189,248,0.14),transparent_64%)]" />
+      <div className="pointer-events-none absolute -left-8 top-4 h-28 w-28 rounded-full bg-cyan-300/10 blur-2xl" />
+      <div className="pointer-events-none absolute -right-6 bottom-2 h-24 w-24 rounded-full bg-emerald-300/10 blur-2xl" />
       <span
         aria-hidden
-        className="pointer-events-none absolute bottom-4 left-3 top-4 w-px rounded-full bg-[linear-gradient(180deg,rgba(74,106,146,0)_0%,rgba(74,106,146,0.3)_22%,rgba(74,106,146,0.18)_78%,rgba(74,106,146,0)_100%)]"
+        className="pointer-events-none absolute bottom-5 left-3 top-5 w-px rounded-full bg-[linear-gradient(180deg,rgba(74,106,146,0)_0%,rgba(74,106,146,0.26)_22%,rgba(74,106,146,0.14)_78%,rgba(74,106,146,0)_100%)]"
       />
       <div className="relative z-10">
-        <div className="mb-3 flex items-start justify-between gap-3">
+        <div className={cn("flex flex-wrap items-start justify-between", compact ? "mb-3 gap-2.5" : "mb-4 gap-3")}>
           <div className="max-w-full">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: TEXT_MUTED }}>Trilha ativa</p>
-            <h2 className="mt-1 max-w-[94%] text-[20px] font-semibold leading-[1.02] tracking-tight" style={{ color: TEXT_PRIMARY }}>{subjectName}</h2>
-            <p className="mt-2 text-[11px] font-medium" style={{ color: TEXT_MUTED }}>Nível {safeLevel} · Explorador Analítico</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-cyan-300/25 bg-cyan-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100">
+                Trilha ativa
+              </span>
+              <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-100">
+                Nível {safeLevel}
+              </span>
+            </div>
+            <h2 className={cn("mt-3 max-w-[94%] font-semibold leading-[1.02] tracking-tight", compact ? "text-[21px]" : "text-[24px]")} style={{ color: TEXT_PRIMARY }}>{subjectName}</h2>
+            <p className={cn("mt-2 font-medium", compact ? "text-[11px]" : "text-[12px]")} style={{ color: TEXT_MUTED }}>
+              Sua próxima descoberta está logo ali. Mais {remainingXp} XP para abrir o próximo marco.
+            </p>
           </div>
-          <span className="rounded-full border border-sky-300/35 bg-sky-500/10 px-2.5 py-1 text-[11px] font-semibold text-sky-100 shadow-[0_0_14px_rgba(56,189,248,0.2)]">
-            {safeXpPercent}% progresso
-          </span>
+          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+            <span className="inline-flex h-2.5 w-2.5 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.7)]" />
+            <span className="font-semibold text-sky-100">{safeXpPercent}% progresso</span>
+          </div>
         </div>
 
         <div
@@ -116,9 +134,9 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
             if (xpPulse) setXpPulse(false);
           }}
         >
-          <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_MUTED }}>Progresso atual</p>
-            <span className="text-[11px] font-semibold" style={{ color: TEXT_PRIMARY }}>{safeXpPercent}%</span>
+          <div className={cn("mb-2 flex items-center justify-between gap-2 px-0.5", compact && "mb-1.5")}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_MUTED }}>Energia da trilha</p>
+            <span className="text-[11px] font-semibold" style={{ color: TEXT_PRIMARY }}>{safeInLevel}/{safeToNext} XP</span>
           </div>
           <div className="relative h-2.5 w-full overflow-hidden rounded-full border border-[#9CC8F2]/45 bg-[linear-gradient(180deg,rgba(227,236,247,0.92)_0%,rgba(217,229,242,0.92)_100%)] shadow-[inset_0_1px_3px_rgba(41,58,86,0.12)]">
             <div aria-hidden className="pointer-events-none absolute inset-0 z-10">
@@ -132,32 +150,40 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
             />
           </div>
 
-          <div className="mt-3 grid gap-3 md:grid-cols-[1.5fr_1fr] md:items-stretch">
-            <div className="rounded-xl border border-white/12 bg-white/[0.03] px-3 py-2.5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_MUTED }}>Próximo marco</p>
-              <p className="mt-1 text-[13px] font-semibold" style={{ color: TEXT_PRIMARY }}>Nível {nextLevel} · Estruturas Numéricas</p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium" style={{ color: TEXT_MUTED }}>
-                  Faltam {remainingXp} XP
-                </span>
-                <span className="rounded-full border border-sky-300/30 bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-100">
-                  ≈ {missionsToUnlock} missões
-                </span>
+          <div className={cn("grid", compact ? "mt-3 gap-2.5" : "mt-4 gap-3 md:grid-cols-[1.25fr_auto] md:items-center")}>
+            <div className={cn("grid", compact ? "gap-2.5" : "gap-3 md:grid-cols-[1.2fr_0.8fr]")}>
+              <div className={cn("rounded-[22px] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]", compact ? "px-3.5 py-2.5" : "px-4 py-3")}>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_MUTED }}>Missão brilhando agora</p>
+                <p className={cn("mt-1 font-semibold leading-tight", compact ? "text-[14px]" : "text-[15px]")} style={{ color: TEXT_PRIMARY }}>{missionTitle}</p>
+                <div className={cn("mt-2 flex flex-wrap", compact ? "gap-1.5" : "gap-2")}>
+                  <span className="rounded-full border border-cyan-300/25 bg-cyan-400/10 px-2.5 py-1 text-[11px] font-medium text-cyan-100">
+                    +{missionXp} XP
+                  </span>
+                  <span className="rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium" style={{ color: TEXT_MUTED }}>
+                    Missão pronta
+                  </span>
+                </div>
+              </div>
+
+              <div className={cn("rounded-[22px] border border-white/10 bg-[linear-gradient(145deg,rgba(16,185,129,0.12),rgba(59,130,246,0.06))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]", compact ? "px-3.5 py-2.5" : "px-4 py-3")}>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_MUTED }}>Próximo portal</p>
+                <p className={cn("mt-1 font-semibold", compact ? "text-[13px]" : "text-[14px]")} style={{ color: TEXT_PRIMARY }}>Nível {nextLevel}</p>
+                <p className={cn("mt-1 leading-snug", compact ? "text-[11px]" : "text-[12px]")} style={{ color: TEXT_MUTED }}>
+                  Cerca de {missionsToUnlock} missões para desbloquear.
+                </p>
               </div>
             </div>
 
-            <div className="rounded-xl border border-white/12 bg-[linear-gradient(160deg,rgba(7,29,63,0.48),rgba(10,28,57,0.35))] px-3 py-2.5 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.08)]">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_MUTED }}>Missão atual</div>
-              <div className="mt-1.5 text-[13px] font-semibold" style={{ color: TEXT_PRIMARY }}>{currentMission?.title ?? "Missão indisponível"}</div>
-              <div className="text-[11px]" style={{ color: TEXT_MUTED }}>+{currentMission?.xp ?? 0} XP</div>
-              <button
-                type="button"
-                onClick={onStartMission}
-                className="mt-2.5 inline-flex w-full items-center justify-center rounded-lg border border-cyan-200/35 bg-[linear-gradient(135deg,rgba(56,189,248,0.92),rgba(37,99,235,0.92))] px-3 py-2 text-[13px] font-semibold text-white shadow-[0_0_16px_rgba(56,189,248,0.42)] transition hover:brightness-110"
-              >
-                Iniciar missão
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onStartMission}
+              className={cn(
+                "inline-flex items-center justify-center rounded-[20px] border border-cyan-200/35 bg-[linear-gradient(135deg,rgba(56,189,248,0.96),rgba(37,99,235,0.96))] font-semibold text-white shadow-[0_0_18px_rgba(56,189,248,0.34)] transition hover:brightness-110",
+                compact ? "min-h-[50px] w-full px-4 py-2.5 text-[13px]" : "min-h-[56px] px-5 py-3 text-[14px] md:min-w-[188px]",
+              )}
+            >
+              Iniciar missão
+            </button>
           </div>
         </div>
       </div>

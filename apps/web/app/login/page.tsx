@@ -108,33 +108,55 @@ export default function LoginPage() {
   };
 
   return (
-    <div
-      className="min-h-screen bg-[#f6f6f3] bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: "url('/axiora/home/login-background.svg')" }}
-    >
-      <main className="safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md overflow-x-clip p-4 md:p-6">
+    <div className="axiora-brand-page">
+      <main className="axiora-brand-content safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md overflow-x-clip p-4 md:p-6">
         <div className="relative min-h-[calc(100vh-2rem)] w-full md:min-h-[calc(100vh-3rem)]">
           <div className="pointer-events-none absolute left-0 right-0 top-12 md:top-16">
             <AxionMascot />
           </div>
-          <Card className="absolute left-1/2 top-[58%] w-full -translate-x-1/2 -translate-y-1/2 border-white/60 bg-white/95 shadow-[0_-4px_40px_rgba(13,25,41,0.25),0_8px_32px_rgba(0,0,0,0.15)]">
+          <Card className="axiora-glass-card absolute left-1/2 top-[58%] w-full -translate-x-1/2 -translate-y-1/2 text-slate-100">
           <CardHeader>
-            <CardTitle>Entrar</CardTitle>
-            <CardDescription>Use sua organização e credenciais para acessar o MVP.</CardDescription>
+            <CardTitle className="text-slate-100">Entrar</CardTitle>
+            <CardDescription className="text-slate-300">Use sua organização e credenciais para acessar o MVP.</CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-3" onSubmit={onSubmit}>
-              <Input placeholder="Organização" value={tenantSlug} onChange={(e) => setTenantSlugValue(e.target.value)} autoComplete="organization" required />
-              <Input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
+              <label className="block text-xs font-semibold text-slate-300" htmlFor="tenantSlug">Organização</label>
               <Input
+                id="tenantSlug"
+                placeholder="Organização"
+                value={tenantSlug}
+                onChange={(e) => setTenantSlugValue(e.target.value)}
+                autoComplete="organization"
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? "login-error" : undefined}
+                required
+              />
+              <label className="block text-xs font-semibold text-slate-300" htmlFor="email">Email</label>
+              <Input
+                id="email"
+                placeholder="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? "login-error" : undefined}
+                required
+              />
+              <label className="block text-xs font-semibold text-slate-300" htmlFor="password">Senha</label>
+              <Input
+                id="password"
                 placeholder="Senha"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? "login-error" : undefined}
                 required
               />
-              {error ? <p className="text-sm text-destructive">{error}</p> : null}
+              {error ? <p id="login-error" role="alert" aria-live="polite" className="text-sm text-rose-300">{error}</p> : null}
               <Button className="w-full" type="submit" disabled={loading}>
                 {loading ? "Entrando..." : "Entrar"}
               </Button>

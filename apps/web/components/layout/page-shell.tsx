@@ -6,10 +6,10 @@ type PageShellTone = "default" | "child" | "parent" | "admin";
 type PageShellWidth = "compact" | "content" | "wide" | "full";
 
 const toneClass: Record<PageShellTone, string> = {
-  default: "",
+  default: "axiora-brand-content",
   child: "pb-52 md:pb-40 lg:pb-8",
-  parent: "",
-  admin: "",
+  parent: "axiora-brand-content",
+  admin: "axiora-brand-content",
 };
 
 const widthClass: Record<PageShellWidth, string> = {

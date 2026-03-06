@@ -92,6 +92,17 @@ const GAMES: GameItem[] = [
     estimatedMinutes: 3,
   },
   {
+    id: "local-tug-of-war",
+    href: "/child/games/tug-of-war",
+    title: "Cabo de Guerra",
+    description: "Duelo matemático em tempo real: acerte para puxar a corda e vencer.",
+    skill: "Aritmética e agilidade",
+    difficulty: "Médio",
+    xpReward: 90,
+    icon: Flame,
+    estimatedMinutes: 4,
+  },
+  {
     id: "local-word-search",
     href: "/child/games/wordsearch",
     title: "Caça-palavras",
@@ -156,6 +167,7 @@ function resolveCatalogRoute(item: GameCatalogItem): string | null {
   if (templateId.includes("troco") || templateId.includes("finance")) return "/child/games/finance-sim";
   if (templateId.includes("palavra") || templateId.includes("drag")) return "/child/games/wordsearch";
   if (templateId.includes("tictactoe")) return "/child/games/tictactoe";
+  if (templateId.includes("tug") || templateId.includes("cabo") || templateId.includes("guerra")) return "/child/games/tug-of-war";
 
   const title = item.title.trim().toLowerCase();
   if (title === "corrida da soma") return "/child/games/quiz";
@@ -163,6 +175,7 @@ function resolveCatalogRoute(item: GameCatalogItem): string | null {
   if (title === "mercado do troco") return "/child/games/finance-sim";
   if (title === "caça-palavras") return "/child/games/wordsearch";
   if (title === "jogo da velha") return "/child/games/tictactoe";
+  if (title === "cabo de guerra" || title === "tug of war") return "/child/games/tug-of-war";
 
   const key = item.engineKey.toUpperCase();
   if (key === "QUIZ") return "/child/games/quiz";
