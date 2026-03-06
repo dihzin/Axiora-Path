@@ -37,26 +37,29 @@ type ProgressionMapProps = {
   className?: string;
 };
 
-const NODE_GAP = 120;
-const START_Y = 160;
-const NODE_SIZE = 48;
+const NODE_GAP = 156;
+const START_Y = 210;
+const NODE_SIZE = 56;
 const NODE_RADIUS = NODE_SIZE / 2;
-const SAFE_TOP = 70;
-const SAFE_BOTTOM = 120;
-const SAFE_MARGIN = 90;
+const SAFE_TOP = 96;
+const SAFE_BOTTOM = 156;
+const SAFE_MARGIN = 116;
 
-const SAFE_PAD = { top: 90, right: 110, bottom: 130, left: 110 };
-const BADGE_ALLOW = 52;
-const WORLD_END_PADDING = 220;
-const VIEWPORT_HEIGHT = 640;
+const SAFE_PAD = { top: 118, right: 132, bottom: 168, left: 132 };
+const BADGE_ALLOW = 68;
+const WORLD_END_PADDING = 300;
+const VIEWPORT_HEIGHT = 780;
 const MAX_ENERGY_PARTICLES = 12;
 const LOW_TIER_PARTICLES = 8;
 const MAX_UNLOCK_COMETS = 10;
 const MAX_SPARKS = 3;
 const PATH_PATTERN = [-1, 1, -0.6, 0.8, -0.4, 0.6];
-const DEBUG_PERF = false;
+const DEBUG_PERF = true;
 const TEXT_PRIMARY = "rgba(240,249,255,0.92)";
 const TEXT_MUTED = "rgba(226,232,240,0.72)";
+const DESKTOP_TARGET_FRAME_MS = 18.5;
+const MOBILE_DEGRADE_FRAME_MS = 36;
+const DESKTOP_GRAPHICS_PRESET: "ultra" | "balanced" | "safe" = "ultra";
 
 type PersistedMapData = {
   nodes: MapNode[];
@@ -165,6 +168,17 @@ function randomParticle(quality: "low" | "high"): EnergyParticle {
     jitter: (Math.random() - 0.5) * (quality === "high" ? 3.5 : 2.6),
     alive: true,
   };
+}
+
+function buildConstellationLinks(points: Array<{ x: number; y: number }>) {
+  const links: Array<{ from: { x: number; y: number }; to: { x: number; y: number } }> = [];
+  for (let i = 0; i < points.length - 2; i += 1) {
+    const from = points[i];
+    const to = points[i + 2];
+    if (!from || !to) continue;
+    links.push({ from, to });
+  }
+  return links;
 }
 
 function nearestPointIndex(samplePoints: SampledPathPoint[], x: number, y: number) {
@@ -310,9 +324,17 @@ export default function ProgressionMap({
   const isMobile = trackWidth < 768;
   const compactMobile = trackWidth < 480;
   const quality: "low" | "high" = isMobile ? "low" : "high";
+  const desktopHD = quality === "high";
+  const desktopPresetConfig = desktopHD
+    ? DESKTOP_GRAPHICS_PRESET === "ultra"
+      ? { stars: 1.42, dust: 1.22, sampleCount: 760 }
+      : DESKTOP_GRAPHICS_PRESET === "safe"
+        ? { stars: 1.04, dust: 1.0, sampleCount: 420 }
+        : { stars: 1.22, dust: 1.12, sampleCount: 520 }
+    : { stars: 1.02, dust: 0.96, sampleCount: 280 };
   const energyParticleLimit = quality === "high" ? MAX_ENERGY_PARTICLES : LOW_TIER_PARTICLES;
-  const starsDensityScale = degradedFx ? 0.8 : 1;
-  const dustDensityScale = degradedFx ? 0.7 : 1;
+  const starsDensityScale = degradedFx ? (desktopHD ? 0.94 : 0.84) : desktopPresetConfig.stars;
+  const dustDensityScale = degradedFx ? (desktopHD ? 0.88 : 0.78) : desktopPresetConfig.dust;
   const sparksEnabled = !degradedFx;
 
   const amplitude = Math.min(160, trackWidth * 0.28);
@@ -408,6 +430,7 @@ export default function ProgressionMap({
   const activeIndex = mapData?.activeIndex ?? -1;
   const curvedPath = mapData?.curvedPath ?? "";
   const progressPath = mapData?.progressPath ?? "";
+  const constellationLinks = useMemo(() => buildConstellationLinks(points), [points]);
 
   const cameraRange = useMemo(() => {
     if (!points.length || view.h <= 0 || worldHeight <= 0) {
@@ -478,7 +501,7 @@ export default function ProgressionMap({
 
     const path = pathRef.current;
     const total = path.getTotalLength();
-    const sampleCount = quality === "high" ? 300 : 180;
+    const sampleCount = desktopPresetConfig.sampleCount;
 
     if (!Number.isFinite(total) || total <= 0 || sampleCount < 2) {
       sampledPathRef.current = [];
@@ -493,7 +516,7 @@ export default function ProgressionMap({
     }
 
     sampledPathRef.current = sampled;
-  }, [curvedPath, quality]);
+  }, [curvedPath, desktopPresetConfig.sampleCount]);
 
   useEffect(() => {
     if (!points.length || sampledPathRef.current.length < 2) return;
@@ -825,7 +848,8 @@ export default function ProgressionMap({
       perfDtSumRef.current += dt;
       if (perfWindowMsRef.current >= 2000) {
         const avgDt = perfDtSumRef.current / Math.max(1, perfFrameCountRef.current);
-        if (avgDt > 40 && !degradedFx) {
+        const degradeThreshold = desktopHD ? DESKTOP_TARGET_FRAME_MS : MOBILE_DEGRADE_FRAME_MS;
+        if (avgDt > degradeThreshold && !degradedFx) {
           degradeTriggeredRef.current = true;
           setDegradedFx(true);
         }
@@ -842,7 +866,7 @@ export default function ProgressionMap({
           const avgDt = perfLogDtSumRef.current / Math.max(1, perfLogFrameCountRef.current);
           const fps = avgDt > 0 ? 1000 / avgDt : 0;
           console.log(
-            `[ProgressionMap][perf] avg dt=${avgDt.toFixed(2)}ms fps~${fps.toFixed(1)} quality=${quality} degraded=${degradedFx} degradeTriggered=${degradeTriggeredRef.current}`,
+            `[ProgressionMap][perf] avg dt=${avgDt.toFixed(2)}ms fps~${fps.toFixed(1)} quality=${quality} preset=${desktopHD ? DESKTOP_GRAPHICS_PRESET : "mobile"} degraded=${degradedFx} degradeTriggered=${degradeTriggeredRef.current}`,
           );
           perfLogWindowMsRef.current = 0;
           perfLogFrameCountRef.current = 0;
@@ -857,7 +881,7 @@ export default function ProgressionMap({
     return () => {
       window.cancelAnimationFrame(rafId);
     };
-  }, [degradedFx, energyParticleLimit, isMobile, quality, reducedMotion, sparksEnabled]);
+  }, [degradedFx, desktopHD, energyParticleLimit, isMobile, quality, reducedMotion, sparksEnabled]);
 
   void debug;
 
@@ -879,7 +903,7 @@ export default function ProgressionMap({
   return (
     <div
       ref={containerRef}
-      className={cn("axiora-parallax relative w-full", className)}
+      className={cn("axiora-parallax cosmic-breathe relative w-full", className)}
       style={{
         position: "relative",
         width: "100%",
@@ -900,6 +924,61 @@ export default function ProgressionMap({
         >
           <div ref={nebulaRef} className={cn("nebula-layer pointer-events-none absolute inset-0 z-[0]", quality === "high" ? "nebula-high" : "nebula-low")} />
 
+          <div
+            className="pointer-events-none absolute inset-0 z-[0]"
+            style={{
+              background:
+                "linear-gradient(90deg, rgba(17,24,39,0.28) 0%, rgba(17,24,39,0.06) 16%, rgba(17,24,39,0) 28%, rgba(17,24,39,0) 72%, rgba(17,24,39,0.06) 84%, rgba(17,24,39,0.24) 100%)",
+            }}
+            aria-hidden
+          />
+
+          <div
+            className="pointer-events-none absolute inset-0 z-[0] opacity-[0.9]"
+            style={{
+              background: `
+                radial-gradient(circle at 18% 24%, rgba(56,189,248,0.16), transparent 18%),
+                radial-gradient(circle at 78% 30%, rgba(34,211,238,0.14), transparent 16%),
+                radial-gradient(circle at 52% 68%, rgba(96,165,250,0.12), transparent 20%),
+                radial-gradient(circle at 30% 78%, rgba(59,130,246,0.10), transparent 18%),
+                radial-gradient(circle at 68% 62%, rgba(251,191,36,0.08), transparent 14%)
+              `,
+            }}
+            aria-hidden
+          />
+
+          <div
+            className="pointer-events-none absolute inset-0 z-[0] opacity-[0.95]"
+            style={{
+              background: `
+                radial-gradient(ellipse at 50% 44%, rgba(96,165,250,0.18) 0%, rgba(37,99,235,0.10) 22%, rgba(2,6,23,0) 58%),
+                radial-gradient(ellipse at 50% 62%, rgba(34,211,238,0.14) 0%, rgba(14,165,233,0.06) 24%, rgba(2,6,23,0) 62%),
+                radial-gradient(ellipse at 50% 52%, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 48%)
+              `,
+            }}
+            aria-hidden
+          />
+
+          <div
+            className="pointer-events-none absolute inset-0 z-[0] opacity-[0.9]"
+            style={{
+              background: `
+                linear-gradient(115deg, rgba(250,204,21,0.06) 0%, rgba(250,204,21,0) 18%),
+                linear-gradient(245deg, rgba(192,132,252,0.08) 0%, rgba(192,132,252,0) 20%),
+                linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0))
+              `,
+            }}
+            aria-hidden
+          />
+
+          <div
+            className="pointer-events-none absolute inset-0 z-[0]"
+            style={{
+              background: "linear-gradient(180deg, rgba(3,7,18,0.08), rgba(3,7,18,0) 18%, rgba(3,7,18,0) 78%, rgba(3,7,18,0.12))",
+            }}
+            aria-hidden
+          />
+
           <div ref={starsLayerRef} className="pointer-events-none absolute inset-0 z-[1] will-change-transform" aria-hidden>
             <AxioraStarField ref={starFieldRef} width={view.w} height={view.h} cameraY={cameraYRef.current} quality={quality} densityScale={starsDensityScale} />
           </div>
@@ -912,14 +991,6 @@ export default function ProgressionMap({
             ref={lensRef}
             className={cn("pointer-events-none absolute inset-0 z-[3] will-change-transform", quality === "high" ? "opacity-[0.35]" : "opacity-[0.22]")}
             style={{ mixBlendMode: "screen", background: "radial-gradient(closest-side, rgba(125,211,252,0.10), transparent 60%)" }}
-            aria-hidden
-          />
-
-          <div
-            className="pointer-events-none absolute right-0 top-0 z-[29] h-[180px] w-[220px] rounded-bl-[36px]"
-            style={{
-              background: "linear-gradient(180deg, rgba(2,6,23,0), rgba(2,6,23,0.35))",
-            }}
             aria-hidden
           />
 
@@ -938,6 +1009,36 @@ export default function ProgressionMap({
           >
             <TrailConstellation isCurrent={activeIndex >= 0} />
 
+            <div className="pointer-events-none absolute left-1/2 top-0 z-[4] -translate-x-1/2" style={{ width: `${trackWidth}px`, height: `${worldHeight}px` }} aria-hidden>
+              {renderNodes.map((node, index) => {
+                const point = points[index];
+                if (!point) return null;
+
+                const auraSize = node.status === "current" ? 280 : node.status === "done" ? 220 : 150;
+                const auraBackground =
+                  node.status === "current"
+                    ? "radial-gradient(circle, rgba(56,189,248,0.22) 0%, rgba(14,165,233,0.12) 34%, rgba(2,6,23,0) 72%)"
+                    : node.status === "done"
+                      ? "radial-gradient(circle, rgba(52,211,153,0.18) 0%, rgba(16,185,129,0.10) 34%, rgba(2,6,23,0) 70%)"
+                      : "radial-gradient(circle, rgba(148,163,184,0.10) 0%, rgba(51,65,85,0.06) 30%, rgba(2,6,23,0) 66%)";
+
+                return (
+                  <div
+                    key={`node-aura-${node.id}`}
+                    className={cn("absolute rounded-full", node.status === "current" ? "node-aura-current" : node.status === "done" ? "node-aura-done" : "node-aura-locked")}
+                    style={{
+                      left: point.x,
+                      top: point.y,
+                      width: `${auraSize}px`,
+                      height: `${auraSize}px`,
+                      transform: "translate(-50%, -50%)",
+                      background: auraBackground,
+                    }}
+                  />
+                );
+              })}
+            </div>
+
             <div
               ref={trailLayerRef}
               className="pointer-events-none absolute left-1/2 top-0 z-[5] -translate-x-1/2"
@@ -949,6 +1050,7 @@ export default function ProgressionMap({
                 height={worldHeight}
                 viewBox={`0 0 ${trackWidth} ${worldHeight}`}
                 preserveAspectRatio="xMidYMin meet"
+                shapeRendering="geometricPrecision"
                 style={{ overflow: "visible" }}
                 aria-hidden
               >
@@ -960,29 +1062,45 @@ export default function ProgressionMap({
                     <stop offset="100%" stopColor="#38bdf8" stopOpacity="0" />
                   </linearGradient>
                   <linearGradient id="trailEnergy" x1="0%" y1="0%" x2="100%" y2="0%" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#60a5fa" />
-                    <stop offset="50%" stopColor="#38bdf8" />
-                    <stop offset="100%" stopColor="#6366f1" />
+                    <stop offset="0%" stopColor="#93c5fd" />
+                    <stop offset="45%" stopColor="#67e8f9" />
+                    <stop offset="72%" stopColor="#38bdf8" />
+                    <stop offset="100%" stopColor="#fde68a" />
                   </linearGradient>
                 </defs>
+
+                {constellationLinks.map((link, index) => (
+                  <line
+                    key={`constellation-link-${index}`}
+                    x1={link.from.x}
+                    y1={link.from.y}
+                    x2={link.to.x}
+                    y2={link.to.y}
+                    stroke="rgba(148,197,255,0.24)"
+                    strokeWidth={1}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ))}
 
                 <path
                   ref={pathRef}
                   d={curvedPath}
-                  stroke={isMobile ? "rgba(255,255,255,0.26)" : "rgba(255,255,255,0.16)"}
+                  stroke={isMobile ? "rgba(255,255,255,0.30)" : "rgba(255,255,255,0.18)"}
                   strokeWidth={isMobile ? 6 : 3}
                   fill="none"
                   strokeLinecap="round"
+                  vectorEffect="non-scaling-stroke"
                 />
                 <path
                   d={curvedPath}
                   fill="none"
                   stroke="url(#energyGradient)"
-                  strokeWidth={4}
+                  strokeWidth={4.5}
                   strokeLinecap="round"
                   strokeDasharray="12 18"
                   className="energy-flow"
-                  opacity={0.35}
+                  opacity={0.4}
+                  vectorEffect="non-scaling-stroke"
                 />
                 {progressPath ? (
                   <>
@@ -990,16 +1108,19 @@ export default function ProgressionMap({
                       d={progressPath}
                       stroke="#38bdf8"
                       strokeWidth={(isMobile ? 7 : 4) * 2.2}
-                      opacity={quality === "high" ? 0.24 : 0.2}
+                      opacity={quality === "high" ? 0.22 : 0.18}
                       fill="none"
                       strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
                     />
                     <path
                       d={progressPath}
                       stroke="url(#trailEnergy)"
                       strokeWidth={isMobile ? 7 : 4}
+                      opacity={0.82}
                       fill="none"
                       strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
                     />
                   </>
                 ) : null}
@@ -1049,6 +1170,8 @@ export default function ProgressionMap({
                 return renderNode({
                   node,
                   point,
+                  prevPoint: points[index - 1],
+                  nextPoint: points[index + 1],
                   nodeIndex: index,
                   compactMobile,
                   highlightedNodeId: selectedNodeId ?? activeNodeId,
@@ -1062,11 +1185,19 @@ export default function ProgressionMap({
             </div>
           </div>
 
-          <div className="pointer-events-none absolute right-3 top-3 z-[30] rounded-xl border border-white/15 bg-slate-900/35 px-3 py-2 text-[11px] text-slate-100/90 backdrop-blur-md">
-            <div className="mb-1 font-semibold tracking-wide" style={{ color: TEXT_PRIMARY }}>Legenda</div>
-            <div className="flex items-center gap-2" style={{ color: TEXT_MUTED }}><span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />Concluído</div>
-            <div className="flex items-center gap-2" style={{ color: TEXT_MUTED }}><span className="inline-block h-2 w-2 rounded-full bg-sky-400" />Atual</div>
-            <div className="flex items-center gap-2" style={{ color: TEXT_MUTED }}><span className="inline-block h-2 w-2 rounded-full bg-slate-500" />Bloqueado</div>
+          <div className="legend-chips pointer-events-none absolute right-6 top-6 z-[30] flex gap-2">
+            <div className="inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[12px]" style={{ background: "rgba(10,18,34,0.76)", color: TEXT_MUTED, border: "1px solid rgba(255,255,255,0.06)" }}>
+              <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
+              Concluído
+            </div>
+            <div className="inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[12px]" style={{ background: "rgba(10,18,34,0.76)", color: TEXT_PRIMARY, border: "1px solid rgba(255,255,255,0.06)" }}>
+              <span className="inline-block h-2 w-2 rounded-full bg-sky-400" />
+              Atual
+            </div>
+            <div className="inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[12px]" style={{ background: "rgba(10,18,34,0.76)", color: TEXT_MUTED, border: "1px solid rgba(255,255,255,0.06)" }}>
+              <span className="inline-block h-2 w-2 rounded-full bg-slate-500" />
+              Bloqueado
+            </div>
           </div>
         </div>
       </div>
@@ -1086,20 +1217,47 @@ export default function ProgressionMap({
         }
 
         .nebula-layer {
-          opacity: 0.55;
+          opacity: 0.42;
           background:
-            radial-gradient(circle at 14% 18%, rgba(56, 189, 248, 0.24), transparent 44%),
-            radial-gradient(circle at 82% 26%, rgba(14, 165, 233, 0.2), transparent 48%),
-            radial-gradient(circle at 48% 76%, rgba(59, 130, 246, 0.17), transparent 58%);
+            radial-gradient(circle at 14% 18%, rgba(56, 189, 248, 0.18), transparent 30%),
+            radial-gradient(circle at 82% 26%, rgba(14, 165, 233, 0.14), transparent 32%),
+            radial-gradient(circle at 48% 76%, rgba(59, 130, 246, 0.12), transparent 38%),
+            radial-gradient(circle at 64% 52%, rgba(125, 211, 252, 0.08), transparent 26%),
+            radial-gradient(circle at 70% 18%, rgba(250, 204, 21, 0.06), transparent 18%);
           will-change: transform;
         }
 
         .nebula-low {
-          opacity: 0.4;
+          opacity: 0.28;
         }
 
         .energy-flow {
           animation: energyMove 3s linear infinite;
+        }
+
+        .cosmic-breathe {
+          animation: cosmicBreathe 12s ease-in-out infinite;
+          transform-origin: center center;
+        }
+
+        .node-aura-current,
+        .node-aura-done,
+        .node-aura-locked {
+          will-change: transform, opacity;
+          mix-blend-mode: screen;
+        }
+
+        .node-aura-current {
+          animation: auraFloat 9s ease-in-out infinite;
+        }
+
+        .node-aura-done {
+          animation: auraFloat 12s ease-in-out infinite;
+          opacity: 0.92;
+        }
+
+        .node-aura-locked {
+          opacity: 0.72;
         }
 
         .path-energy {
@@ -1146,6 +1304,26 @@ export default function ProgressionMap({
           }
         }
 
+        @keyframes cosmicBreathe {
+          0%,
+          100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.01);
+          }
+        }
+
+        @keyframes auraFloat {
+          0%,
+          100% {
+            transform: translate(-50%, -50%) scale(1);
+          }
+          50% {
+            transform: translate(-50%, -50%) scale(1.05);
+          }
+        }
+
         @keyframes orbit {
           from {
             transform: translate(-50%, -50%) rotate(0deg);
@@ -1180,10 +1358,10 @@ export default function ProgressionMap({
           position: absolute;
           left: 50%;
           top: 50%;
-          width: 84px;
-          height: 84px;
+          width: 74px;
+          height: 74px;
           border-radius: 9999px;
-          background: radial-gradient(circle, rgba(56, 189, 248, 0.25), transparent 65%);
+          background: radial-gradient(circle, rgba(56, 189, 248, 0.16), transparent 62%);
           animation: pulseHalo 2.4s ease-in-out infinite;
           will-change: transform, opacity;
           pointer-events: none;
@@ -1234,6 +1412,7 @@ export default function ProgressionMap({
         }
 
         @media (prefers-reduced-motion: reduce) {
+          .cosmic-breathe,
           .energy-flow,
           .active-halo,
           .orbital-ring,

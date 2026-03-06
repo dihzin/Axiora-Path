@@ -53,7 +53,7 @@ const AxioraStarField = forwardRef<AxioraStarFieldHandle, AxioraStarFieldProps>(
   const dprRef = useRef(1);
   const cameraYRef = useRef(cameraY);
 
-  const baseCount = quality === "high" ? 120 : 70;
+  const baseCount = quality === "high" ? 176 : 96;
   const starCount = Math.max(32, Math.floor(baseCount * densityScale));
   const stars = useMemo(() => createStars(starCount, width, height), [height, starCount, width]);
   const starsRef = useRef<Star[]>(stars);
@@ -112,17 +112,19 @@ const AxioraStarField = forwardRef<AxioraStarFieldHandle, AxioraStarFieldProps>(
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const dpr = typeof window === "undefined" ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+    const dpr = typeof window === "undefined" ? 1 : Math.min(window.devicePixelRatio || 1, quality === "high" ? 3 : 1.25);
     dprRef.current = dpr;
     canvas.width = Math.max(1, Math.floor(width * dpr));
     canvas.height = Math.max(1, Math.floor(height * dpr));
     canvas.style.width = `${Math.max(1, width)}px`;
     canvas.style.height = `${Math.max(1, height)}px`;
 
-    const ctx = canvas.getContext("2d", { alpha: true });
+    const ctx = canvas.getContext("2d", { alpha: true, desynchronized: quality === "high" });
     if (!ctx) return;
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     ctxRef.current = ctx;
     drawFrame(performance.now(), cameraYRef.current);
   }, [drawFrame, height, quality, width]);

@@ -45,7 +45,7 @@ const AxioraCosmicDust = forwardRef<AxioraCosmicDustHandle, AxioraCosmicDustProp
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const cameraYRef = useRef(cameraY);
 
-  const baseCount = quality === "high" ? 40 : 18;
+  const baseCount = quality === "high" ? 56 : 26;
   const count = Math.max(8, Math.floor(baseCount * densityScale));
   const dust = useMemo(() => createDust(count, width, height), [count, height, width]);
   const dustRef = useRef<Dust[]>(dust);
@@ -93,16 +93,18 @@ const AxioraCosmicDust = forwardRef<AxioraCosmicDustHandle, AxioraCosmicDustProp
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const dpr = typeof window === "undefined" ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+    const dpr = typeof window === "undefined" ? 1 : Math.min(window.devicePixelRatio || 1, quality === "high" ? 3 : 1.25);
     canvas.width = Math.max(1, Math.floor(width * dpr));
     canvas.height = Math.max(1, Math.floor(height * dpr));
     canvas.style.width = `${Math.max(1, width)}px`;
     canvas.style.height = `${Math.max(1, height)}px`;
 
-    const ctx = canvas.getContext("2d", { alpha: true });
+    const ctx = canvas.getContext("2d", { alpha: true, desynchronized: quality === "high" });
     if (!ctx) return;
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     ctxRef.current = ctx;
     drawFrame(performance.now(), cameraYRef.current);
   }, [drawFrame, height, width]);
