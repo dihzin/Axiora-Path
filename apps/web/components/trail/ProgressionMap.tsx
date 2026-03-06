@@ -54,6 +54,9 @@ const LOW_TIER_PARTICLES = 8;
 const MAX_UNLOCK_COMETS = 10;
 const MAX_SPARKS = 3;
 const PATH_PATTERN = [-1, 1, -0.6, 0.8, -0.4, 0.6];
+const DEBUG_PERF = false;
+const TEXT_PRIMARY = "rgba(240,249,255,0.92)";
+const TEXT_MUTED = "rgba(226,232,240,0.72)";
 
 type PersistedMapData = {
   nodes: MapNode[];
@@ -233,6 +236,10 @@ export default function ProgressionMap({
   const perfWindowMsRef = useRef(0);
   const perfFrameCountRef = useRef(0);
   const perfDtSumRef = useRef(0);
+  const perfLogWindowMsRef = useRef(0);
+  const perfLogFrameCountRef = useRef(0);
+  const perfLogDtSumRef = useRef(0);
+  const degradeTriggeredRef = useRef(false);
   const lastVisualSyncRef = useRef<{ enter: number; unlockNodeId: string | null; unlockProgress: number }>({
     enter: -1,
     unlockNodeId: null,
@@ -687,8 +694,9 @@ export default function ProgressionMap({
 
           const x = pointA.x + (pointB.x - pointA.x) * frac;
           const y = pointA.y + (pointB.y - pointA.y) * frac + Math.sin((ts / 1000 + i) * 3.2) * particle.jitter;
-          const localOpacity = 0.35 + (1 - particle.t) * 0.65;
-          const scale = particle.size / 6;
+          const phase = Math.sin(particle.t * Math.PI);
+          const localOpacity = 0.35 + phase * 0.65;
+          const scale = (0.75 + phase * 0.45) * (particle.size / 6);
 
           el.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale.toFixed(3)})`;
           el.style.opacity = localOpacity.toFixed(3);
@@ -818,11 +826,28 @@ export default function ProgressionMap({
       if (perfWindowMsRef.current >= 2000) {
         const avgDt = perfDtSumRef.current / Math.max(1, perfFrameCountRef.current);
         if (avgDt > 40 && !degradedFx) {
+          degradeTriggeredRef.current = true;
           setDegradedFx(true);
         }
         perfWindowMsRef.current = 0;
         perfFrameCountRef.current = 0;
         perfDtSumRef.current = 0;
+      }
+
+      if (DEBUG_PERF) {
+        perfLogWindowMsRef.current += dt;
+        perfLogFrameCountRef.current += 1;
+        perfLogDtSumRef.current += dt;
+        if (perfLogWindowMsRef.current >= 1000) {
+          const avgDt = perfLogDtSumRef.current / Math.max(1, perfLogFrameCountRef.current);
+          const fps = avgDt > 0 ? 1000 / avgDt : 0;
+          console.log(
+            `[ProgressionMap][perf] avg dt=${avgDt.toFixed(2)}ms fps~${fps.toFixed(1)} quality=${quality} degraded=${degradedFx} degradeTriggered=${degradeTriggeredRef.current}`,
+          );
+          perfLogWindowMsRef.current = 0;
+          perfLogFrameCountRef.current = 0;
+          perfLogDtSumRef.current = 0;
+        }
       }
 
       rafId = window.requestAnimationFrame(tick);
@@ -891,6 +916,14 @@ export default function ProgressionMap({
           />
 
           <div
+            className="pointer-events-none absolute right-0 top-0 z-[29] h-[180px] w-[220px] rounded-bl-[36px]"
+            style={{
+              background: "linear-gradient(180deg, rgba(2,6,23,0), rgba(2,6,23,0.35))",
+            }}
+            aria-hidden
+          />
+
+          <div
             ref={worldRef}
             className="progression-map-world"
             style={{
@@ -931,9 +964,6 @@ export default function ProgressionMap({
                     <stop offset="50%" stopColor="#38bdf8" />
                     <stop offset="100%" stopColor="#6366f1" />
                   </linearGradient>
-                  <filter id="routeGlow">
-                    <feDropShadow dx="0" dy="0" stdDeviation="2.2" floodColor="#38bdf8" floodOpacity="0.55" />
-                  </filter>
                 </defs>
 
                 <path
@@ -955,14 +985,23 @@ export default function ProgressionMap({
                   opacity={0.35}
                 />
                 {progressPath ? (
-                  <path
-                    d={progressPath}
-                    stroke="url(#trailEnergy)"
-                    strokeWidth={isMobile ? 7 : 4}
-                    fill="none"
-                    strokeLinecap="round"
-                    filter={quality === "high" ? "url(#routeGlow)" : undefined}
-                  />
+                  <>
+                    <path
+                      d={progressPath}
+                      stroke="#38bdf8"
+                      strokeWidth={(isMobile ? 7 : 4) * 2.2}
+                      opacity={quality === "high" ? 0.24 : 0.2}
+                      fill="none"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d={progressPath}
+                      stroke="url(#trailEnergy)"
+                      strokeWidth={isMobile ? 7 : 4}
+                      fill="none"
+                      strokeLinecap="round"
+                    />
+                  </>
                 ) : null}
               </svg>
             </div>
@@ -1024,10 +1063,10 @@ export default function ProgressionMap({
           </div>
 
           <div className="pointer-events-none absolute right-3 top-3 z-[30] rounded-xl border border-white/15 bg-slate-900/35 px-3 py-2 text-[11px] text-slate-100/90 backdrop-blur-md">
-            <div className="mb-1 font-semibold tracking-wide text-slate-200/95">Legenda</div>
-            <div className="flex items-center gap-2"><span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />Concluído</div>
-            <div className="flex items-center gap-2"><span className="inline-block h-2 w-2 rounded-full bg-sky-400" />Atual</div>
-            <div className="flex items-center gap-2"><span className="inline-block h-2 w-2 rounded-full bg-slate-500" />Bloqueado</div>
+            <div className="mb-1 font-semibold tracking-wide" style={{ color: TEXT_PRIMARY }}>Legenda</div>
+            <div className="flex items-center gap-2" style={{ color: TEXT_MUTED }}><span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />Concluído</div>
+            <div className="flex items-center gap-2" style={{ color: TEXT_MUTED }}><span className="inline-block h-2 w-2 rounded-full bg-sky-400" />Atual</div>
+            <div className="flex items-center gap-2" style={{ color: TEXT_MUTED }}><span className="inline-block h-2 w-2 rounded-full bg-slate-500" />Bloqueado</div>
           </div>
         </div>
       </div>
@@ -1173,28 +1212,25 @@ export default function ProgressionMap({
           box-shadow: 0 0 10px rgba(56, 189, 248, 0.85);
         }
 
+        .orbital-ring-dot-lg::after {
+          top: -3px;
+          width: 6px;
+          height: 6px;
+        }
+
+        .orbital-ring-dot-sm::after {
+          top: -2px;
+          width: 4px;
+          height: 4px;
+          opacity: 0.92;
+        }
+
         .orbital-ring-1 {
-          animation: orbit 6s linear infinite;
+          animation: orbit 7.5s linear infinite;
         }
 
         .orbital-ring-2 {
-          animation: orbitReverse 9s linear infinite;
-          opacity: 0.9;
-        }
-
-        .orbital-ring-3 {
-          animation: orbit 14s linear infinite;
-          opacity: 0.52;
-        }
-
-        @media (max-width: 767px) {
-          .orbital-ring-1 {
-            animation-duration: 8s;
-          }
-
-          .orbital-ring-2 {
-            animation-duration: 12s;
-          }
+          animation: orbitReverse 11s linear infinite;
         }
 
         @media (prefers-reduced-motion: reduce) {

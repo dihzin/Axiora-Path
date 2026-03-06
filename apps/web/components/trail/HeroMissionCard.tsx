@@ -28,6 +28,9 @@ type HeroMissionCardProps = {
   className?: string;
 };
 
+const TEXT_PRIMARY = "rgba(240,249,255,0.92)";
+const TEXT_MUTED = "rgba(226,232,240,0.72)";
+
 export function HeroMissionCard(props: HeroMissionCardProps) {
   const {
     subjectName,
@@ -89,6 +92,7 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
       }}
     >
       <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/5 via-white/[0.03] to-transparent" />
+      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[linear-gradient(180deg,rgba(2,6,23,0)_0%,rgba(2,6,23,0.16)_56%,rgba(2,6,23,0.35)_100%)]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[radial-gradient(70%_90%_at_50%_0%,rgba(56,189,248,0.16),transparent_65%)]" />
       <span
         aria-hidden
@@ -97,9 +101,9 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
       <div className="relative z-10">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="max-w-full">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/75">Trilha ativa</p>
-            <h2 className="mt-1 max-w-[94%] text-[20px] font-semibold leading-[1.02] tracking-tight text-white">{subjectName}</h2>
-            <p className="mt-2 text-[11px] font-medium text-white/85">Nível {safeLevel} · Explorador Analítico</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: TEXT_MUTED }}>Trilha ativa</p>
+            <h2 className="mt-1 max-w-[94%] text-[20px] font-semibold leading-[1.02] tracking-tight" style={{ color: TEXT_PRIMARY }}>{subjectName}</h2>
+            <p className="mt-2 text-[11px] font-medium" style={{ color: TEXT_MUTED }}>Nível {safeLevel} · Explorador Analítico</p>
           </div>
           <span className="rounded-full border border-sky-300/35 bg-sky-500/10 px-2.5 py-1 text-[11px] font-semibold text-sky-100 shadow-[0_0_14px_rgba(56,189,248,0.2)]">
             {safeXpPercent}% progresso
@@ -113,8 +117,8 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
           }}
         >
           <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70">Progresso atual</p>
-            <span className="text-[11px] font-semibold text-white/90">{safeXpPercent}%</span>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_MUTED }}>Progresso atual</p>
+            <span className="text-[11px] font-semibold" style={{ color: TEXT_PRIMARY }}>{safeXpPercent}%</span>
           </div>
           <div className="relative h-2.5 w-full overflow-hidden rounded-full border border-[#9CC8F2]/45 bg-[linear-gradient(180deg,rgba(227,236,247,0.92)_0%,rgba(217,229,242,0.92)_100%)] shadow-[inset_0_1px_3px_rgba(41,58,86,0.12)]">
             <div aria-hidden className="pointer-events-none absolute inset-0 z-10">
@@ -130,10 +134,10 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
 
           <div className="mt-3 grid gap-3 md:grid-cols-[1.5fr_1fr] md:items-stretch">
             <div className="rounded-xl border border-white/12 bg-white/[0.03] px-3 py-2.5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70">Próximo marco</p>
-              <p className="mt-1 text-[13px] font-semibold text-white/90">Nível {nextLevel} · Estruturas Numéricas</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_MUTED }}>Próximo marco</p>
+              <p className="mt-1 text-[13px] font-semibold" style={{ color: TEXT_PRIMARY }}>Nível {nextLevel} · Estruturas Numéricas</p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-white/85">
+                <span className="rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium" style={{ color: TEXT_MUTED }}>
                   Faltam {remainingXp} XP
                 </span>
                 <span className="rounded-full border border-sky-300/30 bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-100">
@@ -143,9 +147,9 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
             </div>
 
             <div className="rounded-xl border border-white/12 bg-[linear-gradient(160deg,rgba(7,29,63,0.48),rgba(10,28,57,0.35))] px-3 py-2.5 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.08)]">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70">Missão atual</div>
-              <div className="mt-1.5 text-[13px] font-semibold text-white">{currentMission?.title ?? "Missão indisponível"}</div>
-              <div className="text-[11px] text-white/85">+{currentMission?.xp ?? 0} XP</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_MUTED }}>Missão atual</div>
+              <div className="mt-1.5 text-[13px] font-semibold" style={{ color: TEXT_PRIMARY }}>{currentMission?.title ?? "Missão indisponível"}</div>
+              <div className="text-[11px]" style={{ color: TEXT_MUTED }}>+{currentMission?.xp ?? 0} XP</div>
               <button
                 type="button"
                 onClick={onStartMission}
