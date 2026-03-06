@@ -43,6 +43,7 @@ function createDust(count: number, width: number, height: number): Dust[] {
 const AxioraCosmicDust = forwardRef<AxioraCosmicDustHandle, AxioraCosmicDustProps>(function AxioraCosmicDust({ width, height, cameraY, quality, densityScale = 1 }, ref) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const cameraYRef = useRef(cameraY);
 
   const baseCount = quality === "high" ? 40 : 18;
   const count = Math.max(8, Math.floor(baseCount * densityScale));
@@ -85,6 +86,10 @@ const AxioraCosmicDust = forwardRef<AxioraCosmicDustHandle, AxioraCosmicDustProp
   }, [dust]);
 
   useEffect(() => {
+    cameraYRef.current = cameraY;
+  }, [cameraY]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -99,8 +104,8 @@ const AxioraCosmicDust = forwardRef<AxioraCosmicDustHandle, AxioraCosmicDustProp
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctxRef.current = ctx;
-    drawFrame(performance.now(), cameraY);
-  }, [cameraY, drawFrame, height, width]);
+    drawFrame(performance.now(), cameraYRef.current);
+  }, [drawFrame, height, width]);
 
   return <canvas ref={canvasRef} className="pointer-events-none h-full w-full" aria-hidden />;
 });

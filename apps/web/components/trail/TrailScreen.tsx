@@ -556,10 +556,10 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
           <DesktopNavItem href="/child/axion" active={pathname.startsWith("/child/axion")} iconName="axion" label="Axion" />
         </aside>
 
-        <div className="mx-auto w-full lg:max-w-[980px] lg:px-5 xl:px-8">
-          <div className="mx-auto w-full max-w-sm pb-24 pt-1 md:max-w-4xl md:pb-8 lg:max-w-3xl lg:pb-12 lg:pt-6">
-            <div className="mx-auto w-full max-w-[760px] px-4 sm:px-6">
-              <header className="relative z-50 space-y-2 bg-[rgba(15,23,42,0.08)] pb-2 [backdrop-filter:blur(2px)] lg:bg-transparent lg:pb-0">
+        <div className="mx-auto w-full lg:max-w-[1420px] lg:px-8 xl:max-w-[1560px] xl:px-12 2xl:px-16">
+          <div className="mx-auto w-full max-w-sm pb-24 pt-1 md:max-w-4xl md:pb-8 lg:max-w-[1240px] lg:pb-12 lg:pt-6 xl:max-w-[1320px]">
+            <div className="mx-auto w-full max-w-[760px] px-4 sm:px-6 lg:max-w-[1120px] lg:px-2 xl:max-w-[1200px]">
+              <header className="relative z-50 space-y-2 bg-[rgba(15,23,42,0.08)] pb-2 [backdrop-filter:blur(2px)] lg:space-y-3 lg:bg-transparent lg:pb-0">
                 <div className="motion-safe:animate-[fade-in-up_280ms_ease-out]">
                   <SubjectSelector
                     streak={subjectStreakDays}
@@ -581,9 +581,10 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
               </header>
 
               <main className="lg:pt-4">
-                <div className="flex w-full flex-col">
+                <div className="flex w-full flex-col gap-4 lg:gap-5">
                   <div className="w-full motion-safe:animate-[fade-in-up_340ms_ease-out]">
                     <HeroMissionCard
+                      className="max-w-none"
                       subjectName={selectedSubjectName}
                       areaLabel={selectedArea}
                       streakDays={subjectStreakDays}
@@ -604,7 +605,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
                     />
                   </div>
                   {hasProgressionMap ? (
-                    <div className="mt-4 w-full motion-safe:animate-[fade-in-up_360ms_ease-out]">
+                    <div className="relative w-full min-h-[520px] shrink-0 motion-safe:animate-[fade-in-up_360ms_ease-out]">
                       <ProgressionMap
                         nodes={progressionNodes}
                         activeNodeId={resolvedActiveMapNodeId}
@@ -614,7 +615,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
                       />
                     </div>
                   ) : null}
-                  <div className="mt-10 w-full motion-safe:animate-[fade-in-up_380ms_ease-out]">
+                  <div className="w-full motion-safe:animate-[fade-in-up_380ms_ease-out]">
                     <DailyMissionsPanel
                       missions={missions}
                       missionsLoading={missionsLoading}
@@ -622,7 +623,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
                       onClaimMission={(missionId) => void onClaimMission(missionId)}
                     />
                   </div>
-                  <div className="mt-10 w-full motion-safe:animate-[fade-in-up_320ms_ease-out]">
+                  <div className="w-full motion-safe:animate-[fade-in-up_320ms_ease-out]">
                     <WeeklyGoalCard completed={weeklyGoal.completed} target={weeklyGoal.target} weekLabel={weeklyGoal.weekLabel} />
                   </div>
                 </div>

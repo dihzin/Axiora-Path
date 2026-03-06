@@ -22,12 +22,14 @@ export function DesktopRightRail({
 
   return (
     <div className="space-y-3">
-      <div className="rounded-2xl border border-[#DFE7F2] bg-white p-3.5 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
-        <p className="text-xs font-black uppercase tracking-[0.08em] text-[#8A9BB4]">Progresso</p>
-        <p className="mt-1 text-xl font-black leading-[1.2] text-[#1F3558]">
+      <div className="relative overflow-hidden rounded-2xl border border-white/14 bg-[linear-gradient(160deg,rgba(15,23,42,0.86)_0%,rgba(12,25,54,0.82)_55%,rgba(10,19,46,0.92)_100%)] p-3.5 shadow-[0_10px_28px_rgba(2,12,35,0.32),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
+        <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/5 via-white/[0.03] to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[radial-gradient(70%_90%_at_50%_0%,rgba(56,189,248,0.16),transparent_65%)]" />
+        <p className="relative z-10 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">Progresso</p>
+        <p className="relative z-10 mt-1 text-[20px] font-semibold leading-[1.2] tracking-tight text-white">
           {insights ? `${insights.weeklyXpEarned} XP na semana` : insightsLoading ? "Carregando progresso..." : "Você está indo bem!"}
         </p>
-        <p className="mt-1 text-[13px] font-semibold leading-5 text-[#5F7393]">
+        <p className="relative z-10 mt-1 text-[13px] font-medium leading-5 text-white/75">
           {insights
             ? `${insights.dueReviewsCount} revisões pendentes`
             : insightsLoading
@@ -36,13 +38,15 @@ export function DesktopRightRail({
         </p>
       </div>
 
-      <div className="rounded-2xl border border-[#DFE7F2] bg-white p-3.5 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
-        <div className="flex items-center justify-between">
-          <p className="text-lg font-black leading-none text-[#1F3558]">Missões do dia</p>
-          <span className="text-xs font-black uppercase tracking-[0.06em] text-[#1DA1F2]">Ver todas</span>
+      <div className="relative overflow-hidden rounded-2xl border border-white/14 bg-[linear-gradient(160deg,rgba(15,23,42,0.86)_0%,rgba(12,25,54,0.82)_55%,rgba(10,19,46,0.92)_100%)] p-3.5 shadow-[0_10px_28px_rgba(2,12,35,0.32),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
+        <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/5 via-white/[0.03] to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[radial-gradient(70%_90%_at_50%_0%,rgba(56,189,248,0.16),transparent_65%)]" />
+        <div className="relative z-10 flex items-center justify-between">
+          <p className="text-[17px] font-semibold leading-none tracking-tight text-white">Missões do dia</p>
+          <span className="rounded-full border border-sky-300/30 bg-sky-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-100">Top 3</span>
         </div>
         {desktopMissions.length > 0 ? (
-          <div className="mt-2.5 space-y-2.5">
+          <div className="relative z-10 mt-2.5 space-y-2">
             {desktopMissions.map((mission) => (
               <DesktopMission
                 key={mission.missionId}
@@ -53,7 +57,7 @@ export function DesktopRightRail({
             ))}
           </div>
         ) : (
-          <p className="mt-3 rounded-xl border border-[#E6ECF5] bg-[#F8FBFF] px-3 py-2 text-sm font-semibold text-[#6A7E9D]">
+          <p className="relative z-10 mt-3 rounded-xl border border-white/20 bg-[rgba(15,23,42,0.65)] px-3 py-2 text-sm font-semibold text-white">
             {missionsLoading ? "Carregando missões..." : "Sem missões disponíveis no momento."}
           </p>
         )}
@@ -68,16 +72,16 @@ function DesktopMission({ mission, onClaim, claiming = false }: { mission: Missi
   const percent = Math.max(0, Math.min(100, Number.isFinite(mission.progressPercent) ? mission.progressPercent : (safeValue / safeTotal) * 100));
   const claimable = mission.completed && !mission.rewardGranted;
   return (
-    <div className="space-y-1.5 rounded-xl border border-[#E6ECF5] p-2.5">
-      <div className="flex items-center justify-between text-[13px] font-semibold text-[#425776]">
-        <span>{mission.title}</span>
-        <span className="text-xs font-black text-[#7A8EA9]">
+    <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-2.5 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.06)]">
+      <div className="flex items-center justify-between text-[13px] font-semibold text-white/90">
+        <span className="truncate">{mission.title}</span>
+        <span className="shrink-0 rounded-full border border-sky-300/35 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-100">
           {safeValue}/{safeTotal}
         </span>
       </div>
-      <div className="h-2 rounded-full bg-[#E9EFF8]">
+      <div className="h-1.5 rounded-full border border-white/15 bg-white/10">
         <div
-          className={`h-full rounded-full transition-transform transition-shadow transition-opacity duration-[180ms] ${mission.completed ? "bg-[#4DD9AC]" : "bg-[#8CC8FF]"}`}
+          className={`h-full rounded-full transition-transform transition-shadow transition-opacity duration-[180ms] ${mission.completed ? "bg-gradient-to-r from-emerald-300 to-emerald-500" : "bg-gradient-to-r from-cyan-300 via-sky-400 to-blue-500"}`}
           style={{ width: `${percent}%` }}
         />
       </div>
@@ -86,12 +90,12 @@ function DesktopMission({ mission, onClaim, claiming = false }: { mission: Missi
           type="button"
           onClick={onClaim}
           disabled={claiming}
-          className="mt-1 w-full rounded-full border border-[#8EE2C7] bg-[#E8FBF3] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.05em] text-[#178D72] transition-colors hover:bg-[#DDF7EC] disabled:cursor-default disabled:opacity-70"
+          className="mt-1 w-full rounded-full border border-cyan-200/35 bg-[linear-gradient(135deg,rgba(56,189,248,0.92),rgba(37,99,235,0.92))] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-white shadow-[0_0_14px_rgba(56,189,248,0.35)] transition hover:brightness-110 disabled:cursor-default disabled:opacity-70"
         >
           {claiming ? "Resgatando..." : "Resgatar"}
         </button>
       ) : mission.rewardGranted ? (
-        <p className="mt-1 text-[11px] font-black uppercase tracking-[0.05em] text-[#5E7B9E]">Recompensa recebida</p>
+        <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-100/90">Recompensa recebida</p>
       ) : null}
     </div>
   );

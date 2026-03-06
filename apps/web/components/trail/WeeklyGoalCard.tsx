@@ -20,33 +20,35 @@ export function WeeklyGoalCard({ completed, target, weekLabel, className }: Week
   return (
     <section
       className={cn(
-        "axiora-hover-magic relative overflow-hidden rounded-2xl border border-white/10 bg-[rgba(15,23,42,0.85)] bg-gradient-to-b from-white/10 to-white/5 p-4 backdrop-blur-xl shadow-[0_0_30px_rgba(56,189,248,0.1)] transition-all duration-500 hover:shadow-[0_0_30px_rgba(56,189,248,0.25)]",
+        "axiora-hover-magic relative overflow-hidden rounded-2xl border border-white/14 bg-[linear-gradient(160deg,rgba(15,23,42,0.86)_0%,rgba(12,25,54,0.82)_55%,rgba(10,19,46,0.92)_100%)] p-4 backdrop-blur-xl shadow-[0_10px_28px_rgba(2,12,35,0.32),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-500 hover:shadow-[0_14px_36px_rgba(2,12,35,0.42)]",
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/5 via-white/[0.03] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[radial-gradient(70%_90%_at_50%_0%,rgba(56,189,248,0.16),transparent_65%)]" />
+      <div className="relative z-10 flex items-start justify-between gap-2">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-white">Meta da semana</p>
-          <p className="mt-1 text-[21px] font-semibold leading-tight text-white">{
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/75">Meta da semana</p>
+          <p className="mt-1 text-[18px] font-semibold leading-tight tracking-[-0.01em] text-white">{
             statusText
           }</p>
-          <p className="mt-1 text-[13px] font-medium text-white/80">
+          <p className="mt-1 text-[12px] font-medium text-white/80">
             Você já concluiu {safeCompleted} de {safeTarget}.
           </p>
         </div>
-        <div className="rounded-full bg-[#DFE6F1] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.06em] text-[#2B2F42]">
+        <div className="rounded-full border border-sky-300/30 bg-sky-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-100">
           {weekLabel}
         </div>
       </div>
 
-      <div className="mt-2.5">
+      <div className="relative z-10 mt-2.5">
         <div className="mb-1.5 flex items-center justify-between text-[12px] font-semibold text-white">
-          <span>Progresso da semana</span>
-          <span className="rounded-full bg-[#DFE6F1] px-2 py-0.5 text-[11px] text-[#2B2F42]">{percent}%</span>
+          <span className="text-[11px] uppercase tracking-[0.1em] text-white/70">Progresso da semana</span>
+          <span className="rounded-full border border-sky-300/35 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-100">{percent}%</span>
         </div>
-        <div className="h-2.5 overflow-hidden rounded-full border border-[#CDD9E9] bg-[linear-gradient(180deg,#DEE7F3_0%,#D7E1EF_100%)] shadow-[inset_0_1px_3px_rgba(40,58,88,0.12)]">
+        <div className="h-2.5 overflow-hidden rounded-full border border-[#9CC8F2]/45 bg-[linear-gradient(180deg,rgba(227,236,247,0.92)_0%,rgba(217,229,242,0.92)_100%)] shadow-[inset_0_1px_3px_rgba(40,58,88,0.12)]">
           <div
-            className="h-full rounded-full bg-[linear-gradient(120deg,#3E73AF_0%,#5D8DC2_100%)] transition-transform transition-shadow transition-opacity duration-700 ease-out"
+            className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-sky-400 to-blue-500 transition-transform transition-shadow transition-opacity duration-700 ease-out"
             style={{ width: `${percent}%` }}
           />
         </div>

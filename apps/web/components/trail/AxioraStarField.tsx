@@ -51,6 +51,7 @@ const AxioraStarField = forwardRef<AxioraStarFieldHandle, AxioraStarFieldProps>(
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const dprRef = useRef(1);
+  const cameraYRef = useRef(cameraY);
 
   const baseCount = quality === "high" ? 120 : 70;
   const starCount = Math.max(32, Math.floor(baseCount * densityScale));
@@ -104,6 +105,10 @@ const AxioraStarField = forwardRef<AxioraStarFieldHandle, AxioraStarFieldProps>(
   }, [stars]);
 
   useEffect(() => {
+    cameraYRef.current = cameraY;
+  }, [cameraY]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -119,8 +124,8 @@ const AxioraStarField = forwardRef<AxioraStarFieldHandle, AxioraStarFieldProps>(
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctxRef.current = ctx;
-    drawFrame(performance.now(), cameraY);
-  }, [cameraY, drawFrame, height, quality, width]);
+    drawFrame(performance.now(), cameraYRef.current);
+  }, [drawFrame, height, quality, width]);
 
   return <canvas ref={canvasRef} className="pointer-events-none h-full w-full" aria-hidden />;
 });

@@ -233,6 +233,11 @@ export default function ProgressionMap({
   const perfWindowMsRef = useRef(0);
   const perfFrameCountRef = useRef(0);
   const perfDtSumRef = useRef(0);
+  const lastVisualSyncRef = useRef<{ enter: number; unlockNodeId: string | null; unlockProgress: number }>({
+    enter: -1,
+    unlockNodeId: null,
+    unlockProgress: -1,
+  });
 
   const [viewportW, setViewportW] = useState(1024);
   const [viewportHeightPx, setViewportHeightPx] = useState(viewportHeight);
@@ -683,10 +688,9 @@ export default function ProgressionMap({
           const x = pointA.x + (pointB.x - pointA.x) * frac;
           const y = pointA.y + (pointB.y - pointA.y) * frac + Math.sin((ts / 1000 + i) * 3.2) * particle.jitter;
           const localOpacity = 0.35 + (1 - particle.t) * 0.65;
+          const scale = particle.size / 6;
 
-          el.style.width = `${particle.size}px`;
-          el.style.height = `${particle.size}px`;
-          el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+          el.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale.toFixed(3)})`;
           el.style.opacity = localOpacity.toFixed(3);
         }
 
@@ -791,8 +795,21 @@ export default function ProgressionMap({
       visualUpdateAccumulatorRef.current += dt;
       if (visualUpdateAccumulatorRef.current >= 33) {
         visualUpdateAccumulatorRef.current = 0;
-        setEnterProgressVisual(enterProgressRef.current);
-        setUnlockVisual({ nodeId: unlockNodeId, progress: unlockProgress });
+        const lastVisual = lastVisualSyncRef.current;
+        const nextEnter = enterProgressRef.current;
+        const enterDelta = Math.abs(nextEnter - lastVisual.enter);
+        if (enterDelta > 0.012) {
+          setEnterProgressVisual(nextEnter);
+          lastVisual.enter = nextEnter;
+        }
+
+        const unlockNodeChanged = unlockNodeId !== lastVisual.unlockNodeId;
+        const unlockDelta = Math.abs(unlockProgress - lastVisual.unlockProgress);
+        if (unlockNodeChanged || unlockDelta > 0.02) {
+          setUnlockVisual({ nodeId: unlockNodeId, progress: unlockProgress });
+          lastVisual.unlockNodeId = unlockNodeId;
+          lastVisual.unlockProgress = unlockProgress;
+        }
       }
 
       perfWindowMsRef.current += dt;
@@ -915,7 +932,7 @@ export default function ProgressionMap({
                     <stop offset="100%" stopColor="#6366f1" />
                   </linearGradient>
                   <filter id="routeGlow">
-                    <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#38bdf8" floodOpacity="0.8" />
+                    <feDropShadow dx="0" dy="0" stdDeviation="2.2" floodColor="#38bdf8" floodOpacity="0.55" />
                   </filter>
                 </defs>
 
@@ -926,7 +943,6 @@ export default function ProgressionMap({
                   strokeWidth={isMobile ? 6 : 3}
                   fill="none"
                   strokeLinecap="round"
-                  filter="url(#routeGlow)"
                 />
                 <path
                   d={curvedPath}
@@ -945,8 +961,7 @@ export default function ProgressionMap({
                     strokeWidth={isMobile ? 7 : 4}
                     fill="none"
                     strokeLinecap="round"
-                    filter="url(#routeGlow)"
-                    style={{ filter: "drop-shadow(0 0 22px rgba(56,189,248,0.8))" }}
+                    filter={quality === "high" ? "url(#routeGlow)" : undefined}
                   />
                 ) : null}
               </svg>
