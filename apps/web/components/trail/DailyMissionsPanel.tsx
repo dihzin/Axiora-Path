@@ -30,15 +30,15 @@ export function DailyMissionsPanel({ missions, missionsLoading, claimingMissionI
   const canNavigate = dailyMissions.length > 1;
 
   return (
-    <section className={cn("relative overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(160deg,rgba(11,21,48,0.8)_0%,rgba(11,30,58,0.74)_55%,rgba(9,19,46,0.84)_100%)] shadow-[0_16px_40px_rgba(2,8,28,0.28),inset_0_1px_0_rgba(255,255,255,0.08)]", compact ? "p-3.5" : "p-4", className)}>
+    <section className={cn("relative overflow-hidden rounded-[28px] border border-violet-200/12 bg-[linear-gradient(160deg,rgba(12,21,47,0.82)_0%,rgba(18,22,58,0.82)_52%,rgba(8,18,42,0.88)_100%)] shadow-[0_16px_40px_rgba(2,8,28,0.28),inset_0_1px_0_rgba(255,255,255,0.08)]", compact ? "p-3.5" : "p-4", className)}>
       <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-gradient-to-b from-white/5 via-white/[0.03] to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[radial-gradient(70%_90%_at_50%_0%,rgba(250,204,21,0.12),transparent_65%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[radial-gradient(70%_90%_at_50%_0%,rgba(167,139,250,0.12),transparent_65%)]" />
       <div className="relative z-10 flex items-end justify-between gap-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">Desafios do dia</p>
-          <h3 className={cn("mt-1 font-semibold leading-tight text-white", compact ? "text-[16px]" : "text-[18px]")}>Pequenas conquistas para hoje</h3>
+          <h3 className={cn("mt-1 font-semibold leading-tight text-white", compact ? "text-[15px]" : "text-[18px]")}>{compact ? "Desafio em foco" : "Pequenas conquistas para hoje"}</h3>
         </div>
-        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-slate-200">
+        <span className="rounded-full border border-violet-200/16 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-slate-200">
           {dailyMissions.length} ativos
         </span>
       </div>
@@ -60,6 +60,9 @@ export function DailyMissionsPanel({ missions, missionsLoading, claimingMissionI
                     onClick={() => setActiveIndex((prev) => (prev + 1) % dailyMissions.length)}
                   />
                 </div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/58">
+                  {activeIndex + 1} de {dailyMissions.length}
+                </p>
                 <div className="flex items-center gap-1.5">
                   {dailyMissions.map((mission, index) => (
                     <button
@@ -68,7 +71,7 @@ export function DailyMissionsPanel({ missions, missionsLoading, claimingMissionI
                       onClick={() => setActiveIndex(index)}
                       className={cn(
                         "h-2.5 rounded-full transition-all duration-200",
-                        index === activeIndex ? "w-5 bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.45)]" : "w-2.5 bg-white/20 hover:bg-white/35",
+                        index === activeIndex ? "w-5 bg-violet-300 shadow-[0_0_10px_rgba(167,139,250,0.45)]" : "w-2.5 bg-white/20 hover:bg-white/35",
                       )}
                       aria-label={`Mostrar desafio ${index + 1}`}
                       aria-pressed={index === activeIndex}
@@ -111,7 +114,7 @@ function NavButton({
       disabled={disabled}
       className={cn(
         "inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/12 bg-white/[0.04] text-[14px] text-white transition",
-        disabled ? "cursor-default opacity-40" : "hover:border-cyan-300/35 hover:bg-cyan-400/10 hover:text-cyan-100",
+        disabled ? "cursor-default opacity-40" : "hover:border-violet-300/35 hover:bg-violet-400/10 hover:text-violet-100",
       )}
       aria-label={direction === "left" ? "Desafio anterior" : "Próximo desafio"}
     >
@@ -137,7 +140,7 @@ function MissionTile({ mission, index, compact }: { mission: MissionProgress; in
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className={cn("font-semibold leading-tight text-white", compact ? "text-[13px]" : "text-[14px]")}>{mission.title}</p>
-          <p className="mt-1 text-[11px] text-slate-300">{done ? "Desafio concluído" : "Continue para acender esta estrela"}</p>
+          <p className="mt-1 text-[11px] text-slate-300">{done ? "Conquista pronta para celebrar" : "Continue para acender esta estrela"}</p>
         </div>
         <p className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${done ? "border-emerald-300/45 bg-emerald-400/15 text-emerald-100" : "border-sky-300/40 bg-sky-400/15 text-sky-100"}`}>
           {safeValue}/{safeTotal}

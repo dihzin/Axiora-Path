@@ -41,13 +41,39 @@ export function getIsoWeekLabel(date: Date = new Date()): string {
   return `${year}-W${String(week).padStart(2, "0")}`;
 }
 
+function getWeekRange(date: Date) {
+  const start = new Date(date);
+  const day = start.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() + diffToMonday);
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+export function getHumanWeekLabel(date: Date = new Date()): string {
+  const { start, end } = getWeekRange(date);
+  const startDay = start.getDate();
+  const endDay = end.getDate();
+  const sameMonth = start.getMonth() === end.getMonth();
+  const startMonth = start.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "").toLowerCase();
+  const endMonth = end.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "").toLowerCase();
+  if (sameMonth) {
+    return `${startDay}–${endDay} ${endMonth}`;
+  }
+  return `${startDay} ${startMonth} – ${endDay} ${endMonth}`;
+}
+
 export function resolveWeeklyGoalProgress(missions: MissionsCurrentResponse | null, target = 3): {
   completed: number;
   target: number;
   weekLabel: string;
 } {
   const now = new Date();
-  const weekLabel = getIsoWeekLabel(now);
+  const weekLabel = getHumanWeekLabel(now);
   if (!missions) return { completed: 0, target, weekLabel };
 
   const lessonMission = missions.missions.find((item) => item.missionType === "LESSONS_COMPLETED");

@@ -122,7 +122,7 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
               Sua próxima descoberta está logo ali. Mais {remainingXp} XP para abrir o próximo marco.
             </p>
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+          <div className="flex items-center gap-2 rounded-full border border-cyan-300/16 bg-cyan-400/[0.06] px-3 py-2 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
             <span className="inline-flex h-2.5 w-2.5 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.7)]" />
             <span className="font-semibold text-sky-100">{safeXpPercent}% progresso</span>
           </div>
@@ -152,7 +152,7 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
 
           <div className={cn("grid", compact ? "mt-3 gap-2.5" : "mt-4 gap-3 md:grid-cols-[1.25fr_auto] md:items-center")}>
             <div className={cn("grid", compact ? "gap-2.5" : "gap-3 md:grid-cols-[1.2fr_0.8fr]")}>
-              <div className={cn("rounded-[22px] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]", compact ? "px-3.5 py-2.5" : "px-4 py-3")}>
+              <div className={cn("rounded-[22px] border border-cyan-300/14 bg-[linear-gradient(145deg,rgba(17,24,39,0.48),rgba(8,47,73,0.22))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]", compact ? "px-3.5 py-2.5" : "px-4 py-3")}>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_MUTED }}>Missão brilhando agora</p>
                 <p className={cn("mt-1 font-semibold leading-tight", compact ? "text-[14px]" : "text-[15px]")} style={{ color: TEXT_PRIMARY }}>{missionTitle}</p>
                 <div className={cn("mt-2 flex flex-wrap", compact ? "gap-1.5" : "gap-2")}>
@@ -165,7 +165,7 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
                 </div>
               </div>
 
-              <div className={cn("rounded-[22px] border border-white/10 bg-[linear-gradient(145deg,rgba(16,185,129,0.12),rgba(59,130,246,0.06))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]", compact ? "px-3.5 py-2.5" : "px-4 py-3")}>
+              <div className={cn("rounded-[22px] border border-emerald-300/12 bg-[linear-gradient(145deg,rgba(16,185,129,0.14),rgba(59,130,246,0.08))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]", compact ? "px-3.5 py-2.5" : "px-4 py-3")}>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_MUTED }}>Próximo portal</p>
                 <p className={cn("mt-1 font-semibold", compact ? "text-[13px]" : "text-[14px]")} style={{ color: TEXT_PRIMARY }}>Nível {nextLevel}</p>
                 <p className={cn("mt-1 leading-snug", compact ? "text-[11px]" : "text-[12px]")} style={{ color: TEXT_MUTED }}>

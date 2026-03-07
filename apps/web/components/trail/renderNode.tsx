@@ -266,22 +266,22 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
           </span>
         ) : null}
       </button>
-        <div
+      <div
         className={cn(
-          "pointer-events-none absolute top-1/2 z-20 rounded-[14px] text-center opacity-95 transition-opacity duration-[180ms] group-hover:opacity-100",
+          "pointer-events-none absolute top-1/2 z-20 rounded-[16px] text-center opacity-95 transition-opacity duration-[180ms] group-hover:opacity-100",
           badgeAnchorClass,
-          compactMobile ? "px-2 py-1 text-[10px] leading-snug" : "px-3 py-1.5 text-[11px] leading-tight",
+          compactMobile ? "px-2.5 py-1 text-[10px] leading-snug" : "px-3.5 py-1.5 text-[11px] leading-tight",
         )}
         style={{
           transform: `translate(${badgeTranslateX}, calc(-50% + ${badgeOffsetY.toFixed(1)}px))`,
-          background: visuals.labelBg,
+          background: `linear-gradient(180deg, rgba(8,16,34,0.96), rgba(8,16,34,0.9)), ${visuals.labelBg}`,
           border: `1px solid ${visuals.labelBorder}`,
-          boxShadow: visuals.labelShadow,
+          boxShadow: `${visuals.labelShadow}, inset 0 1px 0 rgba(255,255,255,0.06)`,
           transition: "transform 0.4s ease, opacity 180ms ease",
           whiteSpace: "nowrap",
         }}
       >
-        <span className="font-medium" style={{ color: visuals.labelText }}>{node.title}</span>
+        <span className="font-semibold tracking-[-0.01em]" style={{ color: visuals.labelText, textShadow: "0 1px 8px rgba(2,6,23,0.38)" }}>{node.title}</span>
       </div>
     </div>
   );

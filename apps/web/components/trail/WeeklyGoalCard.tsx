@@ -21,13 +21,14 @@ export function WeeklyGoalCard({ completed, target, weekLabel, className, compac
   return (
     <section
       className={cn(
-        "axiora-hover-magic relative overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(145deg,rgba(18,26,58,0.84),rgba(14,23,49,0.78))] p-4 shadow-[0_14px_34px_rgba(2,8,28,0.26),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-500 hover:shadow-[0_18px_40px_rgba(2,8,28,0.34)]",
+        "axiora-hover-magic relative overflow-hidden rounded-[26px] border border-amber-200/12 bg-[linear-gradient(145deg,rgba(24,24,52,0.9),rgba(16,20,44,0.82))] p-4 shadow-[0_14px_34px_rgba(2,8,28,0.26),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-500 hover:shadow-[0_18px_40px_rgba(2,8,28,0.34)]",
         compact && "p-3.5",
         className,
       )}
     >
       <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-gradient-to-b from-white/5 via-white/[0.03] to-transparent" />
-      <div className="pointer-events-none absolute -left-4 top-1/2 h-24 w-24 -translate-y-1/2 rounded-full bg-amber-300/10 blur-2xl" />
+      <div className="pointer-events-none absolute -left-4 top-1/2 h-24 w-24 -translate-y-1/2 rounded-full bg-amber-300/12 blur-2xl" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(180deg,rgba(250,204,21,0.08),rgba(250,204,21,0))]" />
       <div className={cn("relative z-10 flex items-center", compact ? "gap-3" : "gap-4")}>
         <div className={cn("flex shrink-0 items-center justify-center rounded-[18px] border border-amber-300/20 bg-[linear-gradient(145deg,rgba(250,204,21,0.18),rgba(56,189,248,0.12))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]", compact ? "h-12 w-12 text-[22px]" : "h-14 w-14 text-[26px]")}>
           ✦
@@ -35,7 +36,7 @@ export function WeeklyGoalCard({ completed, target, weekLabel, className, compac
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">Meta da semana</p>
-            <div className="rounded-full border border-sky-300/30 bg-sky-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-100">
+            <div className="rounded-full border border-amber-200/25 bg-amber-300/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-amber-50/90">
               {weekLabel}
             </div>
           </div>
