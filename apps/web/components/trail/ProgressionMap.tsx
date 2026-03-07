@@ -170,17 +170,6 @@ function randomParticle(quality: "low" | "high"): EnergyParticle {
   };
 }
 
-function buildConstellationLinks(points: Array<{ x: number; y: number }>) {
-  const links: Array<{ from: { x: number; y: number }; to: { x: number; y: number } }> = [];
-  for (let i = 0; i < points.length - 2; i += 1) {
-    const from = points[i];
-    const to = points[i + 2];
-    if (!from || !to) continue;
-    links.push({ from, to });
-  }
-  return links;
-}
-
 function nearestPointIndex(samplePoints: SampledPathPoint[], x: number, y: number) {
   let bestIdx = 0;
   let bestDist = Number.POSITIVE_INFINITY;
@@ -430,7 +419,6 @@ export default function ProgressionMap({
   const activeIndex = mapData?.activeIndex ?? -1;
   const curvedPath = mapData?.curvedPath ?? "";
   const progressPath = mapData?.progressPath ?? "";
-  const constellationLinks = useMemo(() => buildConstellationLinks(points), [points]);
 
   const cameraRange = useMemo(() => {
     if (!points.length || view.h <= 0 || worldHeight <= 0) {
@@ -937,11 +925,12 @@ export default function ProgressionMap({
             className="pointer-events-none absolute inset-0 z-[0] opacity-[0.9]"
             style={{
               background: `
-                radial-gradient(circle at 18% 24%, rgba(56,189,248,0.16), transparent 18%),
-                radial-gradient(circle at 78% 30%, rgba(34,211,238,0.14), transparent 16%),
-                radial-gradient(circle at 52% 68%, rgba(96,165,250,0.12), transparent 20%),
-                radial-gradient(circle at 30% 78%, rgba(59,130,246,0.10), transparent 18%),
-                radial-gradient(circle at 68% 62%, rgba(251,191,36,0.08), transparent 14%)
+                radial-gradient(circle at 18% 24%, rgba(56,189,248,0.18), transparent 18%),
+                radial-gradient(circle at 78% 30%, rgba(34,211,238,0.16), transparent 16%),
+                radial-gradient(circle at 52% 68%, rgba(96,165,250,0.14), transparent 20%),
+                radial-gradient(circle at 30% 78%, rgba(59,130,246,0.12), transparent 18%),
+                radial-gradient(circle at 68% 62%, rgba(251,191,36,0.10), transparent 14%),
+                radial-gradient(circle at 44% 18%, rgba(192,132,252,0.10), transparent 15%)
               `,
             }}
             aria-hidden
@@ -951,8 +940,9 @@ export default function ProgressionMap({
             className="pointer-events-none absolute inset-0 z-[0] opacity-[0.95]"
             style={{
               background: `
-                radial-gradient(ellipse at 50% 44%, rgba(96,165,250,0.18) 0%, rgba(37,99,235,0.10) 22%, rgba(2,6,23,0) 58%),
-                radial-gradient(ellipse at 50% 62%, rgba(34,211,238,0.14) 0%, rgba(14,165,233,0.06) 24%, rgba(2,6,23,0) 62%),
+                radial-gradient(ellipse at 50% 44%, rgba(96,165,250,0.20) 0%, rgba(37,99,235,0.11) 22%, rgba(2,6,23,0) 58%),
+                radial-gradient(ellipse at 50% 62%, rgba(34,211,238,0.15) 0%, rgba(14,165,233,0.06) 24%, rgba(2,6,23,0) 62%),
+                radial-gradient(ellipse at 66% 48%, rgba(167,139,250,0.10) 0%, rgba(167,139,250,0.04) 18%, rgba(2,6,23,0) 52%),
                 radial-gradient(ellipse at 50% 52%, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 48%)
               `,
             }}
@@ -963,8 +953,9 @@ export default function ProgressionMap({
             className="pointer-events-none absolute inset-0 z-[0] opacity-[0.9]"
             style={{
               background: `
-                linear-gradient(115deg, rgba(250,204,21,0.06) 0%, rgba(250,204,21,0) 18%),
-                linear-gradient(245deg, rgba(192,132,252,0.08) 0%, rgba(192,132,252,0) 20%),
+                linear-gradient(115deg, rgba(250,204,21,0.08) 0%, rgba(250,204,21,0) 18%),
+                linear-gradient(245deg, rgba(192,132,252,0.10) 0%, rgba(192,132,252,0) 20%),
+                linear-gradient(35deg, rgba(45,212,191,0.06) 0%, rgba(45,212,191,0) 16%),
                 linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0))
               `,
             }}
@@ -1017,9 +1008,9 @@ export default function ProgressionMap({
                 const auraSize = node.status === "current" ? 280 : node.status === "done" ? 220 : 150;
                 const auraBackground =
                   node.status === "current"
-                    ? "radial-gradient(circle, rgba(56,189,248,0.22) 0%, rgba(14,165,233,0.12) 34%, rgba(2,6,23,0) 72%)"
+                    ? "radial-gradient(circle, rgba(56,189,248,0.24) 0%, rgba(59,130,246,0.14) 28%, rgba(167,139,250,0.08) 44%, rgba(2,6,23,0) 72%)"
                     : node.status === "done"
-                      ? "radial-gradient(circle, rgba(52,211,153,0.18) 0%, rgba(16,185,129,0.10) 34%, rgba(2,6,23,0) 70%)"
+                      ? "radial-gradient(circle, rgba(52,211,153,0.18) 0%, rgba(16,185,129,0.10) 28%, rgba(250,204,21,0.06) 42%, rgba(2,6,23,0) 70%)"
                       : "radial-gradient(circle, rgba(148,163,184,0.10) 0%, rgba(51,65,85,0.06) 30%, rgba(2,6,23,0) 66%)";
 
                 return (
@@ -1057,22 +1048,31 @@ export default function ProgressionMap({
                 <defs>
                   <linearGradient id="energyGradient" gradientUnits="userSpaceOnUse">
                     <stop offset="0%" stopColor="#38bdf8" stopOpacity="0" />
-                    <stop offset="40%" stopColor="#60a5fa" />
-                    <stop offset="60%" stopColor="#22d3ee" />
+                    <stop offset="30%" stopColor="#60a5fa" />
+                    <stop offset="52%" stopColor="#22d3ee" />
+                    <stop offset="74%" stopColor="#a78bfa" />
                     <stop offset="100%" stopColor="#38bdf8" stopOpacity="0" />
                   </linearGradient>
                   <linearGradient id="trailEnergy" x1="0%" y1="0%" x2="100%" y2="0%" gradientUnits="userSpaceOnUse">
                     <stop offset="0%" stopColor="#93c5fd" />
-                    <stop offset="45%" stopColor="#67e8f9" />
-                    <stop offset="72%" stopColor="#38bdf8" />
+                    <stop offset="30%" stopColor="#67e8f9" />
+                    <stop offset="58%" stopColor="#38bdf8" />
+                    <stop offset="78%" stopColor="#a78bfa" />
                     <stop offset="100%" stopColor="#fde68a" />
+                  </linearGradient>
+                  <linearGradient id="trailCore" x1="0%" y1="0%" x2="100%" y2="0%" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="rgba(255,255,255,0)" />
+                    <stop offset="22%" stopColor="rgba(255,255,255,0.65)" />
+                    <stop offset="52%" stopColor="rgba(255,255,255,0.9)" />
+                    <stop offset="78%" stopColor="rgba(255,255,255,0.58)" />
+                    <stop offset="100%" stopColor="rgba(255,255,255,0)" />
                   </linearGradient>
                 </defs>
 
                 <path
                   ref={pathRef}
                   d={curvedPath}
-                  stroke={isMobile ? "rgba(255,255,255,0.30)" : "rgba(255,255,255,0.18)"}
+                  stroke={isMobile ? "rgba(255,255,255,0.34)" : "rgba(255,255,255,0.20)"}
                   strokeWidth={isMobile ? 6 : 3}
                   fill="none"
                   strokeLinecap="round"
@@ -1104,7 +1104,16 @@ export default function ProgressionMap({
                       d={progressPath}
                       stroke="url(#trailEnergy)"
                       strokeWidth={isMobile ? 7 : 4}
-                      opacity={0.82}
+                      opacity={0.86}
+                      fill="none"
+                      strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                    <path
+                      d={progressPath}
+                      stroke="url(#trailCore)"
+                      strokeWidth={isMobile ? 2.4 : 1.5}
+                      opacity={0.54}
                       fill="none"
                       strokeLinecap="round"
                       vectorEffect="non-scaling-stroke"
@@ -1204,13 +1213,14 @@ export default function ProgressionMap({
         }
 
         .nebula-layer {
-          opacity: 0.42;
+          opacity: 0.46;
           background:
-            radial-gradient(circle at 14% 18%, rgba(56, 189, 248, 0.18), transparent 30%),
-            radial-gradient(circle at 82% 26%, rgba(14, 165, 233, 0.14), transparent 32%),
-            radial-gradient(circle at 48% 76%, rgba(59, 130, 246, 0.12), transparent 38%),
+            radial-gradient(circle at 14% 18%, rgba(56, 189, 248, 0.2), transparent 30%),
+            radial-gradient(circle at 82% 26%, rgba(14, 165, 233, 0.15), transparent 32%),
+            radial-gradient(circle at 48% 76%, rgba(59, 130, 246, 0.13), transparent 38%),
             radial-gradient(circle at 64% 52%, rgba(125, 211, 252, 0.08), transparent 26%),
-            radial-gradient(circle at 70% 18%, rgba(250, 204, 21, 0.06), transparent 18%);
+            radial-gradient(circle at 70% 18%, rgba(250, 204, 21, 0.06), transparent 18%),
+            radial-gradient(circle at 32% 62%, rgba(167, 139, 250, 0.08), transparent 24%);
           will-change: transform;
         }
 
@@ -1254,8 +1264,8 @@ export default function ProgressionMap({
           width: 6px;
           height: 6px;
           border-radius: 9999px;
-          background: radial-gradient(circle, #7dd3fc, #0284c7);
-          box-shadow: 0 0 8px rgba(56, 189, 248, 0.9), 0 0 16px rgba(2, 132, 199, 0.85);
+          background: radial-gradient(circle, #e0f2fe 0%, #7dd3fc 38%, #38bdf8 65%, #8b5cf6 100%);
+          box-shadow: 0 0 10px rgba(56, 189, 248, 0.95), 0 0 20px rgba(139, 92, 246, 0.5);
           will-change: transform, opacity;
           pointer-events: none;
         }
@@ -1265,8 +1275,8 @@ export default function ProgressionMap({
           left: 0;
           top: 0;
           border-radius: 9999px;
-          background: linear-gradient(90deg, rgba(125, 211, 252, 0), rgba(125, 211, 252, 0.95), rgba(125, 211, 252, 0));
-          box-shadow: 0 0 12px rgba(56, 189, 248, 0.95);
+          background: linear-gradient(90deg, rgba(125, 211, 252, 0), rgba(255, 255, 255, 0.92), rgba(125, 211, 252, 0.88), rgba(125, 211, 252, 0));
+          box-shadow: 0 0 12px rgba(56, 189, 248, 0.95), 0 0 22px rgba(167, 139, 250, 0.28);
           pointer-events: none;
           will-change: transform, opacity;
         }

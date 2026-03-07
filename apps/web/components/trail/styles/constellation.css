@@ -3,8 +3,8 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: radial-gradient(circle, #7dd3fc, #0284c7);
-  box-shadow: 0 0 8px #38bdf8, 0 0 16px #0284c7;
+  background: radial-gradient(circle, #e0f2fe 0%, #7dd3fc 38%, #38bdf8 65%, #8b5cf6 100%);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.95), 0 0 20px rgba(139, 92, 246, 0.5);
   pointer-events: none;
   will-change: transform;
 }

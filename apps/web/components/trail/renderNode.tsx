@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-import { Check, Lock, Star } from "lucide-react";
+import { BookOpen, Check, Flag, Lock, Sparkles, Star, Zap } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -42,8 +42,55 @@ const statusLabel: Record<RenderNodeStatus, string> = {
 };
 const TEXT_PRIMARY = "rgba(240,249,255,0.92)";
 const TEXT_MUTED = "rgba(226,232,240,0.72)";
+type MissionKind = "story" | "challenge" | "checkpoint" | "lesson";
 
-function getNodeVisuals(status: RenderNodeStatus) {
+function resolveMissionKind(node: RenderableMapNode): MissionKind {
+  const title = node.title.toLowerCase();
+  if (node.isCheckpoint || title.includes("checkpoint") || title.includes("marco")) return "checkpoint";
+  if (title.includes("historia") || title.includes("contagem") || title.includes("sequencia")) return "story";
+  if (title.includes("desafio") || title.includes("escolha") || title.includes("conexao")) return "challenge";
+  return "lesson";
+}
+
+function getMissionKindMeta(kind: MissionKind) {
+  if (kind === "story") {
+    return {
+      label: "História",
+      accent: "rgba(196,181,253,0.92)",
+      accentSoft: "rgba(139,92,246,0.18)",
+      glow: "0 0 18px rgba(139,92,246,0.22)",
+      Icon: BookOpen,
+    };
+  }
+  if (kind === "challenge") {
+    return {
+      label: "Desafio",
+      accent: "rgba(250,204,21,0.94)",
+      accentSoft: "rgba(251,191,36,0.18)",
+      glow: "0 0 18px rgba(250,204,21,0.2)",
+      Icon: Zap,
+    };
+  }
+  if (kind === "checkpoint") {
+    return {
+      label: "Marco",
+      accent: "rgba(110,231,183,0.94)",
+      accentSoft: "rgba(52,211,153,0.18)",
+      glow: "0 0 18px rgba(16,185,129,0.18)",
+      Icon: Flag,
+    };
+  }
+  return {
+    label: "Lição",
+    accent: "rgba(103,232,249,0.94)",
+    accentSoft: "rgba(34,211,238,0.16)",
+    glow: "0 0 18px rgba(56,189,248,0.18)",
+    Icon: Sparkles,
+  };
+}
+
+function getNodeVisuals(status: RenderNodeStatus, kind: MissionKind) {
+  const kindMeta = getMissionKindMeta(kind);
   if (status === "done") {
     return {
       shell: "border-2 border-emerald-50 bg-[linear-gradient(180deg,#86efac_0%,#34d399_42%,#16a34a_82%,#facc15_118%)] text-white shadow-[0_12px_28px_rgba(34,197,94,0.24),0_0_18px_rgba(250,204,21,0.18)]",
@@ -56,6 +103,9 @@ function getNodeVisuals(status: RenderNodeStatus) {
       labelText: "rgba(247,254,231,0.96)",
       accentA: "rgba(253,224,71,0.92)",
       accentB: "rgba(187,247,208,0.92)",
+      kindAccent: kindMeta.accent,
+      kindAccentSoft: kindMeta.accentSoft,
+      kindGlow: kindMeta.glow,
     };
   }
   if (status === "current") {
@@ -70,10 +120,13 @@ function getNodeVisuals(status: RenderNodeStatus) {
       labelText: "rgba(240,249,255,0.96)",
       accentA: "rgba(255,255,255,0.96)",
       accentB: "rgba(192,132,252,0.86)",
+      kindAccent: kindMeta.accent,
+      kindAccentSoft: kindMeta.accentSoft,
+      kindGlow: kindMeta.glow,
     };
   }
   return {
-    shell: "border border-slate-300/20 bg-[linear-gradient(180deg,rgba(100,116,139,0.62),rgba(51,65,85,0.72))] text-white shadow-[0_8px_18px_rgba(15,23,42,0.26)]",
+    shell: "border border-dashed border-slate-300/20 bg-[linear-gradient(180deg,rgba(100,116,139,0.62),rgba(51,65,85,0.72))] text-white shadow-[0_8px_18px_rgba(15,23,42,0.26)]",
     shellHighlight: "linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.02))",
     starFill: "rgba(255,255,255,0.05)",
     starStroke: "rgba(226,232,240,0.46)",
@@ -83,6 +136,9 @@ function getNodeVisuals(status: RenderNodeStatus) {
     labelText: "rgba(226,232,240,0.9)",
     accentA: "rgba(203,213,225,0.7)",
     accentB: "rgba(148,163,184,0.72)",
+    kindAccent: kindMeta.accent,
+    kindAccentSoft: kindMeta.accentSoft,
+    kindGlow: kindMeta.glow,
   };
 }
 
@@ -101,7 +157,10 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
   const isCurrent = node.status === "current";
   const isLocked = node.status === "locked";
   const isDone = node.status === "done";
-  const visuals = getNodeVisuals(node.status);
+  const missionKind = resolveMissionKind(node);
+  const missionMeta = getMissionKindMeta(missionKind);
+  const visuals = getNodeVisuals(node.status, missionKind);
+  const MissionIcon = missionMeta.Icon;
   const showOrbital = isActive;
   const ringPrimaryOpacityClass = isCurrent ? "opacity-[0.72] group-hover:opacity-[0.84]" : "opacity-[0.40] group-hover:opacity-[0.52]";
   const ringSecondaryOpacityClass = isCurrent ? "opacity-[0.54] group-hover:opacity-[0.66]" : "opacity-[0.28] group-hover:opacity-[0.40]";
@@ -154,7 +213,7 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
         )}
         style={{ transition: "transform 220ms ease, filter 220ms ease, opacity 200ms ease" }}
         aria-current={isActive ? "step" : undefined}
-        aria-label={node.title}
+        aria-label={`${node.title} · ${missionMeta.label} · ${statusLabel[node.status]}`}
       >
         <span
           aria-hidden
@@ -259,7 +318,7 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
         {isCurrent ? <div className="pointer-events-none absolute inset-0 rounded-full border border-sky-100/26" /> : null}
         {isDone ? <Check className="h-6 w-6" strokeWidth={2.6} aria-hidden /> : null}
         {isLocked ? <Lock className="h-5 w-5" strokeWidth={2.2} aria-hidden /> : null}
-        {!isDone && !isLocked ? <span className="text-base font-bold leading-none">{displayIndex}</span> : null}
+        {!isDone && !isLocked ? <MissionIcon className="h-[18px] w-[18px]" strokeWidth={2.3} aria-hidden /> : null}
         {node.isCheckpoint ? (
           <span className="absolute -right-1 -top-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/25 bg-[#0F172A]/75 text-[#D9E2EF]">
             <Star className="h-2.5 w-2.5" strokeWidth={2} aria-hidden />
@@ -276,12 +335,23 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
           transform: `translate(${badgeTranslateX}, calc(-50% + ${badgeOffsetY.toFixed(1)}px))`,
           background: `linear-gradient(180deg, rgba(8,16,34,0.96), rgba(8,16,34,0.9)), ${visuals.labelBg}`,
           border: `1px solid ${visuals.labelBorder}`,
-          boxShadow: `${visuals.labelShadow}, inset 0 1px 0 rgba(255,255,255,0.06)`,
+          boxShadow: `${visuals.labelShadow}, ${visuals.kindGlow}, inset 0 1px 0 rgba(255,255,255,0.06)`,
           transition: "transform 0.4s ease, opacity 180ms ease",
           whiteSpace: "nowrap",
         }}
       >
-        <span className="font-semibold tracking-[-0.01em]" style={{ color: visuals.labelText, textShadow: "0 1px 8px rgba(2,6,23,0.38)" }}>{node.title}</span>
+        <span
+          className="mb-1 inline-flex w-fit items-center gap-1 rounded-full px-2 py-[2px] text-[9px] font-semibold uppercase tracking-[0.08em]"
+          style={{
+            color: missionMeta.accent,
+            background: `linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01)), ${visuals.kindAccentSoft}`,
+            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), ${visuals.kindGlow}`,
+          }}
+        >
+          <MissionIcon className="h-2.5 w-2.5" strokeWidth={2.4} aria-hidden />
+          {missionMeta.label}
+        </span>
+        <span className="block font-semibold tracking-[-0.01em]" style={{ color: visuals.labelText, textShadow: "0 1px 8px rgba(2,6,23,0.38)" }}>{node.title}</span>
       </div>
     </div>
   );
