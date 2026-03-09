@@ -90,6 +90,9 @@ AXIORA_APP_ENV=development
 AXIORA_CORS_ALLOWED_ORIGINS=http://localhost:3000
 AXIORA_AUTH_COOKIE_SECURE=false
 AXIORA_AUTH_COOKIE_SAMESITE=lax
+AXIORA_PLATFORM_ADMIN_EMAILS=admin@local.com
+AXIORA_LOCAL_PLATFORM_ADMIN_EMAIL=admin@local.com
+AXIORA_LOCAL_PLATFORM_ADMIN_PASSWORD=Axion@123
 ```
 
 ### Web (`apps/web/.env.local`)
@@ -167,8 +170,15 @@ Acessos:
 - Web: `http://localhost:3000`
 - API docs: `http://localhost:8000/docs`
 - Health: `http://localhost:8000/health`
+- Platform Admin login: `http://localhost:3000/platform-admin/login`
 
 ## 9) Usuarios recomendados para teste
+
+Admin local recriado pelo bootstrap local e pelo seed `apps/api/scripts/seed_platform_admin.py`:
+
+- email: `admin@local.com`
+- senha: `Axion@123`
+- rota: `http://localhost:3000/platform-admin/login`
 
 Use contas separadas por tenant (familia), para validar isolamento:
 

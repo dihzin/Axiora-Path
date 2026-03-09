@@ -40,7 +40,7 @@ import {
   type PlatformTenantDetail,
   type PlatformTenantSummary,
 } from "@/lib/api/client";
-import { clearTenantSlug, clearTokens, getAccessToken, getTenantSlug } from "@/lib/api/session";
+import { clearTenantSlug, clearTokens, getAccessToken, getTenantSlug, setTenantSlug } from "@/lib/api/session";
 
 type Tab = "policies" | "messages" | "preview" | "audit" | "impact" | "orgs";
 type OrgViewTab = "clients" | "admin";
@@ -335,10 +335,12 @@ export default function AxionStudioPage() {
 
   useEffect(() => {
     const hasAccess = Boolean(getAccessToken());
-    const hasTenant = Boolean(getTenantSlug());
-    if (!hasAccess && !hasTenant) {
+    if (!hasAccess) {
       redirectToLogin();
       return;
+    }
+    if (!getTenantSlug()) {
+      setTenantSlug("platform-admin");
     }
     setAuthChecked(true);
     void loadBase();

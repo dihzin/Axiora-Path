@@ -39,6 +39,7 @@ class MembershipRole(str, Enum):
     PARENT = "PARENT"
     TEACHER = "TEACHER"
     CHILD = "CHILD"
+    PLATFORM_ADMIN = "PLATFORM_ADMIN"
 
 
 class TaskDifficulty(str, Enum):

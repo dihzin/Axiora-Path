@@ -2232,7 +2232,7 @@ export async function getAxionStudioPolicies(params?: { context?: string; q?: st
   return apiRequest<AxionStudioPolicy[]>(`/api/platform-admin/axion/policies${suffix}`, {
     method: "GET",
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2240,7 +2240,7 @@ export async function getAxionStudioMe(): Promise<AxionStudioMe> {
   return apiRequest<AxionStudioMe>("/api/platform-admin/axion/me", {
     method: "GET",
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2252,7 +2252,7 @@ export async function getPlatformTenants(params?: { q?: string; tenantType?: "FA
   return apiRequest<PlatformTenantSummary[]>(`/api/platform-admin/tenants${suffix}`, {
     method: "GET",
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2272,7 +2272,7 @@ export async function createPlatformTenant(payload: {
     method: "POST",
     body: payload,
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2280,7 +2280,7 @@ export async function getPlatformTenantDetail(tenantId: number): Promise<Platfor
   return apiRequest<PlatformTenantDetail>(`/api/platform-admin/tenants/${tenantId}`, {
     method: "GET",
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2289,7 +2289,7 @@ export async function deletePlatformTenant(tenantId: number, confirmSlug: string
     method: "DELETE",
     body: { confirmSlug },
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2305,7 +2305,7 @@ export async function createAxionStudioPolicy(payload: {
     method: "POST",
     body: payload,
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2324,7 +2324,7 @@ export async function patchAxionStudioPolicy(
     method: "PATCH",
     body: payload,
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2332,7 +2332,7 @@ export async function toggleAxionStudioPolicy(policyId: number): Promise<AxionSt
   return apiRequest<AxionStudioPolicy>(`/api/platform-admin/axion/policies/${policyId}/toggle`, {
     method: "POST",
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2340,7 +2340,7 @@ export async function getAxionStudioPolicyVersions(policyId: number): Promise<Ax
   return apiRequest<AxionStudioVersion[]>(`/api/platform-admin/axion/policies/${policyId}/versions`, {
     method: "GET",
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2349,7 +2349,7 @@ export async function restoreAxionStudioPolicy(policyId: number, version: number
     method: "POST",
     body: { version },
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2361,7 +2361,7 @@ export async function getAxionStudioTemplates(params?: { context?: string; tone?
   return apiRequest<AxionStudioTemplate[]>(`/api/platform-admin/axion/templates${suffix}`, {
     method: "GET",
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2378,7 +2378,7 @@ export async function createAxionStudioTemplate(payload: {
     method: "POST",
     body: payload,
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2398,7 +2398,7 @@ export async function patchAxionStudioTemplate(
     method: "PATCH",
     body: payload,
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2406,7 +2406,7 @@ export async function toggleAxionStudioTemplate(templateId: number): Promise<Axi
   return apiRequest<AxionStudioTemplate>(`/api/platform-admin/axion/templates/${templateId}/toggle`, {
     method: "POST",
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2414,7 +2414,7 @@ export async function getAxionStudioTemplateVersions(templateId: number): Promis
   return apiRequest<AxionStudioVersion[]>(`/api/platform-admin/axion/templates/${templateId}/versions`, {
     method: "GET",
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2423,7 +2423,7 @@ export async function restoreAxionStudioTemplate(templateId: number, version: nu
     method: "POST",
     body: { version },
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2435,7 +2435,7 @@ export async function getAxionStudioAudit(params?: { actorUserId?: number; entit
   return apiRequest<AxionStudioAudit[]>(`/api/platform-admin/axion/audit${suffix}`, {
     method: "GET",
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2443,7 +2443,7 @@ export async function getAxionStudioPreviewUsers(): Promise<AxionStudioPreviewUs
   return apiRequest<AxionStudioPreviewUser[]>("/api/platform-admin/axion/users", {
     method: "GET",
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2452,7 +2452,7 @@ export async function previewAxionStudio(payload: { userId: number; context: str
     method: "POST",
     body: payload,
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
 
@@ -2463,6 +2463,6 @@ export async function getAxionStudioImpact(params: { userId: number; days?: numb
   return apiRequest<AxionImpactResponse>(`/api/platform-admin/axion/impact?${query.toString()}`, {
     method: "GET",
     requireAuth: true,
-    includeTenant: false,
+    includeTenant: true,
   });
 }
