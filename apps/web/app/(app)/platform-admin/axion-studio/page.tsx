@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import {
   ApiError,
@@ -15,6 +16,7 @@ import {
   getAxionStudioMe,
   getPlatformTenants,
   getPlatformTenantDetail,
+  updatePlatformTenant,
   getAxionStudioPolicies,
   getAxionStudioPolicyVersions,
   getAxionStudioPreviewUsers,
@@ -102,6 +104,10 @@ function toneLabel(value: string): string {
   return TONE_LABELS[value] ?? value;
 }
 
+function isValidTab(value: string | null): value is Tab {
+  return value === "policies" || value === "messages" || value === "preview" || value === "audit" || value === "impact" || value === "orgs";
+}
+
 function validateTenantDraft(draft: {
   name: string;
   slug: string;
@@ -112,17 +118,21 @@ function validateTenantDraft(draft: {
   createTestChild: boolean;
   testChildName: string;
   testChildBirthYear: string;
-}): Partial<Record<TenantFieldKey, string>> {
+  resetExistingUserPassword: boolean;
+}, options?: { isEditing?: boolean }): Partial<Record<TenantFieldKey, string>> {
+  const isEditing = Boolean(options?.isEditing);
   const errors: Partial<Record<TenantFieldKey, string>> = {};
   const currentYear = new Date().getFullYear();
 
   if (draft.name.trim().length < 2) errors.name = "Informe um nome com pelo menos 2 caracteres.";
-  if (!SLUG_REGEX.test(draft.slug.trim().toLowerCase())) {
+  if (!isEditing && !SLUG_REGEX.test(draft.slug.trim().toLowerCase())) {
     errors.slug = "Use apenas letras minúsculas, números e hífen (ex.: familia-silva).";
   }
   if (draft.adminName.trim().length < 2) errors.adminName = "Informe o nome do administrador (mínimo 2 caracteres).";
   if (!EMAIL_REGEX.test(draft.adminEmail.trim().toLowerCase())) errors.adminEmail = "Informe um e-mail válido.";
-  if (draft.adminPassword.length < 10) errors.adminPassword = "A senha inicial deve ter no mínimo 10 caracteres.";
+  if (!isEditing || draft.resetExistingUserPassword) {
+    if (draft.adminPassword.length < 10) errors.adminPassword = "A senha inicial deve ter no mínimo 10 caracteres.";
+  }
 
   if (draft.type === "FAMILY" && draft.createTestChild && draft.testChildName.trim().length < 2) {
     errors.testChildName = "Informe o nome da criança com pelo menos 2 caracteres.";
@@ -174,7 +184,10 @@ function mapTenant422Errors(payload: unknown): Partial<Record<TenantFieldKey, st
 }
 
 export default function AxionStudioPage() {
-  const [tab, setTab] = useState<Tab>("policies");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<Tab>("orgs");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -192,6 +205,8 @@ export default function AxionStudioPage() {
   const [tenantSearch, setTenantSearch] = useState("");
   const [tenantTypeFilter, setTenantTypeFilter] = useState<"" | "FAMILY" | "SCHOOL">("");
   const [tenantCreateResult, setTenantCreateResult] = useState<PlatformTenantCreateResponse | null>(null);
+  const [editingTenantId, setEditingTenantId] = useState<number | null>(null);
+  const [tenantOperationMessage, setTenantOperationMessage] = useState<string | null>(null);
   const [tenantFieldErrors, setTenantFieldErrors] = useState<Partial<Record<TenantFieldKey, string>>>({});
   const [tenantDraft, setTenantDraft] = useState({
     name: "",
@@ -259,6 +274,16 @@ export default function AxionStudioPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [passwordFeedback, setPasswordFeedback] = useState<string | null>(null);
+
+  const setTabWithUrl = (nextTab: Tab) => {
+    setTab(nextTab);
+    const currentTab = searchParams.get("tab");
+    if (currentTab === nextTab) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", nextTab);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
 
   const templateCharCount = useMemo(() => templateDraft.text.trim().length, [templateDraft.text]);
   const clientTenants = useMemo(() => tenants.filter((tenant) => tenant.slug !== "platform-admin"), [tenants]);
@@ -356,6 +381,13 @@ export default function AxionStudioPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgViewTab, tab]);
 
+  useEffect(() => {
+    const requestedTab = searchParams.get("tab");
+    if (isValidTab(requestedTab) && requestedTab !== tab) {
+      setTab(requestedTab);
+    }
+  }, [searchParams, tab]);
+
   const handleLogout = async () => {
     setLoading(true);
     try {
@@ -419,7 +451,7 @@ export default function AxionStudioPage() {
       if (previewAfterSave && previewUserId) {
         const result = await previewAxionStudio({ userId: previewUserId, context: previewContext });
         setPreviewResult(result);
-        setTab("preview");
+        setTabWithUrl("preview");
       }
     } catch (err) {
       setError(getApiErrorMessage(err, "Falha ao salvar regra."));
@@ -486,7 +518,8 @@ export default function AxionStudioPage() {
   };
 
   const saveTenant = async () => {
-    const localErrors = validateTenantDraft(tenantDraft);
+    const isEditing = editingTenantId !== null;
+    const localErrors = validateTenantDraft(tenantDraft, { isEditing });
     if (Object.keys(localErrors).length > 0) {
       setTenantFieldErrors(localErrors);
       setError("Revise os campos obrigatórios e os formatos informados.");
@@ -495,9 +528,37 @@ export default function AxionStudioPage() {
 
     setLoading(true);
     setError(null);
+    setTenantOperationMessage(null);
     setTenantCreateResult(null);
     setTenantFieldErrors({});
     try {
+      if (isEditing && editingTenantId !== null) {
+        await updatePlatformTenant(editingTenantId, {
+          name: tenantDraft.name.trim(),
+          type: tenantDraft.type,
+          adminEmail: tenantDraft.adminEmail.trim().toLowerCase(),
+          adminName: tenantDraft.adminName.trim(),
+          adminPassword: tenantDraft.resetExistingUserPassword ? tenantDraft.adminPassword : null,
+          resetExistingUserPassword: tenantDraft.resetExistingUserPassword,
+        });
+        await loadBase();
+        setTenantOperationMessage("Organização atualizada com sucesso.");
+        setEditingTenantId(null);
+        setTenantDraft((prev) => ({
+          ...prev,
+          name: "",
+          slug: "",
+          type: "FAMILY",
+          adminEmail: "",
+          adminName: "",
+          adminPassword: "",
+          createTestChild: true,
+          testChildName: "Filho Teste",
+          testChildBirthYear: "",
+          resetExistingUserPassword: false,
+        }));
+        return;
+      }
       const payload = {
         name: tenantDraft.name.trim(),
         slug: tenantDraft.slug.trim().toLowerCase(),
@@ -512,15 +573,22 @@ export default function AxionStudioPage() {
       };
       const result = await createPlatformTenant(payload);
       setTenantCreateResult(result);
+      setTenantOperationMessage("Organização criada com sucesso.");
       await loadBase();
       setTenantDraft((prev) => ({
         ...prev,
         name: "",
         slug: "",
+        type: "FAMILY",
         adminEmail: "",
         adminName: "",
         adminPassword: "",
+        createTestChild: true,
+        testChildName: "Filho Teste",
+        testChildBirthYear: "",
+        resetExistingUserPassword: false,
       }));
+      setEditingTenantId(null);
       setTenantFieldErrors({});
     } catch (err) {
       if (err instanceof ApiError && err.status === 422) {
@@ -531,8 +599,43 @@ export default function AxionStudioPage() {
         setError("Alguns campos não passaram na validação. Revise os itens destacados.");
       } else {
         setTenantFieldErrors({});
-        setError(getApiErrorMessage(err, "Falha ao criar organização."));
+        setError(getApiErrorMessage(err, isEditing ? "Falha ao atualizar organização." : "Falha ao criar organização."));
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startEditTenant = async (tenant: PlatformTenantSummary) => {
+    setLoading(true);
+    setError(null);
+    setTenantOperationMessage(null);
+    setTenantCreateResult(null);
+    try {
+      const detail = await getPlatformTenantDetail(tenant.id);
+      const primaryAdmin = detail.adminMembers[0];
+      if (!primaryAdmin) {
+        setError("Nenhum administrador encontrado para edição.");
+        return;
+      }
+      setTenantDraft({
+        name: detail.tenant.name,
+        slug: detail.tenant.slug,
+        type: detail.tenant.type === "SCHOOL" ? "SCHOOL" : "FAMILY",
+        adminEmail: primaryAdmin.email,
+        adminName: primaryAdmin.name,
+        adminPassword: "",
+        createTestChild: false,
+        testChildName: "Filho Teste",
+        testChildBirthYear: "",
+        resetExistingUserPassword: false,
+      });
+      setEditingTenantId(tenant.id);
+      setTenantFieldErrors({});
+      setOrgViewTab("clients");
+      setTabWithUrl("orgs");
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Falha ao carregar dados para edição da organização."));
     } finally {
       setLoading(false);
     }
@@ -577,7 +680,7 @@ export default function AxionStudioPage() {
     setVersions(rows);
     setVersionsTitle(`Versões da regra #${policyId}`);
     setVersionsTarget({ type: "RULE", id: policyId });
-    setTab("audit");
+    setTabWithUrl("audit");
   };
 
   const loadTemplateVersions = async (templateId: number) => {
@@ -585,7 +688,7 @@ export default function AxionStudioPage() {
     setVersions(rows);
     setVersionsTitle(`Versões do template #${templateId}`);
     setVersionsTarget({ type: "TEMPLATE", id: templateId });
-    setTab("audit");
+    setTabWithUrl("audit");
   };
 
   return (
@@ -630,19 +733,19 @@ export default function AxionStudioPage() {
 
         <div className="mt-4 flex flex-wrap gap-2">
           {[
+            { id: "orgs", label: "Organizações" },
             { id: "policies", label: "Políticas" },
             { id: "messages", label: "Mensagens" },
             { id: "preview", label: "Prévia" },
             { id: "audit", label: "Auditoria" },
             { id: "impact", label: "Impacto" },
-            { id: "orgs", label: "Organizações" },
           ].map((item) => (
             <button
               key={item.id}
               className={`rounded-2xl px-4 py-2 text-sm font-extrabold transition ${
                 tab === item.id ? "bg-[#24B6A9] text-white shadow-[0_5px_0_rgba(13,122,114,0.35)]" : "border border-[#C9D8EF] bg-white text-[#34557F]"
               }`}
-              onClick={() => setTab(item.id as Tab)}
+              onClick={() => setTabWithUrl(item.id as Tab)}
               type="button"
             >
               {item.label}
@@ -1078,6 +1181,14 @@ export default function AxionStudioPage() {
                                 Detalhes
                               </button>
                               <button
+                                className="rounded-lg border border-[#9EDFD8] px-2 py-1 text-xs font-bold text-[#1F7E74] disabled:cursor-not-allowed disabled:opacity-50"
+                                disabled={tenant.slug === "platform-admin"}
+                                onClick={() => void startEditTenant(tenant)}
+                                type="button"
+                              >
+                                Editar
+                              </button>
+                              <button
                                 className="rounded-lg border border-[#F5B2A9] px-2 py-1 text-xs font-bold text-[#B8574B] disabled:cursor-not-allowed disabled:opacity-50"
                                 disabled={tenant.slug === "platform-admin"}
                                 onClick={() => {
@@ -1102,11 +1213,24 @@ export default function AxionStudioPage() {
             </div>
 
             <div className="rounded-2xl border border-[#C9D8EF] p-3 xl:sticky xl:top-4 xl:self-start">
-              {orgViewTab === "clients" ? <h3 className="mb-2 text-sm font-black text-[#1E3B65]">Nova organização de teste</h3> : <h3 className="mb-2 text-sm font-black text-[#1E3B65]">Administrador da plataforma</h3>}
+              {orgViewTab === "clients" ? (
+                <h3 className="mb-2 text-sm font-black text-[#1E3B65]">{editingTenantId ? "Editar organização" : "Nova organização de teste"}</h3>
+              ) : (
+                <h3 className="mb-2 text-sm font-black text-[#1E3B65]">Administrador da plataforma</h3>
+              )}
               {orgViewTab === "clients" ? (
                 <div className="mb-3 rounded-xl border border-[#D7E2F4] bg-[#F7FAFF] px-3 py-2 text-xs font-semibold text-[#35567F]">
-                  <p>Campos obrigatórios: nome da organização, slug, tipo, nome do administrador, e-mail e senha inicial.</p>
-                  <p className="mt-1">Padrões: slug em minúsculas com hífen (`familia-silva`) e senha com pelo menos 10 caracteres.</p>
+                  {editingTenantId ? (
+                    <>
+                      <p>Edite nome, tipo e dados do administrador da organização selecionada.</p>
+                      <p className="mt-1">O slug fica bloqueado na edição para evitar impacto em acessos existentes.</p>
+                    </>
+                  ) : (
+                    <>
+                      <p>Campos obrigatórios: nome da organização, slug, tipo, nome do administrador, e-mail e senha inicial.</p>
+                      <p className="mt-1">Padrões: slug em minúsculas com hífen (`familia-silva`) e senha com pelo menos 10 caracteres.</p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="mb-3 rounded-xl border border-[#D7E2F4] bg-[#F7FAFF] px-3 py-2 text-xs font-semibold text-[#35567F]">
@@ -1135,9 +1259,16 @@ export default function AxionStudioPage() {
                   setTenantFieldErrors((prev) => ({ ...prev, slug: undefined }));
                 }}
                 placeholder="Slug * (ex.: familia-silva)"
+                disabled={editingTenantId !== null}
                 value={tenantDraft.slug}
               />
-              {tenantFieldErrors.slug ? <p className="mb-2 text-xs font-semibold text-[#B54C47]">{tenantFieldErrors.slug}</p> : <p className="mb-2 text-xs font-semibold text-[#6B87AC]">Use apenas `a-z`, `0-9` e `-`.</p>}
+              {tenantFieldErrors.slug ? (
+                <p className="mb-2 text-xs font-semibold text-[#B54C47]">{tenantFieldErrors.slug}</p>
+              ) : editingTenantId ? (
+                <p className="mb-2 text-xs font-semibold text-[#6B87AC]">Slug bloqueado durante a edição.</p>
+              ) : (
+                <p className="mb-2 text-xs font-semibold text-[#6B87AC]">Use apenas `a-z`, `0-9` e `-`.</p>
+              )}
               <select
                 className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${tenantFieldErrors.type ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
                 onChange={(e) => {
@@ -1168,6 +1299,7 @@ export default function AxionStudioPage() {
                 }}
                 placeholder="E-mail do administrador *"
                 type="email"
+                autoComplete="off"
                 value={tenantDraft.adminEmail}
               />
               {tenantFieldErrors.adminEmail ? <p className="mb-2 text-xs font-semibold text-[#B54C47]">{tenantFieldErrors.adminEmail}</p> : null}
@@ -1179,12 +1311,15 @@ export default function AxionStudioPage() {
                 }}
                 placeholder="Senha inicial do administrador *"
                 type="password"
+                autoComplete="new-password"
                 value={tenantDraft.adminPassword}
               />
               {tenantFieldErrors.adminPassword ? (
                 <p className="mb-2 text-xs font-semibold text-[#B54C47]">{tenantFieldErrors.adminPassword}</p>
               ) : (
-                <p className="mb-2 text-xs font-semibold text-[#6B87AC]">Mínimo: 10 caracteres.</p>
+                <p className="mb-2 text-xs font-semibold text-[#6B87AC]">
+                  {editingTenantId ? "Opcional. Marque abaixo para redefinir senha (mínimo 10 caracteres)." : "Mínimo: 10 caracteres."}
+                </p>
               )}
 
               {tenantDraft.type === "FAMILY" ? (
@@ -1231,12 +1366,47 @@ export default function AxionStudioPage() {
                   onChange={(e) => setTenantDraft((d) => ({ ...d, resetExistingUserPassword: e.target.checked }))}
                   type="checkbox"
                 />
-                Redefinir senha se usuário já existir
+                {editingTenantId ? "Redefinir senha do administrador" : "Redefinir senha se usuário já existir"}
               </label>
 
-              <button className="rounded-xl bg-[#2ABBA3] px-3 py-2 text-sm font-black text-white disabled:opacity-60" disabled={loading} onClick={() => void saveTenant()} type="button">
-                Criar organização
-              </button>
+              <div className={`flex flex-wrap items-center gap-2 ${editingTenantId ? "justify-start" : "justify-center"}`}>
+                <button className="rounded-xl bg-[#2ABBA3] px-3 py-2 text-sm font-black text-white disabled:opacity-60" disabled={loading} onClick={() => void saveTenant()} type="button">
+                  {editingTenantId ? "Salvar alterações" : "Criar organização"}
+                </button>
+                {editingTenantId ? (
+                  <button
+                    className="rounded-xl border border-[#BCD1EE] bg-white px-3 py-2 text-sm font-black text-[#2F527D]"
+                    disabled={loading}
+                    onClick={() => {
+                      setEditingTenantId(null);
+                      setTenantFieldErrors({});
+                      setTenantOperationMessage(null);
+                      setTenantDraft((prev) => ({
+                        ...prev,
+                        name: "",
+                        slug: "",
+                        type: "FAMILY",
+                        adminEmail: "",
+                        adminName: "",
+                        adminPassword: "",
+                        createTestChild: true,
+                        testChildName: "Filho Teste",
+                        testChildBirthYear: "",
+                        resetExistingUserPassword: false,
+                      }));
+                    }}
+                    type="button"
+                  >
+                    Cancelar edição
+                  </button>
+                ) : null}
+              </div>
+
+              {tenantOperationMessage ? (
+                <div className="mt-3 rounded-xl border border-[#CBE7E4] bg-[#F1FCFA] p-3 text-xs font-semibold text-[#245A67]">
+                  <p className="font-black text-[#1F4F5D]">{tenantOperationMessage}</p>
+                </div>
+              ) : null}
 
               {tenantCreateResult ? (
                 <div className="mt-3 rounded-xl border border-[#CBE7E4] bg-[#F1FCFA] p-3 text-xs font-semibold text-[#245A67]">

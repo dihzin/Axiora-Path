@@ -172,3 +172,12 @@ class AxionTenantDetailOut(BaseModel):
 
 class AxionTenantDeleteRequest(BaseModel):
     confirmSlug: str = Field(min_length=3, max_length=255)
+
+
+class AxionTenantUpdateRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=255)
+    type: str = Field(pattern="^(FAMILY|SCHOOL)$")
+    adminEmail: str
+    adminName: str = Field(min_length=2, max_length=255)
+    adminPassword: str | None = Field(default=None, min_length=10)
+    resetExistingUserPassword: bool = False

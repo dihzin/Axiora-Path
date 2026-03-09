@@ -2293,6 +2293,25 @@ export async function deletePlatformTenant(tenantId: number, confirmSlug: string
   });
 }
 
+export async function updatePlatformTenant(
+  tenantId: number,
+  payload: {
+    name: string;
+    type: "FAMILY" | "SCHOOL";
+    adminEmail: string;
+    adminName: string;
+    adminPassword?: string | null;
+    resetExistingUserPassword: boolean;
+  },
+): Promise<PlatformTenantDetail> {
+  return apiRequest<PlatformTenantDetail>(`/api/platform-admin/tenants/${tenantId}`, {
+    method: "PATCH",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
 export async function createAxionStudioPolicy(payload: {
   name: string;
   context: string;

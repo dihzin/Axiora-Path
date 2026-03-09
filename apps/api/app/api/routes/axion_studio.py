@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import UTC, date, datetime
 from typing import Annotated, Any
@@ -43,6 +43,7 @@ from app.schemas.axion_studio import (
     AxionTenantCreateResponse,
     AxionTenantDetailOut,
     AxionTenantSummaryOut,
+    AxionTenantUpdateRequest,
     AxionStudioUserOption,
     AxionVersionOut,
 )
@@ -106,7 +107,7 @@ def _validate_context(value: str) -> str:
     normalized = (value or "").strip().lower()
     allowed = {item.value for item in AxionDecisionContext}
     if normalized not in allowed:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Contexto inválido: {value}")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Contexto invÃ¡lido: {value}")
     return normalized
 
 
@@ -115,12 +116,12 @@ def _validate_json_conditions(conditions: dict[str, Any]) -> None:
         if isinstance(expression, dict):
             for op, val in expression.items():
                 if op not in ALLOWED_OPERATORS:
-                    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Operador inválido: {op}")
+                    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Operador invÃ¡lido: {op}")
                 if key in SCORE_KEYS and op in {"gt", "gte", "lt", "lte", "eq"}:
                     try:
                         num = float(val)
                     except (TypeError, ValueError):
-                        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Limite numérico inválido para {key}") from None
+                        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Limite numÃ©rico invÃ¡lido para {key}") from None
                     if num < 0.0 or num > 1.0:
                         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"{key} deve estar entre 0 e 1")
                 if op == "in" and not isinstance(val, list):
@@ -131,7 +132,7 @@ def _validate_actions(actions: list[dict[str, Any]]) -> None:
     for action in actions:
         action_type = str(action.get("type", "")).strip().upper()
         if action_type not in ALLOWED_ACTION_TYPES:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Tipo de ação inválido: {action_type}")
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Tipo de aÃ§Ã£o invÃ¡lido: {action_type}")
 
 
 def _rule_snapshot(rule: AxionPolicyRule) -> dict[str, Any]:
@@ -282,12 +283,12 @@ def _map_cta(actions: list[dict[str, Any]], *, due_reviews: int) -> dict[str, An
     action_type = str(first.get("type", "")).upper()
     params = first.get("params") if isinstance(first.get("params"), dict) else {}
     if action_type == "TRIGGER_REVIEW":
-        return {"label": f"Fazer revisão agora ({3 if due_reviews else 2} min)", "actionType": "OPEN_REVIEWS", "payload": {"mode": "due_reviews"}}
+        return {"label": f"Fazer revisÃ£o agora ({3 if due_reviews else 2} min)", "actionType": "OPEN_REVIEWS", "payload": {"mode": "due_reviews"}}
     if action_type == "OFFER_GAME_BREAK":
-        return {"label": "Jogar 1 partida estratégica", "actionType": "OPEN_GAME_BREAK", "payload": {"game": "strategic"}}
+        return {"label": "Jogar 1 partida estratÃ©gica", "actionType": "OPEN_GAME_BREAK", "payload": {"game": "strategic"}}
     if action_type == "OFFER_BOOST":
         return {"label": "Ativar impulso de XP", "actionType": "ACTIVATE_BOOST", "payload": params}
-    return {"label": "Desafio rápido (2 min)", "actionType": "OPEN_MICRO_MISSION", "payload": params or {"durationMinutes": 2}}
+    return {"label": "Desafio rÃ¡pido (2 min)", "actionType": "OPEN_MICRO_MISSION", "payload": params or {"durationMinutes": 2}}
 
 
 async def _rate_limit_preview(request: Request, *, user_id: int) -> None:
@@ -299,7 +300,7 @@ async def _rate_limit_preview(request: Request, *, user_id: int) -> None:
     if current == 1:
         await redis.expire(key, 60)
     if int(current) > 20:
-        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Limite de pré-visualizações atingido")
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Limite de prÃ©-visualizaÃ§Ãµes atingido")
 
 
 @router.get("/api/platform-admin/axion/policies", response_model=list[AxionPolicyRuleOut])
@@ -342,7 +343,7 @@ def list_tenants(
     if tenantType and tenantType.strip():
         normalized_type = tenantType.strip().upper()
         if normalized_type not in {"FAMILY", "SCHOOL"}:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Tipo de organização inválido")
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Tipo de organizaÃ§Ã£o invÃ¡lido")
         stmt = stmt.where(Tenant.type == normalized_type)
     rows = db.scalars(stmt.order_by(Tenant.created_at.desc(), Tenant.id.desc()).limit(300)).all()
     family_tenant_ids = [tenant.id for tenant in rows if tenant.type == TenantType.FAMILY]
@@ -369,17 +370,17 @@ def create_tenant(
 
     slug = payload.slug.strip().lower()
     if not slug:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Slug é obrigatório")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Slug Ã© obrigatÃ³rio")
     if any(ch.isspace() for ch in slug):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Slug não pode conter espaços")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Slug nÃ£o pode conter espaÃ§os")
 
     existing_tenant = db.scalar(select(Tenant).where(Tenant.slug == slug, Tenant.deleted_at.is_(None)))
     if existing_tenant is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Já existe uma organização com esse slug")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="JÃ¡ existe uma organizaÃ§Ã£o com esse slug")
 
     tenant_type_value = payload.type.strip().upper()
     if tenant_type_value not in {"FAMILY", "SCHOOL"}:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Tipo de organização inválido")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Tipo de organizaÃ§Ã£o invÃ¡lido")
     tenant_type = TenantType(tenant_type_value)
 
     password_error = validate_password_strength(payload.adminPassword)
@@ -491,7 +492,7 @@ def get_tenant_detail(
     _require_platform_admin(user)
     tenant = db.scalar(select(Tenant).where(Tenant.id == tenant_id, Tenant.deleted_at.is_(None)))
     if tenant is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organização não encontrada")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OrganizaÃ§Ã£o nÃ£o encontrada")
 
     consent_done = _tenant_consent_done(db, tenant=tenant)
     admin_rows = db.execute(
@@ -538,15 +539,15 @@ def delete_tenant(
     _require_platform_admin(user)
     tenant = db.scalar(select(Tenant).where(Tenant.id == tenant_id, Tenant.deleted_at.is_(None)))
     if tenant is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organização não encontrada")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OrganizaÃ§Ã£o nÃ£o encontrada")
     if tenant.slug == "platform-admin":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A organização platform-admin não pode ser excluída")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A organizaÃ§Ã£o platform-admin nÃ£o pode ser excluÃ­da")
 
     provided_slug = payload.confirmSlug.strip().lower()
     if provided_slug != tenant.slug:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Confirmação inválida. Informe o slug exato da organização.")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="ConfirmaÃ§Ã£o invÃ¡lida. Informe o slug exato da organizaÃ§Ã£o.")
 
-    before_snapshot = _tenant_out(tenant, consent_completed=_tenant_consent_done(db, tenant=tenant)).model_dump()
+    before_snapshot = _tenant_out(tenant, consent_completed=_tenant_consent_done(db, tenant=tenant)).model_dump(mode="json")
     now = datetime.now(UTC)
     tenant.deleted_at = now
     children_rows = db.scalars(select(ChildProfile).where(ChildProfile.tenant_id == tenant.id, ChildProfile.deleted_at.is_(None))).all()
@@ -564,6 +565,121 @@ def delete_tenant(
     )
     db.commit()
     return {"deleted": True, "tenantId": tenant_id}
+
+
+@router.patch("/api/platform-admin/tenants/{tenant_id}", response_model=AxionTenantDetailOut)
+def update_tenant(
+    tenant_id: int,
+    payload: AxionTenantUpdateRequest,
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> AxionTenantDetailOut:
+    _require_platform_admin(user)
+    tenant = db.scalar(select(Tenant).where(Tenant.id == tenant_id, Tenant.deleted_at.is_(None)))
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OrganizaÃ§Ã£o nÃ£o encontrada")
+    if tenant.slug == "platform-admin":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A organizaÃ§Ã£o platform-admin nÃ£o pode ser editada nesta tela")
+
+    before_snapshot = _tenant_out(tenant, consent_completed=_tenant_consent_done(db, tenant=tenant)).model_dump(mode="json")
+
+    tenant_type_value = payload.type.strip().upper()
+    if tenant_type_value not in {"FAMILY", "SCHOOL"}:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Tipo de organizaÃ§Ã£o invÃ¡lido")
+    tenant_type = TenantType(tenant_type_value)
+
+    admin_memberships = db.scalars(
+        select(Membership)
+        .where(
+            Membership.tenant_id == tenant.id,
+            Membership.role.in_([MembershipRole.PARENT, MembershipRole.TEACHER]),
+        )
+        .order_by(Membership.id.asc())
+    ).all()
+    if not admin_memberships:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Administrador da organizaÃ§Ã£o nÃ£o encontrado")
+
+    primary_admin_membership = admin_memberships[0]
+    primary_admin_user = db.scalar(select(User).where(User.id == primary_admin_membership.user_id))
+    if primary_admin_user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="UsuÃ¡rio administrador nÃ£o encontrado")
+
+    next_admin_email = payload.adminEmail.strip().lower()
+    existing_user_same_email = db.scalar(select(User).where(User.email == next_admin_email))
+    if existing_user_same_email is not None and existing_user_same_email.id != primary_admin_user.id:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="JÃ¡ existe outro usuÃ¡rio com este e-mail")
+
+    tenant.name = payload.name.strip()
+    tenant.type = tenant_type
+    if tenant_type == TenantType.SCHOOL:
+        tenant.onboarding_completed = True
+
+    primary_admin_user.name = payload.adminName.strip()
+    primary_admin_user.email = next_admin_email
+    if payload.resetExistingUserPassword:
+        if not payload.adminPassword:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Informe a nova senha para redefinir o usuÃ¡rio")
+        password_error = validate_password_strength(payload.adminPassword)
+        if password_error is not None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=password_error)
+        primary_admin_user.password_hash = hash_password(payload.adminPassword)
+        primary_admin_user.failed_login_attempts = 0
+        primary_admin_user.locked_until = None
+
+    next_admin_role = MembershipRole.PARENT if tenant_type == TenantType.FAMILY else MembershipRole.TEACHER
+    for membership in admin_memberships:
+        membership.role = next_admin_role
+
+    after_snapshot = _tenant_out(tenant, consent_completed=_tenant_consent_done(db, tenant=tenant)).model_dump(mode="json")
+    _write_audit(
+        db,
+        actor_user_id=user.id,
+        action="ORG_UPDATE",
+        entity_type="ORG",
+        entity_id=str(tenant.id),
+        before=before_snapshot,
+        after={
+            **after_snapshot,
+            "adminEmail": primary_admin_user.email,
+            "adminName": primary_admin_user.name,
+            "adminRole": next_admin_role.value,
+            "passwordReset": bool(payload.resetExistingUserPassword),
+        },
+    )
+    db.commit()
+
+    consent_done = _tenant_consent_done(db, tenant=tenant)
+    admin_rows = db.execute(
+        select(User, Membership.role)
+        .join(Membership, Membership.user_id == User.id)
+        .where(
+            Membership.tenant_id == tenant.id,
+            Membership.role.in_([MembershipRole.PARENT, MembershipRole.TEACHER]),
+        )
+        .order_by(User.name.asc(), User.id.asc())
+    ).all()
+    admin_members = [
+        AxionTenantAdminMemberOut(
+            userId=row[0].id,
+            name=row[0].name,
+            email=row[0].email,
+            role=row[1].value if isinstance(row[1], MembershipRole) else str(row[1]),
+        )
+        for row in admin_rows
+    ]
+    children_count = int(db.scalar(select(func.count(ChildProfile.id)).where(ChildProfile.tenant_id == tenant.id)) or 0)
+    active_children_count = int(
+        db.scalar(select(func.count(ChildProfile.id)).where(ChildProfile.tenant_id == tenant.id, ChildProfile.deleted_at.is_(None))) or 0
+    )
+    memberships_count = int(db.scalar(select(func.count(Membership.id)).where(Membership.tenant_id == tenant.id)) or 0)
+
+    return AxionTenantDetailOut(
+        tenant=_tenant_out(tenant, consent_completed=consent_done),
+        adminMembers=admin_members,
+        childrenCount=children_count,
+        activeChildrenCount=active_children_count,
+        membershipsCount=memberships_count,
+    )
 
 
 @router.post("/api/platform-admin/axion/policies", response_model=AxionPolicyRuleOut)
@@ -600,7 +716,7 @@ def patch_policy(
     _require_platform_admin(user)
     rule = db.get(AxionPolicyRule, policy_id)
     if rule is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regra de política não encontrada")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regra de polÃ­tica nÃ£o encontrada")
     before = _rule_snapshot(rule)
     _save_rule_version(db, rule=rule, actor_user_id=user.id)
     if payload.name is not None:
@@ -632,7 +748,7 @@ def toggle_policy(
     _require_platform_admin(user)
     rule = db.get(AxionPolicyRule, policy_id)
     if rule is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regra de política não encontrada")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regra de polÃ­tica nÃ£o encontrada")
     before = _rule_snapshot(rule)
     _save_rule_version(db, rule=rule, actor_user_id=user.id)
     rule.enabled = not bool(rule.enabled)
@@ -667,7 +783,7 @@ def restore_policy(
     _require_platform_admin(user)
     rule = db.get(AxionPolicyRule, policy_id)
     if rule is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regra de política não encontrada")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regra de polÃ­tica nÃ£o encontrada")
     version = db.scalar(
         select(AxionPolicyRuleVersion).where(
             AxionPolicyRuleVersion.rule_id == policy_id,
@@ -675,7 +791,7 @@ def restore_policy(
         )
     )
     if version is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Versão da regra não encontrada")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="VersÃ£o da regra nÃ£o encontrada")
     before = _rule_snapshot(rule)
     _save_rule_version(db, rule=rule, actor_user_id=user.id)
     snap = version.snapshot if isinstance(version.snapshot, dict) else {}
@@ -721,7 +837,7 @@ def create_template(
     _require_platform_admin(user)
     _validate_json_conditions(payload.conditions)
     if len(payload.text.strip()) > 220:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="O texto do template deve ter no máximo 220 caracteres")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="O texto do template deve ter no mÃ¡ximo 220 caracteres")
     template = AxionMessageTemplate(
         context=_validate_context(payload.context),
         tone=payload.tone.strip().upper(),
@@ -748,7 +864,7 @@ def patch_template(
     _require_platform_admin(user)
     template = db.get(AxionMessageTemplate, template_id)
     if template is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template não encontrado")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template nÃ£o encontrado")
     before = _template_snapshot(template)
     _save_template_version(db, template=template, actor_user_id=user.id)
     if payload.context is not None:
@@ -762,7 +878,7 @@ def patch_template(
         template.conditions = payload.conditions
     if payload.text is not None:
         if len(payload.text.strip()) > 220:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="O texto do template deve ter no máximo 220 caracteres")
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="O texto do template deve ter no mÃ¡ximo 220 caracteres")
         template.message_text = payload.text.strip()
     if payload.weight is not None:
         template.weight = max(1, int(payload.weight))
@@ -783,7 +899,7 @@ def toggle_template(
     _require_platform_admin(user)
     template = db.get(AxionMessageTemplate, template_id)
     if template is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template não encontrado")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template nÃ£o encontrado")
     before = _template_snapshot(template)
     _save_template_version(db, template=template, actor_user_id=user.id)
     template.enabled = not bool(template.enabled)
@@ -818,7 +934,7 @@ def restore_template(
     _require_platform_admin(user)
     template = db.get(AxionMessageTemplate, template_id)
     if template is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template não encontrado")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template nÃ£o encontrado")
     version = db.scalar(
         select(AxionMessageTemplateVersion).where(
             AxionMessageTemplateVersion.template_id == template_id,
@@ -826,7 +942,7 @@ def restore_template(
         )
     )
     if version is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Versão do template não encontrada")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="VersÃ£o do template nÃ£o encontrada")
     before = _template_snapshot(template)
     _save_template_version(db, template=template, actor_user_id=user.id)
     snap = version.snapshot if isinstance(version.snapshot, dict) else {}
