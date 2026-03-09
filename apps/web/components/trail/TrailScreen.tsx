@@ -11,9 +11,10 @@ import { BottomNav } from "@/components/trail/BottomNav";
 import { DailyMissionsPanel } from "@/components/trail/DailyMissionsPanel";
 import { DomainSection } from "@/components/trail/DomainSection";
 import { HeroMissionCard } from "@/components/trail/HeroMissionCard";
-import ProgressionMap, { type MapNode, type MapSection } from "@/components/trail/ProgressionMap";
+import ProgressionMap, { type MapNode, type MapSection, type NodeStatus } from "@/components/trail/ProgressionMap";
 import { SubjectSelector } from "@/components/trail/SubjectSelector";
 import { WeeklyGoalCard } from "@/components/trail/WeeklyGoalCard";
+import { cn } from "@/lib/utils";
 import {
   ApiError,
   claimMission,
@@ -70,6 +71,23 @@ function resolveSubjectStorageKey(): string {
 
 function resolvePathCacheKey(subjectId: number | null): string {
   return `axiora_learning_path_cache:${subjectId ?? "default"}`;
+}
+
+function readCachedPath(subjectId: number | null): LearningPathResponse | null {
+  if (typeof window === "undefined") return null;
+  const keys = [resolvePathCacheKey(subjectId), resolvePathCacheKey(null)];
+
+  for (const key of keys) {
+    const raw = window.sessionStorage.getItem(key);
+    if (!raw) continue;
+    try {
+      return JSON.parse(raw) as LearningPathResponse;
+    } catch {
+      window.sessionStorage.removeItem(key);
+    }
+  }
+
+  return null;
 }
 
 function distributeSubjectsByArea(subjects: AprenderSubjectOption[], currentSubjectId: number | null): Record<SubjectAreaLabel, AprenderSubjectOption[]> {
@@ -171,6 +189,49 @@ function getDomainData(path: LearningPathResponse, areaLabel: SubjectAreaLabel):
   };
 }
 
+function buildProgressionSectionsFromPath(path: LearningPathResponse | null): MapSection[] {
+  if (!path) return [];
+
+  let currentAssigned = false;
+  const sections = path.units.map((unit) => {
+    const lessons = [...unit.nodes]
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .map((node) => node.lesson)
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+    const nodes = lessons.map((lesson) => {
+      let status: NodeStatus = "locked";
+      if (lesson.completed) {
+        status = "done";
+      } else if (lesson.unlocked && !currentAssigned) {
+        status = "current";
+        currentAssigned = true;
+      }
+
+      return {
+        id: `lesson-${lesson.id}`,
+        title: lesson.title,
+        subtitle: `Lição ${lesson.order}`,
+        xp: 30,
+        status,
+      } satisfies MapNode;
+    });
+
+    return {
+      id: `unit-${unit.id}`,
+      title: unit.title,
+      nodes,
+    } satisfies MapSection;
+  });
+
+  const currentSection =
+    sections.find((section) => section.nodes.some((node) => node.status === "current")) ??
+    sections.find((section) => section.nodes.some((node) => node.status !== "done")) ??
+    sections[0];
+
+  return currentSection ? [currentSection] : [];
+}
+
 type TrailScreenProps = {
   progressionSections?: MapSection[];
   progressionActiveNodeId?: string;
@@ -180,10 +241,21 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [path, setPath] = useState<LearningPathResponse | null>(null);
+  const [path, setPath] = useState<LearningPathResponse | null>(() => {
+    if (typeof window === "undefined") return null;
+    const rawSubjectId = new URLSearchParams(window.location.search).get("subjectId");
+    const parsedSubjectId = Number(rawSubjectId);
+    const initialSubjectId = Number.isFinite(parsedSubjectId) && parsedSubjectId > 0 ? parsedSubjectId : null;
+    return readCachedPath(initialSubjectId);
+  });
   const [subjects, setSubjects] = useState<AprenderSubjectOption[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(() => {
     if (typeof window === "undefined") return null;
+    const rawFromQuery = new URLSearchParams(window.location.search).get("subjectId");
+    const parsedFromQuery = Number(rawFromQuery);
+    if (Number.isFinite(parsedFromQuery) && parsedFromQuery > 0) {
+      return parsedFromQuery;
+    }
     const raw = window.localStorage.getItem(resolveSubjectStorageKey());
     const parsed = Number(raw);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
@@ -196,7 +268,13 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   const [xpInLevel, setXpInLevel] = useState(0);
   const [xpToNextLevel, setXpToNextLevel] = useState(100);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const rawSubjectId = new URLSearchParams(window.location.search).get("subjectId");
+    const parsedSubjectId = Number(rawSubjectId);
+    const initialSubjectId = Number.isFinite(parsedSubjectId) && parsedSubjectId > 0 ? parsedSubjectId : null;
+    return readCachedPath(initialSubjectId) === null;
+  });
   const [pathRefreshing, setPathRefreshing] = useState(false);
   const [insights, setInsights] = useState<LearningInsightsResponse | null>(null);
   const [missions, setMissions] = useState<MissionsCurrentResponse | null>(null);
@@ -206,7 +284,9 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   const [subjectStreakDays, setSubjectStreakDays] = useState(0);
   const [selectedNode, setSelectedNode] = useState<MapNode | null>(null);
   const [pathRetryToken, setPathRetryToken] = useState(0);
+  const [desktopStageHeight, setDesktopStageHeight] = useState(760);
   const hasLoadedPathRef = useRef(false);
+  const headerRef = useRef<HTMLElement | null>(null);
 
   const completedLessonSignal = searchParams.get("completedLessonId") ?? "";
   const subjectIdFromQueryRaw = searchParams.get("subjectId");
@@ -214,6 +294,12 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
     const parsed = Number(subjectIdFromQueryRaw);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }, [subjectIdFromQueryRaw]);
+
+  useEffect(() => {
+    if (path) {
+      hasLoadedPathRef.current = true;
+    }
+  }, [path]);
 
   const subjectsForUi = useMemo(() => {
     if (subjects.length > 0) return subjects;
@@ -247,6 +333,33 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
     }
     window.localStorage.setItem(key, String(selectedSubjectId));
   }, [selectedSubjectId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateDesktopViewport = () => {
+      const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+      if (!isDesktop) {
+        setDesktopStageHeight(760);
+        return;
+      }
+      const headerHeight = headerRef.current?.getBoundingClientRect().height ?? 92;
+      const chromeAllowance = 28;
+      const nextHeight = Math.max(540, Math.round(window.innerHeight - headerHeight - chromeAllowance));
+      setDesktopStageHeight(nextHeight);
+    };
+    const frame = window.requestAnimationFrame(updateDesktopViewport);
+    window.addEventListener("resize", updateDesktopViewport);
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && headerRef.current) {
+      observer = new ResizeObserver(() => updateDesktopViewport());
+      observer.observe(headerRef.current);
+    }
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", updateDesktopViewport);
+      observer?.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -450,8 +563,12 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
     if (insights.dueReviewsCount > 0) return "Mais um passo e você desbloqueia novidades!";
     return "Continue assim!";
   }, [insights, insightsLoading]);
-  const progressionNodes = useMemo(() => progressionSections?.flatMap((section) => section.nodes) ?? [], [progressionSections]);
-  const hasProgressionMap = (progressionSections?.length ?? 0) > 0;
+  const resolvedProgressionSections = useMemo(
+    () => (progressionSections && progressionSections.length > 0 ? progressionSections : buildProgressionSectionsFromPath(path)),
+    [path, progressionSections],
+  );
+  const progressionNodes = useMemo(() => resolvedProgressionSections.flatMap((section) => section.nodes), [resolvedProgressionSections]);
+  const hasProgressionMap = resolvedProgressionSections.length > 0;
   const resolvedActiveMapNodeId = useMemo(() => {
     if (!hasProgressionMap) return undefined;
     if (progressionActiveNodeId) return progressionActiveNodeId;
@@ -467,6 +584,9 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   const nodeForHeroMission = selectedNode ?? currentMapNode;
   const mapHighlightedNodeId = selectedNode?.id ?? resolvedActiveMapNodeId;
   const weeklyRemaining = Math.max(0, weeklyGoal.target - weeklyGoal.completed);
+  const compactDesktop = desktopStageHeight <= 700;
+  const progressionViewportHeight = hasProgressionMap ? desktopStageHeight - 8 : 980;
+  const initialPathLoading = loading && !path;
 
   useEffect(() => {
     if (!selectedNode) return;
@@ -474,16 +594,11 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
     setSelectedNode(null);
   }, [progressionNodes, selectedNode]);
 
-  const handleContinueLearning = () => {
-    if (!resolvedActiveMapNodeId) return;
-    document.getElementById(`map-node-${resolvedActiveMapNodeId}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
-  };
-  const handleStartMission = () => {
-    const missionNode = nodeForHeroMission;
-    if (!missionNode || missionNode.status === "locked") return;
-    setSelectedNode(missionNode);
-    if (missionNode.id.startsWith("lesson-")) {
-      const lessonId = Number(missionNode.id.replace("lesson-", ""));
+  const openMapNode = (node: MapNode | null) => {
+    if (!node || node.status === "locked") return;
+    setSelectedNode(node);
+    if (node.id.startsWith("lesson-")) {
+      const lessonId = Number(node.id.replace("lesson-", ""));
       if (Number.isFinite(lessonId) && lessonId > 0) {
         const activeSubjectId = selectedSubjectId ?? path?.subjectId ?? null;
         if (activeSubjectId && Number.isFinite(activeSubjectId)) {
@@ -494,7 +609,15 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
         return;
       }
     }
-    document.getElementById(`map-node-${missionNode.id}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+    document.getElementById(`map-node-${node.id}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
+
+  const handleContinueLearning = () => {
+    if (!resolvedActiveMapNodeId) return;
+    document.getElementById(`map-node-${resolvedActiveMapNodeId}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
+  const handleStartMission = () => {
+    openMapNode(nodeForHeroMission);
   };
 
   const onLessonClick = (lessonId: number, state: TrailNodeType) => {
@@ -538,8 +661,8 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   };
 
   return (
-    <div className="relative overflow-hidden min-h-screen bg-transparent">
-      <div className="w-full lg:pl-[208px]">
+    <div className="relative overflow-hidden min-h-screen bg-transparent lg:h-screen">
+      <div className="w-full lg:h-screen lg:overflow-hidden lg:pl-[208px]">
         <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/5 lg:border-t-white/5 lg:bg-[linear-gradient(180deg,#0F172A_0%,#0D1626_100%)] lg:px-3 lg:py-5">
           <div className="mb-0.5 flex justify-center">
             <div className="rounded-2xl bg-[#12213D]/80 p-1.5 shadow-[inset_0_1px_12px_rgba(0,0,0,0.35)]">
@@ -556,82 +679,231 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
           <DesktopNavItem href="/child/axion" active={pathname.startsWith("/child/axion")} iconName="axion" label="Axion" />
         </aside>
 
-        <div className="mx-auto w-full lg:max-w-[980px] lg:px-5 xl:px-8">
-          <div className="mx-auto w-full max-w-sm pb-24 pt-1 md:max-w-4xl md:pb-8 lg:max-w-3xl lg:pb-12 lg:pt-6">
-            <div className="mx-auto w-full max-w-[760px] px-4 sm:px-6">
-              <header className="relative z-50 space-y-2 bg-[rgba(15,23,42,0.08)] pb-2 [backdrop-filter:blur(2px)] lg:bg-transparent lg:pb-0">
-                <div className="motion-safe:animate-[fade-in-up_280ms_ease-out]">
-                  <SubjectSelector
-                    streak={subjectStreakDays}
-                    gems={coins}
-                    xp={xpPercent}
-                    selectedSubjectName={selectedSubjectName}
-                    subjects={visibleSubjects}
-                    selectedSubjectId={selectedSubjectId}
-                    pathSubjectId={path?.subjectId ?? null}
-                    className="w-full"
-                    onSelectSubject={onSelectSubject}
-                  />
-                </div>
-                <div className="flex items-center gap-4 text-xs font-medium text-slate-300">
-                  <span className="flex items-center gap-1">
-                    🔥 {weeklyRemaining} missões restantes esta semana
-                  </span>
-                </div>
-              </header>
-
-              <main className="lg:pt-4">
-                <div className="flex w-full flex-col">
-                  <div className="w-full motion-safe:animate-[fade-in-up_340ms_ease-out]">
-                    <HeroMissionCard
-                      subjectName={selectedSubjectName}
-                      areaLabel={selectedArea}
-                      streakDays={subjectStreakDays}
-                      medalTier={domainCompletion.medal}
-                      completionPercent={domainCompletion.completionPercent}
-                      xpTotal={xpTotal}
-                      level={xpLevel}
-                      xpPercent={xpPercent}
-                      xpInLevel={xpInLevel}
-                      xpToNextLevel={xpToNextLevel}
-                      currentMission={{
-                        title: nodeForHeroMission?.title ?? "Adição no Cotidiano",
-                        xp: nodeForHeroMission?.xp ?? 30,
-                      }}
-                      encouragementText={encouragementText}
-                      onContinue={handleContinueLearning}
-                      onStartMission={handleStartMission}
-                    />
+        <div className="mx-auto w-full lg:h-screen lg:max-w-[1420px] lg:px-8 xl:max-w-[1560px] xl:px-12 2xl:px-16">
+          <div className="mx-auto w-full max-w-sm pb-24 pt-1 md:max-w-4xl md:pb-8 lg:flex lg:h-screen lg:max-w-[1360px] lg:flex-col lg:overflow-hidden lg:pb-0 lg:pt-4 xl:max-w-[1480px]">
+            <div className="mx-auto w-full max-w-[760px] px-4 sm:px-6 lg:max-w-none lg:px-2">
+              <header ref={headerRef} className="relative z-50 space-y-2 bg-[rgba(15,23,42,0.08)] pb-2 [backdrop-filter:blur(2px)] lg:flex-none lg:space-y-2 lg:bg-transparent lg:pb-2">
+                {initialPathLoading ? (
+                  <div className="space-y-2">
+                    <div className="h-[38px] w-full animate-pulse rounded-full border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,52,0.82),rgba(10,19,42,0.76))]" />
+                    <div className="h-4 w-48 animate-pulse rounded-full bg-white/10" />
                   </div>
-                  {hasProgressionMap ? (
-                    <div className="mt-4 w-full motion-safe:animate-[fade-in-up_360ms_ease-out]">
-                      <ProgressionMap
-                        nodes={progressionNodes}
-                        activeNodeId={resolvedActiveMapNodeId}
-                        selectedNodeId={mapHighlightedNodeId}
-                        onNodeClick={(node) => setSelectedNode(node)}
-                        className="mx-auto w-full max-w-[1400px]"
+                ) : (
+                  <>
+                    <div className="motion-safe:animate-[fade-in-up_280ms_ease-out]">
+                      <SubjectSelector
+                        streak={subjectStreakDays}
+                        gems={coins}
+                        xp={xpPercent}
+                        selectedSubjectName={selectedSubjectName}
+                        subjects={visibleSubjects}
+                        selectedSubjectId={selectedSubjectId}
+                        pathSubjectId={path?.subjectId ?? null}
+                        className="w-full"
+                        onSelectSubject={onSelectSubject}
                       />
                     </div>
-                  ) : null}
-                  <div className="mt-10 w-full motion-safe:animate-[fade-in-up_380ms_ease-out]">
-                    <DailyMissionsPanel
-                      missions={missions}
-                      missionsLoading={missionsLoading}
-                      claimingMissionId={claimingMissionId}
-                      onClaimMission={(missionId) => void onClaimMission(missionId)}
-                    />
-                  </div>
-                  <div className="mt-10 w-full motion-safe:animate-[fade-in-up_320ms_ease-out]">
-                    <WeeklyGoalCard completed={weeklyGoal.completed} target={weeklyGoal.target} weekLabel={weeklyGoal.weekLabel} />
-                  </div>
-                </div>
+                    <div className="flex items-center gap-4 text-xs font-medium text-slate-300">
+                      <span className="flex items-center gap-1">
+                        🔥 {weeklyRemaining} missões restantes esta semana
+                      </span>
+                    </div>
+                  </>
+                )}
+              </header>
 
-                {loading && !path ? (
-                  <div className="mt-6 rounded-2xl border border-black/5 bg-[#F1EAE3] p-3 text-sm font-semibold text-slate-700/80">Carregando trilha...</div>
-                ) : null}
+              <main className="lg:flex lg:min-h-0 lg:flex-1 lg:overflow-hidden lg:pt-1">
+                {initialPathLoading ? (
+                  <section className="relative w-full">
+                    <div className="hidden lg:grid lg:grid-cols-[minmax(0,1fr)_356px] lg:gap-4" style={{ height: `${desktopStageHeight}px` }}>
+                      <div className="overflow-hidden rounded-[34px] border border-white/8 bg-[linear-gradient(180deg,rgba(10,22,48,0.82),rgba(9,20,43,0.74))]">
+                        <div className="h-full w-full animate-pulse bg-[radial-gradient(ellipse_at_50%_35%,rgba(96,165,250,0.22),rgba(37,99,235,0.08)_36%,rgba(2,6,23,0)_72%)]" />
+                      </div>
+                      <div className="flex min-h-0 flex-col gap-3">
+                        <div className="h-[292px] animate-pulse rounded-[30px] border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,52,0.84),rgba(10,19,42,0.8))]" />
+                        <div className="h-[148px] animate-pulse rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,52,0.82),rgba(10,19,42,0.76))]" />
+                        <div className="flex-1 animate-pulse rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,52,0.8),rgba(10,19,42,0.74))]" />
+                      </div>
+                    </div>
+                    <div className="space-y-4 lg:hidden">
+                      <div className="h-[360px] animate-pulse rounded-[30px] border border-white/8 bg-[linear-gradient(180deg,rgba(10,22,48,0.82),rgba(9,20,43,0.74))]" />
+                      <div className="h-[220px] animate-pulse rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,52,0.84),rgba(10,19,42,0.8))]" />
+                    </div>
+                  </section>
+                ) : (
+                  <div className={cn("flex w-full flex-col gap-5", compactDesktop ? "lg:gap-4" : "lg:gap-5")}>
+                    {hasProgressionMap ? (
+                    <>
+                      <section className="relative isolate w-full motion-safe:animate-[fade-in-up_340ms_ease-out] lg:hidden">
+                        <div
+                          aria-hidden
+                          className="pointer-events-none absolute inset-x-0 top-10 z-0 h-[760px]"
+                          style={{
+                            background:
+                              "radial-gradient(ellipse at 50% 24%, rgba(103,232,249,0.12), rgba(37,99,235,0.07) 34%, rgba(2,6,23,0) 72%)",
+                            filter: "blur(22px)",
+                          }}
+                        />
+                        <div className="relative z-10 w-full">
+                          <ProgressionMap
+                            nodes={progressionNodes}
+                            activeNodeId={resolvedActiveMapNodeId}
+                            selectedNodeId={mapHighlightedNodeId}
+                            onNodeClick={openMapNode}
+                            viewportHeight={980}
+                            className="mx-auto w-full max-w-[1560px]"
+                          />
+                        </div>
+                      </section>
+
+                      <section
+                        className="relative hidden w-full lg:grid lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_356px] lg:gap-4 motion-safe:animate-[fade-in-up_340ms_ease-out]"
+                        style={{ height: `${desktopStageHeight}px` }}
+                      >
+                        <div
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 -z-10 rounded-[40px]"
+                          style={{
+                            background:
+                              "radial-gradient(ellipse at 38% 22%, rgba(103,232,249,0.14), rgba(37,99,235,0.08) 34%, rgba(2,6,23,0) 72%), radial-gradient(ellipse at 78% 86%, rgba(250,204,21,0.08), transparent 22%)",
+                            filter: "blur(22px)",
+                          }}
+                        />
+                        <div className="relative z-10 min-w-0 lg:min-h-0">
+                          <ProgressionMap
+                            nodes={progressionNodes}
+                            activeNodeId={resolvedActiveMapNodeId}
+                            selectedNodeId={mapHighlightedNodeId}
+                            onNodeClick={openMapNode}
+                            viewportHeight={progressionViewportHeight}
+                            className="mx-auto w-full max-w-none"
+                          />
+                        </div>
+                        <div className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
+                          <HeroMissionCard
+                            className="max-w-none"
+                            compact
+                            subjectName={selectedSubjectName}
+                            areaLabel={selectedArea}
+                            streakDays={subjectStreakDays}
+                            medalTier={domainCompletion.medal}
+                            completionPercent={domainCompletion.completionPercent}
+                            xpTotal={xpTotal}
+                            level={xpLevel}
+                            xpPercent={xpPercent}
+                            xpInLevel={xpInLevel}
+                            xpToNextLevel={xpToNextLevel}
+                            currentMission={{
+                              title: nodeForHeroMission?.title ?? "Adição no Cotidiano",
+                              xp: nodeForHeroMission?.xp ?? 30,
+                            }}
+                            encouragementText={encouragementText}
+                            onContinue={handleContinueLearning}
+                            onStartMission={handleStartMission}
+                          />
+                          <WeeklyGoalCard
+                            compact
+                            completed={weeklyGoal.completed}
+                            target={weeklyGoal.target}
+                            weekLabel={weeklyGoal.weekLabel}
+                          />
+                          <div className="min-h-0 flex-1 overflow-auto pr-1">
+                            <DailyMissionsPanel
+                              compact
+                              missions={missions}
+                              missionsLoading={missionsLoading}
+                              claimingMissionId={claimingMissionId}
+                              onClaimMission={(missionId) => void onClaimMission(missionId)}
+                            />
+                          </div>
+                        </div>
+                      </section>
+                    </>
+                  ) : (
+                    <div className="w-full motion-safe:animate-[fade-in-up_340ms_ease-out]">
+                      <HeroMissionCard
+                        className="max-w-none"
+                        compact={compactDesktop}
+                        subjectName={selectedSubjectName}
+                        areaLabel={selectedArea}
+                        streakDays={subjectStreakDays}
+                        medalTier={domainCompletion.medal}
+                        completionPercent={domainCompletion.completionPercent}
+                        xpTotal={xpTotal}
+                        level={xpLevel}
+                        xpPercent={xpPercent}
+                        xpInLevel={xpInLevel}
+                        xpToNextLevel={xpToNextLevel}
+                        currentMission={{
+                          title: nodeForHeroMission?.title ?? "Adição no Cotidiano",
+                          xp: nodeForHeroMission?.xp ?? 30,
+                        }}
+                        encouragementText={encouragementText}
+                        onContinue={handleContinueLearning}
+                        onStartMission={handleStartMission}
+                      />
+                    </div>
+                  )}
+                  {hasProgressionMap ? (
+                    <section className="relative w-full motion-safe:animate-[fade-in-up_380ms_ease-out] lg:hidden">
+                      <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 -z-10 rounded-[40px] opacity-80"
+                        style={{
+                          background:
+                            "radial-gradient(ellipse at 18% 14%, rgba(103,232,249,0.1), transparent 28%), radial-gradient(ellipse at 82% 80%, rgba(250,204,21,0.08), transparent 24%)",
+                          filter: "blur(18px)",
+                        }}
+                      />
+                      <div className={cn("grid gap-4 lg:grid-cols-[1.15fr_0.85fr] lg:grid-rows-[auto_auto]", compactDesktop ? "lg:gap-4" : "lg:gap-5")}>
+                        <div className="lg:col-span-2">
+                          <HeroMissionCard
+                            className="max-w-none"
+                            compact={compactDesktop}
+                            subjectName={selectedSubjectName}
+                            areaLabel={selectedArea}
+                            streakDays={subjectStreakDays}
+                            medalTier={domainCompletion.medal}
+                            completionPercent={domainCompletion.completionPercent}
+                            xpTotal={xpTotal}
+                            level={xpLevel}
+                            xpPercent={xpPercent}
+                            xpInLevel={xpInLevel}
+                            xpToNextLevel={xpToNextLevel}
+                            currentMission={{
+                              title: nodeForHeroMission?.title ?? "Adição no Cotidiano",
+                              xp: nodeForHeroMission?.xp ?? 30,
+                            }}
+                            encouragementText={encouragementText}
+                            onContinue={handleContinueLearning}
+                            onStartMission={handleStartMission}
+                          />
+                        </div>
+                        <div className="grid gap-4">
+                          <DailyMissionsPanel
+                            className="h-full"
+                            compact={compactDesktop}
+                            missions={missions}
+                            missionsLoading={missionsLoading}
+                            claimingMissionId={claimingMissionId}
+                            onClaimMission={(missionId) => void onClaimMission(missionId)}
+                          />
+                        </div>
+                        <div className="grid content-start gap-4">
+                          <WeeklyGoalCard
+                            compact={compactDesktop}
+                            completed={weeklyGoal.completed}
+                            target={weeklyGoal.target}
+                            weekLabel={weeklyGoal.weekLabel}
+                          />
+                        </div>
+                      </div>
+                    </section>
+                  ) : null}
+                  </div>
+                )}
                 {pathRefreshing ? (
-                  <div className="mt-6 inline-flex items-center rounded-full border border-black/5 bg-[#ECE4DC] px-3 py-1 text-xs font-semibold uppercase tracking-[0.04em] text-slate-700/75">
+                  <div className="mt-4 inline-flex items-center rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-[0.04em] text-slate-200/80">
                     Atualizando...
                   </div>
                 ) : null}

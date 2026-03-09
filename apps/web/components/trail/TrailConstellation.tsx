@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 
 type StarDot = {
   size: number;
@@ -15,28 +15,28 @@ type TrailConstellationProps = {
 };
 
 export default function TrailConstellation({ isCurrent = false }: TrailConstellationProps) {
-  const nearStars = useMemo<StarDot[]>(
-    () =>
-      Array.from({ length: 30 }).map(() => {
-        const size = Math.random() > 0.7 ? 4 : 2;
-        return {
-          size,
-          top: Math.random() * 100,
-          left: Math.random() * 100,
-          duration: 12 + Math.random() * 8,
-          delay: Math.random() * 4,
-        };
-      }),
-    [],
-  );
-  const farStars = useMemo(
-    () =>
-      Array.from({ length: 20 }).map(() => ({
-        left: `${Math.random() * 100}%`,
-        top: `${Math.random() * 100}%`,
-      })),
-    [],
-  );
+  const [nearStars, setNearStars] = useState<StarDot[]>([]);
+  const [farStars, setFarStars] = useState<Array<{ left: string; top: string }>>([]);
+
+  useEffect(() => {
+    const generatedNearStars: StarDot[] = Array.from({ length: 30 }).map(() => {
+      const size = Math.random() > 0.7 ? 4 : 2;
+      return {
+        size,
+        top: Math.random() * 100,
+        left: Math.random() * 100,
+        duration: 12 + Math.random() * 8,
+        delay: Math.random() * 4,
+      };
+    });
+    const generatedFarStars = Array.from({ length: 20 }).map(() => ({
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+    }));
+
+    setNearStars(generatedNearStars);
+    setFarStars(generatedFarStars);
+  }, []);
 
   return (
     <div className="pointer-events-none absolute inset-0 z-0">

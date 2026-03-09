@@ -140,7 +140,7 @@ def get_learning_insights(db: Session, *, user_id: int) -> LearningInsightsSnaps
                    COALESCE(m.mastery_average, 0)::float AS mastery_average,
                    CASE
                        WHEN COALESCE(u.total_units, 0) = 0 THEN 0
-                       ELSE ROUND((u.completed_units::float / u.total_units::float) * 100, 2)
+                       ELSE ROUND(((u.completed_units::numeric / u.total_units::numeric) * 100), 2)::float
                    END AS unit_completion_percent
             FROM subjects s
             LEFT JOIN mastery_by_subject m

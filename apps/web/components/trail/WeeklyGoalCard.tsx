@@ -7,9 +7,10 @@ type WeeklyGoalCardProps = {
   target: number;
   weekLabel: string;
   className?: string;
+  compact?: boolean;
 };
 
-export function WeeklyGoalCard({ completed, target, weekLabel, className }: WeeklyGoalCardProps) {
+export function WeeklyGoalCard({ completed, target, weekLabel, className, compact = false }: WeeklyGoalCardProps) {
   const safeTarget = Math.max(1, target);
   const safeCompleted = Math.max(0, Math.min(safeTarget, completed));
   const remaining = Math.max(0, safeTarget - safeCompleted);
@@ -20,35 +21,58 @@ export function WeeklyGoalCard({ completed, target, weekLabel, className }: Week
   return (
     <section
       className={cn(
-        "axiora-hover-magic relative overflow-hidden rounded-2xl border border-white/10 bg-[rgba(15,23,42,0.85)] bg-gradient-to-b from-white/10 to-white/5 p-4 backdrop-blur-xl shadow-[0_0_30px_rgba(56,189,248,0.1)] transition-all duration-500 hover:shadow-[0_0_30px_rgba(56,189,248,0.25)]",
+        "axiora-hover-magic relative overflow-hidden rounded-[26px] border border-amber-200/12 bg-[linear-gradient(145deg,rgba(24,24,52,0.9),rgba(16,20,44,0.82))] p-4 shadow-[0_14px_34px_rgba(2,8,28,0.26),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-500 hover:shadow-[0_18px_40px_rgba(2,8,28,0.34)]",
+        compact && "p-3.5",
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-white">Meta da semana</p>
-          <p className="mt-1 text-[21px] font-semibold leading-tight text-white">{
-            statusText
-          }</p>
-          <p className="mt-1 text-[13px] font-medium text-white/80">
-            Você já concluiu {safeCompleted} de {safeTarget}.
-          </p>
+      <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-gradient-to-b from-white/5 via-white/[0.03] to-transparent" />
+      <div className="pointer-events-none absolute -left-4 top-1/2 h-24 w-24 -translate-y-1/2 rounded-full bg-amber-300/12 blur-2xl" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(180deg,rgba(250,204,21,0.08),rgba(250,204,21,0))]" />
+      <div className={cn("relative z-10 flex items-center", compact ? "gap-3" : "gap-4")}>
+        <div className={cn("flex shrink-0 items-center justify-center rounded-[18px] border border-amber-300/20 bg-[linear-gradient(145deg,rgba(250,204,21,0.18),rgba(56,189,248,0.12))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]", compact ? "h-12 w-12 text-[22px]" : "h-14 w-14 text-[26px]")}>
+          ✦
         </div>
-        <div className="rounded-full bg-[#DFE6F1] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.06em] text-[#2B2F42]">
-          {weekLabel}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">Meta da semana</p>
+            <div className="rounded-full border border-amber-200/25 bg-amber-300/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-amber-50/90">
+              {weekLabel}
+            </div>
+          </div>
+          <p className={cn("mt-1 font-semibold leading-tight tracking-[-0.01em] text-white", compact ? "text-[15px]" : "text-[17px]")}>{statusText}</p>
+          <p className="mt-1 text-[12px] font-medium text-white/78">
+            {safeCompleted} de {safeTarget} concluídas
+          </p>
         </div>
       </div>
 
-      <div className="mt-2.5">
-        <div className="mb-1.5 flex items-center justify-between text-[12px] font-semibold text-white">
-          <span>Progresso da semana</span>
-          <span className="rounded-full bg-[#DFE6F1] px-2 py-0.5 text-[11px] text-[#2B2F42]">{percent}%</span>
+      <div className={cn("relative z-10", compact ? "mt-3" : "mt-4")}>
+        <div className="mb-2 flex items-center justify-between text-[12px] font-semibold text-white">
+          <span className="text-[11px] uppercase tracking-[0.1em] text-white/70">Barra de conquista</span>
+          <span className="rounded-full border border-sky-300/35 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-100">{percent}%</span>
         </div>
-        <div className="h-2.5 overflow-hidden rounded-full border border-[#CDD9E9] bg-[linear-gradient(180deg,#DEE7F3_0%,#D7E1EF_100%)] shadow-[inset_0_1px_3px_rgba(40,58,88,0.12)]">
+        <div className="h-2.5 overflow-hidden rounded-full border border-[#9CC8F2]/45 bg-[linear-gradient(180deg,rgba(227,236,247,0.92)_0%,rgba(217,229,242,0.92)_100%)] shadow-[inset_0_1px_3px_rgba(40,58,88,0.12)]">
           <div
-            className="h-full rounded-full bg-[linear-gradient(120deg,#3E73AF_0%,#5D8DC2_100%)] transition-transform transition-shadow transition-opacity duration-700 ease-out"
+            className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-sky-400 to-blue-500 transition-transform transition-shadow transition-opacity duration-700 ease-out"
             style={{ width: `${percent}%` }}
           />
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          {Array.from({ length: safeTarget }).map((_, index) => {
+            const filled = index < safeCompleted;
+            return (
+              <span
+                key={`${weekLabel}-${index}`}
+                className={cn(
+                  "h-3 w-3 rounded-full border transition-all duration-300",
+                  filled
+                    ? "border-amber-200/60 bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.55)]"
+                    : "border-white/20 bg-white/10",
+                )}
+              />
+            );
+          })}
         </div>
       </div>
     </section>

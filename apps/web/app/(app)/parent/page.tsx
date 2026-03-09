@@ -3,8 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ArrowDownRight,
-  ArrowUpRight,
   Baby,
   Building2,
   CheckCircle2,
@@ -52,6 +50,7 @@ import {
 import { clearTenantSlug, clearTokens } from "@/lib/api/session";
 import { getSoundEnabled as getChildSoundEnabled, setSoundEnabled as setChildSoundEnabled } from "@/lib/sound-manager";
 import { ChildAvatar } from "@/components/child-avatar";
+import { cn } from "@/lib/utils";
 
 const THEME_OPTIONS: ThemeName[] = ["default", "space", "jungle", "ocean", "soccer", "capybara", "dinos", "princess", "heroes"];
 const DIFFICULTY_OPTIONS: TaskOut["difficulty"][] = ["EASY", "MEDIUM", "HARD", "LEGENDARY"];
@@ -74,16 +73,6 @@ const DIFFICULTY_LABELS: Record<TaskOut["difficulty"], string> = {
   HARD: "Difícil",
   LEGENDARY: "Lendária",
 };
-
-function TrendIndicator({ value }: { value: number }) {
-  const positive = value >= 0;
-  return (
-    <span className={`inline-flex items-center gap-1 text-xs font-medium ${positive ? "text-secondary" : "text-destructive"}`}>
-      {positive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-      {Math.abs(value).toFixed(1)}%
-    </span>
-  );
-}
 
 function formatBRL(valueCents: number): string {
   return new Intl.NumberFormat("pt-BR", {
@@ -110,33 +99,35 @@ function CollapsibleCard({
   summary,
   collapsed,
   onToggle,
+  className,
   children,
 }: {
   title: string;
   summary?: string;
   collapsed: boolean;
   onToggle: () => void;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <Card>
+    <Card className={cn("apple-panel", className)}>
       <CardHeader className="pb-3">
         <button
           type="button"
-          className="flex w-full items-start justify-between gap-3 text-left"
+          className="flex w-full items-start justify-between gap-3 text-left text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
           onClick={onToggle}
           aria-expanded={!collapsed}
         >
           <div className="min-w-0 flex-1">
-            <CardTitle className="break-words text-base leading-tight">{title}</CardTitle>
+            <CardTitle className="break-words text-base leading-tight text-slate-100">{title}</CardTitle>
             {summary ? (
-              <p className="mt-1 break-words text-xs font-medium leading-snug text-muted-foreground [overflow-wrap:anywhere]">{summary}</p>
+              <p className="mt-1 break-words text-xs font-medium leading-snug text-slate-300 [overflow-wrap:anywhere]">{summary}</p>
             ) : null}
           </div>
-          <ChevronDown className={`mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition ${collapsed ? "" : "rotate-180"}`} />
+          <ChevronDown className={`mt-0.5 h-4 w-4 shrink-0 text-slate-300 transition ${collapsed ? "" : "rotate-180"}`} />
         </button>
       </CardHeader>
-      {!collapsed ? <CardContent className="space-y-2 text-sm">{children}</CardContent> : null}
+      {!collapsed ? <CardContent className="space-y-2 text-sm text-slate-100">{children}</CardContent> : null}
     </Card>
   );
 }
@@ -195,13 +186,17 @@ export default function ParentPage() {
   const [editingTaskActive, setEditingTaskActive] = useState(true);
   const [savingTask, setSavingTask] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState({
-    children: true,
-    approvals: true,
+    children: false,
+    approvals: false,
     insights: false,
     wallet: true,
     weekly: true,
     tasks: true,
   });
+  const appleFieldClassName =
+    "!h-10 !rounded-2xl !border !border-white/18 !bg-slate-950/45 !text-slate-100 !shadow-none placeholder:!text-slate-400";
+  const appleSelectClassName =
+    "!h-10 !rounded-2xl !border !border-white/18 !bg-slate-950/45 !text-slate-100 !shadow-none";
 
   const clearLocalSession = (options?: { keepOrganization?: boolean }) => {
     clearTokens();
@@ -604,7 +599,17 @@ export default function ParentPage() {
   };
 
   if (!allowed || loadingPage) {
-    return null;
+    return (
+      <PageShell tone="parent" width="full" className="axiora-brand-page relative">
+        <div className="axiora-brand-content mx-auto mt-16 w-full max-w-2xl rounded-3xl border border-sky-200/20 bg-slate-950/35 p-6 text-slate-100 shadow-[0_20px_60px_rgba(5,12,28,0.45)]">
+          <p className="axiora-kicker">Área dos pais</p>
+          <p className="mt-2 text-lg font-semibold">Preparando seu painel familiar...</p>
+          <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-slate-900/60">
+            <div className="h-full w-1/3 animate-pulse rounded-full bg-sky-300/60" />
+          </div>
+        </div>
+      </PageShell>
+    );
   }
 
   const selectedChild = children.find((child) => child.id === selectedChildId) ?? null;
@@ -613,11 +618,22 @@ export default function ParentPage() {
   };
 
   return (
-    <PageShell tone="parent" width="wide">
-      <header className="mb-3 flex flex-wrap items-center gap-2 sm:flex-nowrap sm:justify-between">
-        <h1 className="order-2 min-w-0 flex-1 basis-full break-words text-lg font-semibold leading-tight sm:order-1 sm:basis-auto">Área dos pais</h1>
+    <PageShell tone="parent" width="full" className="apple-parent-page relative [font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif]">
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_-20%,rgba(148,163,184,0.12),transparent_62%),linear-gradient(180deg,#071427_0%,#091a34_100%)]" />
+
+      <header className="axiora-brand-content mb-5 flex flex-wrap items-center gap-2 sm:flex-nowrap sm:justify-between">
+        <div className="order-2 min-w-0 flex-1 basis-full sm:order-1 sm:basis-auto">
+          <p className="text-[11px] font-semibold tracking-[0.08em] text-slate-300">Area dos pais</p>
+          <h1 className="mt-1 break-words text-[30px] font-semibold leading-[1.08] text-slate-100">Centro familiar</h1>
+        </div>
         <div className="order-1 ml-auto flex shrink-0 items-center gap-2 sm:order-2 sm:ml-0">
-          <Button type="button" size="sm" variant="outline" className="whitespace-nowrap px-2 text-xs sm:px-3 sm:text-sm" onClick={onGoChildMode}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="!h-10 !rounded-full !border !border-white/20 !bg-white/92 !px-4 !text-sm !font-semibold !tracking-normal !text-slate-900 !shadow-[0_8px_24px_rgba(3,8,20,0.35)] hover:!bg-white active:!translate-y-0 active:!border-b"
+            onClick={onGoChildMode}
+          >
             <Baby className="mr-1 h-4 w-4" />
             Ver modo criança
           </Button>
@@ -628,17 +644,17 @@ export default function ParentPage() {
               variant="outline"
               aria-haspopup="menu"
               aria-expanded={profileMenuOpen}
-              className="duo-icon-button h-10 w-10 border-0 p-0"
+              className="!h-10 !w-10 !rounded-full !border !border-white/20 !bg-white/92 !p-0 !text-slate-900 !shadow-[0_8px_24px_rgba(3,8,20,0.35)] hover:!bg-white active:!translate-y-0 active:!border-b"
               onClick={() => setProfileMenuOpen((prev) => !prev)}
             >
               <UserCircle2 className="h-4 w-4" />
             </Button>
             {profileMenuOpen ? (
-              <div className="absolute right-0 top-11 z-20 w-52 rounded-xl border border-border bg-card p-1 shadow-md" role="menu">
+              <div className="axiora-glass-soft absolute right-0 top-11 z-20 w-52 rounded-xl p-1 text-slate-100 shadow-md" role="menu">
                 <button
                   type="button"
                   role="menuitem"
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-muted"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                   onClick={onSwitchOrganization}
                 >
                   <Building2 className="h-4 w-4" />
@@ -647,7 +663,7 @@ export default function ParentPage() {
                 <button
                   type="button"
                   role="menuitem"
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-muted disabled:opacity-50"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 disabled:opacity-50"
                   onClick={() => void onLogout()}
                   disabled={loggingOut}
                 >
@@ -660,58 +676,85 @@ export default function ParentPage() {
         </div>
       </header>
 
-      {selectedChild ? (
-        <div className="mb-3">
-          <StatusNotice tone="info" className="min-w-0">
-            <span className="block min-w-0 break-words leading-snug [overflow-wrap:anywhere]">
-              Perfil ativo: <strong className="ml-1 inline">{selectedChild.display_name}</strong>
-            </span>
-          </StatusNotice>
-        </div>
-      ) : null}
+      <Card className="axiora-brand-content apple-panel mb-4 text-slate-100">
+        <CardContent className="grid gap-3 p-4 md:grid-cols-[1fr_auto] md:items-center">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold tracking-[0.08em] text-slate-300">Perfil em foco</p>
+            <p className="mt-1 text-[28px] font-semibold leading-tight text-slate-100">{selectedChild?.display_name ?? "Nenhuma criança ativa"}</p>
+            <p className="mt-1 text-[13px] apple-muted">
+              {selectedChild
+                ? `Nascimento ${formatDateBr(selectedChild.date_of_birth)} • tema ${THEME_LABELS[selectedChild.theme]}`
+                : "Selecione ou crie um perfil infantil para habilitar o monitoramento."}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+            <div className="rounded-2xl border apple-hairline bg-slate-950/35 px-3 py-2">
+              <p className="text-[10px] font-semibold tracking-[0.06em] text-slate-300">Pendencias</p>
+              <p className="mt-1 text-lg font-semibold text-slate-100">{pendingLogs.length}</p>
+            </div>
+            <div className="rounded-2xl border apple-hairline bg-slate-950/35 px-3 py-2">
+              <p className="text-[10px] font-semibold tracking-[0.06em] text-slate-300">Carteira</p>
+              <p className="mt-1 text-sm font-semibold text-slate-100">{wallet ? formatBRL(wallet.total_balance_cents) : "—"}</p>
+            </div>
+            <div className="rounded-2xl border apple-hairline bg-slate-950/35 px-3 py-2">
+              <p className="text-[10px] font-semibold tracking-[0.06em] text-slate-300">Conclusao</p>
+              <p className="mt-1 text-sm font-semibold text-slate-100">{trend ? `${trend.completion_delta_percent >= 0 ? "+" : ""}${trend.completion_delta_percent.toFixed(1)}%` : "—"}</p>
+            </div>
+            <div className="rounded-2xl border apple-hairline bg-slate-950/35 px-3 py-2">
+              <p className="text-[10px] font-semibold tracking-[0.06em] text-slate-300">Criancas</p>
+              <p className="mt-1 text-lg font-semibold text-slate-100">{children.length}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <section className="space-y-3">
+      <section className="axiora-brand-content grid gap-3 lg:grid-cols-12">
         <CollapsibleCard
-          title="Crianças vinculadas"
-          summary={`${children.length} criança(s) • ativa: ${selectedChild?.display_name ?? "nenhuma"}`}
+          title="Família"
+          summary={`${children.length} criança(s) • ${tasks.length} tarefa(s)`}
           collapsed={collapsedSections.children}
           onToggle={() => toggleSection("children")}
+          className="lg:col-span-7 apple-panel"
         >
+            <div className="mb-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+              <p className="text-[12px] font-semibold tracking-[0.02em] text-slate-300">Criancas vinculadas</p>
+              <p className="mt-0.5 text-xs text-slate-300/85">Ativa: {selectedChild?.display_name ?? "nenhuma"}</p>
+            </div>
             {children.length === 0 ? <StatusNotice tone="warning">Nenhuma criança cadastrada ainda.</StatusNotice> : null}
             {children.map((child) => (
               <div
                 key={child.id}
-                className={`rounded-md border px-2 py-2 ${selectedChildId === child.id ? "border-secondary bg-secondary/10" : "border-border"}`}
+                className={`rounded-2xl border px-2.5 py-2.5 ${selectedChildId === child.id ? "border-secondary bg-secondary/10" : "border-white/10 bg-white/[0.03]"}`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
                     <ChildAvatar name={child.display_name} avatarKey={child.avatar_key} size={42} />
                     <div className="min-w-0 flex-1">
-                      <p className="break-words text-sm font-medium leading-tight [overflow-wrap:anywhere]">
+                      <p className="break-words text-sm font-medium leading-tight text-slate-100 [overflow-wrap:anywhere]">
                         {child.display_name}
                         {selectedChildId === child.id ? <span className="ml-2 text-xs text-secondary">ativa</span> : null}
                       </p>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
-                        <span className="rounded-full border border-border/80 bg-white/80 px-2 py-0.5">
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-300">
+                        <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5">
                           Nascimento: {formatDateBr(child.date_of_birth)}
                         </span>
-                        <span className="rounded-full border border-border/80 bg-white/80 px-2 py-0.5">
+                        <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5">
                           Tema: {THEME_LABELS[child.theme]}
                         </span>
                       </div>
                     </div>
                   </div>
                   <div className="ml-auto flex w-full shrink-0 flex-wrap items-center justify-end gap-1 sm:w-auto">
-                    <Button size="sm" variant="outline" onClick={() => void onSelectChild(child)}>
+                    <Button size="sm" variant="outline" className="apple-btn-subtle" onClick={() => void onSelectChild(child)}>
                       Selecionar
                     </Button>
-                    <Button size="sm" variant="outline" className="duo-icon-button h-9 w-9 border-0 p-0" onClick={() => startEditChild(child)}>
+                    <Button size="sm" variant="outline" className="apple-btn-subtle apple-icon-btn" onClick={() => startEditChild(child)}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="duo-icon-button h-9 w-9 border-0 p-0"
+                      className="apple-btn-subtle apple-icon-btn"
                       onClick={() => {
                         setChildActionError(null);
                         setDeleteChildPin("");
@@ -728,13 +771,13 @@ export default function ParentPage() {
             ))}
 
             {editingChildId ? (
-              <div className="rounded-md border border-border p-2">
-                <p className="mb-2 text-xs font-semibold text-muted-foreground">Editar criança</p>
-                <div className="grid grid-cols-1 gap-2">
-                  <div className="flex items-center gap-3 rounded-md border border-border p-2">
+              <div className="rounded-2xl border apple-hairline bg-slate-950/25 p-3">
+                <p className="mb-2 text-xs font-semibold text-slate-300">Editar criança</p>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="flex items-center gap-3 rounded-xl border apple-hairline bg-slate-950/25 p-3">
                     <ChildAvatar name={editingChildName || "Criança"} avatarKey={editingChildAvatarKey} size={54} />
                     <div className="space-y-1">
-                      <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-[#2F527D]">
+                      <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-sky-300">
                         <ImagePlus className="h-3.5 w-3.5" />
                         Trocar foto
                         <input
@@ -747,22 +790,22 @@ export default function ParentPage() {
                       {editingChildAvatarKey ? (
                         <button
                           type="button"
-                          className="text-xs font-semibold text-[#B8574B]"
+                          className="text-xs font-semibold text-rose-300"
                           onClick={() => setEditingChildAvatarKey(null)}
                         >
                           Remover foto
                         </button>
                     ) : (
-                      <p className="max-w-[17rem] break-words text-[11px] font-semibold leading-snug text-muted-foreground [overflow-wrap:anywhere]">
+                      <p className="max-w-[17rem] break-words text-[11px] font-semibold leading-snug text-slate-300 [overflow-wrap:anywhere]">
                         Sem foto, usamos um avatar amigável.
                       </p>
                     )}
                   </div>
                 </div>
-                  <Input placeholder="Nome da criança" value={editingChildName} onChange={(e) => setEditingChildName(e.target.value)} />
-                  <Input type="date" required value={editingChildDateOfBirth} onChange={(e) => setEditingChildDateOfBirth(e.target.value)} />
-                  <p className="text-[11px] font-medium text-muted-foreground">Data de nascimento obrigatória.</p>
-                  <NativeSelect value={editingChildTheme} onChange={(e) => setEditingChildTheme(e.target.value as ThemeName)}>
+                  <Input className={appleFieldClassName} placeholder="Nome da criança" value={editingChildName} onChange={(e) => setEditingChildName(e.target.value)} />
+                  <Input className={appleFieldClassName} type="date" required value={editingChildDateOfBirth} onChange={(e) => setEditingChildDateOfBirth(e.target.value)} />
+                  <p className="text-[11px] font-medium text-slate-300">Data de nascimento obrigatória.</p>
+                  <NativeSelect className={appleSelectClassName} value={editingChildTheme} onChange={(e) => setEditingChildTheme(e.target.value as ThemeName)}>
                     {THEME_OPTIONS.map((theme) => (
                       <option key={theme} value={theme}>
                         {THEME_LABELS[theme]}
@@ -770,11 +813,11 @@ export default function ParentPage() {
                     ))}
                   </NativeSelect>
                   <div className="flex items-center gap-2">
-                    <Button size="sm" onClick={() => void onSaveChild()} disabled={savingChild}>
+                    <Button size="sm" className="apple-btn-primary" onClick={() => void onSaveChild()} disabled={savingChild}>
                       <Save className="mr-1 h-3.5 w-3.5" />
                       {savingChild ? "Salvando..." : "Salvar criança"}
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditingChildId(null)}>
+                    <Button size="sm" variant="outline" className="apple-btn-subtle" onClick={() => setEditingChildId(null)}>
                       Cancelar
                     </Button>
                   </div>
@@ -782,13 +825,13 @@ export default function ParentPage() {
               </div>
             ) : null}
 
-            <div className="rounded-md border border-border p-2">
-              <p className="mb-2 text-xs font-semibold text-muted-foreground">Adicionar nova criança</p>
-              <div className="grid grid-cols-1 gap-2">
-                <div className="flex items-center gap-3 rounded-md border border-border p-2">
+            <div className="rounded-2xl border apple-hairline bg-slate-950/25 p-3">
+              <p className="mb-2 text-xs font-semibold text-slate-300">Adicionar nova criança</p>
+              <div className="grid grid-cols-1 gap-3">
+                <div className="flex items-center gap-3 rounded-xl border apple-hairline bg-slate-950/25 p-3">
                   <ChildAvatar name={newChildName || "Criança"} avatarKey={newChildAvatarKey} size={54} />
                   <div className="space-y-1">
-                    <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-[#2F527D]">
+                    <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-sky-300">
                       <ImagePlus className="h-3.5 w-3.5" />
                       Enviar foto
                       <input
@@ -801,35 +844,113 @@ export default function ParentPage() {
                     {newChildAvatarKey ? (
                       <button
                         type="button"
-                        className="text-xs font-semibold text-[#B8574B]"
+                        className="text-xs font-semibold text-rose-300"
                         onClick={() => setNewChildAvatarKey(null)}
                       >
                         Remover foto
                       </button>
                     ) : (
-                      <p className="max-w-[17rem] break-words text-[11px] font-semibold leading-snug text-muted-foreground [overflow-wrap:anywhere]">
+                      <p className="max-w-[17rem] break-words text-[11px] font-semibold leading-snug text-slate-300 [overflow-wrap:anywhere]">
                         Opcional. Sem foto, aplicamos um avatar amigável.
                       </p>
                     )}
                   </div>
                 </div>
-                <Input placeholder="Nome da criança" value={newChildName} onChange={(e) => setNewChildName(e.target.value)} />
-                <Input type="date" required value={newChildDateOfBirth} onChange={(e) => setNewChildDateOfBirth(e.target.value)} />
-                <p className="text-[11px] font-medium text-muted-foreground">Data de nascimento obrigatória.</p>
-                <NativeSelect value={newChildTheme} onChange={(e) => setNewChildTheme(e.target.value as ThemeName)}>
+                <Input className={appleFieldClassName} placeholder="Nome da criança" value={newChildName} onChange={(e) => setNewChildName(e.target.value)} />
+                <Input className={appleFieldClassName} type="date" required value={newChildDateOfBirth} onChange={(e) => setNewChildDateOfBirth(e.target.value)} />
+                <p className="text-[11px] font-medium text-slate-300">Data de nascimento obrigatória.</p>
+                <NativeSelect className={appleSelectClassName} value={newChildTheme} onChange={(e) => setNewChildTheme(e.target.value as ThemeName)}>
                   {THEME_OPTIONS.map((theme) => (
                     <option key={theme} value={theme}>
                       {THEME_LABELS[theme]}
                     </option>
                   ))}
                 </NativeSelect>
-                <Button size="sm" onClick={() => void onCreateChild()} disabled={creatingChild}>
+                <Button size="sm" className="apple-btn-primary" onClick={() => void onCreateChild()} disabled={creatingChild}>
                   <Plus className="mr-1 h-3.5 w-3.5" />
                   {creatingChild ? "Criando..." : "Criar acesso da criança"}
                 </Button>
               </div>
             </div>
-            {childActionError ? <StatusNotice tone="error">{childActionError}</StatusNotice> : null}
+            <div className="my-3 h-px bg-gradient-to-r from-transparent via-sky-200/25 to-transparent" />
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+              <p className="text-[12px] font-semibold tracking-[0.02em] text-slate-300">Cadastro de tarefas</p>
+              <p className="mt-0.5 text-xs text-slate-300/85">{tasks.length} tarefa(s) cadastrada(s)</p>
+            </div>
+            <div className="rounded-2xl border apple-hairline bg-slate-950/25 p-3">
+              <p className="mb-2 text-xs font-semibold text-slate-300">Criar tarefa</p>
+              <div className="grid grid-cols-1 gap-3">
+                <Input className={appleFieldClassName} placeholder="Título da tarefa" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} />
+                <div className="grid grid-cols-2 gap-2">
+                  <NativeSelect className={appleSelectClassName} value={newTaskDifficulty} onChange={(e) => setNewTaskDifficulty(e.target.value as TaskOut["difficulty"])}>
+                    {DIFFICULTY_OPTIONS.map((item) => (
+                      <option key={item} value={item}>
+                        {DIFFICULTY_LABELS[item]}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                  <Input className={appleFieldClassName} inputMode="numeric" placeholder="Peso" value={newTaskWeight} onChange={(e) => setNewTaskWeight(e.target.value)} />
+                </div>
+                <Button size="sm" className="apple-btn-primary" onClick={() => void onCreateTask()} disabled={creatingTask}>
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  {creatingTask ? "Criando..." : "Criar tarefa"}
+                </Button>
+              </div>
+            </div>
+
+            {tasks.map((task) => (
+              <div key={task.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="font-medium text-slate-100">{task.title}</p>
+                    <p className="text-xs text-slate-300">
+                      {DIFFICULTY_LABELS[task.difficulty]} • peso {task.weight} • {task.is_active ? "ativa" : "inativa"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button size="sm" variant="outline" className="apple-btn-subtle apple-icon-btn" onClick={() => startEditTask(task)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="sm" variant="outline" className="apple-btn-subtle apple-icon-btn" onClick={() => void onDeleteTask(task.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+                {editingTaskId === task.id ? (
+                  <div className="mt-2 grid grid-cols-1 gap-3">
+                    <Input className={appleFieldClassName} value={editingTaskTitle} onChange={(e) => setEditingTaskTitle(e.target.value)} />
+                    <div className="grid grid-cols-2 gap-2">
+                      <NativeSelect className={appleSelectClassName} value={editingTaskDifficulty} onChange={(e) => setEditingTaskDifficulty(e.target.value as TaskOut["difficulty"])}>
+                        {DIFFICULTY_OPTIONS.map((item) => (
+                          <option key={item} value={item}>
+                            {DIFFICULTY_LABELS[item]}
+                          </option>
+                        ))}
+                      </NativeSelect>
+                      <Input className={appleFieldClassName} value={editingTaskWeight} onChange={(e) => setEditingTaskWeight(e.target.value)} inputMode="numeric" />
+                    </div>
+                    <label className="flex items-center gap-2 text-xs text-slate-300">
+                      <input type="checkbox" checked={editingTaskActive} onChange={(e) => setEditingTaskActive(e.target.checked)} />
+                      Tarefa ativa
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" className="apple-btn-primary" onClick={() => void onSaveTask()} disabled={savingTask}>
+                        <Save className="mr-1 h-3.5 w-3.5" />
+                        {savingTask ? "Salvando..." : "Salvar tarefa"}
+                      </Button>
+                      <Button size="sm" variant="outline" className="apple-btn-subtle" onClick={() => setEditingTaskId(null)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+
+            {tasks.length === 0 ? <StatusNotice tone="info">Nenhuma tarefa cadastrada ainda.</StatusNotice> : null}
+            {taskActionError ? <StatusNotice tone="error">{taskActionError}</StatusNotice> : null}
+            {childActionError ? <div role="alert" aria-live="polite"><StatusNotice tone="error">{childActionError}</StatusNotice></div> : null}
         </CollapsibleCard>
 
         <CollapsibleCard
@@ -837,29 +958,30 @@ export default function ParentPage() {
           summary={parentInsights?.learningRhythm.title ?? "Recomendações inteligentes para hoje"}
           collapsed={collapsedSections.insights}
           onToggle={() => toggleSection("insights")}
+          className="lg:col-span-5 apple-panel"
         >
             {parentInsightsLoading ? <StatusNotice tone="info">Atualizando insights inteligentes...</StatusNotice> : null}
             {parentInsightsError ? <StatusNotice tone="error">{parentInsightsError}</StatusNotice> : null}
             {parentInsights ? (
               <div className="space-y-2">
-                <div className="rounded-md border border-border px-2 py-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Risco de queda de consistência</p>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-2.5 py-2.5">
+                  <p className="text-[11px] font-semibold tracking-[0.02em] text-slate-300">Risco de queda de consistência</p>
                   <p className="mt-1 text-sm font-semibold">{parentInsights.dropoutRisk.title}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{parentInsights.dropoutRisk.summary}</p>
+                  <p className="mt-1 text-xs text-slate-300">{parentInsights.dropoutRisk.summary}</p>
                 </div>
-                <div className="rounded-md border border-border px-2 py-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Insight semanal</p>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-2.5 py-2.5">
+                  <p className="text-[11px] font-semibold tracking-[0.02em] text-slate-300">Insight semanal</p>
                   <p className="mt-1 text-sm font-semibold">{parentInsights.learningRhythm.title}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{parentInsights.learningRhythm.summary}</p>
+                  <p className="mt-1 text-xs text-slate-300">{parentInsights.learningRhythm.summary}</p>
                 </div>
-                <div className="rounded-md border border-border px-2 py-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">3 ações recomendadas</p>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-2.5 py-2.5">
+                  <p className="text-[11px] font-semibold tracking-[0.02em] text-slate-300">3 ações recomendadas</p>
                   <div className="mt-2 space-y-2">
                     {parentInsights.suggestedParentalActions.slice(0, 3).map((action) => (
                       <button
                         key={action}
                         type="button"
-                        className="w-full rounded-md border border-border bg-white px-2 py-2 text-left text-xs font-medium transition hover:bg-muted"
+                        className="w-full rounded-md border border-sky-200/25 bg-slate-950/30 px-2 py-2 text-left text-xs font-medium text-slate-100 transition hover:bg-slate-900/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                         onClick={() => void onParentActionClick(action)}
                         disabled={loggingParentAction === action}
                       >
@@ -876,17 +998,40 @@ export default function ParentPage() {
         </CollapsibleCard>
 
         <CollapsibleCard
-          title="Aprovações pendentes"
-          summary={`Pendentes: ${pendingLogs.length} • Som: ${soundEnabled ? "ligado" : "desligado"}`}
+          title="Operação diária"
+          summary={`Pendências: ${pendingLogs.length} • Carteira: ${wallet ? formatBRL(wallet.total_balance_cents) : "—"}`}
           collapsed={collapsedSections.approvals}
           onToggle={() => toggleSection("approvals")}
+          className="lg:col-span-12 apple-panel"
         >
-            <div className="flex items-center justify-between">
-              <p className="text-muted-foreground">Pendentes: {pendingLogs.length}</p>
+            <div className="grid gap-2 md:grid-cols-4">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                <p className="text-[10px] font-semibold tracking-[0.03em] text-slate-300">Pendências</p>
+                <p className="mt-1 text-sm font-semibold text-slate-100">{pendingLogs.length}</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                <p className="text-[10px] font-semibold tracking-[0.03em] text-slate-300">Carteira</p>
+                <p className="mt-1 text-sm font-semibold text-slate-100">{wallet ? formatBRL(wallet.total_balance_cents) : "—"}</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                <p className="text-[10px] font-semibold tracking-[0.03em] text-slate-300">Conclusão</p>
+                <p className="mt-1 text-sm font-semibold text-slate-100">
+                  {trend ? `${trend.completion_delta_percent >= 0 ? "+" : ""}${trend.completion_delta_percent.toFixed(1)}%` : "—"}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                <p className="text-[10px] font-semibold tracking-[0.03em] text-slate-300">Ganhos</p>
+                <p className="mt-1 text-sm font-semibold text-slate-100">
+                  {trend ? `${trend.earnings_delta_percent >= 0 ? "+" : ""}${trend.earnings_delta_percent.toFixed(1)}%` : "—"}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center justify-between">
+              <p className="text-slate-300">Aprovações pendentes</p>
               <button
                 type="button"
                 aria-label="Alternar som"
-                className="text-xs text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+                className="text-xs text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
                 onClick={onToggleSound}
               >
                 Som: {soundEnabled ? "ligado" : "desligado"}
@@ -897,7 +1042,7 @@ export default function ParentPage() {
                 <span>
                   Tarefa #{log.task_id} • {log.date}
                 </span>
-                <Button size="sm" onClick={() => void onApproveWithRollback(log.id)} disabled={approvingLogId === log.id}>
+                <Button size="sm" className="apple-btn-subtle" onClick={() => void onApproveWithRollback(log.id)} disabled={approvingLogId === log.id}>
                   {approvingLogId === log.id ? "..." : "Aprovar"}
                 </Button>
               </div>
@@ -905,117 +1050,7 @@ export default function ParentPage() {
             {pendingLogs.length === 0 && !dashboardError ? (
               <StatusNotice tone="info">Sem pendências de aprovação para a criança ativa.</StatusNotice>
             ) : null}
-            {dashboardError ? <StatusNotice tone="error">{dashboardError}</StatusNotice> : null}
-        </CollapsibleCard>
-
-        <CollapsibleCard
-          title="Resumo da carteira"
-          summary={`Total: ${wallet ? formatBRL(wallet.total_balance_cents) : "—"}`}
-          collapsed={collapsedSections.wallet}
-          onToggle={() => toggleSection("wallet")}
-        >
-            <p>Total: {wallet ? formatBRL(wallet.total_balance_cents) : "—"}</p>
-            <p className="text-muted-foreground">Gastar: {wallet ? formatBRL(wallet.pot_balances_cents.SPEND) : "—"}</p>
-            <p className="text-muted-foreground">Guardar: {wallet ? formatBRL(wallet.pot_balances_cents.SAVE) : "—"}</p>
-            <p className="text-muted-foreground">Doar: {wallet ? formatBRL(wallet.pot_balances_cents.DONATE) : "—"}</p>
-        </CollapsibleCard>
-
-        <CollapsibleCard
-          title="Resumo semanal"
-          summary={`Conclusão ${trend ? `${trend.completion_delta_percent >= 0 ? "+" : ""}${trend.completion_delta_percent.toFixed(1)}%` : "—"} • Ganhos ${
-            trend ? `${trend.earnings_delta_percent >= 0 ? "+" : ""}${trend.earnings_delta_percent.toFixed(1)}%` : "—"
-          }`}
-          collapsed={collapsedSections.weekly}
-          onToggle={() => toggleSection("weekly")}
-        >
-            <div className="flex items-center justify-between">
-              <span>Conclusão</span>
-              <TrendIndicator value={trend?.completion_delta_percent ?? 0} />
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Ganhos</span>
-              <TrendIndicator value={trend?.earnings_delta_percent ?? 0} />
-            </div>
-        </CollapsibleCard>
-
-        <CollapsibleCard
-          title="Cadastro de tarefas"
-          summary={`${tasks.length} tarefa(s) cadastrada(s)`}
-          collapsed={collapsedSections.tasks}
-          onToggle={() => toggleSection("tasks")}
-        >
-            <div className="rounded-md border border-border p-2">
-              <p className="mb-2 text-xs font-semibold text-muted-foreground">Criar tarefa</p>
-              <div className="grid grid-cols-1 gap-2">
-                <Input placeholder="Título da tarefa" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} />
-                <div className="grid grid-cols-2 gap-2">
-                  <NativeSelect value={newTaskDifficulty} onChange={(e) => setNewTaskDifficulty(e.target.value as TaskOut["difficulty"])}>
-                    {DIFFICULTY_OPTIONS.map((item) => (
-                      <option key={item} value={item}>
-                        {DIFFICULTY_LABELS[item]}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                  <Input inputMode="numeric" placeholder="Peso" value={newTaskWeight} onChange={(e) => setNewTaskWeight(e.target.value)} />
-                </div>
-                <Button size="sm" onClick={() => void onCreateTask()} disabled={creatingTask}>
-                  <Plus className="mr-1 h-3.5 w-3.5" />
-                  {creatingTask ? "Criando..." : "Criar tarefa"}
-                </Button>
-              </div>
-            </div>
-
-            {tasks.map((task) => (
-              <div key={task.id} className="rounded-md border border-border p-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium">{task.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {DIFFICULTY_LABELS[task.difficulty]} • peso {task.weight} • {task.is_active ? "ativa" : "inativa"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button size="sm" variant="outline" className="duo-icon-button h-9 w-9 border-0 p-0" onClick={() => startEditTask(task)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button size="sm" variant="outline" className="duo-icon-button h-9 w-9 border-0 p-0" onClick={() => void onDeleteTask(task.id)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-                {editingTaskId === task.id ? (
-                  <div className="mt-2 grid grid-cols-1 gap-2">
-                    <Input value={editingTaskTitle} onChange={(e) => setEditingTaskTitle(e.target.value)} />
-                    <div className="grid grid-cols-2 gap-2">
-                      <NativeSelect value={editingTaskDifficulty} onChange={(e) => setEditingTaskDifficulty(e.target.value as TaskOut["difficulty"])}>
-                        {DIFFICULTY_OPTIONS.map((item) => (
-                          <option key={item} value={item}>
-                            {DIFFICULTY_LABELS[item]}
-                          </option>
-                        ))}
-                      </NativeSelect>
-                      <Input value={editingTaskWeight} onChange={(e) => setEditingTaskWeight(e.target.value)} inputMode="numeric" />
-                    </div>
-                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <input type="checkbox" checked={editingTaskActive} onChange={(e) => setEditingTaskActive(e.target.checked)} />
-                      Tarefa ativa
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" onClick={() => void onSaveTask()} disabled={savingTask}>
-                        <Save className="mr-1 h-3.5 w-3.5" />
-                        {savingTask ? "Salvando..." : "Salvar tarefa"}
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => setEditingTaskId(null)}>
-                        Cancelar
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            ))}
-
-            {tasks.length === 0 ? <StatusNotice tone="info">Nenhuma tarefa cadastrada ainda.</StatusNotice> : null}
-            {taskActionError ? <StatusNotice tone="error">{taskActionError}</StatusNotice> : null}
+            {dashboardError ? <div role="alert" aria-live="polite"><StatusNotice tone="error">{dashboardError}</StatusNotice></div> : null}
         </CollapsibleCard>
       </section>
 
@@ -1028,6 +1063,7 @@ export default function ParentPage() {
             </p>
             <div className="mt-3 space-y-2">
               <Input
+                className={appleFieldClassName}
                 type="password"
                 inputMode="numeric"
                 maxLength={6}
@@ -1041,6 +1077,7 @@ export default function ParentPage() {
               <Button
                 type="button"
                 variant="outline"
+                className="apple-btn-subtle"
                 onClick={() => {
                   setChildToDelete(null);
                   setDeleteChildPin("");
@@ -1049,7 +1086,7 @@ export default function ParentPage() {
               >
                 Cancelar
               </Button>
-              <Button type="button" className="bg-destructive text-white hover:bg-destructive/90" onClick={() => void onDeleteChild()} disabled={deletingChild}>
+              <Button type="button" className="apple-btn-primary !bg-[#ef4444] !text-white hover:!bg-[#dc2626]" onClick={() => void onDeleteChild()} disabled={deletingChild}>
                 {deletingChild ? "Excluindo..." : "Confirmar exclusão"}
               </Button>
             </div>
@@ -1059,3 +1096,4 @@ export default function ParentPage() {
     </PageShell>
   );
 }
+

@@ -1,0 +1,241 @@
+.tow-character {
+  position: absolute;
+  bottom: 10px;
+  will-change: left, right, transform;
+  transition:
+    left 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    right 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    filter 0.3s ease;
+}
+
+.red {
+}
+
+.blue {
+}
+
+.characterRoot {
+  position: relative;
+  width: 130px;
+  aspect-ratio: 780 / 736;
+}
+
+.characterBody {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-origin: bottom center;
+}
+
+.characterSprite {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+}
+
+.characterSprite svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.sweat {
+  position: absolute;
+  top: 6%;
+  right: 10%;
+  width: 15%;
+  aspect-ratio: 1;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.sweat::after {
+  content: "💧";
+  position: absolute;
+  top: 0;
+  left: 0;
+  animation: sweatDrop 1s infinite;
+}
+
+.arms {
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  z-index: 1;
+  width: 58%;
+  height: 8%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.arm {
+  position: absolute;
+  width: 28%;
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(122, 63, 35, 0.85);
+}
+
+.arm.left {
+  left: 10%;
+}
+
+.arm.right {
+  right: 10%;
+}
+
+.tow-character.idle .characterBody {
+  animation: idleBreath 2.4s ease-in-out infinite;
+}
+
+.tow-character.struggling .characterBody {
+  animation: struggleShift 0.25s infinite alternate;
+}
+
+.tow-character.pull.red .characterBody {
+  animation: pullBodyRed 0.48s ease-in-out infinite;
+  filter: drop-shadow(0 0 12px rgba(255, 80, 50, 0.55));
+}
+
+.tow-character.pull.blue .characterBody {
+  animation: pullBodyBlue 0.48s ease-in-out infinite;
+  filter: drop-shadow(0 0 12px rgba(255, 80, 50, 0.55));
+}
+
+.tow-character.pull .arm.left {
+  animation: armPullLeft 0.48s ease-in-out infinite;
+}
+
+.tow-character.pull .arm.right {
+  animation: armPullRight 0.48s ease-in-out infinite;
+}
+
+.tow-character.hit .characterBody {
+  animation: hitImpact 0.35s ease;
+}
+
+.tow-character.victory .characterBody {
+  animation: victoryBounce 0.9s ease infinite;
+  filter: drop-shadow(0 0 18px gold) brightness(1.18);
+}
+
+.tow-character.defeat .characterBody {
+  filter: grayscale(0.6) brightness(0.4);
+  transform: scale(0.92);
+}
+
+@keyframes idleBreath {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(calc(var(--tension, 0) * -1px)) scale(1.02);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes struggleShift {
+  0% {
+    transform: translateX(-1.5px);
+  }
+  100% {
+    transform: translateX(1.5px);
+  }
+}
+
+@keyframes pullBodyRed {
+  0% {
+    transform: translateX(0) translateY(0) scale(1);
+  }
+  50% {
+    transform: translateX(-3px) translateY(-1px) scale(1.03);
+  }
+  100% {
+    transform: translateX(0) translateY(0) scale(1);
+  }
+}
+
+@keyframes pullBodyBlue {
+  0% {
+    transform: translateX(0) translateY(0) scale(1);
+  }
+  50% {
+    transform: translateX(3px) translateY(-1px) scale(1.03);
+  }
+  100% {
+    transform: translateX(0) translateY(0) scale(1);
+  }
+}
+
+@keyframes armPullLeft {
+  0% {
+    transform: translateX(3px);
+  }
+  50% {
+    transform: translateX(-7px);
+  }
+  100% {
+    transform: translateX(3px);
+  }
+}
+
+@keyframes armPullRight {
+  0% {
+    transform: translateX(-3px);
+  }
+  50% {
+    transform: translateX(7px);
+  }
+  100% {
+    transform: translateX(-3px);
+  }
+}
+
+@keyframes hitImpact {
+  0% {
+    transform: translateX(0) scale(0.96);
+  }
+  30% {
+    transform: translateX(-8px) scale(0.96);
+  }
+  60% {
+    transform: translateX(5px) scale(0.96);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes sweatDrop {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(18px);
+    opacity: 0;
+  }
+}
+
+@keyframes victoryBounce {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.18);
+  }
+  60% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

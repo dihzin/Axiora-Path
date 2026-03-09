@@ -39,17 +39,14 @@ export default function PlatformAdminLoginPage() {
   };
 
   return (
-    <main
-      className="mx-auto flex min-h-screen w-full items-center justify-center bg-[#f6f6f3] bg-cover bg-center bg-no-repeat px-4 py-8"
-      style={{ backgroundImage: "url('/axiora/home/login-background.svg')" }}
-    >
-      <div className="w-full max-w-md rounded-3xl border border-white/60 bg-white/95 p-6 shadow-[0_-4px_40px_rgba(13,25,41,0.25),0_8px_32px_rgba(0,0,0,0.15)]">
-        <h1 className="text-2xl font-black text-[#17345E]">Platform Admin</h1>
-        <p className="mt-1 text-sm font-semibold text-[#5A7AA4]">Acesso administrativo do Axion Studio.</p>
+    <main className="axiora-brand-page mx-auto flex min-h-screen w-full items-center justify-center px-4 py-8">
+      <div className="axiora-brand-content axiora-glass-card w-full max-w-md rounded-3xl p-6 text-slate-100">
+        <h1 className="text-2xl font-black text-slate-100">Platform Admin</h1>
+        <p className="mt-1 text-sm font-semibold text-slate-300">Acesso administrativo do Axion Studio.</p>
 
         <form className="mt-5 space-y-3" onSubmit={onSubmit}>
           <input
-            className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+            className="w-full rounded-xl border border-sky-200/30 bg-slate-950/50 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400"
             type="email"
             placeholder="E-mail"
             value={email}
@@ -58,7 +55,7 @@ export default function PlatformAdminLoginPage() {
             required
           />
           <input
-            className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+            className="w-full rounded-xl border border-sky-200/30 bg-slate-950/50 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400"
             type="password"
             placeholder="Senha"
             value={password}
@@ -66,7 +63,7 @@ export default function PlatformAdminLoginPage() {
             autoComplete="current-password"
             required
           />
-          {error ? <p className="text-sm font-semibold text-[#B54C47]">{error}</p> : null}
+          {error ? <p className="text-sm font-semibold text-rose-300">{error}</p> : null}
           <button
             className="w-full rounded-xl bg-[#FF6B3D] px-3 py-2 text-sm font-black text-white shadow-[0_5px_0_rgba(190,89,52,0.45)] disabled:opacity-60"
             type="submit"

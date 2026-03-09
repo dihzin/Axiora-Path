@@ -416,6 +416,21 @@ def get_learning_next_questions(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Adaptive question engine unavailable. Try again in a moment.",
         ) from exc
+    except Exception as exc:
+        db.rollback()
+        logger.exception(
+            "learning_next_unhandled_error",
+            extra={
+                "user_id": user.id,
+                "tenant_id": tenant.id,
+                "subject_id": payload.subject_id,
+                "lesson_id": payload.lesson_id,
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Adaptive question engine unavailable. Try again in a moment.",
+        ) from exc
     if len(plan.items) <= 0:
         diagnostics = dict(plan.diagnostics or {})
         logger.info(
@@ -575,16 +590,40 @@ def start_session(
                 detail="Daily lesson limit reached for this child.",
             )
 
-    session = start_learning_session(
-        db,
-        user_id=user.id,
-        subject_id=subject_id,
-        unit_id=unit_id,
-        lesson_id=lesson_id,
-        tenant_id=tenant.id,
-    )
-    db.commit()
-    db.refresh(session)
+    try:
+        session = start_learning_session(
+            db,
+            user_id=user.id,
+            subject_id=subject_id,
+            unit_id=unit_id,
+            lesson_id=lesson_id,
+            tenant_id=tenant.id,
+        )
+        db.commit()
+        db.refresh(session)
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Learning session unavailable. Try again in a moment.",
+        ) from exc
+    except Exception as exc:
+        db.rollback()
+        logger.exception(
+            "learning_session_start_unhandled_error",
+            extra={
+                "user_id": user.id,
+                "tenant_id": tenant.id,
+                "subject_id": subject_id,
+                "unit_id": unit_id,
+                "lesson_id": lesson_id,
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Learning session unavailable. Try again in a moment.",
+        ) from exc
+
     return LearningSessionStartResponse(
         sessionId=session.id,
         subjectId=session.subject_id,

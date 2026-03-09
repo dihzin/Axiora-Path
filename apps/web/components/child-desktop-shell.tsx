@@ -54,11 +54,15 @@ export function ChildDesktopShell({ children, activeNav, rightRail, rightRailApp
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F7FC]">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_50%_18%,rgba(59,130,246,0.16),rgba(15,23,42,0.04)_26%,rgba(2,6,23,0)_56%),linear-gradient(180deg,#061226_0%,#0A1731_38%,#0B1430_100%)]">
       <div className="w-full lg:pl-[208px]">
-        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-[#E2E8F2] lg:bg-[#F4F7FC] lg:px-3 lg:py-5">
+        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-white/5 lg:bg-[linear-gradient(180deg,#0F172A_0%,#0D1626_100%)] lg:px-3 lg:py-5">
           <div className="mb-0.5 flex justify-center">
-            <AxionCharacter stage={1} moodState="NEUTRAL" reducedMotion={false} />
+            <div className="rounded-2xl bg-[#12213D]/80 p-1.5 shadow-[inset_0_1px_12px_rgba(0,0,0,0.35)]">
+              <div className="scale-90">
+                <AxionCharacter stage={1} moodState="NEUTRAL" reducedMotion={false} />
+              </div>
+            </div>
           </div>
           {NAV_ITEMS.map((item) => (
             <DesktopNavItem
@@ -104,10 +108,10 @@ function DesktopNavItem({ href, iconName, label, active }: { href: string; iconN
     <Link
       href={href}
       className={`mx-1.5 inline-flex items-center gap-2.5 rounded-2xl px-4 py-[7px] text-[15px] font-black uppercase tracking-[0.04em] transition-colors ${
-        active ? "border border-[#96D9FF] bg-[#EAF7FF] text-[#1DA1F2]" : "text-[#4A5F80] hover:bg-white"
+        active ? "border border-[#96D9FF]/35 bg-[#EAF7FF]/10 text-sky-300" : "text-slate-300 hover:bg-white/5"
       }`}
     >
-      <span className={`${active ? "opacity-100" : "opacity-75 grayscale-[35%]"}`}>
+      <span className={`${active ? "opacity-100" : "opacity-80 grayscale-[22%]"}`}>
         <ChildNavIcon name={iconName} active={active} size={42} />
       </span>
       {label}
@@ -169,10 +173,10 @@ function DefaultRightRail() {
   return (
     <>
       <TopStatsBar streak={streak} gems={gems} xp={xp} className="max-w-none" />
-      <div className="rounded-2xl border border-[#DFE7F2] bg-white p-4 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
-        <p className="text-xs font-black uppercase tracking-[0.08em] text-[#8A9BB4]">Progresso</p>
-        <p className="mt-1 text-lg font-black text-[#1F3558]">Você está indo bem!</p>
-        <p className="mt-1 text-sm font-semibold text-[#5F7393]">Continue explorando para evoluir no Axiora.</p>
+      <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(160deg,rgba(15,23,42,0.86)_0%,rgba(12,25,54,0.82)_55%,rgba(10,19,46,0.92)_100%)] p-4 shadow-[0_10px_28px_rgba(2,12,35,0.32),inset_0_1px_0_rgba(255,255,255,0.08)]">
+        <p className="text-xs font-black uppercase tracking-[0.08em] text-slate-400">Progresso</p>
+        <p className="mt-1 text-lg font-black text-slate-100">Você está indo bem!</p>
+        <p className="mt-1 text-sm font-semibold text-slate-300">Continue explorando para evoluir no Axiora.</p>
       </div>
     </>
   );

@@ -34,11 +34,11 @@ export default function ParentPinPage() {
   };
 
   return (
-    <main className="safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md items-center overflow-x-clip p-4 md:p-6">
-      <Card className="w-full">
+    <main className="axiora-brand-page safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md items-center overflow-x-clip p-4 md:p-6">
+      <Card className="axiora-brand-content axiora-glass-card w-full text-slate-100">
         <CardHeader>
-          <CardTitle>PIN dos pais</CardTitle>
-          <CardDescription>Confirme o PIN antes de acessar a area de pais.</CardDescription>
+          <CardTitle className="text-slate-100">PIN dos pais</CardTitle>
+          <CardDescription className="text-slate-300">Confirme o PIN antes de acessar a area de pais.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-3" onSubmit={onSubmit}>

@@ -18,6 +18,47 @@ Raiz do projeto:
 cd "c:\DEV\Axiora Path"
 ```
 
+## 2.1) Setup rapido (script unico)
+
+Se quiser automatizar quase tudo:
+
+```powershell
+cd "c:\DEV\Axiora Path"
+powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap_local.ps1
+```
+
+Opcoes uteis:
+
+- resetar banco/volumes:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap_local.ps1 -ResetDb
+```
+
+- pular npm install:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap_local.ps1 -SkipNpmInstall
+```
+
+- pular instalacao python deps:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap_local.ps1 -SkipPythonInstall
+```
+
+- pular seeds:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap_local.ps1 -SkipSeeds
+```
+
+- limpar cache de build do web (`apps/web/.next`), util para corrigir erros intermitentes de render/build:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap_local.ps1 -CleanWebCache
+```
+
 ## 3) Infra local (Postgres + Redis)
 
 Subir infraestrutura:
@@ -203,4 +244,3 @@ GRANT ALL PRIVILEGES ON DATABASE axiora TO axiora;
 ```
 
 E mantenha `AXIORA_DATABASE_URL` apontando para esse Postgres.
-

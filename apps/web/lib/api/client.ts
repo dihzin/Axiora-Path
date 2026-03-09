@@ -8,8 +8,11 @@ import {
   setAccessToken,
 } from "@/lib/api/session";
 
-function resolveApiUrl(): string {
+function resolveApiUrl(path = ""): string {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (typeof window !== "undefined" && (path.startsWith("/api/") || path.startsWith("/auth/"))) {
+    return "";
+  }
   if (apiUrl) {
     return apiUrl.replace(/\/+$/, "");
   }
@@ -105,7 +108,7 @@ async function parseJsonSafe(response: Response): Promise<unknown> {
 }
 
 async function refreshAccessToken(suppressRedirect = false): Promise<string | null> {
-  const apiUrl = resolveApiUrl();
+  const apiUrl = resolveApiUrl("/auth/refresh");
   const tenantSlug = getTenantSlug();
   if (!tenantSlug) {
     clearTokens();
@@ -158,7 +161,7 @@ async function refreshAccessToken(suppressRedirect = false): Promise<string | nu
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const apiUrl = resolveApiUrl();
+  const apiUrl = resolveApiUrl(path);
   const method = options.method ?? "GET";
   if (parentalConsentBlocked && !isConsentExemptPath(path)) {
     throw new ApiError("Blocked by parental consent policy", 403, {
@@ -1600,14 +1603,14 @@ export async function trackAxionSessionCompleted(payload: {
 
 export async function getParentAxionInsights(): Promise<ParentAxionInsightsResponse> {
   try {
-    return await apiRequest<ParentAxionInsightsResponse>("/api/axion/parent_insights", {
+    return await apiRequest<ParentAxionInsightsResponse>("/axion/parent-insights", {
       method: "GET",
       requireAuth: true,
       includeTenant: true,
     });
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
-      return apiRequest<ParentAxionInsightsResponse>("/axion/parent-insights", {
+      return apiRequest<ParentAxionInsightsResponse>("/api/axion/parent_insights", {
         method: "GET",
         requireAuth: true,
         includeTenant: true,

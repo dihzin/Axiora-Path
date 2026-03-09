@@ -57,6 +57,31 @@ Web (`apps/web/.env.local`):
 
 Fluxo recomendado: abrir 3 terminais PowerShell e executar os comandos abaixo.
 
+### Opcao rapida (bootstrap automatico)
+
+Para preparar ambiente local offline com um comando (infra + env + deps + migrate/audit + seeds):
+
+```powershell
+cd "c:\DEV\Axiora Path"
+powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap_local.ps1
+```
+
+Opcoes:
+
+- reset completo do banco local:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap_local.ps1 -ResetDb
+```
+
+- pular etapas especificas:
+  - `-SkipNpmInstall`
+  - `-SkipPythonInstall`
+  - `-SkipSeeds`
+  - `-CleanWebCache` (remove `apps/web/.next` para corrigir erro intermitente de render/build)
+
+Guia completo: `SETUP_LOCAL.md`
+
 ### Terminal 1 - Infra (Postgres + Redis)
 
 ```powershell
