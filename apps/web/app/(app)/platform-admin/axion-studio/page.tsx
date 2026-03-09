@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import {
@@ -183,7 +183,7 @@ function mapTenant422Errors(payload: unknown): Partial<Record<TenantFieldKey, st
   return mapped;
 }
 
-export default function AxionStudioPage() {
+function AxionStudioPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -1570,5 +1570,21 @@ export default function AxionStudioPage() {
         </div>
       ) : null}
     </main>
+  );
+}
+
+export default function AxionStudioPageWrapper() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen w-full overflow-x-clip px-4 py-6 md:px-8 xl:px-14 2xl:px-20">
+          <div className="rounded-3xl border border-[#BFD3EE] bg-white p-6 text-sm font-semibold text-[#5F80AA] shadow-[0_14px_40px_rgba(16,48,90,0.08)]">
+            Carregando...
+          </div>
+        </main>
+      }
+    >
+      <AxionStudioPage />
+    </Suspense>
   );
 }
