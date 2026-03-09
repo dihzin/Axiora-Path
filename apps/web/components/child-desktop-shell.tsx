@@ -54,11 +54,11 @@ export function ChildDesktopShell({ children, activeNav, rightRail, rightRailApp
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_50%_18%,rgba(59,130,246,0.16),rgba(15,23,42,0.04)_26%,rgba(2,6,23,0)_56%),linear-gradient(180deg,#061226_0%,#0A1731_38%,#0B1430_100%)]">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_50%_18%,rgba(59,130,246,0.18),rgba(15,23,42,0.05)_26%,rgba(2,6,23,0)_56%),radial-gradient(circle_at_72%_28%,rgba(167,139,250,0.10),rgba(2,6,23,0)_22%),linear-gradient(180deg,#061226_0%,#0A1731_38%,#0B1430_100%)]">
       <div className="w-full lg:pl-[208px]">
-        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-white/5 lg:bg-[linear-gradient(180deg,#0F172A_0%,#0D1626_100%)] lg:px-3 lg:py-5">
+        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-white/5 lg:bg-[linear-gradient(180deg,rgba(15,23,42,0.94)_0%,rgba(13,22,38,0.98)_100%)] lg:px-3 lg:py-5 lg:shadow-[inset_-1px_0_0_rgba(255,255,255,0.04)]">
           <div className="mb-0.5 flex justify-center">
-            <div className="rounded-2xl bg-[#12213D]/80 p-1.5 shadow-[inset_0_1px_12px_rgba(0,0,0,0.35)]">
+              <div className="rounded-2xl bg-[linear-gradient(180deg,rgba(18,33,61,0.88),rgba(12,25,46,0.9))] p-1.5 shadow-[0_10px_24px_rgba(2,12,35,0.24),inset_0_1px_12px_rgba(255,255,255,0.04)]">
               <div className="scale-90">
                 <AxionCharacter stage={1} moodState="NEUTRAL" reducedMotion={false} />
               </div>

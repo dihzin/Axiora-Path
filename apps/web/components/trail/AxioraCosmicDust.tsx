@@ -93,7 +93,7 @@ const AxioraCosmicDust = forwardRef<AxioraCosmicDustHandle, AxioraCosmicDustProp
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const dpr = typeof window === "undefined" ? 1 : Math.min(window.devicePixelRatio || 1, quality === "high" ? 3 : 1.25);
+    const dpr = typeof window === "undefined" ? 1 : Math.min(window.devicePixelRatio || 1, quality === "high" ? 4 : 1.5);
     canvas.width = Math.max(1, Math.floor(width * dpr));
     canvas.height = Math.max(1, Math.floor(height * dpr));
     canvas.style.width = `${Math.max(1, width)}px`;

@@ -23,7 +23,7 @@ export function TopStatsBar({ streak, gems, xp, className, action }: TopStatsBar
         className,
       )}
     >
-      <div className="flex h-10 items-center gap-6 rounded-[20px] border border-white/5 bg-[rgba(15,23,42,0.20)] px-4 py-1.5 backdrop-blur-[6px]">
+      <div className="flex h-10 items-center gap-6 rounded-[20px] border border-white/8 bg-[linear-gradient(180deg,rgba(12,22,46,0.82),rgba(10,18,38,0.72))] px-4 py-1.5 shadow-[0_10px_24px_rgba(2,12,35,0.18),inset_0_1px_0_rgba(255,255,255,0.05)]">
         <StatItem
           label="streak"
           value={Math.max(0, Math.floor(streak))}
@@ -60,8 +60,8 @@ function StatItem({
     <div className="inline-flex items-center gap-1.5 rounded-full px-1 leading-none" aria-label={label}>
       {icon}
       <div className="inline-flex items-baseline gap-1">
-        <span className={cn("text-[15px] font-semibold leading-none text-slate-100/90", valueClassName)}>{value}</span>
-        <span className="text-[11px] font-normal uppercase leading-none tracking-[0.02em] text-slate-300/60">{label}</span>
+        <span className={cn("text-[15px] font-bold leading-none text-slate-50", valueClassName)}>{value}</span>
+        <span className="text-[11px] font-semibold uppercase leading-none tracking-[0.04em] text-slate-300/70">{label}</span>
       </div>
     </div>
   );

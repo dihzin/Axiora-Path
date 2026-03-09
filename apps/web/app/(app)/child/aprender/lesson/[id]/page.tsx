@@ -1792,11 +1792,11 @@ export default function AdaptiveLessonSessionPage() {
       <div className="mb-2 flex flex-wrap items-center gap-1.5 xl:mb-2.5">
         <button
           type="button"
-          className="inline-flex w-full items-center gap-1.5 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] px-2.5 py-1.5 text-sm font-semibold text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:bg-white/10"
+          className="inline-flex w-full items-center gap-1.5 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(18,31,58,0.9),rgba(11,20,42,0.88))] px-2.5 py-1.5 text-sm font-semibold text-slate-100 shadow-[0_10px_22px_rgba(2,12,35,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-sky-300/22 hover:bg-[linear-gradient(180deg,rgba(22,37,66,0.94),rgba(14,24,48,0.9))]"
           onClick={() => void onBackToPath()}
           disabled={backSaving}
         >
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-white/10">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
             <ArrowLeft className="h-4 w-4 stroke-[2.6]" />
           </span>
           {backSaving ? "Salvando..." : "Voltar ao caminho"}
@@ -1926,12 +1926,12 @@ export default function AdaptiveLessonSessionPage() {
               className={cn("question-enter space-y-3", feedback?.tone === "success" ? "correct-glow" : "")}
             >
               <div className="flex items-center justify-between">
-                <span className="inline-flex items-center rounded-full border border-[#DDE7F6] bg-[#F8FBFF] px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.04em] text-[#577093]">
+                <span className="inline-flex items-center rounded-full border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.04em] text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                   Questão {stepCurrent}/{stepTotal}
                 </span>
                 <div className="flex items-center gap-1.5">
                   {SHOW_QUESTION_TYPE_DEBUG ? (
-                    <span className="inline-flex items-center rounded-full border border-[#D8E5F8] bg-[#F3F8FF] px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.05em] text-[#6782A8]">
+                    <span className="inline-flex items-center rounded-full border border-white/12 bg-white/5 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.05em] text-slate-300">
                       DEV {questionTypeLabel(current.type)}
                     </span>
                   ) : null}
@@ -1949,7 +1949,7 @@ export default function AdaptiveLessonSessionPage() {
                   <p className="mt-1 text-sm font-semibold text-secondary/90">{axionTip}</p>
                 </div>
               ) : (
-                <div className="flex items-center justify-between gap-2 rounded-2xl border border-border bg-muted/30 px-3 py-2">
+                <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                   <p className="text-xs font-semibold text-muted-foreground">Precisa de ajuda? O Axion pode dar uma dica.</p>
                   <Button
                     type="button"
@@ -1973,7 +1973,7 @@ export default function AdaptiveLessonSessionPage() {
               <h2 className="text-[21px] font-extrabold leading-tight text-foreground md:text-[25px] xl:text-[28px]">{current.prompt}</h2>
               {current.type === "DRAG_DROP" || current.type === "MATCH" ? (
                 <div className="space-y-3">
-                  <div className="rounded-2xl border border-border bg-white/90 p-3">
+                  <div className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(16,28,56,0.94),rgba(11,21,43,0.9))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       {current.type === "MATCH" ? "Cartões" : "Itens"}
                     </p>
@@ -1986,7 +1986,7 @@ export default function AdaptiveLessonSessionPage() {
                             type="button"
                             draggable={!currentAnswered}
                             onDragStart={() => setDraggingItemId(pair.itemId)}
-                            className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary"
+                            className="rounded-full border border-sky-300/25 bg-sky-400/10 px-3 py-1.5 text-xs font-semibold text-sky-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                           >
                             {pair.itemLabel}
                           </button>
@@ -2006,7 +2006,7 @@ export default function AdaptiveLessonSessionPage() {
                             setDragAssignments((prev) => ({ ...prev, [draggingItemId]: pair.targetId }));
                             setDraggingItemId(null);
                           }}
-                          className="rounded-2xl border border-border bg-muted/40 p-3"
+                          className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] p-3"
                         >
                           <p className="text-xs font-semibold text-muted-foreground">
                             {current.type === "MATCH" ? `Combine com: ${pair.targetLabel}` : pair.targetLabel}
@@ -2026,15 +2026,15 @@ export default function AdaptiveLessonSessionPage() {
                 </div>
               ) : current.type === "ORDERING" ? (
                 <div className="space-y-3">
-                  <div className="rounded-2xl border border-border bg-white/90 p-3">
+                  <div className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(16,28,56,0.94),rgba(11,21,43,0.9))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ordem atual</p>
                     <div className="space-y-2">
                       {orderingIds.map((itemId, itemIndex) => {
                         const item = orderingItems.find((entry) => entry.id === itemId);
                         if (!item) return null;
                         return (
-                          <div key={item.id} className="flex items-center gap-2 rounded-xl border border-border bg-muted/25 px-2 py-2">
-                            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-muted-foreground">
+                          <div key={item.id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] px-2 py-2">
+                            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-[linear-gradient(180deg,rgba(17,28,51,0.92),rgba(11,20,39,0.88))] text-xs font-bold text-slate-200">
                               {itemIndex + 1}
                             </span>
                             <p className="flex-1 text-sm font-semibold text-foreground">{item.label}</p>
@@ -2093,11 +2093,11 @@ export default function AdaptiveLessonSessionPage() {
                         aria-pressed={selectedOption === option.id}
                         className={cn(
                           "group flex min-h-[52px] items-center justify-between rounded-2xl border px-3 py-2.5 text-left text-sm font-semibold transition-transform transition-shadow transition-opacity duration-150 ease-out xl:min-h-[56px] xl:py-3",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950",
                           "active:scale-[0.985]",
                           selectedOption === option.id
-                            ? "border-cyan-300/70 bg-cyan-400/12 text-slate-50 shadow-[0_0_0_1px_rgba(103,232,249,0.18)]"
-                            : "border-white/12 bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(30,41,59,0.86))] text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-cyan-300/30 hover:bg-[linear-gradient(180deg,rgba(30,41,59,0.98),rgba(51,65,85,0.9))]",
+                            ? "border-cyan-300/75 bg-[linear-gradient(180deg,rgba(21,54,78,0.9),rgba(11,31,53,0.94))] text-slate-50 shadow-[0_0_0_1px_rgba(103,232,249,0.18),0_10px_20px_rgba(2,12,35,0.18),inset_0_1px_0_rgba(255,255,255,0.08)]"
+                            : "border-white/12 bg-[linear-gradient(180deg,rgba(15,23,42,0.94),rgba(16,27,48,0.9))] text-slate-50 shadow-[0_8px_20px_rgba(2,12,35,0.14),inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-cyan-300/30 hover:bg-[linear-gradient(180deg,rgba(30,41,59,0.98),rgba(18,29,51,0.92))]",
                           currentAnswered && correctByStep[index] && selectedOption === option.id ? "answer-correct-pop" : "",
                           currentAnswered && !correctByStep[index] && selectedOption === option.id ? "border-accent/55 bg-accent/10 text-accent-foreground" : "",
                         )}
@@ -2105,7 +2105,7 @@ export default function AdaptiveLessonSessionPage() {
                         onClick={() => void onPickOption(option.id)}
                       >
                         <span className="flex items-center gap-2.5">
-                          <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#D7E2F3] bg-[#F6FAFF] text-[11px] font-black text-[#6782A8]">
+                          <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-[linear-gradient(180deg,rgba(243,248,255,0.14),rgba(191,219,254,0.08))] text-[11px] font-black text-cyan-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
                             {OPTION_LETTERS[optionIndex] ?? String(optionIndex + 1)}
                           </span>
                           <span className="text-[15px] font-bold leading-5 text-inherit">{option.label}</span>
@@ -2142,7 +2142,7 @@ export default function AdaptiveLessonSessionPage() {
             <div className="flex gap-2">
               <Button
                 variant="secondary"
-                className="w-full border border-[#DDE7F6] bg-[#F7FBFF] text-[#4E678A] transition-transform transition-shadow transition-opacity duration-150 ease-out hover:bg-[#EEF6FF] disabled:opacity-45"
+                className="w-full border border-white/10 bg-[linear-gradient(180deg,rgba(18,30,54,0.88),rgba(12,21,40,0.84))] text-slate-200 shadow-[0_8px_18px_rgba(2,12,35,0.12),inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform transition-shadow transition-opacity duration-150 ease-out hover:border-sky-300/22 hover:bg-[linear-gradient(180deg,rgba(22,36,62,0.92),rgba(14,24,45,0.88))] disabled:opacity-45"
                 disabled={!canGoPrevious}
                 onClick={() => {
                   setIndex((prev) => Math.max(0, prev - 1));
@@ -2158,7 +2158,7 @@ export default function AdaptiveLessonSessionPage() {
               <Button
                 className={cn(
                   "w-full bg-[#FF7A45] text-white shadow-[0_4px_0_rgba(212,91,49,0.7)] transition-transform transition-shadow transition-opacity duration-150 ease-out hover:brightness-105 active:translate-y-[1px] active:shadow-[0_2px_0_rgba(212,91,49,0.75)]",
-                  shouldHighlightFinish ? "ring-2 ring-secondary/35 ring-offset-2 ring-offset-white" : "",
+                  shouldHighlightFinish ? "ring-2 ring-secondary/35 ring-offset-2 ring-offset-slate-950" : "",
                   canGoNext ? "opacity-60 saturate-75" : "",
                 )}
                 disabled={canGoNext}
@@ -2336,7 +2336,7 @@ export default function AdaptiveLessonSessionPage() {
         .lesson-cosmic .bg-white,
         .lesson-cosmic .bg-white\\/90,
         .lesson-cosmic .bg-white\\/92 {
-          background: rgba(255, 255, 255, 0.04) !important;
+          background: linear-gradient(180deg, rgba(17, 28, 52, 0.92), rgba(11, 21, 41, 0.88)) !important;
         }
 
         .lesson-cosmic .border-border,
@@ -2346,6 +2346,29 @@ export default function AdaptiveLessonSessionPage() {
         .lesson-cosmic .border-\[\#DCE6F4\],
         .lesson-cosmic .border-\[\#E4EBF7\] {
           border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .lesson-cosmic .bg-muted\/25,
+        .lesson-cosmic .bg-muted\/30,
+        .lesson-cosmic .bg-muted\/40 {
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)) !important;
+        }
+
+        .lesson-cosmic .shadow-\[inset_0_1px_0_rgba\(255\,255\,255\,0\.06\)\] {
+          box-shadow: 0 10px 22px rgba(2, 12, 35, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+        }
+
+        .lesson-cosmic button,
+        .lesson-cosmic [role="button"] {
+          -webkit-font-smoothing: antialiased;
+          text-rendering: geometricPrecision;
+        }
+
+        .lesson-cosmic h2,
+        .lesson-cosmic h3,
+        .lesson-cosmic p,
+        .lesson-cosmic span {
+          text-rendering: geometricPrecision;
         }
 
         @keyframes lesson-feedback-pop {
@@ -2431,8 +2454,8 @@ export default function AdaptiveLessonSessionPage() {
         .answer-correct-pop {
           animation: answer-correct-pop 300ms ease-out;
           border-color: rgba(45, 212, 191, 0.75) !important;
-          background: rgba(45, 212, 191, 0.12) !important;
-          color: #0f766e !important;
+          background: linear-gradient(180deg, rgba(16, 185, 129, 0.18), rgba(13, 148, 136, 0.14)) !important;
+          color: rgba(236, 253, 245, 0.98) !important;
         }
         .medal-glow {
           animation: medal-glow 760ms ease-out;

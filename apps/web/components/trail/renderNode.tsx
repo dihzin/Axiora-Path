@@ -338,6 +338,8 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
           boxShadow: `${visuals.labelShadow}, ${visuals.kindGlow}, inset 0 1px 0 rgba(255,255,255,0.06)`,
           transition: "transform 0.4s ease, opacity 180ms ease",
           whiteSpace: "nowrap",
+          textRendering: "geometricPrecision",
+          WebkitFontSmoothing: "antialiased",
         }}
       >
         <span
@@ -378,7 +380,7 @@ export function renderNode({ node, point, prevPoint, nextPoint, nodeIndex, compa
         top: point.y,
         transform: `translate(-50%, -50%) scale(${scale})`,
         opacity: nodeAppear,
-        filter: `drop-shadow(0 0 ${6 + nodeAppear * 8}px rgba(56,189,248,${0.18 + nodeAppear * 0.25}))`,
+        filter: `drop-shadow(0 0 ${4 + nodeAppear * 5}px rgba(56,189,248,${0.16 + nodeAppear * 0.16})) drop-shadow(0 0 ${10 + nodeAppear * 8}px rgba(167,139,250,${0.05 + nodeAppear * 0.08}))`,
         transition: "transform 160ms linear, opacity 160ms linear, filter 160ms linear",
       }}
     >
