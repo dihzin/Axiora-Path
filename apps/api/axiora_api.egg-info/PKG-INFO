@@ -10,7 +10,9 @@ Requires-Dist: pydantic<3.0.0,>=2.10.0
 Requires-Dist: pydantic-settings<3.0.0,>=2.7.1
 Requires-Dist: sqlalchemy<3.0.0,>=2.0.36
 Requires-Dist: alembic<2.0.0,>=1.14.0
+Requires-Dist: apscheduler<4.0.0,>=3.10.4
 Requires-Dist: psycopg[binary]<4.0.0,>=3.2.3
+Requires-Dist: psycopg2-binary<3.0.0,>=2.9.10
 Requires-Dist: redis<6.0.0,>=5.2.1
 Requires-Dist: argon2-cffi<24.0.0,>=23.1.0
 Requires-Dist: PyJWT<3.0.0,>=2.10.1
@@ -126,3 +128,28 @@ Jobs suportados:
 - Middleware CSRF para rotas sensiveis.
 - Validacao de forca de senha no signup.
 - Lock de conta apos repetidas falhas de login.
+
+## Ops Runbooks
+
+- Axion Health Runner (cron externo + rotacao de segredo):
+  - `README.ops.axion_health_runner.md`
+- Axion Production Safe Deploy:
+  - `docs/axion_production_runbook.md`
+  - `scripts/axion_safe_deploy.sh`
+
+## CI Schema Gate (Axion)
+
+O pipeline de CI bloqueia merge/deploy quando schema estiver atrasado ou inconsistente:
+
+1. sobe Postgres
+2. roda `alembic upgrade head`
+3. roda `scripts/axion_db_migrate_and_audit.sh`
+4. roda testes criticos:
+   - `tests/test_axion_hardening.py`
+   - `tests/test_axion_policy_governance.py`
+
+Falha automatica se:
+
+- migrations nao aplicarem
+- auditoria SQL detectar inconsistencias
+- enforcement de single-writer falhar (incluido em `test_axion_hardening.py`)
