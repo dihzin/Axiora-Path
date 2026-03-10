@@ -310,7 +310,7 @@ def _delete_previous_seed() -> tuple[int, int, int]:
                 """
                 SELECT id::text
                 FROM question_variants
-                WHERE question_id = ANY(:question_ids::uuid[])
+                WHERE question_id = ANY(CAST(:question_ids AS uuid[]))
                 """
             ),
             {"question_ids": question_ids},
@@ -320,8 +320,8 @@ def _delete_previous_seed() -> tuple[int, int, int]:
             text(
                 """
                 DELETE FROM user_question_history
-                WHERE question_id = ANY(:question_ids::uuid[])
-                   OR (:has_variants AND variant_id = ANY(:variant_ids::uuid[]))
+                WHERE question_id = ANY(CAST(:question_ids AS uuid[]))
+                   OR (:has_variants AND variant_id = ANY(CAST(:variant_ids AS uuid[])))
                 """
             ),
             {
@@ -335,7 +335,7 @@ def _delete_previous_seed() -> tuple[int, int, int]:
             text(
                 """
                 DELETE FROM question_variants
-                WHERE question_id = ANY(:question_ids::uuid[])
+                WHERE question_id = ANY(CAST(:question_ids AS uuid[]))
                 """
             ),
             {"question_ids": question_ids},
@@ -345,7 +345,7 @@ def _delete_previous_seed() -> tuple[int, int, int]:
             text(
                 """
                 DELETE FROM questions
-                WHERE id = ANY(:question_ids::uuid[])
+                WHERE id = ANY(CAST(:question_ids AS uuid[]))
                 """
             ),
             {"question_ids": question_ids},
