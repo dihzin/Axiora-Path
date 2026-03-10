@@ -82,6 +82,37 @@ powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap_local.ps1 -ResetDb
 
 Guia completo: `SETUP_LOCAL.md`
 
+### Compartilhar estado exato do banco local
+
+Quando for necessario replicar exatamente o estado atual do Postgres local entre desenvolvedores, use dump/restore em vez de apenas rodar seeds.
+
+1. Alinhar a mesma branch/commit.
+2. Gerar um dump do banco local de origem.
+3. Enviar o arquivo `.dump` para o outro desenvolvedor.
+4. Restaurar o dump no Postgres local de destino.
+
+Gerar dump (maquina de origem):
+
+```powershell
+docker exec axiora-postgres pg_dump -U axiora -d axiora -Fc -f /tmp/axiora_local.dump
+docker cp axiora-postgres:/tmp/axiora_local.dump .\axiora_local.dump
+```
+
+Restaurar dump (maquina de destino):
+
+```powershell
+docker compose -f .\infra\docker\docker-compose.yml up -d
+docker cp .\axiora_local.dump axiora-postgres:/tmp/axiora_local.dump
+docker exec axiora-postgres psql -U axiora -d axiora -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+docker exec axiora-postgres pg_restore -U axiora -d axiora --no-owner --no-privileges /tmp/axiora_local.dump
+```
+
+Observacoes:
+
+- esse fluxo replica o estado exato do Postgres local; ele nao substitui sincronizacao de branch
+- evitar rodar `bootstrap_local.ps1 -ResetDb` depois do restore, porque isso apaga o banco restaurado
+- para facilitar rastreabilidade, preferir nomes de arquivo com data e responsavel, por exemplo `axiora_local_2026-03-10_dev2.dump`
+
 ### Terminal 1 - Infra (Postgres + Redis)
 
 ```powershell
