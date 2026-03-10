@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 from sqlalchemy import select
+from dotenv import load_dotenv
 
 from app.core.security import hash_password
 from app.db.session import SessionLocal
@@ -13,6 +15,8 @@ DEFAULT_ADMIN_PASSWORD = "Axion@123"
 DEFAULT_ADMIN_NAME = "Admin"
 DEFAULT_TENANT_NAME = "Platform Admin"
 DEFAULT_TENANT_SLUG = "platform-admin"
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 
 def run_seed() -> None:
