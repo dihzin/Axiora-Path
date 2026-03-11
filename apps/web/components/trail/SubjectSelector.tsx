@@ -89,10 +89,10 @@ export function SubjectSelector({
                   tabIndex={activeSubject || (selectedIndex < 0 && index === 0) ? 0 : -1}
                   onClick={() => onSelectSubject(subject.id)}
                   onKeyDown={(event) => onChipKeyDown(event, index)}
-                  className={`axiora-hover-magic inline-flex h-10 shrink-0 items-center gap-2 rounded-[24px_16px_22px_14px] px-3.5 text-[13px] font-semibold leading-none tracking-[-0.01em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF8A63] focus-visible:ring-offset-2 ${axioraMotionClasses.interactive} ${
+                  className={`axiora-chunky-btn axiora-chunky-chip axiora-hover-magic inline-flex h-10 shrink-0 items-center gap-2 px-3.5 text-[13px] font-semibold leading-none tracking-[-0.01em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF8A63] focus-visible:ring-offset-2 ${axioraMotionClasses.interactive} ${
                     activeSubject
-                      ? "bg-[linear-gradient(135deg,rgba(249,115,22,0.9)_0%,rgba(251,146,60,0.85)_100%)] text-white/90"
-                      : "bg-[#F1EAE3] text-slate-900/85 hover:bg-[#EBE2D9]"
+                      ? "axiora-chunky-chip--active text-white/90"
+                      : "text-slate-900/85"
                   }`}
                 >
                   <span

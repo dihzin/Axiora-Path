@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -9,13 +10,18 @@ class SignupRequest(BaseModel):
     email: str
     name: str
     password: str = Field(min_length=10)
+    tenant_type: Literal["FAMILY"] = "FAMILY"
     tenant_name: str
-    tenant_slug: str
+    tenant_slug: str | None = None
 
 
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+
+class SelectTenantRequest(BaseModel):
+    tenant_slug: str
 
 
 class ChangePasswordRequest(BaseModel):
@@ -31,6 +37,14 @@ class AuthTokens(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
+
+class PrimaryLoginMembershipOut(BaseModel):
+    tenant_id: int
+    tenant_slug: str
+    tenant_name: str
+    tenant_type: str
+    role: str
 
 
 class UserOut(BaseModel):
@@ -72,6 +86,18 @@ class MeResponse(BaseModel):
     user: UserOut
     membership: MembershipOut
     child_profiles: list[ChildProfileOut]
+
+
+class PrimaryLoginResponse(BaseModel):
+    access_token: str
+    user: UserOut
+    memberships: list[PrimaryLoginMembershipOut]
+
+
+class SelectTenantResponse(BaseModel):
+    access_token: str
+    tenant_slug: str
+    role: str
 
 
 class MessageResponse(BaseModel):

@@ -1,20 +1,23 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 
-from app.api.deps import DBSession, get_current_tenant, get_current_user, require_role
+from app.api.deps import DBSession, get_current_tenant, get_current_tenant_optional, get_current_user, require_role, resolve_tenant
 from app.core.config import settings
 from app.core.security import (
     CSRF_COOKIE_NAME,
     REFRESH_COOKIE_NAME,
     create_access_token,
+    create_primary_access_token,
     create_refresh_token,
     decode_token,
     generate_csrf_token,
+    get_token_tenant_id,
     hash_password,
     validate_password_strength,
     verify_password,
@@ -29,7 +32,11 @@ from app.schemas.auth import (
     MeResponse,
     MessageResponse,
     OrganizationMembershipOut,
+    PrimaryLoginMembershipOut,
+    PrimaryLoginResponse,
     RefreshRequest,
+    SelectTenantRequest,
+    SelectTenantResponse,
     SignupRequest,
     UserOut,
 )
@@ -73,15 +80,77 @@ def _is_platform_admin_email(email: str) -> bool:
     return email.strip().lower() in allowlist
 
 
+def _authenticate_user_credentials(db: DBSession, payload: LoginRequest) -> User:
+    user = db.scalar(select(User).where(User.email == payload.email))
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    if user.locked_until is not None and user.locked_until > datetime.now(UTC):
+        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail="Account temporarily locked")
+
+    if not verify_password(payload.password, user.password_hash):
+        user.failed_login_attempts += 1
+        if user.failed_login_attempts >= settings.account_lock_max_attempts:
+            user.locked_until = datetime.now(UTC) + timedelta(minutes=settings.account_lock_minutes)
+            user.failed_login_attempts = 0
+            db.commit()
+            raise HTTPException(status_code=status.HTTP_423_LOCKED, detail="Account temporarily locked")
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    return user
+
+
+def _list_user_memberships(db: DBSession, *, user_id: int) -> list[tuple[Membership, Tenant]]:
+    return db.execute(
+        select(Membership, Tenant)
+        .join(Tenant, Tenant.id == Membership.tenant_id)
+        .where(
+            Membership.user_id == user_id,
+            Tenant.deleted_at.is_(None),
+        )
+        .order_by(Tenant.name.asc(), Tenant.id.asc()),
+    ).all()
+
+
+def _get_user_membership_by_slug(db: DBSession, *, user_id: int, tenant_slug: str) -> tuple[Membership, Tenant] | None:
+    memberships = _list_user_memberships(db, user_id=user_id)
+    for membership, tenant in memberships:
+        if tenant.slug == tenant_slug:
+            return membership, tenant
+    return None
+
+
+def _slugify_tenant_name(value: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "-", value.strip().lower())
+    normalized = re.sub(r"-{2,}", "-", normalized).strip("-")
+    return normalized or "familia"
+
+
+def _generate_unique_tenant_slug(db: DBSession, *, tenant_name: str) -> str:
+    base_slug = _slugify_tenant_name(tenant_name)
+    candidate = base_slug
+    suffix = 2
+    while db.scalar(select(Tenant).where(Tenant.slug == candidate, Tenant.deleted_at.is_(None))) is not None:
+        candidate = f"{base_slug}-{suffix}"
+        suffix += 1
+    return candidate
+
+
 @router.post("/signup", response_model=AuthTokens, status_code=status.HTTP_201_CREATED)
 def signup(payload: SignupRequest, db: DBSession, response: Response) -> AuthTokens:
     existing_user = db.scalar(select(User).where(User.email == payload.email))
     if existing_user is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already in use")
 
-    existing_tenant = db.scalar(select(Tenant).where(Tenant.slug == payload.tenant_slug))
-    if existing_tenant is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tenant slug already in use")
+    if payload.tenant_type != "FAMILY":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only FAMILY signup is supported")
+
+    tenant_slug = payload.tenant_slug.strip() if payload.tenant_slug else _generate_unique_tenant_slug(db, tenant_name=payload.tenant_name)
+    if payload.tenant_slug:
+        existing_tenant = db.scalar(select(Tenant).where(Tenant.slug == tenant_slug, Tenant.deleted_at.is_(None)))
+        if existing_tenant is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tenant slug already in use")
 
     password_error = validate_password_strength(payload.password)
     if password_error is not None:
@@ -90,7 +159,7 @@ def signup(payload: SignupRequest, db: DBSession, response: Response) -> AuthTok
     tenant = Tenant(
         type=TenantType.FAMILY,
         name=payload.tenant_name,
-        slug=payload.tenant_slug,
+        slug=tenant_slug,
     )
     user = User(
         email=payload.email,
@@ -130,22 +199,7 @@ def login(
     response: Response,
     tenant: Annotated[Tenant, Depends(get_current_tenant)],
 ) -> AuthTokens:
-    user = db.scalar(select(User).where(User.email == payload.email))
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-
-    if user.locked_until is not None and user.locked_until > datetime.now(UTC):
-        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail="Account temporarily locked")
-
-    if not verify_password(payload.password, user.password_hash):
-        user.failed_login_attempts += 1
-        if user.failed_login_attempts >= settings.account_lock_max_attempts:
-            user.locked_until = datetime.now(UTC) + timedelta(minutes=settings.account_lock_minutes)
-            user.failed_login_attempts = 0
-            db.commit()
-            raise HTTPException(status_code=status.HTTP_423_LOCKED, detail="Account temporarily locked")
-        db.commit()
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    user = _authenticate_user_credentials(db, payload)
 
     membership = db.scalar(
         select(Membership).where(
@@ -176,47 +230,48 @@ def login(
     return AuthTokens(access_token=access_token, refresh_token=refresh_token)
 
 
-@router.post("/refresh", response_model=AuthTokens)
-def refresh(
-    payload: RefreshRequest,
-    request: Request,
-    response: Response,
-    db: DBSession,
-    tenant: Annotated[Tenant, Depends(get_current_tenant)],
-) -> AuthTokens:
-    refresh_token = payload.refresh_token or request.cookies.get(REFRESH_COOKIE_NAME)
-    if not refresh_token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing refresh token")
+@router.post("/login-primary", response_model=PrimaryLoginResponse)
+def login_primary(payload: LoginRequest, db: DBSession) -> PrimaryLoginResponse:
+    user = _authenticate_user_credentials(db, payload)
+    memberships = _list_user_memberships(db, user_id=user.id)
 
-    try:
-        claims = decode_token(refresh_token)
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token") from exc
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    db.commit()
 
-    if claims.get("type") != "refresh":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token type")
-
-    sub = claims.get("sub")
-    token_tenant_id = claims.get("tenant_id")
-    if not isinstance(sub, str) or not sub.isdigit() or not isinstance(token_tenant_id, int):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Malformed refresh token")
-
-    if token_tenant_id != tenant.id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Tenant mismatch in refresh token")
-
-    user = db.get(User, int(sub))
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-
-    membership = db.scalar(
-        select(Membership).where(
-            Membership.user_id == user.id,
-            Membership.tenant_id == tenant.id,
+    return PrimaryLoginResponse(
+        access_token=create_primary_access_token(user_id=user.id),
+        user=UserOut(
+            id=user.id,
+            email=user.email,
+            name=user.name,
+            created_at=user.created_at,
         ),
+        memberships=[
+            PrimaryLoginMembershipOut(
+                tenant_id=tenant.id,
+                tenant_slug=tenant.slug,
+                tenant_name=tenant.name,
+                tenant_type=tenant.type.value,
+                role=membership.role.value,
+            )
+            for membership, tenant in memberships
+        ],
     )
-    if membership is None:
+
+
+@router.post("/select-tenant", response_model=SelectTenantResponse)
+def select_tenant(
+    payload: SelectTenantRequest,
+    db: DBSession,
+    response: Response,
+    user: Annotated[User, Depends(get_current_user)],
+) -> SelectTenantResponse:
+    membership_with_tenant = _get_user_membership_by_slug(db, user_id=user.id, tenant_slug=payload.tenant_slug)
+    if membership_with_tenant is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not in this tenant")
 
+    membership, tenant = membership_with_tenant
     if membership.role == MembershipRole.CHILD:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Children cannot login in MVP")
 
@@ -231,27 +286,78 @@ def refresh(
         role=membership.role.value,
     )
     _set_auth_cookies(response, refresh_token, generate_csrf_token())
+    return SelectTenantResponse(
+        access_token=access_token,
+        tenant_slug=tenant.slug,
+        role=membership.role.value,
+    )
+
+
+@router.post("/refresh", response_model=AuthTokens)
+def refresh(
+    payload: RefreshRequest,
+    request: Request,
+    response: Response,
+    db: DBSession,
+    tenant: Annotated[Tenant | None, Depends(get_current_tenant_optional)],
+) -> AuthTokens:
+    refresh_token = payload.refresh_token or request.cookies.get(REFRESH_COOKIE_NAME)
+    if not refresh_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing refresh token")
+
+    try:
+        claims = decode_token(refresh_token)
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token") from exc
+
+    if claims.get("type") != "refresh":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token type")
+
+    sub = claims.get("sub")
+    token_tenant_id = get_token_tenant_id(claims)
+    if not isinstance(sub, str) or not sub.isdigit() or token_tenant_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Malformed refresh token")
+
+    resolved_tenant = tenant or resolve_tenant(db, request, tenant_id=token_tenant_id)
+    if resolved_tenant is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Tenant not found for refresh token")
+
+    if token_tenant_id != resolved_tenant.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Tenant mismatch in refresh token")
+
+    user = db.get(User, int(sub))
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    membership = db.scalar(
+        select(Membership).where(
+            Membership.user_id == user.id,
+            Membership.tenant_id == resolved_tenant.id,
+        ),
+    )
+    if membership is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not in this tenant")
+
+    if membership.role == MembershipRole.CHILD:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Children cannot login in MVP")
+
+    access_token = create_access_token(
+        user_id=user.id,
+        tenant_id=resolved_tenant.id,
+        role=membership.role.value,
+    )
+    refresh_token = create_refresh_token(
+        user_id=user.id,
+        tenant_id=resolved_tenant.id,
+        role=membership.role.value,
+    )
+    _set_auth_cookies(response, refresh_token, generate_csrf_token())
     return AuthTokens(access_token=access_token, refresh_token=refresh_token)
 
 
 @router.post("/platform-login", response_model=AuthTokens)
 def platform_login(payload: LoginRequest, db: DBSession, response: Response) -> AuthTokens:
-    user = db.scalar(select(User).where(User.email == payload.email))
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-
-    if user.locked_until is not None and user.locked_until > datetime.now(UTC):
-        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail="Account temporarily locked")
-
-    if not verify_password(payload.password, user.password_hash):
-        user.failed_login_attempts += 1
-        if user.failed_login_attempts >= settings.account_lock_max_attempts:
-            user.locked_until = datetime.now(UTC) + timedelta(minutes=settings.account_lock_minutes)
-            user.failed_login_attempts = 0
-            db.commit()
-            raise HTTPException(status_code=status.HTTP_423_LOCKED, detail="Account temporarily locked")
-        db.commit()
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    user = _authenticate_user_credentials(db, payload)
 
     if not _is_platform_admin_email(user.email):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only platform admins can login here")
@@ -389,15 +495,7 @@ def list_memberships(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> list[OrganizationMembershipOut]:
-    memberships = db.execute(
-        select(Membership, Tenant)
-        .join(Tenant, Tenant.id == Membership.tenant_id)
-        .where(
-            Membership.user_id == user.id,
-            Tenant.deleted_at.is_(None),
-        )
-        .order_by(Tenant.name.asc(), Tenant.id.asc()),
-    ).all()
+    memberships = _list_user_memberships(db, user_id=user.id)
 
     return [
         OrganizationMembershipOut(

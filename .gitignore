@@ -137,6 +137,7 @@ coverage/
 # =========================================================
 *.backup
 *.old
+*.dump
 
 # =========================================================
 # PROJECT SPECIFIC (Axiora)
@@ -155,3 +156,7 @@ bootstrap_local.ps1
 # Local database
 apps/api/*.db
 apps/api/*.sqlite
+
+# Local schema comparison artifacts
+tmp_*schema.sql
+tmp_*schema*.sql

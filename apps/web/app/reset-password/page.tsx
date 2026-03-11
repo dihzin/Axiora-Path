@@ -1,14 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { getApiErrorMessage, getLegalStatus, listMemberships, loginPrimary, selectTenant } from "@/lib/api/client";
-import { clearTenantSlug, clearTokens, setAccessToken, setTenantSlug } from "@/lib/api/session";
 
 function AxionMascot() {
   return (
@@ -53,81 +48,7 @@ function AxionMascot() {
   );
 }
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [nextPath, setNextPath] = useState<string | null>(null);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tenantFromQuery = params.get("tenant");
-    const nextFromQuery = params.get("next");
-    if ((tenantFromQuery ?? "").trim().toLowerCase() === "platform-admin") {
-      const suffix = nextFromQuery && nextFromQuery.startsWith("/") ? `?next=${encodeURIComponent(nextFromQuery)}` : "";
-      router.replace(`/platform-admin/login${suffix}`);
-      return;
-    }
-    if (nextFromQuery && nextFromQuery.startsWith("/")) {
-      setNextPath(nextFromQuery);
-    }
-  }, [router]);
-
-  const onSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    setError(null);
-    setLoading(true);
-    try {
-      clearTenantSlug();
-      const loginResponse = await loginPrimary(email, password);
-      setAccessToken(loginResponse.access_token);
-
-      if (loginResponse.memberships.length === 0) {
-        router.push("/onboarding");
-        return;
-      }
-
-      if (loginResponse.memberships.length > 1) {
-        router.push("/select-tenant");
-        return;
-      }
-
-      const membership = loginResponse.memberships[0];
-      setTenantSlug(membership.tenant_slug);
-      const tenantResponse = await selectTenant(membership.tenant_slug);
-      setAccessToken(tenantResponse.access_token);
-
-      const memberships = await listMemberships();
-      const activeMembership = memberships.find((item) => item.tenant_slug === membership.tenant_slug);
-      if (!activeMembership) {
-        throw new Error("Membership not found after tenant activation");
-      }
-
-      if (activeMembership.tenant_type === "FAMILY") {
-        const legal = await getLegalStatus();
-        if (legal.consent_required) {
-          router.push("/onboarding");
-          return;
-        }
-      }
-
-      if (!activeMembership.onboarding_completed) {
-        router.push("/onboarding");
-        return;
-      }
-
-      router.push(nextPath ?? "/select-child");
-    } catch (err) {
-      clearTokens();
-      clearTenantSlug();
-      setError(getApiErrorMessage(err, "Não foi possível autenticar. Verifique email e senha."));
-    } finally {
-      setLoading(false);
-    }
-  };
-
+export default function ResetPasswordPage() {
   return (
     <div className="axiora-brand-page">
       <main className="axiora-brand-content safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md overflow-x-clip p-4 md:p-6">
@@ -135,51 +56,24 @@ export default function LoginPage() {
           <div className="pointer-events-none absolute left-0 right-0 top-12 md:top-16">
             <AxionMascot />
           </div>
-          <Card className="axiora-glass-card absolute left-1/2 top-[58%] w-full -translate-x-1/2 -translate-y-1/2 text-slate-100">
-          <CardHeader>
-            <CardTitle className="text-slate-100">Entrar</CardTitle>
-            <CardDescription className="text-slate-300">Use seu email e senha para acessar o MVP.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-3" onSubmit={onSubmit}>
-              <label className="block text-xs font-semibold text-slate-300" htmlFor="email">Email</label>
-              <Input
-                id="email"
-                placeholder="Email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                aria-invalid={Boolean(error)}
-                aria-describedby={error ? "login-error" : undefined}
-                required
-              />
-              <label className="block text-xs font-semibold text-slate-300" htmlFor="password">Senha</label>
-              <Input
-                id="password"
-                placeholder="Senha"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                aria-invalid={Boolean(error)}
-                aria-describedby={error ? "login-error" : undefined}
-                required
-              />
-              {error ? <p id="login-error" role="alert" aria-live="polite" className="text-sm text-rose-300">{error}</p> : null}
-              <Button className="w-full" type="submit" disabled={loading}>
-                {loading ? "Entrando..." : "Entrar"}
-              </Button>
-              <div className="flex items-center justify-between gap-3 pt-1 text-xs font-semibold">
-                <Link className="text-[#F3E5D1] transition hover:text-white" href="/reset-password">
-                  Esqueci minha senha
-                </Link>
-                <Link className="text-[#FFB07A] transition hover:text-[#FFD7BD]" href="/signup">
-                  Criar conta
-                </Link>
+          <Card className="axiora-glass-card absolute left-1/2 top-[58%] w-full -translate-x-1/2 -translate-y-1/2 text-[#FFF4E7]">
+            <CardHeader>
+              <CardTitle className="text-[#FFF4E7]">Redefinir senha</CardTitle>
+              <CardDescription className="text-[#E6D8C7]">A recuperação automática ainda não está disponível neste MVP.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm leading-6 text-[#F0E5D8]">
+                Se você já tem uma conta, peça a redefinição ao administrador responsável pelo seu acesso. Se ainda não começou, você pode criar uma nova conta de família agora.
+              </p>
+              <div className="grid gap-3">
+                <Button asChild className="w-full" type="button">
+                  <Link href="/signup">Criar conta</Link>
+                </Button>
+                <Button asChild className="w-full" type="button" variant="outline">
+                  <Link href="/login">Voltar para login</Link>
+                </Button>
               </div>
-            </form>
-          </CardContent>
+            </CardContent>
           </Card>
         </div>
       </main>

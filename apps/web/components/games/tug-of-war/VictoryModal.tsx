@@ -45,14 +45,14 @@ export function VictoryModal({ open, winner, p1Streak, p2Streak, matchAnalytics,
           <button
             type="button"
             onClick={onPlayAgain}
-            className="rounded-2xl border-2 border-[#16a34a] bg-[#86efac] px-3 py-2 text-sm font-black text-[#14532d]"
+            className="axiora-chunky-btn axiora-chunky-btn--secondary w-full text-sm text-white"
           >
             Play again
           </button>
           <button
             type="button"
             onClick={onBackToGames}
-            className="rounded-2xl border-2 border-[#c7d5ee] bg-white px-3 py-2 text-sm font-black text-[#334155]"
+            className="axiora-chunky-btn axiora-chunky-btn--outline w-full text-sm text-[#334155]"
           >
             Back to games
           </button>

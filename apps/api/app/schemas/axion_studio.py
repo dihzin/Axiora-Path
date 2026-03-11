@@ -135,7 +135,7 @@ class AxionTenantSummaryOut(BaseModel):
 class AxionTenantCreateRequest(BaseModel):
     name: str = Field(min_length=2, max_length=255)
     slug: str = Field(min_length=3, max_length=255)
-    type: str = Field(pattern="^(FAMILY|SCHOOL)$")
+    type: str = Field(pattern="^(FAMILY|SCHOOL|SYSTEM_ADMIN)$")
     adminEmail: str
     adminName: str = Field(min_length=2, max_length=255)
     adminPassword: str = Field(min_length=10)
@@ -176,7 +176,7 @@ class AxionTenantDeleteRequest(BaseModel):
 
 class AxionTenantUpdateRequest(BaseModel):
     name: str = Field(min_length=2, max_length=255)
-    type: str = Field(pattern="^(FAMILY|SCHOOL)$")
+    type: str = Field(pattern="^(FAMILY|SCHOOL|SYSTEM_ADMIN)$")
     adminEmail: str
     adminName: str = Field(min_length=2, max_length=255)
     adminPassword: str | None = Field(default=None, min_length=10)

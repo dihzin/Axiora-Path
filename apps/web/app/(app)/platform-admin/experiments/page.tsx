@@ -56,14 +56,14 @@ function MetricBar({
 }) {
   const width = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   const toneClass =
-    tone === "green" ? "from-[#1C9C6C] to-[#46C28F]" : tone === "orange" ? "from-[#E98E2A] to-[#F4B248]" : "from-[#2E6FCC] to-[#58A1FF]";
+    tone === "green" ? "from-[#2A8C73] to-[#6AB29E]" : tone === "orange" ? "from-[#E98E2A] to-[#F4B248]" : "from-[#3F6E66] to-[#7BB2A5]";
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs font-semibold text-[#4B6080]">
+      <div className="flex items-center justify-between text-xs font-semibold text-[#5D695F]">
         <span>{label}</span>
         <span>{formatPct(value)}</span>
       </div>
-      <div className="h-2 rounded-full bg-[#E7EEF8]">
+      <div className="h-2 rounded-full bg-[#E8E1D6]">
         <div className={`h-2 rounded-full bg-gradient-to-r ${toneClass}`} style={{ width: `${width}%` }} />
       </div>
     </div>
@@ -252,7 +252,7 @@ export default function PlatformAdminExperimentsPage() {
       : "border-[#F5CFCA] bg-[#FFF3F1] text-[#9B3931]";
 
   return (
-    <main className="min-h-screen w-full bg-[radial-gradient(circle_at_top_left,_#E8F1FF_0%,_#F7FAFF_45%,_#FCFDFE_100%)] px-4 py-6 md:px-8 xl:px-14">
+    <main className="min-h-screen w-full bg-[radial-gradient(circle_at_top_left,_#F6F2EA_0%,_#F3EDE3_42%,_#FCFAF6_100%)] px-4 py-6 md:px-8 xl:px-14">
       <section className="mx-auto max-w-7xl space-y-5">
         <div className="rounded-3xl border border-[#CCDBEE] bg-white/90 p-5 shadow-[0_14px_36px_rgba(16,48,90,0.10)]">
           <div className="flex flex-wrap items-center justify-between gap-3">

@@ -5,7 +5,7 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.children import ChildCreateRequest
+from app.schemas.children import ChildCreateRequest, FamilyChildCreateRequest
 
 
 def _safe_year_replace(value: date, year: int) -> date:
@@ -30,3 +30,20 @@ def test_child_age_must_be_between_4_and_18() -> None:
 
     with pytest.raises(ValidationError):
         ChildCreateRequest(display_name="Veterana", date_of_birth=too_old, theme="default")
+
+
+def test_family_child_creation_requires_birth_date() -> None:
+    with pytest.raises(ValidationError):
+        FamilyChildCreateRequest(name="Ana")
+
+
+def test_family_child_age_must_be_between_4_and_18() -> None:
+    today = date.today()
+    too_young = _safe_year_replace(today, today.year - 3)
+    too_old = _safe_year_replace(today, today.year - 19)
+
+    with pytest.raises(ValidationError):
+        FamilyChildCreateRequest(name="Nova", birth_date=too_young)
+
+    with pytest.raises(ValidationError):
+        FamilyChildCreateRequest(name="Veterana", birth_date=too_old)

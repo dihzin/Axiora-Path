@@ -217,25 +217,25 @@ export default function AxioraCognitiveField() {
 
     const drawBackground = (atmosphericAlpha: number): void => {
       const gradient = ctx.createLinearGradient(0, 0, 0, height);
-      gradient.addColorStop(0, "#0F172A");
-      gradient.addColorStop(0.52, "#121C38");
-      gradient.addColorStop(1, "#1A2145");
+      gradient.addColorStop(0, "#18312E");
+      gradient.addColorStop(0.52, "#1B3A35");
+      gradient.addColorStop(1, "#254841");
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, width, height);
 
       const lateralDepth = ctx.createLinearGradient(0, 0, width, 0);
-      lateralDepth.addColorStop(0, "rgba(4, 7, 16, 0.12)");
-      lateralDepth.addColorStop(0.22, "rgba(7, 11, 22, 0.05)");
+      lateralDepth.addColorStop(0, "rgba(7, 20, 17, 0.12)");
+      lateralDepth.addColorStop(0.22, "rgba(11, 28, 25, 0.05)");
       lateralDepth.addColorStop(0.5, "rgba(0, 0, 0, 0)");
-      lateralDepth.addColorStop(0.78, "rgba(7, 11, 22, 0.05)");
-      lateralDepth.addColorStop(1, "rgba(4, 7, 16, 0.12)");
+      lateralDepth.addColorStop(0.78, "rgba(11, 28, 25, 0.05)");
+      lateralDepth.addColorStop(1, "rgba(7, 20, 17, 0.12)");
       ctx.fillStyle = lateralDepth;
       ctx.fillRect(0, 0, width, height);
 
       if (staticNoise.length > 0) {
         for (let i = 0; i < staticNoise.length; i += 1) {
           const grain = staticNoise[i];
-          ctx.fillStyle = `rgba(200, 220, 255, ${grain.alpha * atmosphericAlpha})`;
+          ctx.fillStyle = `rgba(243, 229, 209, ${grain.alpha * atmosphericAlpha})`;
           ctx.fillRect(grain.x, grain.y, grain.size, grain.size);
         }
       }

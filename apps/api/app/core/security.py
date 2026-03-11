@@ -66,6 +66,20 @@ def create_access_token(*, user_id: int, tenant_id: int, role: str, extra_claims
     )
 
 
+def create_primary_access_token(*, user_id: int) -> str:
+    return _create_token(
+        token_type="access",
+        user_id=user_id,
+        tenant_id=0,
+        role="PRIMARY_AUTH",
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_MINUTES),
+        extra_claims={
+            "primary_login": True,
+            "tenant_id": None,
+        },
+    )
+
+
 def create_refresh_token(*, user_id: int, tenant_id: int, role: str) -> str:
     return _create_token(
         token_type="refresh",
@@ -83,6 +97,13 @@ def decode_token(token: str) -> dict[str, Any]:
         algorithms=["HS256"],
         issuer=JWT_ISSUER,
     )
+
+
+def get_token_tenant_id(claims: dict[str, Any]) -> int | None:
+    tenant_id = claims.get("tenant_id")
+    if isinstance(tenant_id, int):
+        return tenant_id
+    return None
 
 
 def generate_csrf_token() -> str:

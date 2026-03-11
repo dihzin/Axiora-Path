@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -57,6 +57,67 @@ class ChildUpdateRequest(BaseModel):
     @classmethod
     def validate_date_of_birth(cls, value: date) -> date:
         return _validate_child_age(value)
+
+
+class FamilyChildCreateRequest(BaseModel):
+    name: str
+    birth_date: date
+
+    @field_validator("birth_date")
+    @classmethod
+    def validate_birth_date(cls, value: date) -> date:
+        return _validate_child_age(value)
+
+
+class ChildGuardianOut(BaseModel):
+    user_id: int
+    name: str
+    email: str
+    relationship: str
+
+
+class FamilyChildOut(BaseModel):
+    id: int
+    name: str
+    birth_date: date
+    guardians: list[ChildGuardianOut]
+
+
+class FamilyGuardianInviteRequest(BaseModel):
+    email: str
+    relationship: str = Field(min_length=2, max_length=32)
+
+
+class FamilyGuardianInviteResponse(BaseModel):
+    message: str
+    invite_token: str
+    invite_link: str
+    expires_at: datetime
+
+
+class FamilyGuardianAcceptInviteRequest(BaseModel):
+    token: str
+    name: str | None = None
+    password: str | None = Field(default=None, min_length=10)
+
+
+class FamilyGuardianAcceptInviteResponse(BaseModel):
+    message: str
+    tenant_slug: str
+    linked_children_count: int
+
+
+class FamilyEnableChildLoginRequest(BaseModel):
+    email: str
+    password: str = Field(min_length=10)
+    name: str | None = None
+
+
+class FamilyEnableChildLoginResponse(BaseModel):
+    child_id: int
+    user_id: int
+    email: str
+    name: str
 
 
 class ChildOut(BaseModel):

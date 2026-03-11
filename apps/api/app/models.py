@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy import (
     Boolean,
+    case,
     Date,
     DateTime,
     Enum as SqlEnum,
@@ -20,6 +21,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -33,13 +35,34 @@ def _enum_values(enum_cls: type[Enum]) -> list[str]:
 class TenantType(str, Enum):
     FAMILY = "FAMILY"
     SCHOOL = "SCHOOL"
+    SYSTEM_ADMIN = "SYSTEM_ADMIN"
 
 
 class MembershipRole(str, Enum):
     PARENT = "PARENT"
+    GUARDIAN = "GUARDIAN"
+    DIRECTOR = "DIRECTOR"
     TEACHER = "TEACHER"
+    STUDENT = "STUDENT"
     CHILD = "CHILD"
     PLATFORM_ADMIN = "PLATFORM_ADMIN"
+
+
+TENANT_MEMBERSHIP_ROLES: dict[TenantType, set[MembershipRole]] = {
+    TenantType.FAMILY: {
+        MembershipRole.PARENT,
+        MembershipRole.GUARDIAN,
+        MembershipRole.CHILD,
+    },
+    TenantType.SCHOOL: {
+        MembershipRole.DIRECTOR,
+        MembershipRole.TEACHER,
+        MembershipRole.STUDENT,
+    },
+    TenantType.SYSTEM_ADMIN: {
+        MembershipRole.PLATFORM_ADMIN,
+    },
+}
 
 
 class TaskDifficulty(str, Enum):
@@ -649,9 +672,15 @@ class LearningSettings(Base):
 
 class ChildProfile(Base):
     __tablename__ = "child_profiles"
+    __table_args__ = (
+        Index("ix_child_profiles_tenant_id", "tenant_id"),
+        Index("ix_child_profiles_user_id", "user_id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
     avatar_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     date_of_birth: Mapped[date] = mapped_column(Date, nullable=False)
@@ -662,7 +691,180 @@ class ChildProfile(Base):
     avatar_stage: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
     xp_total: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     last_mission_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    @property
+    def organization_id(self) -> int:
+        return self.tenant_id
+
+    @organization_id.setter
+    def organization_id(self, value: int) -> None:
+        self.tenant_id = value
+
+    @property
+    def name(self) -> str:
+        return self.display_name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self.display_name = value
+
+    @property
+    def birth_date(self) -> date:
+        return self.date_of_birth
+
+    @birth_date.setter
+    def birth_date(self, value: date) -> None:
+        self.date_of_birth = value
+
+
+class StudentProfile(Base):
+    __tablename__ = "student_profiles"
+    __table_args__ = (
+        Index("ix_student_profiles_tenant_id", "tenant_id"),
+        Index("ix_student_profiles_child_profile_id", "child_profile_id"),
+        Index("ix_student_profiles_user_id", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    date_of_birth: Mapped[date] = mapped_column(Date, nullable=False)
+    created_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    child_profile_id: Mapped[int | None] = mapped_column(ForeignKey("child_profiles.id"), nullable=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    @property
+    def organization_id(self) -> int:
+        return self.tenant_id
+
+    @organization_id.setter
+    def organization_id(self, value: int) -> None:
+        self.tenant_id = value
+
+    @property
+    def name(self) -> str:
+        return self.display_name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self.display_name = value
+
+    @property
+    def birth_date(self) -> date:
+        return self.date_of_birth
+
+    @birth_date.setter
+    def birth_date(self, value: date) -> None:
+        self.date_of_birth = value
+
+
+class TeacherStudent(Base):
+    __tablename__ = "teacher_students"
+    __table_args__ = (
+        UniqueConstraint(
+            "teacher_user_id",
+            "student_profile_id",
+            name="uq_teacher_students_teacher_user_student_profile",
+        ),
+        Index("ix_teacher_students_teacher_user_id", "teacher_user_id"),
+        Index("ix_teacher_students_student_profile_id", "student_profile_id"),
+    )
+
+    teacher_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    student_profile_id: Mapped[int] = mapped_column(
+        ForeignKey("student_profiles.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class StudentFamilyLink(Base):
+    __tablename__ = "student_family_links"
+    __table_args__ = (
+        UniqueConstraint(
+            "student_profile_id",
+            "child_profile_id",
+            name="uq_student_family_links_student_profile_child_profile",
+        ),
+        Index("ix_student_family_links_student_profile_id", "student_profile_id"),
+        Index("ix_student_family_links_child_profile_id", "child_profile_id"),
+    )
+
+    student_profile_id: Mapped[int] = mapped_column(
+        ForeignKey("student_profiles.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    child_profile_id: Mapped[int] = mapped_column(
+        ForeignKey("child_profiles.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    linked_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class SchoolFamilyLinkRequest(Base):
+    __tablename__ = "school_family_link_requests"
+    __table_args__ = (
+        UniqueConstraint("token", name="uq_school_family_link_requests_token"),
+        Index("ix_school_family_link_requests_student_profile_id", "student_profile_id"),
+        Index("ix_school_family_link_requests_child_profile_id", "child_profile_id"),
+        Index("ix_school_family_link_requests_status_expires_at", "status", "expires_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_profile_id: Mapped[int] = mapped_column(ForeignKey("student_profiles.id", ondelete="CASCADE"), nullable=False)
+    child_profile_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id", ondelete="CASCADE"), nullable=False)
+    requested_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    accepted_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    token: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="pending")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class ChildGuardian(Base):
+    __tablename__ = "child_guardians"
+    __table_args__ = (
+        UniqueConstraint("child_id", "user_id", name="uq_child_guardians_child_user"),
+        Index("ix_child_guardians_child_id", "child_id"),
+        Index("ix_child_guardians_user_id", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    child_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    relationship: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class FamilyGuardianInvitation(Base):
+    __tablename__ = "family_guardian_invitations"
+    __table_args__ = (
+        UniqueConstraint("token", name="uq_family_guardian_invitations_token"),
+        Index("ix_family_guardian_invitations_tenant_id_created_at", "tenant_id", "created_at"),
+        Index("ix_family_guardian_invitations_email", "email"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    relationship: Mapped[str] = mapped_column(String(32), nullable=False)
+    token: Mapped[str] = mapped_column(String(255), nullable=False)
+    invited_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    accepted_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
 class AxionChildProfile(Base):
@@ -731,6 +933,126 @@ class Wallet(Base):
     tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
     child_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id"), nullable=False)
     currency_code: Mapped[str] = mapped_column(String(8), nullable=False, server_default="BRL")
+
+
+@event.listens_for(ChildProfile, "before_insert")
+@event.listens_for(ChildProfile, "before_update")
+def _validate_child_profile_family_tenant(_mapper: Any, connection: Any, target: ChildProfile) -> None:
+    tenant_type = connection.execute(
+        text("SELECT type FROM tenants WHERE id = :tenant_id"),
+        {"tenant_id": target.tenant_id},
+    ).scalar_one_or_none()
+    if tenant_type is not None and str(tenant_type).upper() != TenantType.FAMILY.value:
+        raise ValueError("child_profiles can only belong to FAMILY tenants")
+
+
+@event.listens_for(Membership, "before_insert")
+@event.listens_for(Membership, "before_update")
+def _validate_membership_role_for_tenant(_mapper: Any, connection: Any, target: Membership) -> None:
+    tenant_type_raw = connection.execute(
+        text("SELECT type FROM tenants WHERE id = :tenant_id"),
+        {"tenant_id": target.tenant_id},
+    ).scalar_one_or_none()
+    if tenant_type_raw is None:
+        raise ValueError("memberships require an existing tenant")
+
+    tenant_type = TenantType(str(tenant_type_raw).upper())
+    allowed_roles = TENANT_MEMBERSHIP_ROLES[tenant_type]
+    role_value = target.role if isinstance(target.role, MembershipRole) else MembershipRole(str(target.role).upper())
+    if role_value not in allowed_roles:
+        allowed = ", ".join(sorted(item.value for item in allowed_roles))
+        raise ValueError(f"{tenant_type.value} tenants only allow membership roles: {allowed}")
+
+
+@event.listens_for(StudentProfile, "before_insert")
+@event.listens_for(StudentProfile, "before_update")
+def _validate_student_profile_school_tenant(_mapper: Any, connection: Any, target: StudentProfile) -> None:
+    tenant_type = connection.execute(
+        text("SELECT type FROM tenants WHERE id = :tenant_id"),
+        {"tenant_id": target.tenant_id},
+    ).scalar_one_or_none()
+    if tenant_type is None:
+        raise ValueError("student_profiles require an existing tenant")
+    if str(tenant_type).upper() != TenantType.SCHOOL.value:
+        raise ValueError("student_profiles can only belong to SCHOOL tenants")
+
+
+@event.listens_for(TeacherStudent, "before_insert")
+@event.listens_for(TeacherStudent, "before_update")
+def _validate_teacher_student_school_membership(_mapper: Any, connection: Any, target: TeacherStudent) -> None:
+    student_row = connection.execute(
+        text(
+            """
+            SELECT sp.tenant_id, t.type
+            FROM student_profiles AS sp
+            JOIN tenants AS t ON t.id = sp.tenant_id
+            WHERE sp.id = :student_profile_id
+            """
+        ),
+        {"student_profile_id": target.student_profile_id},
+    ).first()
+    if student_row is None:
+        raise ValueError("teacher_students require an existing student profile")
+
+    tenant_id = int(student_row[0])
+    tenant_type = str(student_row[1]).upper()
+    if tenant_type != TenantType.SCHOOL.value:
+        raise ValueError("teacher_students can only reference student profiles from SCHOOL tenants")
+
+    teacher_role = connection.execute(
+        text(
+            """
+            SELECT role
+            FROM memberships
+            WHERE tenant_id = :tenant_id AND user_id = :teacher_user_id
+            """
+        ),
+        {
+            "tenant_id": tenant_id,
+            "teacher_user_id": target.teacher_user_id,
+        },
+    ).scalar_one_or_none()
+    if teacher_role is None or str(teacher_role).upper() != MembershipRole.TEACHER.value:
+        raise ValueError("teacher_user_id must reference a TEACHER membership in the same SCHOOL tenant")
+
+
+@event.listens_for(StudentFamilyLink, "before_insert")
+@event.listens_for(StudentFamilyLink, "before_update")
+def _validate_student_family_link_tenants(_mapper: Any, connection: Any, target: StudentFamilyLink) -> None:
+    student_row = connection.execute(
+        text(
+            """
+            SELECT sp.tenant_id, t.type
+            FROM student_profiles AS sp
+            JOIN tenants AS t ON t.id = sp.tenant_id
+            WHERE sp.id = :student_profile_id
+            """
+        ),
+        {"student_profile_id": target.student_profile_id},
+    ).first()
+    if student_row is None:
+        raise ValueError("student_family_links require an existing student profile")
+
+    child_row = connection.execute(
+        text(
+            """
+            SELECT cp.tenant_id, t.type
+            FROM child_profiles AS cp
+            JOIN tenants AS t ON t.id = cp.tenant_id
+            WHERE cp.id = :child_profile_id
+            """
+        ),
+        {"child_profile_id": target.child_profile_id},
+    ).first()
+    if child_row is None:
+        raise ValueError("student_family_links require an existing child profile")
+
+    student_tenant_type = str(student_row[1]).upper()
+    child_tenant_type = str(child_row[1]).upper()
+    if student_tenant_type != TenantType.SCHOOL.value:
+        raise ValueError("student_profile_id must belong to a SCHOOL tenant")
+    if child_tenant_type != TenantType.FAMILY.value:
+        raise ValueError("child_profile_id must belong to a FAMILY tenant")
 
 
 class LedgerTransaction(Base):
@@ -1034,6 +1356,38 @@ class Subject(Base):
     icon: Mapped[str | None] = mapped_column(String(120), nullable=True)
     color: Mapped[str | None] = mapped_column(String(32), nullable=True)
     order: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    @hybrid_property
+    def age_min(self) -> int:
+        if self.age_group == SubjectAgeGroup.AGE_6_8:
+            return 6
+        if self.age_group == SubjectAgeGroup.AGE_9_12:
+            return 9
+        return 13
+
+    @age_min.expression
+    def age_min(cls):  # type: ignore[no-untyped-def]
+        return case(
+            (cls.age_group == SubjectAgeGroup.AGE_6_8, 6),
+            (cls.age_group == SubjectAgeGroup.AGE_9_12, 9),
+            else_=13,
+        )
+
+    @hybrid_property
+    def age_max(self) -> int:
+        if self.age_group == SubjectAgeGroup.AGE_6_8:
+            return 8
+        if self.age_group == SubjectAgeGroup.AGE_9_12:
+            return 12
+        return 15
+
+    @age_max.expression
+    def age_max(cls):  # type: ignore[no-untyped-def]
+        return case(
+            (cls.age_group == SubjectAgeGroup.AGE_6_8, 8),
+            (cls.age_group == SubjectAgeGroup.AGE_9_12, 12),
+            else_=15,
+        )
 
 
 class Unit(Base):

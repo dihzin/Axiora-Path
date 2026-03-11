@@ -241,25 +241,10 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [path, setPath] = useState<LearningPathResponse | null>(() => {
-    if (typeof window === "undefined") return null;
-    const rawSubjectId = new URLSearchParams(window.location.search).get("subjectId");
-    const parsedSubjectId = Number(rawSubjectId);
-    const initialSubjectId = Number.isFinite(parsedSubjectId) && parsedSubjectId > 0 ? parsedSubjectId : null;
-    return readCachedPath(initialSubjectId);
-  });
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [path, setPath] = useState<LearningPathResponse | null>(null);
   const [subjects, setSubjects] = useState<AprenderSubjectOption[]>([]);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(() => {
-    if (typeof window === "undefined") return null;
-    const rawFromQuery = new URLSearchParams(window.location.search).get("subjectId");
-    const parsedFromQuery = Number(rawFromQuery);
-    if (Number.isFinite(parsedFromQuery) && parsedFromQuery > 0) {
-      return parsedFromQuery;
-    }
-    const raw = window.localStorage.getItem(resolveSubjectStorageKey());
-    const parsed = Number(raw);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-  });
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
   const [selectedArea, setSelectedArea] = useState<SubjectAreaLabel>("Exatas");
   const [coins, setCoins] = useState(0);
   const [xpPercent, setXpPercent] = useState(0);
@@ -268,13 +253,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   const [xpInLevel, setXpInLevel] = useState(0);
   const [xpToNextLevel, setXpToNextLevel] = useState(100);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(() => {
-    if (typeof window === "undefined") return true;
-    const rawSubjectId = new URLSearchParams(window.location.search).get("subjectId");
-    const parsedSubjectId = Number(rawSubjectId);
-    const initialSubjectId = Number.isFinite(parsedSubjectId) && parsedSubjectId > 0 ? parsedSubjectId : null;
-    return readCachedPath(initialSubjectId) === null;
-  });
+  const [loading, setLoading] = useState(true);
   const [pathRefreshing, setPathRefreshing] = useState(false);
   const [insights, setInsights] = useState<LearningInsightsResponse | null>(null);
   const [missions, setMissions] = useState<MissionsCurrentResponse | null>(null);
@@ -294,6 +273,32 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
     const parsed = Number(subjectIdFromQueryRaw);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }, [subjectIdFromQueryRaw]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const rawFromQuery = new URLSearchParams(window.location.search).get("subjectId");
+    const parsedFromQuery = Number(rawFromQuery);
+    const querySubjectId = Number.isFinite(parsedFromQuery) && parsedFromQuery > 0 ? parsedFromQuery : null;
+    const rawStoredSubjectId = window.localStorage.getItem(resolveSubjectStorageKey());
+    const parsedStoredSubjectId = Number(rawStoredSubjectId);
+    const storedSubjectId = Number.isFinite(parsedStoredSubjectId) && parsedStoredSubjectId > 0 ? parsedStoredSubjectId : null;
+    const initialSubjectId = querySubjectId ?? storedSubjectId;
+    const cachedPath = readCachedPath(initialSubjectId);
+
+    if (cachedPath) {
+      setPath(cachedPath);
+      hasLoadedPathRef.current = true;
+    }
+
+    if (initialSubjectId !== null) {
+      setSelectedSubjectId(initialSubjectId);
+    } else if (cachedPath?.subjectId) {
+      setSelectedSubjectId(cachedPath.subjectId);
+    }
+
+    setLoading(cachedPath === null);
+    setIsHydrated(true);
+  }, []);
 
   useEffect(() => {
     if (path) {
@@ -320,11 +325,13 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   const visibleSubjects = subjectsForUi;
 
   useEffect(() => {
+    if (!isHydrated) return;
     if (subjectIdFromQuery === null) return;
     setSelectedSubjectId((prev) => (prev === subjectIdFromQuery ? prev : subjectIdFromQuery));
-  }, [subjectIdFromQuery]);
+  }, [isHydrated, subjectIdFromQuery]);
 
   useEffect(() => {
+    if (!isHydrated) return;
     if (typeof window === "undefined") return;
     const key = resolveSubjectStorageKey();
     if (selectedSubjectId === null) {
@@ -332,7 +339,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
       return;
     }
     window.localStorage.setItem(key, String(selectedSubjectId));
-  }, [selectedSubjectId]);
+  }, [isHydrated, selectedSubjectId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -362,6 +369,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   }, []);
 
   useEffect(() => {
+    if (!isHydrated) return;
     let active = true;
     (async () => {
       try {
@@ -384,15 +392,17 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
     return () => {
       active = false;
     };
-  }, []);
+  }, [isHydrated]);
 
   useEffect(() => {
+    if (!isHydrated) return;
     if (subjectsForUi.length === 0) return;
     const preferredArea = resolveAreaForSubject(groupedByArea, selectedSubjectId);
     setSelectedArea((prev) => (prev === preferredArea ? prev : preferredArea));
-  }, [groupedByArea, selectedSubjectId, subjectsForUi.length]);
+  }, [groupedByArea, isHydrated, selectedSubjectId, subjectsForUi.length]);
 
   useEffect(() => {
+    if (!isHydrated) return;
     if (subjectsForUi.length === 0) return;
     if (subjectIdFromQuery !== null && !subjectsForUi.some((item) => item.id === subjectIdFromQuery)) {
       const fallback = subjectsForUi[0]?.id ?? null;
@@ -405,9 +415,10 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
     if (selectedSubjectId !== null && !subjectsForUi.some((item) => item.id === selectedSubjectId)) {
       setSelectedSubjectId(subjectsForUi[0]?.id ?? null);
     }
-  }, [router, selectedSubjectId, subjectIdFromQuery, subjectsForUi]);
+  }, [isHydrated, router, selectedSubjectId, subjectIdFromQuery, subjectsForUi]);
 
   useEffect(() => {
+    if (!isHydrated) return;
     if (visibleSubjects.length === 0) return;
     if (selectedSubjectId !== null && visibleSubjects.some((item) => item.id === selectedSubjectId)) return;
     const nextSubjectId = visibleSubjects[0]?.id ?? null;
@@ -415,7 +426,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
       setSelectedSubjectId(nextSubjectId);
       router.replace(`/child/aprender?subjectId=${nextSubjectId}`);
     }
-  }, [router, selectedSubjectId, visibleSubjects]);
+  }, [isHydrated, router, selectedSubjectId, visibleSubjects]);
 
   const onSelectSubject = (subjectId: number) => {
     setSelectedSubjectId((prev) => (prev === subjectId ? prev : subjectId));
@@ -423,6 +434,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   };
 
   useEffect(() => {
+    if (!isHydrated) return;
     let active = true;
     (async () => {
       try {
@@ -480,9 +492,10 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
     return () => {
       active = false;
     };
-  }, [router, selectedSubjectId, completedLessonSignal, pathRetryToken]);
+  }, [completedLessonSignal, isHydrated, pathRetryToken, router, selectedSubjectId]);
 
   useEffect(() => {
+    if (!isHydrated) return;
     if (typeof window === "undefined") return;
     const rawChildId = window.localStorage.getItem("axiora_child_id");
     const childId = rawChildId ? Number(rawChildId) : NaN;
@@ -508,9 +521,10 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
     return () => {
       active = false;
     };
-  }, [completedLessonSignal]);
+  }, [completedLessonSignal, isHydrated]);
 
   useEffect(() => {
+    if (!isHydrated) return;
     let active = true;
     void getAprenderLearningStreak()
       .then((streak) => {
@@ -524,9 +538,10 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
     return () => {
       active = false;
     };
-  }, [completedLessonSignal, path?.streakDays, selectedSubjectId]);
+  }, [completedLessonSignal, isHydrated, path?.streakDays, selectedSubjectId]);
 
   useEffect(() => {
+    if (!isHydrated) return;
     let active = true;
     (async () => {
       setInsightsLoading(true);
@@ -542,7 +557,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
     return () => {
       active = false;
     };
-  }, [selectedSubjectId]);
+  }, [isHydrated, selectedSubjectId]);
 
   const selectedSubjectName = useMemo(() => {
     const selectedFromList = subjectsForUi.find((item) => item.id === selectedSubjectId)?.name;
@@ -663,9 +678,9 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   return (
     <div className="relative overflow-hidden min-h-screen bg-transparent lg:h-screen">
       <div className="w-full lg:h-screen lg:overflow-hidden lg:pl-[208px]">
-        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/5 lg:border-t-white/5 lg:bg-[linear-gradient(180deg,#0F172A_0%,#0D1626_100%)] lg:px-3 lg:py-5">
+        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/5 lg:border-t-white/5 lg:bg-[linear-gradient(180deg,#17322F_0%,#112825_100%)] lg:px-3 lg:py-5">
           <div className="mb-0.5 flex justify-center">
-            <div className="rounded-2xl bg-[#12213D]/80 p-1.5 shadow-[inset_0_1px_12px_rgba(0,0,0,0.35)]">
+            <div className="rounded-2xl bg-[#1C3A36]/82 p-1.5 shadow-[inset_0_1px_12px_rgba(0,0,0,0.3)]">
               <div className="scale-90">
                 <AxionCharacter stage={1} moodState="NEUTRAL" reducedMotion={false} />
               </div>
@@ -682,11 +697,20 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
         <div className="mx-auto w-full lg:h-screen lg:max-w-[1420px] lg:px-8 xl:max-w-[1560px] xl:px-12 2xl:px-16">
           <div className="mx-auto w-full max-w-sm pb-24 pt-1 md:max-w-4xl md:pb-8 lg:flex lg:h-screen lg:max-w-[1360px] lg:flex-col lg:overflow-hidden lg:pb-0 lg:pt-4 xl:max-w-[1480px]">
             <div className="mx-auto w-full max-w-[760px] px-4 sm:px-6 lg:max-w-none lg:px-2">
-              <header ref={headerRef} className="relative z-50 space-y-2 bg-[rgba(15,23,42,0.08)] pb-2 [backdrop-filter:blur(2px)] lg:flex-none lg:space-y-2 lg:bg-transparent lg:pb-2">
+              <header ref={headerRef} className="relative z-50 space-y-2 bg-[rgba(24,49,46,0.08)] pb-2 [backdrop-filter:blur(2px)] lg:flex-none lg:space-y-2 lg:bg-transparent lg:pb-2">
                 {initialPathLoading ? (
-                  <div className="space-y-2">
-                    <div className="h-[38px] w-full animate-pulse rounded-full border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,52,0.82),rgba(10,19,42,0.76))]" />
-                    <div className="h-4 w-48 animate-pulse rounded-full bg-white/10" />
+                  <div className="space-y-3 rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(25,53,48,0.82),rgba(18,37,34,0.76))] p-3 shadow-[0_24px_80px_rgba(6,18,16,0.28)]">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="h-10 w-[196px] animate-pulse rounded-full border border-white/8 bg-[linear-gradient(90deg,rgba(248,225,195,0.08),rgba(79,157,138,0.18),rgba(255,163,94,0.14))]" />
+                        <div className="h-10 w-[132px] animate-pulse rounded-full border border-white/8 bg-white/[0.06]" />
+                      </div>
+                      <div className="hidden h-9 w-[92px] animate-pulse rounded-full bg-white/[0.08] lg:block" />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="h-3 w-44 animate-pulse rounded-full bg-[#F0E3D2]/10" />
+                      <div className="h-3 w-28 animate-pulse rounded-full bg-[#F0E3D2]/8" />
+                    </div>
                   </div>
                 ) : (
                   <>
@@ -703,7 +727,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
                         onSelectSubject={onSelectSubject}
                       />
                     </div>
-                    <div className="flex items-center gap-4 text-xs font-medium text-slate-300">
+                    <div className="flex items-center gap-4 text-xs font-medium text-[#E4D8C9]">
                       <span className="flex items-center gap-1">
                         🔥 {weeklyRemaining} missões restantes esta semana
                       </span>
@@ -716,18 +740,56 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
                 {initialPathLoading ? (
                   <section className="relative w-full">
                     <div className="hidden lg:grid lg:grid-cols-[minmax(0,1fr)_356px] lg:gap-4" style={{ height: `${desktopStageHeight}px` }}>
-                      <div className="overflow-hidden rounded-[34px] border border-white/8 bg-[linear-gradient(180deg,rgba(10,22,48,0.82),rgba(9,20,43,0.74))]">
-                        <div className="h-full w-full animate-pulse bg-[radial-gradient(ellipse_at_50%_35%,rgba(96,165,250,0.22),rgba(37,99,235,0.08)_36%,rgba(2,6,23,0)_72%)]" />
+                      <div className="overflow-hidden rounded-[34px] border border-white/8 bg-[linear-gradient(180deg,rgba(23,47,43,0.88),rgba(16,31,28,0.82))] shadow-[0_30px_90px_rgba(5,16,14,0.24)]">
+                        <div className="relative h-full w-full overflow-hidden">
+                          <div className="absolute inset-x-10 top-10 h-16 animate-pulse rounded-[24px] bg-[linear-gradient(90deg,rgba(240,227,210,0.06),rgba(255,163,94,0.14),rgba(79,157,138,0.16))]" />
+                          <div className="absolute left-[12%] top-[22%] h-20 w-20 animate-pulse rounded-[28px] bg-[#4F9D8A]/18 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]" />
+                          <div className="absolute left-[26%] top-[34%] h-16 w-16 animate-pulse rounded-[24px] bg-[#FF9A5C]/16 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]" />
+                          <div className="absolute left-[44%] top-[19%] h-24 w-24 animate-pulse rounded-[32px] bg-[#F0C779]/14 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]" />
+                          <div className="absolute left-[56%] top-[41%] h-16 w-16 animate-pulse rounded-[24px] bg-[#4F9D8A]/16 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]" />
+                          <div className="absolute left-[70%] top-[27%] h-20 w-20 animate-pulse rounded-[28px] bg-[#FF9A5C]/15 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]" />
+                          <div className="absolute inset-x-[14%] bottom-14 h-28 animate-pulse rounded-[32px] border border-white/6 bg-[linear-gradient(180deg,rgba(14,30,27,0.62),rgba(14,30,27,0.22))]" />
+                          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_34%,rgba(255,163,94,0.12),rgba(79,157,138,0.1)_34%,rgba(2,6,23,0)_72%)]" />
+                        </div>
                       </div>
                       <div className="flex min-h-0 flex-col gap-3">
-                        <div className="h-[292px] animate-pulse rounded-[30px] border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,52,0.84),rgba(10,19,42,0.8))]" />
-                        <div className="h-[148px] animate-pulse rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,52,0.82),rgba(10,19,42,0.76))]" />
-                        <div className="flex-1 animate-pulse rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,52,0.8),rgba(10,19,42,0.74))]" />
+                        <div className="rounded-[30px] border border-white/8 bg-[linear-gradient(180deg,rgba(24,49,45,0.9),rgba(18,35,31,0.82))] p-5 shadow-[0_22px_60px_rgba(5,16,14,0.22)]">
+                          <div className="h-3 w-24 animate-pulse rounded-full bg-[#F0E3D2]/12" />
+                          <div className="mt-4 h-8 w-[68%] animate-pulse rounded-full bg-[linear-gradient(90deg,rgba(255,163,94,0.16),rgba(79,157,138,0.18))]" />
+                          <div className="mt-3 h-3 w-full animate-pulse rounded-full bg-white/[0.07]" />
+                          <div className="mt-2 h-3 w-[84%] animate-pulse rounded-full bg-white/[0.06]" />
+                          <div className="mt-6 grid grid-cols-2 gap-3">
+                            <div className="h-24 animate-pulse rounded-[22px] bg-white/[0.05]" />
+                            <div className="h-24 animate-pulse rounded-[22px] bg-white/[0.05]" />
+                          </div>
+                        </div>
+                        <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(23,46,42,0.86),rgba(17,34,30,0.78))] p-4 shadow-[0_18px_46px_rgba(5,16,14,0.18)]">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="h-3 w-28 animate-pulse rounded-full bg-[#F0E3D2]/12" />
+                            <div className="h-8 w-16 animate-pulse rounded-full bg-white/[0.06]" />
+                          </div>
+                          <div className="mt-4 h-16 animate-pulse rounded-[20px] bg-[linear-gradient(90deg,rgba(79,157,138,0.14),rgba(255,163,94,0.12))]" />
+                        </div>
+                        <div className="flex-1 rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(22,44,40,0.84),rgba(16,31,28,0.76))] p-4 shadow-[0_18px_46px_rgba(5,16,14,0.18)]">
+                          <div className="h-3 w-32 animate-pulse rounded-full bg-[#F0E3D2]/12" />
+                          <div className="mt-4 space-y-3">
+                            <div className="h-14 animate-pulse rounded-[18px] bg-white/[0.05]" />
+                            <div className="h-14 animate-pulse rounded-[18px] bg-white/[0.05]" />
+                            <div className="h-14 animate-pulse rounded-[18px] bg-white/[0.05]" />
+                          </div>
+                        </div>
                       </div>
                     </div>
                     <div className="space-y-4 lg:hidden">
-                      <div className="h-[360px] animate-pulse rounded-[30px] border border-white/8 bg-[linear-gradient(180deg,rgba(10,22,48,0.82),rgba(9,20,43,0.74))]" />
-                      <div className="h-[220px] animate-pulse rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,52,0.84),rgba(10,19,42,0.8))]" />
+                      <div className="rounded-[30px] border border-white/8 bg-[linear-gradient(180deg,rgba(23,47,43,0.88),rgba(16,31,28,0.82))] p-4 shadow-[0_24px_70px_rgba(5,16,14,0.22)]">
+                        <div className="h-6 w-40 animate-pulse rounded-full bg-[linear-gradient(90deg,rgba(255,163,94,0.14),rgba(79,157,138,0.18))]" />
+                        <div className="mt-4 h-[280px] animate-pulse rounded-[26px] bg-[radial-gradient(ellipse_at_50%_30%,rgba(255,163,94,0.14),rgba(79,157,138,0.1)_36%,rgba(2,6,23,0)_74%)]" />
+                      </div>
+                      <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(24,49,45,0.88),rgba(18,35,31,0.8))] p-4 shadow-[0_18px_46px_rgba(5,16,14,0.18)]">
+                        <div className="h-3 w-28 animate-pulse rounded-full bg-[#F0E3D2]/12" />
+                        <div className="mt-4 h-20 animate-pulse rounded-[20px] bg-white/[0.05]" />
+                        <div className="mt-3 h-20 animate-pulse rounded-[20px] bg-white/[0.05]" />
+                      </div>
                     </div>
                   </section>
                 ) : (
@@ -740,7 +802,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
                           className="pointer-events-none absolute inset-x-0 top-10 z-0 h-[760px]"
                           style={{
                             background:
-                              "radial-gradient(ellipse at 50% 24%, rgba(103,232,249,0.12), rgba(37,99,235,0.07) 34%, rgba(2,6,23,0) 72%)",
+                              "radial-gradient(ellipse at 50% 24%, rgba(255,163,94,0.12), rgba(79,157,138,0.08) 34%, rgba(2,6,23,0) 72%)",
                             filter: "blur(22px)",
                           }}
                         />
@@ -765,7 +827,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
                           className="pointer-events-none absolute inset-0 -z-10 rounded-[40px]"
                           style={{
                             background:
-                              "radial-gradient(ellipse at 38% 22%, rgba(103,232,249,0.14), rgba(37,99,235,0.08) 34%, rgba(2,6,23,0) 72%), radial-gradient(ellipse at 78% 86%, rgba(250,204,21,0.08), transparent 22%)",
+                              "radial-gradient(ellipse at 38% 22%, rgba(255,163,94,0.14), rgba(79,157,138,0.08) 34%, rgba(2,6,23,0) 72%), radial-gradient(ellipse at 78% 86%, rgba(241,197,107,0.08), transparent 22%)",
                             filter: "blur(22px)",
                           }}
                         />
@@ -851,7 +913,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
                         className="pointer-events-none absolute inset-0 -z-10 rounded-[40px] opacity-80"
                         style={{
                           background:
-                            "radial-gradient(ellipse at 18% 14%, rgba(103,232,249,0.1), transparent 28%), radial-gradient(ellipse at 82% 80%, rgba(250,204,21,0.08), transparent 24%)",
+                            "radial-gradient(ellipse at 18% 14%, rgba(255,163,94,0.1), transparent 28%), radial-gradient(ellipse at 82% 80%, rgba(241,197,107,0.08), transparent 24%)",
                           filter: "blur(18px)",
                         }}
                       />

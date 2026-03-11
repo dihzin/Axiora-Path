@@ -296,15 +296,20 @@ export default function OnboardingPage() {
 
   return (
     <main
-      className={`axiora-brand-page safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md justify-center overflow-x-clip p-4 md:p-6 ${
+      className={`axiora-brand-page safe-px safe-pb flex min-h-screen w-full max-w-none justify-center overflow-x-clip p-4 md:px-6 md:py-6 lg:px-8 ${
         isFocusStep ? "items-center" : "items-start"
       }`}
     >
-      <Card className={`axiora-brand-content axiora-glass-card w-full text-slate-100 ${isFocusStep ? "shadow-[0_12px_32px_rgba(16,48,90,0.14)]" : ""}`}>
+      <div className="axiora-brand-content mx-auto flex w-full max-w-6xl justify-center">
+      <Card
+        className={`axiora-glass-card mx-auto w-full text-[#FFF4E7] ${
+          isFocusStep ? "max-w-2xl shadow-[0_12px_32px_rgba(36,67,63,0.16)]" : "max-w-4xl"
+        }`}
+      >
         <CardHeader>
           <div className="space-y-2">
             <p className="axiora-kicker">Configuração inicial</p>
-            <CardTitle className="break-words text-base leading-tight text-slate-100 [overflow-wrap:anywhere]">
+            <CardTitle className="break-words text-base leading-tight text-[#FFF4E7] [overflow-wrap:anywhere] md:text-xl">
               Passo {step}/{TOTAL_STEPS}: {STEP_TITLES[step - 1]}
             </CardTitle>
             <div
@@ -313,26 +318,26 @@ export default function OnboardingPage() {
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={progressPercent}
-              className="h-2 w-full overflow-hidden rounded-full bg-slate-900/60"
+              className="h-2 w-full overflow-hidden rounded-full bg-[#19322F]/70"
             >
-              <div className="h-full rounded-full bg-gradient-to-r from-sky-300 to-cyan-300 transition-[width] duration-300" style={{ width: `${progressPercent}%` }} />
+              <div className="h-full rounded-full bg-gradient-to-r from-[#FFBE85] via-[#FF7A2F] to-[#4F9D8A] transition-[width] duration-300" style={{ width: `${progressPercent}%` }} />
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4 text-sm">
+        <CardContent className="space-y-4 text-sm md:space-y-5 md:text-base">
           {step === 1 ? (
             <div className="space-y-2">
               <p className="break-words font-semibold leading-snug">Passo 1: Criar perfil infantil</p>
               <div className="flex items-center gap-3 rounded-xl border border-border bg-white p-2">
                 <ChildAvatar name={childName || "Criança"} avatarKey={childAvatarKey} size={56} />
                 <div className="space-y-1">
-                  <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-[#2F527D]">
+                  <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-[#FFD8B8]">
                     <ImagePlus className="h-3.5 w-3.5" />
                     Enviar foto da criança
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => onAvatarFileChange(e.target.files?.[0] ?? null)} />
                   </label>
                   {childAvatarKey ? (
-                    <button type="button" className="text-xs font-semibold text-[#B8574B]" onClick={() => setChildAvatarKey(null)}>
+                    <button type="button" className="text-xs font-semibold text-[#FF9A72]" onClick={() => setChildAvatarKey(null)}>
                       Remover foto
                     </button>
                   ) : (
@@ -352,14 +357,14 @@ export default function OnboardingPage() {
                 <Input type="number" aria-label="Percentual para guardar" value={splitSave} onChange={(e) => setSplitSave(Number(e.target.value) || 0)} />
                 <Input type="number" aria-label="Percentual para doar" value={splitDonate} onChange={(e) => setSplitDonate(Number(e.target.value) || 0)} />
               </div>
-              <p className="break-words text-xs text-slate-300">GASTAR / GUARDAR / DOAR (total {splitTotal})</p>
+              <p className="break-words text-xs text-[#E6D8C7]">GASTAR / GUARDAR / DOAR (total {splitTotal})</p>
             </div>
           ) : null}
 
           {step === 3 ? (
             <div className="space-y-2">
               <p className="break-words font-semibold leading-snug">Passo 3: Revisar tarefas padrão</p>
-              {tasksLoading ? <p role="status" aria-live="polite" className="text-xs text-slate-300">Carregando tarefas...</p> : null}
+              {tasksLoading ? <p role="status" aria-live="polite" className="text-xs text-[#E6D8C7]">Carregando tarefas...</p> : null}
               {tasksError ? (
                 <div className="rounded-md border border-[#F4C5C2] bg-[#FFF2F1] p-2 text-xs text-[#B54C47]">
                   <p>{tasksError}</p>
@@ -372,7 +377,7 @@ export default function OnboardingPage() {
                   </button>
                 </div>
               ) : null}
-              {!tasksLoading && !tasksError && tasks.length === 0 ? <p className="text-xs text-slate-300">Nenhuma tarefa ativa encontrada para esta organização.</p> : null}
+              {!tasksLoading && !tasksError && tasks.length === 0 ? <p className="text-xs text-[#E6D8C7]">Nenhuma tarefa ativa encontrada para esta organização.</p> : null}
               {!tasksLoading && tasks.length > 0 ? (
                 <div className="space-y-1">
                   {tasks.map((task) => (
@@ -438,8 +443,8 @@ export default function OnboardingPage() {
                   placeholder="100,00"
                 />
               </div>
-              <p className="break-words text-xs text-slate-300">Digite o valor mensal em reais. Exemplo: 100,00</p>
-              <p className="break-words text-xs font-semibold text-[#35567F]">
+              <p className="break-words text-xs text-[#E6D8C7]">Digite o valor mensal em reais. Exemplo: 100,00</p>
+              <p className="break-words text-xs font-semibold text-[#FFD8B8]">
                 Valor informado: {parseBrlToCents(allowance) !== null ? formatCentsToBrl(parseBrlToCents(allowance) ?? 0) : "—"}
               </p>
             </div>
@@ -447,19 +452,19 @@ export default function OnboardingPage() {
 
           {step === 5 ? (
             <div className="space-y-4">
-              <div className="rounded-xl border border-[#CFE0F7] bg-[#F7FBFF] p-3">
-                <p className="break-words text-base font-black leading-tight text-[#16345D]">Passo 5: Termos e Privacidade</p>
-                <p className="mt-1 text-sm leading-relaxed text-[#3B5D87]">
+              <div className="rounded-xl border border-[#44605C] bg-[rgba(255,255,255,0.06)] p-3">
+                <p className="break-words text-base font-black leading-tight text-[#FFF4E7]">Passo 5: Termos e Privacidade</p>
+                <p className="mt-1 text-sm leading-relaxed text-[#E6D8C7]">
                   Antes de continuar, confirme o aceite dos termos para uso da plataforma no contexto familiar.
                 </p>
               </div>
-              <div className="space-y-2 rounded-lg border border-border p-3 text-sm leading-relaxed text-[#385881]">
+              <div className="space-y-2 rounded-lg border border-border bg-[rgba(255,255,255,0.04)] p-3 text-sm leading-relaxed text-[#EDE0D1]">
                 <p>
                   Ao continuar, você confirma que leu e aceita os Termos de Uso e a Política de Privacidade da organização.
                 </p>
                 <p className="font-semibold">Resumo: uso educacional familiar, tratamento de dados de rotina e retenção conforme política vigente.</p>
               </div>
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#C8D9F2] bg-[#F9FCFF] p-3 text-sm font-semibold text-[#1E3B65]">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#44605C] bg-[rgba(255,255,255,0.05)] p-3 text-sm font-semibold text-[#FFF0E1]">
                 <input
                   type="checkbox"
                   checked={legalAccepted}
@@ -473,9 +478,9 @@ export default function OnboardingPage() {
 
           {step === 6 ? (
             <div className="space-y-3">
-              <div className="rounded-xl border border-[#CFE0F7] bg-[#F7FBFF] p-3">
-                <p className="break-words text-base font-black leading-tight text-[#16345D]">Passo 6: Definir PIN dos pais</p>
-                <p className="mt-1 text-sm leading-relaxed text-[#3B5D87]">Esse PIN protege ações sensíveis no app dos responsáveis.</p>
+              <div className="rounded-xl border border-[#44605C] bg-[rgba(255,255,255,0.06)] p-3">
+                <p className="break-words text-base font-black leading-tight text-[#FFF4E7]">Passo 6: Definir PIN dos pais</p>
+                <p className="mt-1 text-sm leading-relaxed text-[#E6D8C7]">Esse PIN protege ações sensíveis no app dos responsáveis.</p>
               </div>
               <Input
                 type="password"
@@ -489,7 +494,7 @@ export default function OnboardingPage() {
                   setParentPin(digitsOnly.slice(0, 6));
                 }}
               />
-              <p className="text-xs text-slate-300">Padrão esperado: apenas números, com 4 a 6 dígitos.</p>
+              <p className="text-xs text-[#E6D8C7]">Padrão esperado: apenas números, com 4 a 6 dígitos.</p>
             </div>
           ) : null}
 
@@ -523,6 +528,7 @@ export default function OnboardingPage() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </main>
   );
 }

@@ -249,7 +249,7 @@ export default function ChildAxionPage() {
             Axion
           </div>
           <button
-            className="inline-flex items-center gap-1 rounded-full border border-[#A8C7EB] bg-white/85 px-3 py-1 text-xs font-bold text-[#2A456D] transition hover:bg-white"
+            className="axiora-chunky-btn axiora-control-btn axiora-chunky-btn--compact inline-flex items-center gap-1 px-3 py-1 text-xs text-[#2A456D]"
             onClick={() => setCoachOpen(true)}
             type="button"
           >
@@ -296,7 +296,7 @@ export default function ChildAxionPage() {
         </div>
 
         <button
-          className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-extrabold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 ${adaptiveButton.className}`}
+          className={`axiora-chunky-btn mt-5 inline-flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-70 ${adaptiveButton.className}`}
           disabled={loading || !brief || ctaPending}
           onClick={handleCta}
           type="button"
@@ -310,7 +310,7 @@ export default function ChildAxionPage() {
         {debugVisible ? (
           <section className="mt-4 rounded-2xl border border-[#BFD3EE] bg-white/80 p-3">
             <button
-              className="flex w-full items-center justify-between text-left text-xs font-extrabold text-[#24456F]"
+              className="axiora-chunky-btn axiora-control-btn flex w-full items-center justify-between px-3 py-2 text-left text-xs font-extrabold text-[#24456F]"
               onClick={() => setDebugOpen((prev) => !prev)}
               type="button"
             >
@@ -469,7 +469,7 @@ export default function ChildAxionPage() {
                 </div>
               </div>
               <button
-                className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-[#20B3A8] px-4 py-3 text-sm font-extrabold text-white shadow-[0_6px_0_rgba(14,125,116,0.35)] transition hover:brightness-95"
+                className="axiora-chunky-btn axiora-control-btn--teal mt-5 inline-flex w-full items-center justify-center px-4 py-3 text-sm font-extrabold text-white"
                 onClick={() => setCoachOpen(false)}
                 type="button"
               >

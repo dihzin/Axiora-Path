@@ -20,6 +20,7 @@ class RateLimitRule:
 
 GLOBAL_RULE = RateLimitRule(key_prefix="global", limit=100, window_seconds=60)
 LOGIN_RULE = RateLimitRule(key_prefix="login", limit=10, window_seconds=300)
+LOGIN_PATHS = {"/auth/login", "/auth/login-primary"}
 
 
 def _extract_ip(request: Request) -> str:
@@ -62,7 +63,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     content={"code": "RATE_LIMIT", "message": "Too many requests"},
                 )
 
-            if request.url.path == "/auth/login" and request.method.upper() == "POST":
+            if request.url.path in LOGIN_PATHS and request.method.upper() == "POST":
                 allowed_login = await _increment_and_check(redis, rule=LOGIN_RULE, ip=ip)
                 if not allowed_login:
                     return JSONResponse(

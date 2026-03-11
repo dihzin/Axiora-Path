@@ -1187,7 +1187,7 @@ export default function ProgressionMap({
               Concluído
             </div>
             <div className="inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[12px]" style={{ background: "rgba(10,18,34,0.76)", color: TEXT_PRIMARY, border: "1px solid rgba(255,255,255,0.06)" }}>
-              <span className="inline-block h-2 w-2 rounded-full bg-sky-400" />
+              <span className="inline-block h-2 w-2 rounded-full bg-[#FF9A48]" />
               Atual
             </div>
             <div className="inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[12px]" style={{ background: "rgba(10,18,34,0.76)", color: TEXT_MUTED, border: "1px solid rgba(255,255,255,0.06)" }}>

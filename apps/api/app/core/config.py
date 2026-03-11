@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     auth_cookie_secure: bool = True
     auth_cookie_domain: str | None = None
     auth_cookie_samesite: str = "lax"
-    csrf_exempt_paths: str = "/health,/docs,/redoc,/openapi.json,/auth/login,/auth/signup"
+    csrf_exempt_paths: str = "/health,/docs,/redoc,/openapi.json,/auth/login,/auth/login-primary,/auth/signup"
     account_lock_max_attempts: int = 5
     account_lock_minutes: int = 15
     coin_conversion_coins_per_real: int = 10

@@ -23,7 +23,7 @@ export function TopStatsBar({ streak, gems, xp, className, action }: TopStatsBar
         className,
       )}
     >
-      <div className="flex h-10 items-center gap-6 rounded-[20px] border border-white/8 bg-[linear-gradient(180deg,rgba(12,22,46,0.82),rgba(10,18,38,0.72))] px-4 py-1.5 shadow-[0_10px_24px_rgba(2,12,35,0.18),inset_0_1px_0_rgba(255,255,255,0.05)]">
+      <div className="flex h-10 items-center gap-6 rounded-[20px] border border-white/8 bg-[linear-gradient(180deg,rgba(24,49,43,0.84),rgba(19,39,35,0.74))] px-4 py-1.5 shadow-[0_10px_24px_rgba(7,20,17,0.18),inset_0_1px_0_rgba(255,255,255,0.05)]">
         <StatItem
           label="streak"
           value={Math.max(0, Math.floor(streak))}

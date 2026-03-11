@@ -40,8 +40,8 @@ const statusLabel: Record<RenderNodeStatus, string> = {
   current: "Atual",
   locked: "Bloqueada",
 };
-const TEXT_PRIMARY = "rgba(240,249,255,0.92)";
-const TEXT_MUTED = "rgba(226,232,240,0.72)";
+const TEXT_PRIMARY = "rgba(255,246,236,0.94)";
+const TEXT_MUTED = "rgba(231,220,205,0.74)";
 type MissionKind = "story" | "challenge" | "checkpoint" | "lesson";
 
 function resolveMissionKind(node: RenderableMapNode): MissionKind {
@@ -56,9 +56,9 @@ function getMissionKindMeta(kind: MissionKind) {
   if (kind === "story") {
     return {
       label: "História",
-      accent: "rgba(196,181,253,0.92)",
-      accentSoft: "rgba(139,92,246,0.18)",
-      glow: "0 0 18px rgba(139,92,246,0.22)",
+      accent: "rgba(255,190,133,0.92)",
+      accentSoft: "rgba(255,122,47,0.16)",
+      glow: "0 0 18px rgba(255,122,47,0.18)",
       Icon: BookOpen,
     };
   }
@@ -82,9 +82,9 @@ function getMissionKindMeta(kind: MissionKind) {
   }
   return {
     label: "Lição",
-    accent: "rgba(103,232,249,0.94)",
-    accentSoft: "rgba(34,211,238,0.16)",
-    glow: "0 0 18px rgba(56,189,248,0.18)",
+      accent: "rgba(255,163,94,0.94)",
+      accentSoft: "rgba(255,122,47,0.14)",
+      glow: "0 0 18px rgba(255,122,47,0.16)",
     Icon: Sparkles,
   };
 }
@@ -110,16 +110,16 @@ function getNodeVisuals(status: RenderNodeStatus, kind: MissionKind) {
   }
   if (status === "current") {
     return {
-      shell: "border-2 border-cyan-50 bg-[linear-gradient(180deg,#67e8f9_0%,#38bdf8_34%,#2563eb_74%,#8b5cf6_120%)] text-white shadow-[0_14px_30px_rgba(37,99,235,0.30),0_0_22px_rgba(103,232,249,0.22)]",
+      shell: "border-2 border-[#FFF3E5] bg-[linear-gradient(180deg,#FFBE85_0%,#FF9A48_34%,#4F9D8A_72%,#24433F_118%)] text-white shadow-[0_14px_30px_rgba(36,67,63,0.3),0_0_22px_rgba(255,154,72,0.22)]",
       shellHighlight: "linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0.07))",
       starFill: "rgba(255,255,255,0.16)",
       starStroke: "rgba(239,246,255,0.99)",
-      labelBg: "linear-gradient(180deg, rgba(8,24,52,0.96), rgba(13,22,49,0.96))",
-      labelBorder: "rgba(192,132,252,0.24)",
-      labelShadow: "0 12px 24px rgba(7,17,38,0.36), 0 0 18px rgba(56,189,248,0.24)",
-      labelText: "rgba(240,249,255,0.96)",
-      accentA: "rgba(255,255,255,0.96)",
-      accentB: "rgba(192,132,252,0.86)",
+      labelBg: "linear-gradient(180deg, rgba(28,58,54,0.96), rgba(20,40,37,0.96))",
+      labelBorder: "rgba(255,190,133,0.24)",
+      labelShadow: "0 12px 24px rgba(14,30,28,0.36), 0 0 18px rgba(255,122,47,0.18)",
+      labelText: "rgba(255,246,236,0.96)",
+      accentA: "rgba(255,246,236,0.96)",
+      accentB: "rgba(241,197,107,0.86)",
       kindAccent: kindMeta.accent,
       kindAccentSoft: kindMeta.accentSoft,
       kindGlow: kindMeta.glow,
@@ -166,7 +166,7 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
   const ringSecondaryOpacityClass = isCurrent ? "opacity-[0.54] group-hover:opacity-[0.66]" : "opacity-[0.28] group-hover:opacity-[0.40]";
   const hoverableClasses = reducedMotion
     ? "transition-opacity duration-200"
-    : "transition-transform duration-200 active:scale-105 hover:-translate-y-[2px] hover:scale-[1.12] hover:shadow-[0_0_18px_rgba(56,189,248,0.55)]";
+    : "transition-transform duration-200 active:scale-105 hover:-translate-y-[2px] hover:scale-[1.12] hover:shadow-[0_0_18px_rgba(255,122,47,0.35)]";
   const ring1Style = {
     width: 48,
     height: 48,
@@ -194,7 +194,7 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
 
   return (
     <div className="group relative">
-      <div className="pointer-events-none absolute -top-2 left-1/2 z-30 w-max max-w-[240px] -translate-x-1/2 -translate-y-full rounded-xl border border-white/12 bg-[rgba(6,16,34,0.88)] px-3 py-2 text-center text-[11px] text-white opacity-0 shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-opacity duration-150 group-hover:opacity-100">
+      <div className="pointer-events-none absolute -top-2 left-1/2 z-30 w-max max-w-[240px] -translate-x-1/2 -translate-y-full rounded-xl border border-white/12 bg-[rgba(23,50,47,0.9)] px-3 py-2 text-center text-[11px] text-white opacity-0 shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-opacity duration-150 group-hover:opacity-100">
         <p className="truncate text-xs font-semibold" style={{ color: TEXT_PRIMARY }}>{node.title}</p>
         <p className="mt-0.5 font-medium" style={{ color: TEXT_MUTED }}>
           {typeof node.xp === "number" ? `+${node.xp} XP · ` : ""}
@@ -236,7 +236,7 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
             aria-hidden
             className="pointer-events-none absolute inset-[-8px] rounded-full"
             style={{
-              background: "radial-gradient(circle, rgba(125,211,252,0.24), rgba(56,189,248,0.04) 62%, transparent 72%)",
+              background: "radial-gradient(circle, rgba(255,179,122,0.22), rgba(255,122,47,0.04) 62%, transparent 72%)",
             }}
           />
         ) : null}
@@ -259,12 +259,12 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
             <span
               aria-hidden
               className={cn("pointer-events-none absolute left-[-8px] top-[7px] h-[7px] w-[7px] rounded-full", !reducedMotion ? "animate-[pulse_2.1s_ease-in-out_infinite]" : "")}
-              style={{ background: visuals.accentA, boxShadow: "0 0 10px rgba(186,230,253,0.6)" }}
+              style={{ background: visuals.accentA, boxShadow: "0 0 10px rgba(255,190,133,0.48)" }}
             />
             <span
               aria-hidden
               className={cn("pointer-events-none absolute right-[-8px] top-[5px] h-[6px] w-[6px] rounded-full", !reducedMotion ? "animate-[pulse_2.8s_ease-in-out_infinite]" : "")}
-              style={{ background: visuals.accentB, boxShadow: "0 0 10px rgba(192,132,252,0.5)" }}
+              style={{ background: visuals.accentB, boxShadow: "0 0 10px rgba(255,122,47,0.4)" }}
             />
             <span
               aria-hidden
@@ -306,21 +306,21 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
             className={cn("pointer-events-none absolute inset-[-16px]", !reducedMotion ? "animate-[spin_16s_linear_infinite]" : "")}
             style={{
               background:
-                "conic-gradient(from 90deg, rgba(255,255,255,0) 0deg, rgba(186,230,253,0.24) 38deg, rgba(255,255,255,0) 72deg, rgba(255,255,255,0) 360deg)",
+                "conic-gradient(from 90deg, rgba(255,255,255,0) 0deg, rgba(255,190,133,0.24) 38deg, rgba(255,255,255,0) 72deg, rgba(255,255,255,0) 360deg)",
               maskImage: "radial-gradient(circle, transparent 54%, black 64%, transparent 74%)",
               WebkitMaskImage: "radial-gradient(circle, transparent 54%, black 64%, transparent 74%)",
             }}
           />
         ) : null}
-        {isCurrent ? <span aria-hidden className={cn("pointer-events-none absolute inset-[-10px] rounded-full border border-sky-300/24", !reducedMotion ? "animate-[pulse_2.6s_ease-out_infinite]" : "")} /> : null}
+        {isCurrent ? <span aria-hidden className={cn("pointer-events-none absolute inset-[-10px] rounded-full border border-[#FFBE85]/28", !reducedMotion ? "animate-[pulse_2.6s_ease-out_infinite]" : "")} /> : null}
         {isDone ? <span aria-hidden className="pointer-events-none absolute inset-[-3px] rounded-full shadow-[0_0_18px_rgba(16,185,129,0.22)]" /> : null}
-        {isCurrent ? <span aria-hidden className="pointer-events-none absolute inset-[-4px] rounded-full shadow-[0_0_20px_rgba(56,189,248,0.24)]" /> : null}
-        {isCurrent ? <div className="pointer-events-none absolute inset-0 rounded-full border border-sky-100/26" /> : null}
+        {isCurrent ? <span aria-hidden className="pointer-events-none absolute inset-[-4px] rounded-full shadow-[0_0_20px_rgba(255,122,47,0.2)]" /> : null}
+        {isCurrent ? <div className="pointer-events-none absolute inset-0 rounded-full border border-[#FFF3E5]/28" /> : null}
         {isDone ? <Check className="h-6 w-6" strokeWidth={2.6} aria-hidden /> : null}
         {isLocked ? <Lock className="h-5 w-5" strokeWidth={2.2} aria-hidden /> : null}
         {!isDone && !isLocked ? <MissionIcon className="h-[18px] w-[18px]" strokeWidth={2.3} aria-hidden /> : null}
         {node.isCheckpoint ? (
-          <span className="absolute -right-1 -top-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/25 bg-[#0F172A]/75 text-[#D9E2EF]">
+          <span className="absolute -right-1 -top-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/25 bg-[#18312E]/80 text-[#F3E7D8]">
             <Star className="h-2.5 w-2.5" strokeWidth={2} aria-hidden />
           </span>
         ) : null}
@@ -389,12 +389,12 @@ export function renderNode({ node, point, prevPoint, nextPoint, nodeIndex, compa
           <>
             <span
               aria-hidden
-              className="pointer-events-none absolute left-1/2 top-1/2 h-[84px] w-[84px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-300/70"
+              className="pointer-events-none absolute left-1/2 top-1/2 h-[84px] w-[84px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#FFBE85]/70"
               style={{ transform: `translate(-50%, -50%) scale(${burstA})`, opacity: burstAOpacity }}
             />
             <span
               aria-hidden
-              className="pointer-events-none absolute left-1/2 top-1/2 h-[84px] w-[84px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/55"
+              className="pointer-events-none absolute left-1/2 top-1/2 h-[84px] w-[84px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#4F9D8A]/55"
               style={{ transform: `translate(-50%, -50%) scale(${burstB})`, opacity: burstBOpacity }}
             />
           </>

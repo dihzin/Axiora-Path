@@ -14,6 +14,7 @@ from app.models import Membership, Tenant, User
 from app.services.events import EventService
 
 auth_scheme = HTTPBearer(auto_error=False)
+PRIMARY_LOGIN_ALLOWED_PATHS = {"/auth/memberships", "/auth/select-tenant"}
 
 
 def get_db() -> Iterator[Session]:
@@ -34,6 +35,23 @@ def get_event_service(db: DBSession) -> EventService:
 EventSvc = Annotated[EventService, Depends(get_event_service)]
 
 
+def resolve_tenant(
+    db: Session,
+    request: Request,
+    *,
+    tenant_slug: str | None = None,
+    tenant_id: int | None = None,
+) -> Tenant | None:
+    tenant: Tenant | None = None
+    if tenant_slug:
+        tenant = db.scalar(select(Tenant).where(Tenant.slug == tenant_slug, Tenant.deleted_at.is_(None)))
+    elif tenant_id is not None:
+        tenant = db.scalar(select(Tenant).where(Tenant.id == tenant_id, Tenant.deleted_at.is_(None)))
+
+    request.state.tenant_id = tenant.id if tenant is not None else None
+    return tenant
+
+
 def get_current_tenant(
     db: DBSession,
     request: Request,
@@ -45,13 +63,12 @@ def get_current_tenant(
             detail="X-Tenant-Slug header is required",
         )
 
-    tenant = db.scalar(select(Tenant).where(Tenant.slug == x_tenant_slug, Tenant.deleted_at.is_(None)))
+    tenant = resolve_tenant(db, request, tenant_slug=x_tenant_slug)
     if tenant is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Tenant not found",
         )
-    request.state.tenant_id = tenant.id
     return tenant
 
 
@@ -63,12 +80,7 @@ def get_current_tenant_optional(
     if not x_tenant_slug:
         request.state.tenant_id = None
         return None
-    tenant = db.scalar(select(Tenant).where(Tenant.slug == x_tenant_slug, Tenant.deleted_at.is_(None)))
-    if tenant is None:
-        request.state.tenant_id = None
-        return None
-    request.state.tenant_id = tenant.id
-    return tenant
+    return resolve_tenant(db, request, tenant_slug=x_tenant_slug)
 
 
 def get_current_user(
@@ -109,6 +121,13 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
         )
+
+    if payload.get("primary_login") is True and request.url.path not in PRIMARY_LOGIN_ALLOWED_PATHS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Primary login token requires tenant selection",
+        )
+
     # Guest multiplayer tokens are sandboxed to multiplayer endpoints only.
     if payload.get("guest_mode") is True:
         path = request.url.path or ""
@@ -144,11 +163,16 @@ def get_current_membership(
 
 def require_role(roles: list[str]) -> Callable[[Membership], Membership]:
     allowed = set(roles)
+    implied_roles = {
+        "DIRECTOR": {"TEACHER"},
+    }
 
     def dependency(
         membership: Annotated[Membership, Depends(get_current_membership)],
     ) -> Membership:
-        if membership.role.value not in allowed:
+        role_value = membership.role.value
+        effective_roles = {role_value, *implied_roles.get(role_value, set())}
+        if allowed.isdisjoint(effective_roles):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient role",

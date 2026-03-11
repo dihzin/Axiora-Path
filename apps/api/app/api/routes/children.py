@@ -8,11 +8,29 @@ from sqlalchemy import func, select
 
 from app.api.deps import DBSession, EventSvc, get_current_tenant, get_current_user, require_role
 from app.core.security import verify_password
-from app.models import ChildProfile, Membership, Tenant, User
+from app.models import ChildProfile, Membership, Tenant, TenantType, User
 from app.schemas.children import ChildCreateRequest, ChildDeleteRequest, ChildOut, ChildThemeResponse, ChildThemeUpdateRequest, ChildUpdateRequest
 
 router = APIRouter(prefix="/children", tags=["children"])
 MAX_AVATAR_DATA_URL_CHARS = 1_500_000
+
+
+def _ensure_family_tenant(tenant: Tenant) -> None:
+    if tenant.type != TenantType.FAMILY:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Child profiles are only available for family tenants")
+
+
+def _to_child_out(child: ChildProfile) -> ChildOut:
+    return ChildOut(
+        id=child.id,
+        display_name=child.display_name,
+        avatar_key=child.avatar_key,
+        date_of_birth=child.date_of_birth,
+        birth_year=child.birth_year,
+        needs_profile_completion=child.needs_profile_completion,
+        theme=child.theme,
+        avatar_stage=child.avatar_stage,
+    )
 
 
 def _sanitize_avatar_key(raw_value: str | None) -> str | None:
@@ -34,6 +52,7 @@ def list_children(
     tenant: Annotated[Tenant, Depends(get_current_tenant)],
     _: Annotated[Membership, Depends(require_role(["PARENT", "TEACHER"]))],
 ) -> list[ChildOut]:
+    _ensure_family_tenant(tenant)
     children = db.scalars(
         select(ChildProfile)
         .where(
@@ -42,19 +61,7 @@ def list_children(
         )
         .order_by(ChildProfile.id.asc()),
     ).all()
-    return [
-        ChildOut(
-            id=child.id,
-            display_name=child.display_name,
-            avatar_key=child.avatar_key,
-            date_of_birth=child.date_of_birth,
-            birth_year=child.birth_year,
-            needs_profile_completion=child.needs_profile_completion,
-            theme=child.theme,
-            avatar_stage=child.avatar_stage,
-        )
-        for child in children
-    ]
+    return [_to_child_out(child) for child in children]
 
 
 @router.post("", response_model=ChildOut, status_code=status.HTTP_201_CREATED)
@@ -66,8 +73,10 @@ def create_child(
     user: Annotated[User, Depends(get_current_user)],
     _: Annotated[Membership, Depends(require_role(["PARENT", "TEACHER"]))],
 ) -> ChildOut:
+    _ensure_family_tenant(tenant)
     child = ChildProfile(
         tenant_id=tenant.id,
+        created_by_user_id=user.id,
         display_name=payload.display_name,
         avatar_key=_sanitize_avatar_key(payload.avatar_key),
         date_of_birth=payload.date_of_birth,
@@ -85,16 +94,7 @@ def create_child(
         payload={"child_id": child.id},
     )
     db.commit()
-    return ChildOut(
-        id=child.id,
-        display_name=child.display_name,
-        avatar_key=child.avatar_key,
-        date_of_birth=child.date_of_birth,
-        birth_year=child.birth_year,
-        needs_profile_completion=child.needs_profile_completion,
-        theme=child.theme,
-        avatar_stage=child.avatar_stage,
-    )
+    return _to_child_out(child)
 
 
 @router.put("/{child_id}", response_model=ChildOut)
@@ -107,6 +107,7 @@ def update_child(
     user: Annotated[User, Depends(get_current_user)],
     _: Annotated[Membership, Depends(require_role(["PARENT", "TEACHER"]))],
 ) -> ChildOut:
+    _ensure_family_tenant(tenant)
     child = db.scalar(
         select(ChildProfile).where(
             ChildProfile.id == child_id,
@@ -131,16 +132,7 @@ def update_child(
         payload={"child_id": child.id},
     )
     db.commit()
-    return ChildOut(
-        id=child.id,
-        display_name=child.display_name,
-        avatar_key=child.avatar_key,
-        date_of_birth=child.date_of_birth,
-        birth_year=child.birth_year,
-        needs_profile_completion=child.needs_profile_completion,
-        theme=child.theme,
-        avatar_stage=child.avatar_stage,
-    )
+    return _to_child_out(child)
 
 
 @router.put("/{child_id}/theme", response_model=ChildThemeResponse)
@@ -153,6 +145,7 @@ def update_child_theme(
     user: Annotated[User, Depends(get_current_user)],
     _: Annotated[Membership, Depends(require_role(["PARENT", "TEACHER"]))],
 ) -> ChildThemeResponse:
+    _ensure_family_tenant(tenant)
     child = db.scalar(
         select(ChildProfile).where(
             ChildProfile.id == child_id,
@@ -185,6 +178,7 @@ def delete_child(
     user: Annotated[User, Depends(get_current_user)],
     _: Annotated[Membership, Depends(require_role(["PARENT", "TEACHER"]))],
 ) -> dict[str, bool]:
+    _ensure_family_tenant(tenant)
     if not tenant.parent_pin_hash:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Parent PIN not configured")
     if not verify_password(payload.pin, tenant.parent_pin_hash):

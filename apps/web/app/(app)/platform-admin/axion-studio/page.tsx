@@ -111,7 +111,7 @@ function isValidTab(value: string | null): value is Tab {
 function validateTenantDraft(draft: {
   name: string;
   slug: string;
-  type: "FAMILY" | "SCHOOL";
+  type: "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN";
   adminEmail: string;
   adminName: string;
   adminPassword: string;
@@ -203,7 +203,7 @@ function AxionStudioPage() {
   const [deleteTargetTenant, setDeleteTargetTenant] = useState<PlatformTenantSummary | null>(null);
   const [deleteConfirmSlug, setDeleteConfirmSlug] = useState("");
   const [tenantSearch, setTenantSearch] = useState("");
-  const [tenantTypeFilter, setTenantTypeFilter] = useState<"" | "FAMILY" | "SCHOOL">("");
+  const [tenantTypeFilter, setTenantTypeFilter] = useState<"" | "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN">("");
   const [tenantCreateResult, setTenantCreateResult] = useState<PlatformTenantCreateResponse | null>(null);
   const [editingTenantId, setEditingTenantId] = useState<number | null>(null);
   const [tenantOperationMessage, setTenantOperationMessage] = useState<string | null>(null);
@@ -211,7 +211,7 @@ function AxionStudioPage() {
   const [tenantDraft, setTenantDraft] = useState({
     name: "",
     slug: "",
-    type: "FAMILY" as "FAMILY" | "SCHOOL",
+    type: "FAMILY" as "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN",
     adminEmail: "",
     adminName: "",
     adminPassword: "",
@@ -621,7 +621,7 @@ function AxionStudioPage() {
       setTenantDraft({
         name: detail.tenant.name,
         slug: detail.tenant.slug,
-        type: detail.tenant.type === "SCHOOL" ? "SCHOOL" : "FAMILY",
+        type: detail.tenant.type === "SYSTEM_ADMIN" ? "SYSTEM_ADMIN" : detail.tenant.type === "SCHOOL" ? "SCHOOL" : "FAMILY",
         adminEmail: primaryAdmin.email,
         adminName: primaryAdmin.name,
         adminPassword: "",
@@ -710,7 +710,7 @@ function AxionStudioPage() {
             </div>
             <div className="mt-2 flex items-center justify-end gap-2">
               <button
-                className="rounded-xl border border-[#BCD1EE] bg-white px-3 py-2 text-xs font-black text-[#2F527D] transition hover:bg-[#F0F6FF]"
+                className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn-sm text-[#2F527D]"
                 disabled={loading}
                 onClick={() => setShowPasswordModal(true)}
                 type="button"
@@ -718,7 +718,7 @@ function AxionStudioPage() {
                 Redefinir senha
               </button>
               <button
-                className="rounded-xl border border-[#F5B2A9] bg-[#FFF3F1] px-3 py-2 text-xs font-black text-[#B8574B] transition hover:bg-[#FFE7E2]"
+                className="axiora-chunky-btn axiora-chunky-btn--destructive axiora-admin-btn-sm text-white"
                 disabled={loading}
                 onClick={() => void handleLogout()}
                 type="button"
@@ -742,8 +742,8 @@ function AxionStudioPage() {
           ].map((item) => (
             <button
               key={item.id}
-              className={`rounded-2xl px-4 py-2 text-sm font-extrabold transition ${
-                tab === item.id ? "bg-[#24B6A9] text-white shadow-[0_5px_0_rgba(13,122,114,0.35)]" : "border border-[#C9D8EF] bg-white text-[#34557F]"
+              className={`axiora-chunky-btn axiora-admin-btn text-sm ${
+                tab === item.id ? "axiora-chunky-btn--secondary text-white" : "axiora-chunky-btn--outline text-[#34557F]"
               }`}
               onClick={() => setTabWithUrl(item.id as Tab)}
               type="button"
@@ -768,7 +768,7 @@ function AxionStudioPage() {
                     </option>
                   ))}
                 </select>
-                <button className="rounded-xl bg-[#2ABBA3] px-3 py-2 text-sm font-bold text-white" onClick={() => void loadBase()} type="button">
+                <button className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn px-3 py-2 text-sm text-white" onClick={() => void loadBase()} type="button">
                   Filtrar
                 </button>
               </div>
@@ -801,7 +801,7 @@ function AxionStudioPage() {
                           <td className="px-3 py-2">
                             <div className="flex flex-wrap gap-1">
                               <button
-                                className="rounded-lg border border-[#BCD1EE] px-2 py-1 text-xs font-bold"
+                                className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn-sm text-[#2F527D]"
                                 onClick={() =>
                                   setPolicyDraft({
                                     id: p.id,
@@ -817,10 +817,10 @@ function AxionStudioPage() {
                               >
                                 Editar
                               </button>
-                              <button className="rounded-lg border border-[#BCD1EE] px-2 py-1 text-xs font-bold" onClick={() => void toggleAxionStudioPolicy(p.id).then(loadBase)} type="button">
+                              <button className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn-sm text-[#2F527D]" onClick={() => void toggleAxionStudioPolicy(p.id).then(loadBase)} type="button">
                                 {p.enabled ? "Desativar" : "Ativar"}
                               </button>
-                              <button className="rounded-lg border border-[#BCD1EE] px-2 py-1 text-xs font-bold" onClick={() => void loadPolicyVersions(p.id)} type="button">
+                              <button className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn-sm text-[#2F527D]" onClick={() => void loadPolicyVersions(p.id)} type="button">
                                 Versões
                               </button>
                             </div>
@@ -850,10 +850,10 @@ function AxionStudioPage() {
                 Habilitada
               </label>
               <div className="flex flex-wrap gap-2">
-                <button className="rounded-xl bg-[#2ABBA3] px-3 py-2 text-sm font-black text-white" disabled={loading} onClick={() => void savePolicy(false)} type="button">
+                <button className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn px-3 py-2 text-sm text-white" disabled={loading} onClick={() => void savePolicy(false)} type="button">
                   Salvar
                 </button>
-                <button className="rounded-xl bg-[#FF7A45] px-3 py-2 text-sm font-black text-white" disabled={loading} onClick={() => void savePolicy(true)} type="button">
+                <button className="axiora-chunky-btn axiora-admin-btn px-3 py-2 text-sm text-white" disabled={loading} onClick={() => void savePolicy(true)} type="button">
                   Salvar e prévia
                 </button>
               </div>
@@ -895,7 +895,7 @@ function AxionStudioPage() {
                           <td className="px-3 py-2">
                             <div className="flex flex-wrap gap-1">
                               <button
-                                className="rounded-lg border border-[#BCD1EE] px-2 py-1 text-xs font-bold"
+                                className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn-sm text-[#2F527D]"
                                 onClick={() =>
                                   setTemplateDraft({
                                     id: t.id,
@@ -912,10 +912,10 @@ function AxionStudioPage() {
                               >
                                 Editar
                               </button>
-                              <button className="rounded-lg border border-[#BCD1EE] px-2 py-1 text-xs font-bold" onClick={() => void toggleAxionStudioTemplate(t.id).then(loadBase)} type="button">
+                              <button className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn-sm text-[#2F527D]" onClick={() => void toggleAxionStudioTemplate(t.id).then(loadBase)} type="button">
                                 {t.enabled ? "Desativar" : "Ativar"}
                               </button>
-                              <button className="rounded-lg border border-[#BCD1EE] px-2 py-1 text-xs font-bold" onClick={() => void loadTemplateVersions(t.id)} type="button">
+                              <button className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn-sm text-[#2F527D]" onClick={() => void loadTemplateVersions(t.id)} type="button">
                                 Versões
                               </button>
                             </div>
@@ -952,7 +952,7 @@ function AxionStudioPage() {
                 <input checked={templateDraft.enabled} onChange={(e) => setTemplateDraft((d) => ({ ...d, enabled: e.target.checked }))} type="checkbox" />
                 Habilitado
               </label>
-              <button className="rounded-xl bg-[#2ABBA3] px-3 py-2 text-sm font-black text-white" disabled={loading || templateCharCount > 220} onClick={() => void saveTemplate()} type="button">
+              <button className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn px-3 py-2 text-sm text-white" disabled={loading || templateCharCount > 220} onClick={() => void saveTemplate()} type="button">
                 Salvar
               </button>
               <p className="mt-3 text-xs font-semibold text-[#6C88AF]">Placeholders: {"{{name}}, {{skill}}, {{strongSkill}}, {{lesson}}, {{unit}}, {{streak}}, {{coins}}, {{xp}}, {{dueReviews}}, {{energy}}"}</p>
@@ -977,11 +977,11 @@ function AxionStudioPage() {
                   </option>
                 ))}
               </select>
-              <button className="rounded-xl bg-[#2ABBA3] px-3 py-2 text-sm font-black text-white" onClick={() => void runPreview()} type="button">
+              <button className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn px-3 py-2 text-sm text-white" onClick={() => void runPreview()} type="button">
                 Executar prévia
               </button>
               <button
-                className="rounded-xl border border-[#BCD1EE] px-3 py-2 text-sm font-bold"
+                className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn px-3 py-2 text-sm text-[#2F527D]"
                 onClick={() => void navigator.clipboard.writeText(pretty(previewResult ?? {}))}
                 type="button"
               >
@@ -1026,11 +1026,11 @@ function AxionStudioPage() {
                     <p className="text-[11px] font-semibold text-[#6B87AC]">{new Date(v.createdAt).toLocaleString("pt-BR")}</p>
                     <div className="mt-2 flex gap-2">
                       {versionsTarget?.type === "RULE" ? (
-                        <button className="rounded-lg border border-[#BCD1EE] px-2 py-1 text-xs font-bold" onClick={() => void restoreAxionStudioPolicy(versionsTarget.id, v.version).then(loadBase)} type="button">
+                        <button className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn-sm text-[#2F527D]" onClick={() => void restoreAxionStudioPolicy(versionsTarget.id, v.version).then(loadBase)} type="button">
                           Restaurar
                         </button>
                       ) : versionsTarget?.type === "TEMPLATE" ? (
-                        <button className="rounded-lg border border-[#BCD1EE] px-2 py-1 text-xs font-bold" onClick={() => void restoreAxionStudioTemplate(versionsTarget.id, v.version).then(loadBase)} type="button">
+                        <button className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn-sm text-[#2F527D]" onClick={() => void restoreAxionStudioTemplate(versionsTarget.id, v.version).then(loadBase)} type="button">
                           Restaurar
                         </button>
                       ) : null}
@@ -1057,7 +1057,7 @@ function AxionStudioPage() {
                 <option value={14}>14 dias</option>
                 <option value={30}>30 dias</option>
               </select>
-              <button className="rounded-xl bg-[#2ABBA3] px-3 py-2 text-sm font-black text-white" onClick={() => void runImpact()} type="button">
+              <button className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn px-3 py-2 text-sm text-white" onClick={() => void runImpact()} type="button">
                 Calcular impacto
               </button>
             </div>
@@ -1100,14 +1100,14 @@ function AxionStudioPage() {
             <div className="rounded-2xl border border-[#C9D8EF] p-3">
               <div className="mb-3 flex flex-wrap gap-2">
                 <button
-                  className={`rounded-xl px-3 py-2 text-sm font-black ${orgViewTab === "clients" ? "bg-[#24B6A9] text-white shadow-[0_5px_0_rgba(13,122,114,0.35)]" : "border border-[#BCD1EE] bg-white text-[#2F527D]"}`}
+                  className={`axiora-chunky-btn axiora-admin-btn px-3 py-2 text-sm ${orgViewTab === "clients" ? "axiora-chunky-btn--secondary text-white" : "axiora-chunky-btn--outline text-[#2F527D]"}`}
                   onClick={() => setOrgViewTab("clients")}
                   type="button"
                 >
                   Clientes
                 </button>
                 <button
-                  className={`rounded-xl px-3 py-2 text-sm font-black ${orgViewTab === "admin" ? "bg-[#24B6A9] text-white shadow-[0_5px_0_rgba(13,122,114,0.35)]" : "border border-[#BCD1EE] bg-white text-[#2F527D]"}`}
+                  className={`axiora-chunky-btn axiora-admin-btn px-3 py-2 text-sm ${orgViewTab === "admin" ? "axiora-chunky-btn--secondary text-white" : "axiora-chunky-btn--outline text-[#2F527D]"}`}
                   onClick={() => setOrgViewTab("admin")}
                   type="button"
                 >
@@ -1123,15 +1123,16 @@ function AxionStudioPage() {
                 />
                 <select
                   className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[180px] sm:w-auto"
-                  onChange={(e) => setTenantTypeFilter(e.target.value as "" | "FAMILY" | "SCHOOL")}
+                  onChange={(e) => setTenantTypeFilter(e.target.value as "" | "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN")}
                   disabled={orgViewTab === "admin"}
                   value={tenantTypeFilter}
                 >
                   <option value="">Todos os tipos</option>
                   <option value="FAMILY">Família</option>
                   <option value="SCHOOL">Escola</option>
+                  <option value="SYSTEM_ADMIN">Sistema</option>
                 </select>
-                <button className="rounded-xl bg-[#2ABBA3] px-3 py-2 text-sm font-bold text-white" onClick={() => void loadBase()} type="button">
+                <button className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn px-3 py-2 text-sm text-white" onClick={() => void loadBase()} type="button">
                   Filtrar
                 </button>
               </div>
@@ -1161,27 +1162,27 @@ function AxionStudioPage() {
                         <tr key={tenant.id} className="border-t border-[#E2EAF8]">
                           {(() => {
                             const isPlatformTenant = tenant.slug === "platform-admin";
-                            const consentLabel = isPlatformTenant ? "N/A" : tenant.type === "SCHOOL" ? "N/A" : tenant.consentCompleted ? "Sim" : "Não";
+                            const consentLabel = isPlatformTenant ? "N/A" : tenant.type === "SCHOOL" || tenant.type === "SYSTEM_ADMIN" ? "N/A" : tenant.consentCompleted ? "Sim" : "Não";
                             const onboardingLabel = isPlatformTenant ? "N/A" : tenant.onboardingCompleted ? "Concluído" : "Pendente";
                             return (
                               <>
                           <td className="px-3 py-2 font-semibold text-[#223F68]">{tenant.name}</td>
                           <td className="px-3 py-2 font-mono text-xs text-[#35567F]">{tenant.slug}</td>
-                          <td className="px-3 py-2">{tenant.type === "FAMILY" ? "Família" : tenant.type === "SCHOOL" ? "Escola" : tenant.type}</td>
+                          <td className="px-3 py-2">{tenant.type === "FAMILY" ? "Família" : tenant.type === "SCHOOL" ? "Escola" : tenant.type === "SYSTEM_ADMIN" ? "Sistema" : tenant.type}</td>
                           <td className="px-3 py-2">{consentLabel}</td>
                           <td className="px-3 py-2">{onboardingLabel}</td>
                           <td className="px-3 py-2">{new Date(tenant.createdAt).toLocaleString("pt-BR")}</td>
                           <td className="px-3 py-2">
                             <div className="flex flex-wrap gap-1">
                               <button
-                                className="rounded-lg border border-[#BCD1EE] px-2 py-1 text-xs font-bold text-[#2F527D]"
+                                className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn-sm text-[#2F527D]"
                                 onClick={() => void openTenantDetail(tenant.id)}
                                 type="button"
                               >
                                 Detalhes
                               </button>
                               <button
-                                className="rounded-lg border border-[#9EDFD8] px-2 py-1 text-xs font-bold text-[#1F7E74] disabled:cursor-not-allowed disabled:opacity-50"
+                                className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
                                 disabled={tenant.slug === "platform-admin"}
                                 onClick={() => void startEditTenant(tenant)}
                                 type="button"
@@ -1189,7 +1190,7 @@ function AxionStudioPage() {
                                 Editar
                               </button>
                               <button
-                                className="rounded-lg border border-[#F5B2A9] px-2 py-1 text-xs font-bold text-[#B8574B] disabled:cursor-not-allowed disabled:opacity-50"
+                                className="axiora-chunky-btn axiora-chunky-btn--destructive axiora-admin-btn-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
                                 disabled={tenant.slug === "platform-admin"}
                                 onClick={() => {
                                   setDeleteTargetTenant(tenant);
@@ -1272,13 +1273,14 @@ function AxionStudioPage() {
               <select
                 className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${tenantFieldErrors.type ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
                 onChange={(e) => {
-                  setTenantDraft((d) => ({ ...d, type: e.target.value as "FAMILY" | "SCHOOL" }));
+                  setTenantDraft((d) => ({ ...d, type: e.target.value as "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN" }));
                   setTenantFieldErrors((prev) => ({ ...prev, type: undefined }));
                 }}
                 value={tenantDraft.type}
               >
                 <option value="FAMILY">Família (pais)</option>
                 <option value="SCHOOL">Escola</option>
+                <option value="SYSTEM_ADMIN">Sistema</option>
               </select>
               {tenantFieldErrors.type ? <p className="mb-2 text-xs font-semibold text-[#B54C47]">{tenantFieldErrors.type}</p> : <div className="mb-2" />}
               <input
@@ -1370,12 +1372,12 @@ function AxionStudioPage() {
               </label>
 
               <div className={`flex flex-wrap items-center gap-2 ${editingTenantId ? "justify-start" : "justify-center"}`}>
-                <button className="rounded-xl bg-[#2ABBA3] px-3 py-2 text-sm font-black text-white disabled:opacity-60" disabled={loading} onClick={() => void saveTenant()} type="button">
+                <button className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn px-3 py-2 text-sm text-white disabled:opacity-60" disabled={loading} onClick={() => void saveTenant()} type="button">
                   {editingTenantId ? "Salvar alterações" : "Criar organização"}
                 </button>
                 {editingTenantId ? (
                   <button
-                    className="rounded-xl border border-[#BCD1EE] bg-white px-3 py-2 text-sm font-black text-[#2F527D]"
+                    className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn px-3 py-2 text-sm text-[#2F527D]"
                     disabled={loading}
                     onClick={() => {
                       setEditingTenantId(null);
@@ -1443,7 +1445,7 @@ function AxionStudioPage() {
                 <p className="text-sm font-semibold text-[#5A7AA4]">{selectedTenantDetail.tenant.name} ({selectedTenantDetail.tenant.slug})</p>
               </div>
               <button
-                className="rounded-xl border border-[#BCD1EE] bg-white px-3 py-2 text-sm font-black text-[#2F527D]"
+                className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn px-3 py-2 text-sm text-[#2F527D]"
                 onClick={() => setSelectedTenantDetail(null)}
                 type="button"
               >
@@ -1453,7 +1455,7 @@ function AxionStudioPage() {
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <div className="rounded-xl border border-[#DCE6F7] bg-[#F7FAFF] p-3">
                 <p className="text-[11px] font-bold uppercase text-[#6B87AC]">Tipo</p>
-                <p className="text-sm font-black text-[#24456F]">{selectedTenantDetail.tenant.type === "FAMILY" ? "Família" : selectedTenantDetail.tenant.type === "SCHOOL" ? "Escola" : selectedTenantDetail.tenant.type}</p>
+                <p className="text-sm font-black text-[#24456F]">{selectedTenantDetail.tenant.type === "FAMILY" ? "Família" : selectedTenantDetail.tenant.type === "SCHOOL" ? "Escola" : selectedTenantDetail.tenant.type === "SYSTEM_ADMIN" ? "Sistema" : selectedTenantDetail.tenant.type}</p>
               </div>
               <div className="rounded-xl border border-[#DCE6F7] bg-[#F7FAFF] p-3">
                 <p className="text-[11px] font-bold uppercase text-[#6B87AC]">Crianças ativas</p>
@@ -1499,7 +1501,7 @@ function AxionStudioPage() {
             />
             <div className="mt-4 flex justify-end gap-2">
               <button
-                className="rounded-xl border border-[#BCD1EE] bg-white px-3 py-2 text-sm font-black text-[#2F527D]"
+                className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn px-3 py-2 text-sm text-[#2F527D]"
                 onClick={() => {
                   setDeleteTargetTenant(null);
                   setDeleteConfirmSlug("");
@@ -1509,7 +1511,7 @@ function AxionStudioPage() {
                 Cancelar
               </button>
               <button
-                className="rounded-xl border border-[#F5B2A9] bg-[#FFF3F1] px-3 py-2 text-sm font-black text-[#B8574B] disabled:cursor-not-allowed disabled:opacity-60"
+                className="axiora-chunky-btn axiora-chunky-btn--destructive axiora-admin-btn px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={loading || deleteConfirmSlug.trim().toLowerCase() !== deleteTargetTenant.slug}
                 onClick={() => void confirmDeleteTenant()}
                 type="button"
@@ -1546,7 +1548,7 @@ function AxionStudioPage() {
             {passwordFeedback ? <p className="mt-2 text-sm font-semibold text-[#2F527D]">{passwordFeedback}</p> : null}
             <div className="mt-4 flex justify-end gap-2">
               <button
-                className="rounded-xl border border-[#BCD1EE] bg-white px-3 py-2 text-sm font-black text-[#2F527D]"
+                className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn px-3 py-2 text-sm text-[#2F527D]"
                 onClick={() => {
                   setShowPasswordModal(false);
                   setPasswordFeedback(null);
@@ -1558,7 +1560,7 @@ function AxionStudioPage() {
                 Fechar
               </button>
               <button
-                className="rounded-xl bg-[#2ABBA3] px-3 py-2 text-sm font-black text-white disabled:opacity-60"
+                className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn px-3 py-2 text-sm text-white disabled:opacity-60"
                 onClick={() => void handleChangePassword()}
                 type="button"
                 disabled={loading}

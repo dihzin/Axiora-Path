@@ -5,10 +5,9 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
-import { getApiErrorMessage, getLegalStatus, getMe, listMemberships, type OrganizationMembership } from "@/lib/api/client";
-import { getTenantSlug, setTenantSlug } from "@/lib/api/session";
+import { getApiErrorMessage, listMemberships, selectTenant, type OrganizationMembership } from "@/lib/api/client";
+import { clearTenantSlug, getTenantSlug, setAccessToken, setTenantSlug } from "@/lib/api/session";
 
 export default function SelectTenantPage() {
   const router = useRouter();
@@ -27,24 +26,16 @@ export default function SelectTenantPage() {
 
     setLoading(true);
     const previousSlug = getTenantSlug();
-    setTenantSlug(selectedSlug);
     try {
-      const me = await getMe();
-      if (me.membership.tenant_type === "FAMILY") {
-        const legal = await getLegalStatus();
-        if (legal.consent_required) {
-          router.push("/onboarding");
-          return;
-        }
-      }
-      if (!me.membership.onboarding_completed) {
-        router.push("/onboarding");
-        return;
-      }
-      router.push("/select-child");
+      const activation = await selectTenant(selectedSlug);
+      setTenantSlug(activation.tenant_slug);
+      setAccessToken(activation.access_token);
+      router.push("/parent");
     } catch (err) {
       if (previousSlug) {
         setTenantSlug(previousSlug);
+      } else {
+        clearTenantSlug();
       }
       setError(getApiErrorMessage(err, "Não foi possível validar organização. Confira login e credenciais."));
     } finally {
@@ -93,18 +84,18 @@ export default function SelectTenantPage() {
   return (
     <div className="axiora-brand-page">
       <main className="axiora-brand-content safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md items-center overflow-x-clip p-4 md:p-6">
-        <Card className="axiora-glass-card w-full text-slate-100">
+        <Card className="axiora-glass-card w-full text-[#FFF4E7]">
           <CardHeader>
-            <CardTitle className="text-slate-100">Selecionar organização</CardTitle>
-            <CardDescription className="text-slate-300">Confirme a organização ativa antes de escolher o perfil infantil.</CardDescription>
+            <CardTitle className="text-[#FFF4E7]">Selecionar organização</CardTitle>
+            <CardDescription className="text-[#E6D8C7]">Confirme a organização ativa antes de escolher o perfil infantil.</CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-3" onSubmit={onSubmit}>
               {loadingMemberships ? (
-                <p role="status" aria-live="polite" className="text-sm text-slate-300">Carregando organizações...</p>
+                <p role="status" aria-live="polite" className="text-sm text-[#E6D8C7]">Carregando organizações...</p>
               ) : memberships.length > 0 ? (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-200" htmlFor="organization-select">
+                  <label className="text-sm font-medium text-[#F0E5D8]" htmlFor="organization-select">
                     Organização
                   </label>
                   <NativeSelect
@@ -122,22 +113,12 @@ export default function SelectTenantPage() {
                   </NativeSelect>
                 </div>
               ) : (
-                <>
-                  <label className="text-sm font-medium text-slate-200" htmlFor="slug">Organização</label>
-                  <Input
-                    id="slug"
-                    placeholder="ex: familia-silva"
-                    value={slug}
-                    onChange={(e) => setSlug(e.target.value)}
-                    aria-invalid={Boolean(error)}
-                    aria-describedby={error ? "tenant-error" : undefined}
-                    required
-                    disabled={loading}
-                  />
-                </>
+                <p role="status" aria-live="polite" className="text-sm text-[#E6D8C7]">
+                  Nenhuma organização disponível para esta conta.
+                </p>
               )}
               {error ? <p id="tenant-error" role="alert" aria-live="polite" className="text-sm text-rose-300">{error}</p> : null}
-              <Button className="w-full" type="submit" disabled={loading || loadingMemberships}>
+              <Button className="w-full" type="submit" disabled={loading || loadingMemberships || memberships.length === 0}>
                 {loading ? "Continuando..." : "Continuar"}
               </Button>
             </form>

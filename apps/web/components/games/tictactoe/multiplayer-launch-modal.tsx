@@ -21,7 +21,7 @@ export function MultiplayerLaunchModal({ open, onSolo, onMulti }: Props) {
         </CardHeader>
         <CardContent className="space-y-3">
           <button
-            className="flex w-full items-center justify-between rounded-2xl border border-border bg-card p-3 text-left transition hover:bg-muted/60"
+            className="axiora-chunky-btn axiora-chunky-btn--outline flex w-full items-center justify-between gap-3 rounded-[24px] p-4 text-left text-foreground"
             onClick={onSolo}
             type="button"
           >
@@ -32,7 +32,7 @@ export function MultiplayerLaunchModal({ open, onSolo, onMulti }: Props) {
             <Users className="h-4 w-4 text-primary" />
           </button>
           <button
-            className="flex w-full items-center justify-between rounded-2xl border border-border bg-card p-3 text-left transition hover:bg-muted/60"
+            className="axiora-chunky-btn axiora-chunky-btn--outline flex w-full items-center justify-between gap-3 rounded-[24px] p-4 text-left text-foreground"
             onClick={onMulti}
             type="button"
           >

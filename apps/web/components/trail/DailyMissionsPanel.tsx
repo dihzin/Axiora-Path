@@ -30,15 +30,15 @@ export function DailyMissionsPanel({ missions, missionsLoading, claimingMissionI
   const canNavigate = dailyMissions.length > 1;
 
   return (
-    <section className={cn("relative overflow-hidden rounded-[28px] border border-violet-200/12 bg-[linear-gradient(160deg,rgba(12,21,47,0.82)_0%,rgba(18,22,58,0.82)_52%,rgba(8,18,42,0.88)_100%)] shadow-[0_16px_40px_rgba(2,8,28,0.28),inset_0_1px_0_rgba(255,255,255,0.08)]", compact ? "p-3.5" : "p-4", className)}>
+    <section className={cn("relative overflow-hidden rounded-[28px] border border-[#E5D5C0]/12 bg-[linear-gradient(160deg,rgba(24,49,43,0.84)_0%,rgba(31,58,52,0.82)_52%,rgba(20,39,35,0.9)_100%)] shadow-[0_16px_40px_rgba(7,20,17,0.24),inset_0_1px_0_rgba(255,255,255,0.08)]", compact ? "p-3.5" : "p-4", className)}>
       <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-gradient-to-b from-white/5 via-white/[0.03] to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[radial-gradient(70%_90%_at_50%_0%,rgba(167,139,250,0.12),transparent_65%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[radial-gradient(70%_90%_at_50%_0%,rgba(255,176,122,0.12),transparent_65%)]" />
       <div className="relative z-10 flex items-end justify-between gap-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">Desafios do dia</p>
           <h3 className={cn("mt-1 font-semibold leading-tight text-white", compact ? "text-[15px]" : "text-[18px]")}>{compact ? "Desafio em foco" : "Pequenas conquistas para hoje"}</h3>
         </div>
-        <span className="rounded-full border border-violet-200/16 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-slate-200">
+        <span className="rounded-full border border-[#F1C56B]/18 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-slate-200">
           {dailyMissions.length} ativos
         </span>
       </div>
@@ -71,7 +71,7 @@ export function DailyMissionsPanel({ missions, missionsLoading, claimingMissionI
                       onClick={() => setActiveIndex(index)}
                       className={cn(
                         "h-2.5 rounded-full transition-all duration-200",
-                        index === activeIndex ? "w-5 bg-violet-300 shadow-[0_0_10px_rgba(167,139,250,0.45)]" : "w-2.5 bg-white/20 hover:bg-white/35",
+                        index === activeIndex ? "w-5 bg-[#FF9A48] shadow-[0_0_10px_rgba(255,154,72,0.42)]" : "w-2.5 bg-white/20 hover:bg-white/35",
                       )}
                       aria-label={`Mostrar desafio ${index + 1}`}
                       aria-pressed={index === activeIndex}
@@ -113,8 +113,8 @@ function NavButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/12 bg-white/[0.04] text-[14px] text-white transition",
-        disabled ? "cursor-default opacity-40" : "hover:border-violet-300/35 hover:bg-violet-400/10 hover:text-violet-100",
+        "axiora-chunky-btn axiora-chunky-chip axiora-chunky-btn--compact inline-flex h-8 w-8 items-center justify-center px-0 text-[14px] text-[#17322F]",
+        disabled ? "cursor-default opacity-40" : "axiora-chunky-chip--active text-white",
       )}
       aria-label={direction === "left" ? "Desafio anterior" : "Próximo desafio"}
     >
@@ -129,7 +129,7 @@ function MissionTile({ mission, index, compact }: { mission: MissionProgress; in
   const done = mission.completed || safeValue >= safeTotal;
   const percent = Math.min(100, Math.round((safeValue / safeTotal) * 100));
   const accents = [
-    "from-cyan-300/18 to-sky-400/10 border-cyan-300/18",
+    "from-[#F1C56B]/18 to-[#FF9A48]/10 border-[#F1C56B]/18",
     "from-emerald-300/18 to-lime-300/10 border-emerald-300/18",
     "from-amber-300/18 to-orange-300/10 border-amber-300/18",
   ] as const;
@@ -142,13 +142,13 @@ function MissionTile({ mission, index, compact }: { mission: MissionProgress; in
           <p className={cn("font-semibold leading-tight text-white", compact ? "text-[13px]" : "text-[14px]")}>{mission.title}</p>
           <p className="mt-1 text-[11px] text-slate-300">{done ? "Conquista pronta para celebrar" : "Continue para acender esta estrela"}</p>
         </div>
-        <p className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${done ? "border-emerald-300/45 bg-emerald-400/15 text-emerald-100" : "border-sky-300/40 bg-sky-400/15 text-sky-100"}`}>
+        <p className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${done ? "border-emerald-300/45 bg-emerald-400/15 text-emerald-100" : "border-[#F1C56B]/40 bg-[#FF9A48]/15 text-[#FFE7D1]"}`}>
           {safeValue}/{safeTotal}
         </p>
       </div>
       <div className={cn("w-full overflow-hidden rounded-full border border-white/12 bg-white/10", compact ? "mt-2.5 h-1.5" : "mt-3 h-2")}>
         <div
-          className={`h-full rounded-full transition-all duration-300 ${done ? "bg-gradient-to-r from-emerald-300 to-emerald-500" : "bg-gradient-to-r from-cyan-300 via-sky-400 to-blue-500"}`}
+          className={`h-full rounded-full transition-all duration-300 ${done ? "bg-gradient-to-r from-emerald-300 to-emerald-500" : "bg-gradient-to-r from-[#F1C56B] via-[#FF9A48] to-[#D96C2A]"}`}
           style={{ width: `${percent}%` }}
         />
       </div>

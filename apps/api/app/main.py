@@ -19,6 +19,7 @@ from app.api.routes.coins import router as coins_router
 from app.api.routes.daily_missions import router as daily_missions_router
 from app.api.routes.export import router as export_router
 from app.api.routes.features import router as features_router
+from app.api.routes.family import router as family_router
 from app.api.routes.game_settings import router as game_settings_router
 from app.api.routes.games import router as games_router
 from app.api.routes.games_multiplayer import router as games_multiplayer_router
@@ -30,6 +31,7 @@ from app.api.routes.onboarding import router as onboarding_router
 from app.api.routes.recommendations import router as recommendations_router
 from app.api.routes.retention import router as retention_router
 from app.api.routes.routine import router as routine_router
+from app.api.routes.school import router as school_router
 from app.api.routes.sync import router as sync_router
 from app.api.routes.store import router as store_router
 from app.api.routes.wallet import router as wallet_router
@@ -105,6 +107,7 @@ app.include_router(coins_router)
 app.include_router(daily_missions_router)
 app.include_router(export_router)
 app.include_router(features_router)
+app.include_router(family_router)
 app.include_router(game_settings_router)
 app.include_router(games_router)
 app.include_router(games_multiplayer_router)
@@ -120,6 +123,7 @@ app.include_router(wallet_router)
 app.include_router(recommendations_router)
 app.include_router(user_ux_settings_router)
 app.include_router(retention_router)
+app.include_router(school_router)
 
 
 @app.get("/health")

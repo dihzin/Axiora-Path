@@ -844,10 +844,10 @@ export default function ChildPage() {
           <button
             type="button"
             aria-label="Abrir modo pais"
-            className="order-1 ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-xs font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 sm:order-2 sm:ml-0"
+            className="axiora-chunky-btn axiora-control-btn order-1 ml-auto inline-flex shrink-0 items-center gap-1.5 px-2.5 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 sm:order-2 sm:ml-0"
             onClick={() => router.push("/parent-pin")}
           >
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-muted">
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-[#EDE4D8]">
               <Lock className="h-3.5 w-3.5 stroke-[2.6]" />
             </span>
             Modo pais
@@ -898,7 +898,7 @@ export default function ChildPage() {
                     state={missionCompleting ? "loading" : missionFeedback}
                     loadingLabel="Processando..."
                     disabled={missionCompleting || dailyMission.status === "completed"}
-                    className="w-full rounded-xl bg-[#58cc02] px-3 py-2.5 text-sm font-extrabold text-white shadow-[0_3px_0_#3a9a00] active:translate-y-[2px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
+                    className="axiora-chunky-btn axiora-control-btn--teal w-full px-3 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => void onCompleteDailyMission()}
                   >
                     {dailyMission.status === "completed" ? "Concluída" : "Completar missão"}
@@ -916,13 +916,13 @@ export default function ChildPage() {
           </Card>
         <Card variant="subtle"
           className={cn(
-            "relative mb-4 overflow-hidden border-border shadow-sm",
+            "relative mb-4 overflow-hidden border-[#E5D5C0]/22 bg-[#FFF9F1] shadow-[0_18px_34px_rgba(59,45,32,0.12)]",
             isSchoolTenant ? "bg-card" : "axion-card-idle bg-card",
           )}
         >
           <CardHeader className="p-4 pb-2 text-center">
             <CardTitle className="text-lg font-extrabold tracking-tight">Axion</CardTitle>
-            <p className="text-xs text-secondary">Seu parceiro de missão</p>
+            <p className="text-xs text-[#4F9D8A]">Seu parceiro de missão</p>
           </CardHeader>
           <CardContent className="space-y-2.5 p-4 pt-0 text-sm text-center">
             {axionCelebration ? (
@@ -931,7 +931,7 @@ export default function ChildPage() {
               </div>
             ) : null}
             <div className="mx-auto flex w-full max-w-[18rem] justify-center">
-              <div className="rounded-full border border-accent/20 bg-[radial-gradient(circle_at_50%_35%,rgba(30,42,56,0.12),rgba(30,42,56,0.02)_70%)] p-2.5 shadow-md">
+              <div className="rounded-full border border-[#E8D8BF] bg-[radial-gradient(circle_at_50%_35%,rgba(255,163,94,0.12),rgba(30,42,56,0.02)_70%)] p-2.5 shadow-md">
                 <AxionCharacter
                   stage={axionState?.stage ?? 1}
                   moodState={effectiveAxionMoodState}
@@ -947,8 +947,8 @@ export default function ChildPage() {
               reducedMotion={isSchoolTenant}
             />
             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-              <span className="rounded-xl border border-border bg-background px-2 py-1">Estágio {axionState?.stage ?? 1}</span>
-              <span className="rounded-xl border border-border bg-background px-2 py-1">
+                <span className="rounded-xl border border-[#E8D8BF] bg-[#FFF9F1] px-2 py-1">Estágio {axionState?.stage ?? 1}</span>
+                <span className="rounded-xl border border-[#E8D8BF] bg-[#FFF9F1] px-2 py-1">
                 {childMoodLabel(todayMood) ?? axionMoodStateLabel(effectiveAxionMoodState)}
               </span>
             </div>
@@ -956,7 +956,7 @@ export default function ChildPage() {
         </Card>
         <section className={cn("space-y-4", isSchoolTenant && "grid gap-4 lg:grid-cols-2 lg:items-start lg:space-y-0")}>
           {showDailyWelcome ? (
-            <Card variant="subtle">
+            <Card variant="subtle" className="border-[#E5D5C0]/22 bg-[#FFF9F1] shadow-[0_16px_30px_rgba(59,45,32,0.1)]">
               <CardHeader className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <CardTitle className="min-w-0 break-words text-sm leading-tight [overflow-wrap:anywhere]">Ritmo do dia</CardTitle>
@@ -964,7 +964,7 @@ export default function ChildPage() {
                     <button
                       type="button"
                       aria-label="Alternar som"
-                      className="inline-flex h-8 items-center gap-1 rounded-xl border border-border bg-white px-2 text-[11px] font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+                      className="axiora-chunky-btn axiora-control-btn inline-flex h-8 items-center gap-1 px-2 text-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
                       onClick={onToggleSound}
                     >
                       {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
@@ -973,7 +973,7 @@ export default function ChildPage() {
                     <button
                       type="button"
                       aria-label="Fechar boas-vindas"
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-xl border border-border bg-white text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+                      className="axiora-chunky-btn axiora-control-btn inline-flex h-7 w-7 items-center justify-center px-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
                       onClick={dismissDailyWelcome}
                     >
                       <X className="h-4 w-4 stroke-[2.6]" />
@@ -1008,7 +1008,7 @@ export default function ChildPage() {
                 <p className="text-sm font-medium text-muted-foreground">Painel da missão recolhido</p>
                 <ActionFeedback
                   type="button"
-                  className="rounded-xl border border-border bg-white px-3 py-1 text-sm font-semibold text-foreground"
+                  className="axiora-chunky-btn axiora-control-btn px-3 py-1 text-sm"
                   onClick={restoreDailyWelcome}
                 >
                   Mostrar painel
@@ -1016,7 +1016,7 @@ export default function ChildPage() {
               </CardContent>
             </Card>
           )}
-          <Card variant="subtle" className="border-border/80">
+            <Card variant="subtle" className="border-[#E5D5C0]/22 bg-[#FFF9F1] shadow-[0_16px_30px_rgba(59,45,32,0.1)]">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-base font-semibold">Progresso</CardTitle>
             </CardHeader>
@@ -1028,10 +1028,10 @@ export default function ChildPage() {
                   savePercent={savePercent}
                   isLocked={goalLocked}
                 />
-                <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                <div className="rounded-xl border border-[#E8D8BF] bg-[#FFF9F1] p-4 shadow-sm">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Avatar</p>
                   {childAvatarKey ? (
-                    <div className="mx-auto w-fit rounded-xl border border-border bg-card p-3">
+                    <div className="mx-auto w-fit rounded-xl border border-[#E8D8BF] bg-[#FFF9F1] p-3">
                       <ChildAvatar name={childName || "Criança"} avatarKey={childAvatarKey} size={96} />
                       <p className="mt-2 text-center text-xs font-medium text-muted-foreground">Foto do perfil</p>
                     </div>
@@ -1040,7 +1040,7 @@ export default function ChildPage() {
                   )}
                 </div>
               </div>
-                <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                <div className="rounded-xl border border-[#E8D8BF] bg-[#FFF9F1] p-4 shadow-sm">
                 <div className="mb-2 flex items-center justify-between text-xs">
                   <span className="font-semibold text-foreground">XP</span>
                   <span className="font-medium text-muted-foreground">
@@ -1052,7 +1052,7 @@ export default function ChildPage() {
               <WeeklyBossMeter completionRate={weeklyMetrics?.completion_rate ?? 0} />
             </CardContent>
           </Card>
-          <Card variant="subtle">
+          <Card variant="subtle" className="border-[#E5D5C0]/22 bg-[#FFF9F1] shadow-[0_16px_30px_rgba(59,45,32,0.1)]">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-base">Tarefas</CardTitle>
             </CardHeader>
@@ -1061,14 +1061,14 @@ export default function ChildPage() {
                 <div className="inline-flex rounded-xl border border-border p-0.5 text-sm">
                   <button
                     type="button"
-                    className={`rounded-xl px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${taskView === "list" ? "bg-primary/10 text-foreground" : "text-muted-foreground"}`}
+                    className={`axiora-chunky-btn axiora-control-btn axiora-chunky-btn--compact px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${taskView === "list" ? "axiora-control-btn--orange text-white" : "text-muted-foreground"}`}
                     onClick={() => onToggleTaskView("list")}
                   >
                     Lista
                   </button>
                   <button
                     type="button"
-                    className={`rounded-xl px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${taskView === "journey" ? "bg-primary/10 text-foreground" : "text-muted-foreground"}`}
+                    className={`axiora-chunky-btn axiora-control-btn axiora-chunky-btn--compact px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${taskView === "journey" ? "axiora-control-btn--orange text-white" : "text-muted-foreground"}`}
                     onClick={() => onToggleTaskView("journey")}
                   >
                     Jornada
@@ -1076,7 +1076,7 @@ export default function ChildPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-xl border border-border bg-white shadow-[0_2px_0_rgba(184,200,239,0.6)]">
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-xl border border-[#E8D8BF] bg-[#FFF9F1] shadow-[0_2px_0_rgba(108,97,84,0.12)]">
                   <Flame className={`${isSchoolTenant ? "" : "flame-flicker"} ${flameClassName} stroke-[2.6] text-accent`} />
                 </span>
                 <span className="font-medium text-accent-foreground">Sequência: {streakCount} dias</span>
@@ -1119,7 +1119,7 @@ export default function ChildPage() {
                               state={taskFeedback[task.id] ?? "idle"}
                               loadingLabel="Marcando..."
                               disabled={isProcessing || isMarked}
-                              className="rounded-xl border border-border px-2 py-1 text-xs font-semibold text-foreground disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]"
+                              className="axiora-chunky-btn axiora-control-btn px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
                               onClick={() => void onMarkTask(task.id)}
                             >
                               {isMarked ? "Marcada" : "Marcar"}
@@ -1173,7 +1173,7 @@ export default function ChildPage() {
                           <span className={`h-5 w-5 rounded-full border-2 ${checkpointClass(log.status)}`} />
                           <span className="max-w-20 truncate text-xs text-muted-foreground">{log.task_title || taskLabelById[log.task_id] || `#${log.task_id}`}</span>
                         </div>
-                        {index < weeklyLogs.length - 1 ? <span className="h-0.5 w-8 bg-border" /> : null}
+                        {index < weeklyLogs.length - 1 ? <span className="h-0.5 w-8 bg-[#E5D5C0]" /> : null}
                       </div>
                     ))}
                   </div>

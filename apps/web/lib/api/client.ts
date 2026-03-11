@@ -110,22 +110,16 @@ async function parseJsonSafe(response: Response): Promise<unknown> {
 async function refreshAccessToken(suppressRedirect = false): Promise<string | null> {
   const apiUrl = resolveApiUrl("/auth/refresh");
   const tenantSlug = getTenantSlug();
-  if (!tenantSlug) {
-    clearTokens();
-    clearTenantSlug();
-    if (!suppressRedirect) {
-      redirectToLoginIfBrowser();
-    }
-    return null;
-  }
 
   let response: Response;
   try {
     const csrfToken = getCsrfTokenFromCookie();
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      "X-Tenant-Slug": tenantSlug,
     };
+    if (tenantSlug) {
+      headers["X-Tenant-Slug"] = tenantSlug;
+    }
     if (csrfToken) {
       headers["X-CSRF-Token"] = csrfToken;
     }
@@ -242,9 +236,29 @@ export type AuthTokens = {
   token_type: string;
 };
 
+export type PrimaryLoginMembership = {
+  tenant_id: number;
+  tenant_slug: string;
+  tenant_name: string;
+  tenant_type: "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN";
+  role: string;
+};
+
+export type PrimaryLoginResponse = {
+  access_token: string;
+  user: { id: number; email: string; name: string; created_at: string };
+  memberships: PrimaryLoginMembership[];
+};
+
+export type SelectTenantResponse = {
+  access_token: string;
+  tenant_slug: string;
+  role: string;
+};
+
 export type AuthMeResponse = {
   user: { id: number; email: string; name: string };
-  membership: { role: string; tenant_id: number; tenant_slug: string; tenant_type: "FAMILY" | "SCHOOL"; onboarding_completed: boolean };
+  membership: { role: string; tenant_id: number; tenant_slug: string; tenant_type: "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN"; onboarding_completed: boolean };
   child_profiles: Array<{
     id: number;
     display_name: string;
@@ -262,7 +276,7 @@ export type OrganizationMembership = {
   tenant_id: number;
   tenant_name: string;
   tenant_slug: string;
-  tenant_type: "FAMILY" | "SCHOOL";
+  tenant_type: "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN";
   onboarding_completed: boolean;
 };
 
@@ -661,7 +675,7 @@ export type PlatformTenantSummary = {
   id: number;
   name: string;
   slug: string;
-  type: "FAMILY" | "SCHOOL" | string;
+  type: "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN" | string;
   onboardingCompleted: boolean;
   consentCompleted: boolean;
   createdAt: string;
@@ -1194,6 +1208,39 @@ export async function login(email: string, password: string): Promise<AuthTokens
   return response;
 }
 
+export async function signup(payload: {
+  name: string;
+  email: string;
+  password: string;
+  family_name: string;
+}): Promise<AuthTokens> {
+  const response = await apiRequest<AuthTokens>("/auth/signup", {
+    method: "POST",
+    body: {
+      name: payload.name,
+      email: payload.email,
+      password: payload.password,
+      tenant_type: "FAMILY",
+      tenant_name: payload.family_name,
+    },
+    requireAuth: false,
+    includeTenant: false,
+  });
+  parentalConsentBlocked = false;
+  return response;
+}
+
+export async function loginPrimary(email: string, password: string): Promise<PrimaryLoginResponse> {
+  const response = await apiRequest<PrimaryLoginResponse>("/auth/login-primary", {
+    method: "POST",
+    body: { email, password },
+    requireAuth: false,
+    includeTenant: false,
+  });
+  parentalConsentBlocked = false;
+  return response;
+}
+
 export async function platformLogin(email: string, password: string): Promise<AuthTokens> {
   const response = await apiRequest<AuthTokens>("/auth/platform-login", {
     method: "POST",
@@ -1226,6 +1273,15 @@ export async function changePassword(currentPassword: string, newPassword: strin
 
 export async function listMemberships(): Promise<OrganizationMembership[]> {
   return apiRequest<OrganizationMembership[]>("/auth/memberships", { method: "GET", requireAuth: true, includeTenant: false });
+}
+
+export async function selectTenant(tenantSlug: string): Promise<SelectTenantResponse> {
+  return apiRequest<SelectTenantResponse>("/auth/select-tenant", {
+    method: "POST",
+    body: { tenant_slug: tenantSlug },
+    requireAuth: true,
+    includeTenant: false,
+  });
 }
 
 export async function listChildren(): Promise<ChildProfileSummary[]> {
@@ -2244,7 +2300,7 @@ export async function getAxionStudioMe(): Promise<AxionStudioMe> {
   });
 }
 
-export async function getPlatformTenants(params?: { q?: string; tenantType?: "FAMILY" | "SCHOOL" | "" }): Promise<PlatformTenantSummary[]> {
+export async function getPlatformTenants(params?: { q?: string; tenantType?: "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN" | "" }): Promise<PlatformTenantSummary[]> {
   const query = new URLSearchParams();
   if (params?.q) query.set("q", params.q);
   if (params?.tenantType) query.set("tenantType", params.tenantType);
@@ -2259,7 +2315,7 @@ export async function getPlatformTenants(params?: { q?: string; tenantType?: "FA
 export async function createPlatformTenant(payload: {
   name: string;
   slug: string;
-  type: "FAMILY" | "SCHOOL";
+  type: "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN";
   adminEmail: string;
   adminName: string;
   adminPassword: string;
@@ -2297,7 +2353,7 @@ export async function updatePlatformTenant(
   tenantId: number,
   payload: {
     name: string;
-    type: "FAMILY" | "SCHOOL";
+    type: "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN";
     adminEmail: string;
     adminName: string;
     adminPassword?: string | null;

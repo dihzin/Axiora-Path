@@ -54,11 +54,11 @@ export function ChildDesktopShell({ children, activeNav, rightRail, rightRailApp
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_50%_18%,rgba(59,130,246,0.18),rgba(15,23,42,0.05)_26%,rgba(2,6,23,0)_56%),radial-gradient(circle_at_72%_28%,rgba(167,139,250,0.10),rgba(2,6,23,0)_22%),linear-gradient(180deg,#061226_0%,#0A1731_38%,#0B1430_100%)]">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_46%_16%,rgba(255,163,94,0.16),rgba(24,49,46,0.04)_28%,rgba(2,6,23,0)_56%),radial-gradient(circle_at_72%_24%,rgba(79,157,138,0.12),rgba(2,6,23,0)_24%),linear-gradient(180deg,#112826_0%,#16312E_40%,#17322F_100%)]">
       <div className="w-full lg:pl-[208px]">
-        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-white/5 lg:bg-[linear-gradient(180deg,rgba(15,23,42,0.94)_0%,rgba(13,22,38,0.98)_100%)] lg:px-3 lg:py-5 lg:shadow-[inset_-1px_0_0_rgba(255,255,255,0.04)]">
+        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-white/5 lg:bg-[linear-gradient(180deg,rgba(20,40,37,0.96)_0%,rgba(16,33,31,0.98)_100%)] lg:px-3 lg:py-5 lg:shadow-[inset_-1px_0_0_rgba(255,255,255,0.04)]">
           <div className="mb-0.5 flex justify-center">
-              <div className="rounded-2xl bg-[linear-gradient(180deg,rgba(18,33,61,0.88),rgba(12,25,46,0.9))] p-1.5 shadow-[0_10px_24px_rgba(2,12,35,0.24),inset_0_1px_12px_rgba(255,255,255,0.04)]">
+              <div className="rounded-2xl bg-[linear-gradient(180deg,rgba(30,55,49,0.9),rgba(20,40,37,0.92))] p-1.5 shadow-[0_10px_24px_rgba(7,20,17,0.24),inset_0_1px_12px_rgba(255,255,255,0.04)]">
               <div className="scale-90">
                 <AxionCharacter stage={1} moodState="NEUTRAL" reducedMotion={false} />
               </div>
@@ -108,7 +108,7 @@ function DesktopNavItem({ href, iconName, label, active }: { href: string; iconN
     <Link
       href={href}
       className={`mx-1.5 inline-flex items-center gap-2.5 rounded-2xl px-4 py-[7px] text-[15px] font-black uppercase tracking-[0.04em] transition-colors ${
-        active ? "border border-[#96D9FF]/35 bg-[#EAF7FF]/10 text-sky-300" : "text-slate-300 hover:bg-white/5"
+        active ? "border border-[#FFBE85]/35 bg-[#FF7A2F]/12 text-[#FFE7D1]" : "text-[#D7C7B5] hover:bg-white/5"
       }`}
     >
       <span className={`${active ? "opacity-100" : "opacity-80 grayscale-[22%]"}`}>
@@ -173,10 +173,10 @@ function DefaultRightRail() {
   return (
     <>
       <TopStatsBar streak={streak} gems={gems} xp={xp} className="max-w-none" />
-      <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(160deg,rgba(15,23,42,0.86)_0%,rgba(12,25,54,0.82)_55%,rgba(10,19,46,0.92)_100%)] p-4 shadow-[0_10px_28px_rgba(2,12,35,0.32),inset_0_1px_0_rgba(255,255,255,0.08)]">
-        <p className="text-xs font-black uppercase tracking-[0.08em] text-slate-400">Progresso</p>
-        <p className="mt-1 text-lg font-black text-slate-100">Você está indo bem!</p>
-        <p className="mt-1 text-sm font-semibold text-slate-300">Continue explorando para evoluir no Axiora.</p>
+      <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(160deg,rgba(28,54,48,0.88)_0%,rgba(24,48,43,0.84)_55%,rgba(18,39,35,0.92)_100%)] p-4 shadow-[0_10px_28px_rgba(7,20,17,0.32),inset_0_1px_0_rgba(255,255,255,0.08)]">
+        <p className="text-xs font-black uppercase tracking-[0.08em] text-[#CDBAA6]">Progresso</p>
+        <p className="mt-1 text-lg font-black text-[#FFF4E7]">Você está indo bem!</p>
+        <p className="mt-1 text-sm font-semibold text-[#E6D8C7]">Continue explorando para evoluir no Axiora.</p>
       </div>
     </>
   );

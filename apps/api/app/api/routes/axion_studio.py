@@ -342,7 +342,7 @@ def list_tenants(
         stmt = stmt.where((Tenant.name.ilike(f"%{query}%")) | (Tenant.slug.ilike(f"%{query}%")))
     if tenantType and tenantType.strip():
         normalized_type = tenantType.strip().upper()
-        if normalized_type not in {"FAMILY", "SCHOOL"}:
+        if normalized_type not in {"FAMILY", "SCHOOL", "SYSTEM_ADMIN"}:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Tipo de organizaÃ§Ã£o invÃ¡lido")
         stmt = stmt.where(Tenant.type == normalized_type)
     rows = db.scalars(stmt.order_by(Tenant.created_at.desc(), Tenant.id.desc()).limit(300)).all()
@@ -379,7 +379,7 @@ def create_tenant(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="JÃ¡ existe uma organizaÃ§Ã£o com esse slug")
 
     tenant_type_value = payload.type.strip().upper()
-    if tenant_type_value not in {"FAMILY", "SCHOOL"}:
+    if tenant_type_value not in {"FAMILY", "SCHOOL", "SYSTEM_ADMIN"}:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Tipo de organizaÃ§Ã£o invÃ¡lido")
     tenant_type = TenantType(tenant_type_value)
 
@@ -417,7 +417,11 @@ def create_tenant(
             existing_user.failed_login_attempts = 0
             existing_user.locked_until = None
 
-    admin_role = MembershipRole.PARENT if tenant_type == TenantType.FAMILY else MembershipRole.TEACHER
+    admin_role = (
+        MembershipRole.PARENT
+        if tenant_type == TenantType.FAMILY
+        else MembershipRole.PLATFORM_ADMIN if tenant_type == TenantType.SYSTEM_ADMIN else MembershipRole.DIRECTOR
+    )
     membership = db.scalar(
         select(Membership).where(
             Membership.user_id == existing_user.id,
@@ -442,6 +446,7 @@ def create_tenant(
         db.add(
             ChildProfile(
                 tenant_id=tenant.id,
+                created_by_user_id=user.id,
                 display_name=payload.testChildName.strip(),
                 date_of_birth=child_dob,
                 birth_year=payload.testChildBirthYear,
@@ -500,7 +505,7 @@ def get_tenant_detail(
         .join(Membership, Membership.user_id == User.id)
         .where(
             Membership.tenant_id == tenant.id,
-            Membership.role.in_([MembershipRole.PARENT, MembershipRole.TEACHER]),
+            Membership.role.in_([MembershipRole.PARENT, MembershipRole.PLATFORM_ADMIN, MembershipRole.DIRECTOR, MembershipRole.TEACHER]),
         )
         .order_by(User.name.asc(), User.id.asc())
     ).all()
@@ -584,7 +589,7 @@ def update_tenant(
     before_snapshot = _tenant_out(tenant, consent_completed=_tenant_consent_done(db, tenant=tenant)).model_dump(mode="json")
 
     tenant_type_value = payload.type.strip().upper()
-    if tenant_type_value not in {"FAMILY", "SCHOOL"}:
+    if tenant_type_value not in {"FAMILY", "SCHOOL", "SYSTEM_ADMIN"}:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Tipo de organizaÃ§Ã£o invÃ¡lido")
     tenant_type = TenantType(tenant_type_value)
 
@@ -592,7 +597,7 @@ def update_tenant(
         select(Membership)
         .where(
             Membership.tenant_id == tenant.id,
-            Membership.role.in_([MembershipRole.PARENT, MembershipRole.TEACHER]),
+            Membership.role.in_([MembershipRole.PARENT, MembershipRole.PLATFORM_ADMIN, MembershipRole.DIRECTOR, MembershipRole.TEACHER]),
         )
         .order_by(Membership.id.asc())
     ).all()
@@ -611,7 +616,7 @@ def update_tenant(
 
     tenant.name = payload.name.strip()
     tenant.type = tenant_type
-    if tenant_type == TenantType.SCHOOL:
+    if tenant_type in {TenantType.SCHOOL, TenantType.SYSTEM_ADMIN}:
         tenant.onboarding_completed = True
 
     primary_admin_user.name = payload.adminName.strip()
@@ -626,7 +631,11 @@ def update_tenant(
         primary_admin_user.failed_login_attempts = 0
         primary_admin_user.locked_until = None
 
-    next_admin_role = MembershipRole.PARENT if tenant_type == TenantType.FAMILY else MembershipRole.TEACHER
+    next_admin_role = (
+        MembershipRole.PARENT
+        if tenant_type == TenantType.FAMILY
+        else MembershipRole.PLATFORM_ADMIN if tenant_type == TenantType.SYSTEM_ADMIN else MembershipRole.DIRECTOR
+    )
     for membership in admin_memberships:
         membership.role = next_admin_role
 
@@ -654,7 +663,7 @@ def update_tenant(
         .join(Membership, Membership.user_id == User.id)
         .where(
             Membership.tenant_id == tenant.id,
-            Membership.role.in_([MembershipRole.PARENT, MembershipRole.TEACHER]),
+            Membership.role.in_([MembershipRole.PARENT, MembershipRole.PLATFORM_ADMIN, MembershipRole.DIRECTOR, MembershipRole.TEACHER]),
         )
         .order_by(User.name.asc(), User.id.asc())
     ).all()

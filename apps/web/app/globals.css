@@ -3,12 +3,20 @@
 @tailwind utilities;
 
 :root {
-  --app-bg-color: #0f172a;
-  --app-fg-color: #1a2d4a;
-  --app-bg-gradient: radial-gradient(circle at 50% -12%, rgba(255, 107, 61, 0.15) 0%, transparent 70%);
+  --app-bg-color: #18312e;
+  --app-fg-color: #2e3a35;
+  --app-bg-gradient: radial-gradient(circle at 50% -12%, rgba(255, 122, 47, 0.18) 0%, transparent 70%);
   --theme-primary-rgb: 255 107 61;
-  --theme-secondary-rgb: 14 165 164;
-  --theme-accent-rgb: 255 200 87;
+  --theme-secondary-rgb: 79 157 138;
+  --theme-accent-rgb: 241 197 107;
+  --axiora-ink-strong: #f8f5ee;
+  --axiora-ink-soft: rgba(247, 242, 232, 0.78);
+  --axiora-line: rgba(223, 214, 197, 0.18);
+  --axiora-panel-dark: rgba(25, 50, 45, 0.78);
+  --axiora-panel-dark-2: rgba(18, 39, 35, 0.72);
+  --axiora-panel-light: #fff9f1;
+  --axiora-teal-glow: rgba(93, 188, 168, 0.18);
+  --axiora-orange-glow: rgba(255, 122, 47, 0.16);
   --axiora-ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
   --axiora-shadow-xs: 2px 2px 4px rgba(43, 47, 66, 0.06);
   --axiora-shadow-sm: 4px 4px 10px rgba(43, 47, 66, 0.08);
@@ -16,6 +24,8 @@
   --axiora-shadow-lg: 14px 14px 32px rgba(43, 47, 66, 0.14);
   --duo-chunky-shadow: 0 8px 0 rgba(180, 64, 34, 0.35), 0 14px 24px rgba(18, 39, 72, 0.13);
   --duo-card-shadow: 0 2px 0 rgba(207, 217, 243, 0.95), 0 14px 26px rgba(38, 74, 126, 0.12);
+  --axiora-btn-shadow-dark: rgba(16, 33, 29, 0.24);
+  --axiora-btn-highlight: rgba(255, 248, 239, 0.28);
 
   /* Unit Card Duolingo-like Tokens */
   --card-radius-xl: 30px;
@@ -67,13 +77,32 @@ body {
   overflow-x: hidden;
   width: 100%;
   margin: 0;
+  scrollbar-gutter: stable;
 }
 
 html {
   max-width: 100%;
   overflow-x: hidden;
   width: 100%;
-  background-color: #0f172a;
+  background-color: #18312e;
+  scrollbar-gutter: stable;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 12px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+  background: #18312e;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(79, 157, 138, 0.65), rgba(255, 122, 47, 0.55));
+  border-radius: 9999px;
+  border: 2px solid #18312e;
 }
 
 img,
@@ -209,6 +238,158 @@ h2 {
 .axiora-hover-magic:hover {
   transform: translateY(-2px) scale(1.02);
   box-shadow: var(--axiora-shadow-md);
+}
+
+.axiora-chunky-btn {
+  --axiora-btn-face: linear-gradient(180deg, #ff9654 0%, #ff7a2f 100%);
+  --axiora-btn-edge: #d85b20;
+  --axiora-btn-floor: rgba(168, 72, 30, 0.48);
+  --axiora-btn-text: #fff9f2;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--axiora-btn-edge) 62%, white 16%);
+  border-radius: 18px;
+  background: var(--axiora-btn-face);
+  color: var(--axiora-btn-text);
+  box-shadow:
+    inset 0 1px 0 var(--axiora-btn-highlight),
+    inset 0 -4px 0 color-mix(in srgb, var(--axiora-btn-edge) 92%, black 8%),
+    0 7px 0 var(--axiora-btn-floor),
+    0 15px 26px var(--axiora-btn-shadow-dark);
+  transition:
+    transform 120ms var(--axiora-ease-soft),
+    box-shadow 120ms var(--axiora-ease-soft),
+    filter 140ms var(--axiora-ease-soft),
+    opacity 140ms ease;
+}
+
+.axiora-chunky-btn::before {
+  content: "";
+  position: absolute;
+  inset: 1px 1px auto 1px;
+  height: 48%;
+  border-radius: 16px 16px 12px 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+
+.axiora-chunky-btn:hover {
+  filter: saturate(1.03) brightness(1.02);
+}
+
+.axiora-chunky-btn:active {
+  transform: translateY(4px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -2px 0 color-mix(in srgb, var(--axiora-btn-edge) 92%, black 8%),
+    0 3px 0 var(--axiora-btn-floor),
+    0 8px 18px rgba(15, 29, 25, 0.18);
+}
+
+.axiora-chunky-btn:disabled {
+  filter: saturate(0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -3px 0 rgba(67, 74, 71, 0.42),
+    0 6px 0 rgba(41, 47, 45, 0.36),
+    0 10px 18px rgba(12, 24, 21, 0.14);
+}
+
+.axiora-chunky-btn--secondary {
+  --axiora-btn-face: linear-gradient(180deg, #6ab7a6 0%, #4f9d8a 100%);
+  --axiora-btn-edge: #317564;
+  --axiora-btn-floor: rgba(46, 96, 83, 0.44);
+}
+
+.axiora-chunky-btn--destructive {
+  --axiora-btn-face: linear-gradient(180deg, #ff7c77 0%, #ef4444 100%);
+  --axiora-btn-edge: #c62e2e;
+  --axiora-btn-floor: rgba(146, 38, 38, 0.42);
+}
+
+.axiora-chunky-btn--outline {
+  --axiora-btn-face: linear-gradient(180deg, #fff8ef 0%, #f1e6d7 100%);
+  --axiora-btn-edge: #d5be9f;
+  --axiora-btn-floor: rgba(130, 104, 75, 0.22);
+  --axiora-btn-text: #26433f;
+  border-color: rgba(228, 214, 194, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -4px 0 rgba(213, 190, 159, 0.92),
+    0 7px 0 rgba(149, 124, 92, 0.22),
+    0 15px 24px rgba(33, 49, 46, 0.12);
+}
+
+.axiora-chunky-btn--outline:active {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.88),
+    inset 0 -2px 0 rgba(213, 190, 159, 0.94),
+    0 3px 0 rgba(149, 124, 92, 0.22),
+    0 9px 18px rgba(33, 49, 46, 0.1);
+}
+
+.axiora-chunky-btn--compact {
+  border-radius: 9999px;
+}
+
+.axiora-chunky-chip {
+  --axiora-btn-face: linear-gradient(180deg, rgba(251, 245, 236, 0.96), rgba(238, 228, 212, 0.94));
+  --axiora-btn-edge: rgba(201, 181, 153, 0.96);
+  --axiora-btn-floor: rgba(73, 57, 40, 0.16);
+  --axiora-btn-text: #1f3d39;
+  border-radius: 9999px;
+}
+
+.axiora-chunky-chip--active {
+  --axiora-btn-face: linear-gradient(180deg, #ff9a58 0%, #ff7a2f 100%);
+  --axiora-btn-edge: #d95d22;
+  --axiora-btn-floor: rgba(148, 60, 23, 0.42);
+  --axiora-btn-text: #fff9f2;
+}
+
+.axiora-admin-btn {
+  border-radius: 16px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.axiora-admin-btn-sm {
+  min-height: 2rem;
+  border-radius: 12px;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.axiora-control-btn {
+  --axiora-btn-face: linear-gradient(180deg, #fff9f0 0%, #f2e6d7 100%);
+  --axiora-btn-edge: #cfbea4;
+  --axiora-btn-floor: rgba(92, 76, 56, 0.18);
+  --axiora-btn-text: #3d4f46;
+  border-radius: 16px;
+  font-weight: 800;
+}
+
+.axiora-control-btn--teal {
+  --axiora-btn-face: linear-gradient(180deg, #67b6a4 0%, #4f9d8a 100%);
+  --axiora-btn-edge: #327564;
+  --axiora-btn-floor: rgba(43, 95, 82, 0.4);
+  --axiora-btn-text: #f8fbf9;
+}
+
+.axiora-control-btn--orange {
+  --axiora-btn-face: linear-gradient(180deg, #ff9958 0%, #ff7a2f 100%);
+  --axiora-btn-edge: #d85c21;
+  --axiora-btn-floor: rgba(151, 61, 22, 0.42);
+  --axiora-btn-text: #fff8f2;
+}
+
+.axiora-control-btn--danger {
+  --axiora-btn-face: linear-gradient(180deg, #ff8d86 0%, #ef4444 100%);
+  --axiora-btn-edge: #c83333;
+  --axiora-btn-floor: rgba(137, 34, 34, 0.38);
+  --axiora-btn-text: #fff7f7;
 }
 
 @keyframes xp-pulse {
@@ -1244,10 +1425,10 @@ h2 {
   position: relative;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 14% 18%, rgba(56, 189, 248, 0.14), transparent 40%),
-    radial-gradient(circle at 82% 10%, rgba(59, 130, 246, 0.12), transparent 34%),
-    radial-gradient(circle at 50% 65%, rgba(30, 64, 175, 0.13), transparent 55%),
-    linear-gradient(180deg, #0a1631 0%, #0c1a39 45%, #0b1732 100%);
+    radial-gradient(circle at 16% 18%, rgba(93, 188, 168, 0.16), transparent 38%),
+    radial-gradient(circle at 84% 12%, rgba(255, 122, 47, 0.12), transparent 34%),
+    radial-gradient(circle at 48% 70%, rgba(53, 93, 82, 0.16), transparent 56%),
+    linear-gradient(180deg, #17322f 0%, #142b29 48%, #102422 100%);
 }
 
 .axiora-brand-page::before {
@@ -1257,11 +1438,11 @@ h2 {
   pointer-events: none;
   background-image:
     radial-gradient(2px 2px at 10% 18%, rgba(255, 255, 255, 0.6), transparent),
-    radial-gradient(1.5px 1.5px at 24% 36%, rgba(186, 230, 253, 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 24% 36%, rgba(241, 197, 107, 0.35), transparent),
     radial-gradient(2px 2px at 42% 72%, rgba(255, 255, 255, 0.42), transparent),
-    radial-gradient(2px 2px at 63% 22%, rgba(186, 230, 253, 0.58), transparent),
+    radial-gradient(2px 2px at 63% 22%, rgba(93, 188, 168, 0.46), transparent),
     radial-gradient(1.5px 1.5px at 81% 62%, rgba(255, 255, 255, 0.5), transparent),
-    radial-gradient(1.5px 1.5px at 92% 84%, rgba(186, 230, 253, 0.35), transparent);
+    radial-gradient(1.5px 1.5px at 92% 84%, rgba(255, 207, 163, 0.3), transparent);
   opacity: 0.42;
   z-index: 0;
 }
@@ -1272,25 +1453,25 @@ h2 {
 }
 
 .axiora-glass-card {
-  border-color: rgba(125, 211, 252, 0.25);
-  background: linear-gradient(180deg, rgba(16, 31, 60, 0.86) 0%, rgba(15, 27, 54, 0.82) 100%);
+  border-color: rgba(223, 214, 197, 0.2);
+  background: linear-gradient(180deg, rgba(31, 58, 52, 0.88) 0%, rgba(23, 46, 41, 0.84) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 14px 32px rgba(4, 10, 25, 0.45);
+    inset 0 1px 0 rgba(255, 247, 235, 0.1),
+    0 14px 32px rgba(7, 20, 17, 0.34);
   backdrop-filter: blur(6px);
 }
 
 .axiora-glass-soft {
-  border: 1px solid rgba(125, 211, 252, 0.22);
-  background: rgba(13, 26, 52, 0.62);
+  border: 1px solid rgba(223, 214, 197, 0.18);
+  background: rgba(24, 48, 43, 0.72);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 8px 22px rgba(4, 10, 25, 0.32);
+    inset 0 1px 0 rgba(255, 247, 235, 0.08),
+    0 8px 22px rgba(7, 20, 17, 0.24);
   backdrop-filter: blur(5px);
 }
 
 .axiora-kicker {
-  color: rgba(186, 230, 253, 0.82);
+  color: rgba(239, 219, 188, 0.88);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-size: 0.68rem;
@@ -1299,73 +1480,343 @@ h2 {
 
 .apple-parent-page {
   background:
-    radial-gradient(1100px 520px at 50% -14%, rgba(125, 211, 252, 0.16), transparent 62%),
-    radial-gradient(900px 420px at 100% 18%, rgba(59, 130, 246, 0.1), transparent 68%),
-    linear-gradient(180deg, #08162f 0%, #07142b 48%, #081936 100%);
+    radial-gradient(1100px 520px at 50% -14%, rgba(93, 188, 168, 0.12), transparent 62%),
+    radial-gradient(900px 420px at 100% 18%, rgba(255, 122, 47, 0.08), transparent 68%),
+    radial-gradient(700px 360px at 22% 100%, rgba(127, 166, 118, 0.08), transparent 72%),
+    linear-gradient(180deg, #132b28 0%, #112522 48%, #15302b 100%);
 }
 
 .apple-panel {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: linear-gradient(180deg, rgba(16, 30, 58, 0.62) 0%, rgba(12, 24, 48, 0.56) 100%);
-  backdrop-filter: blur(20px);
+  border: 1px solid rgba(223, 214, 197, 0.14);
+  background: linear-gradient(180deg, rgba(29, 55, 49, 0.84) 0%, rgba(22, 44, 39, 0.78) 100%);
+  backdrop-filter: blur(16px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 18px 42px rgba(2, 10, 24, 0.42);
+    inset 0 1px 0 rgba(255, 247, 235, 0.08),
+    0 16px 36px rgba(7, 20, 17, 0.26),
+    0 0 0 1px rgba(96, 128, 119, 0.08);
 }
 
 .apple-muted {
-  color: rgba(226, 236, 255, 0.72);
+  color: rgba(240, 235, 227, 0.72);
 }
 
 .apple-hairline {
-  border-color: rgba(255, 255, 255, 0.14);
+  border-color: rgba(223, 214, 197, 0.12);
 }
 
 .apple-btn-subtle {
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  border-bottom-width: 1px !important;
+  --axiora-btn-face: linear-gradient(180deg, rgba(48, 78, 70, 0.92), rgba(28, 54, 48, 0.96)) !important;
+  --axiora-btn-edge: rgba(28, 45, 40, 0.92) !important;
+  --axiora-btn-floor: rgba(14, 25, 22, 0.34) !important;
+  --axiora-btn-text: #f6efe4 !important;
   border-radius: 9999px !important;
-  background: rgba(15, 28, 54, 0.55) !important;
-  color: #e8efff !important;
-  box-shadow: none !important;
   letter-spacing: 0 !important;
-  font-weight: 600 !important;
-  transition:
-    background-color 160ms ease,
-    border-color 160ms ease,
-    transform 140ms ease !important;
+  font-weight: 700 !important;
 }
 
 .apple-btn-subtle:hover {
-  background: rgba(255, 255, 255, 0.14) !important;
-  border-color: rgba(255, 255, 255, 0.32) !important;
+  filter: saturate(1.04) brightness(1.03) !important;
 }
 
 .apple-btn-subtle:active {
-  transform: translateY(0) !important;
+  transform: translateY(4px) !important;
 }
 
 .apple-btn-primary {
-  border: 1px solid rgba(255, 255, 255, 0.25) !important;
-  border-bottom-width: 1px !important;
+  --axiora-btn-face: linear-gradient(180deg, #ff9958, #ff7a2f) !important;
+  --axiora-btn-edge: #d75a21 !important;
+  --axiora-btn-floor: rgba(152, 62, 23, 0.42) !important;
+  --axiora-btn-text: #fff8f2 !important;
   border-radius: 9999px !important;
-  background: rgba(238, 245, 255, 0.96) !important;
-  color: #0c2142 !important;
-  box-shadow: 0 8px 18px rgba(2, 10, 24, 0.28) !important;
   letter-spacing: 0 !important;
-  font-weight: 650 !important;
+  font-weight: 800 !important;
 }
 
 .apple-btn-primary:hover {
-  background: #ffffff !important;
+  filter: saturate(1.03) brightness(1.02) !important;
 }
 
 .apple-btn-primary:active {
-  transform: translateY(0) !important;
+  transform: translateY(4px) !important;
 }
 
 .apple-icon-btn {
   width: 2.25rem !important;
   height: 2.25rem !important;
   padding: 0 !important;
+}
+
+.parent-hero-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.parent-hero-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 22% 30%, rgba(93, 188, 168, 0.12), transparent 34%),
+    linear-gradient(90deg, rgba(255, 122, 47, 0.08), transparent 46%);
+  pointer-events: none;
+}
+
+.parent-hero-grid {
+  position: relative;
+  z-index: 1;
+}
+
+.parent-luxe-badge {
+  border: 1px solid rgba(255, 194, 148, 0.24);
+  background: linear-gradient(135deg, rgba(120, 67, 32, 0.58), rgba(77, 53, 34, 0.84));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.parent-avatar-stage {
+  border: 1px solid rgba(223, 214, 197, 0.14);
+  background:
+    radial-gradient(circle at 20% 20%, rgba(93, 188, 168, 0.16), transparent 32%),
+    rgba(22, 47, 41, 0.66);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 20px 34px rgba(7, 20, 17, 0.18);
+}
+
+.parent-spotlight {
+  border: 1px solid rgba(223, 214, 197, 0.16);
+  background:
+    linear-gradient(145deg, rgba(38, 78, 67, 0.74), rgba(24, 50, 44, 0.78)),
+    rgba(24, 50, 44, 0.74);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 18px 32px rgba(7, 20, 17, 0.22);
+}
+
+.parent-week-ribbon {
+  border: 1px solid rgba(223, 214, 197, 0.14);
+  background:
+    linear-gradient(135deg, rgba(22, 47, 41, 0.78), rgba(27, 57, 49, 0.62)),
+    rgba(22, 47, 41, 0.58);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 18px 30px rgba(7, 20, 17, 0.16);
+}
+
+.parent-family-cluster {
+  border: 1px solid rgba(223, 214, 197, 0.16);
+  background: rgba(26, 51, 45, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.parent-focus-pill {
+  border: 1px solid rgba(255, 193, 145, 0.18);
+  background: linear-gradient(135deg, rgba(111, 66, 39, 0.68), rgba(76, 52, 36, 0.76));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.parent-stat-card {
+  border: 1px solid rgba(223, 214, 197, 0.14);
+  background: linear-gradient(180deg, rgba(27, 52, 46, 0.8), rgba(21, 42, 37, 0.74));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 22px rgba(7, 20, 17, 0.18);
+}
+
+.parent-soft-block {
+  border: 1px solid rgba(223, 214, 197, 0.12);
+  background: linear-gradient(180deg, rgba(28, 53, 47, 0.64), rgba(21, 42, 37, 0.58));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 18px rgba(7, 20, 17, 0.12);
+}
+
+.parent-soft-block-strong {
+  border: 1px solid rgba(255, 193, 145, 0.18);
+  background: linear-gradient(180deg, rgba(40, 68, 58, 0.82) 0%, rgba(28, 52, 46, 0.74) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 12px 24px rgba(7, 20, 17, 0.18);
+}
+
+.parent-chip {
+  border: 1px solid rgba(223, 214, 197, 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.parent-management-shell {
+  border: 1px solid rgba(223, 214, 197, 0.1);
+  background:
+    radial-gradient(circle at top left, rgba(93, 188, 168, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(20, 44, 39, 0.52), rgba(15, 34, 30, 0.34));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.parent-profile-grid,
+.parent-task-grid {
+  align-items: start;
+}
+
+.parent-profile-card {
+  border: 1px solid rgba(223, 214, 197, 0.12);
+  background: linear-gradient(180deg, rgba(22, 46, 40, 0.76), rgba(17, 37, 33, 0.56));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 10px 20px rgba(7, 20, 17, 0.12);
+  transition:
+    border-color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.parent-profile-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 193, 145, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 16px 28px rgba(7, 20, 17, 0.16);
+}
+
+.parent-editor-panel {
+  border: 1px solid rgba(255, 193, 145, 0.18);
+  background:
+    radial-gradient(circle at top right, rgba(255, 122, 47, 0.08), transparent 26%),
+    linear-gradient(180deg, rgba(32, 59, 52, 0.8), rgba(22, 46, 40, 0.74));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 14px 28px rgba(7, 20, 17, 0.18);
+}
+
+.parent-editor-aside {
+  border: 1px solid rgba(223, 214, 197, 0.12);
+  background: linear-gradient(180deg, rgba(30, 55, 49, 0.8), rgba(20, 43, 38, 0.74));
+}
+
+.parent-operations-panel {
+  border: 1px solid rgba(223, 214, 197, 0.12);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(241, 197, 107, 0.07), transparent 22%),
+    linear-gradient(180deg, rgba(22, 46, 40, 0.62), rgba(18, 38, 34, 0.5));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 10px 22px rgba(7, 20, 17, 0.14);
+}
+
+.parent-pin-screen {
+  width: 100%;
+}
+
+.parent-pin-shell {
+  display: grid;
+  gap: 1.5rem;
+  align-items: center;
+  width: 100%;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.parent-pin-stage {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(223, 214, 197, 0.14);
+  border-radius: 2rem;
+  padding: 1.5rem;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(93, 188, 168, 0.14), transparent 26%),
+    linear-gradient(180deg, rgba(24, 49, 43, 0.8), rgba(18, 39, 35, 0.68));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 18px 34px rgba(7, 20, 17, 0.18);
+}
+
+.parent-pin-benefits {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.parent-pin-copy {
+  color: rgba(245, 238, 227, 0.86);
+}
+
+.parent-pin-copy-soft {
+  color: rgba(232, 219, 201, 0.8);
+}
+
+.parent-pin-card {
+  max-width: 32rem;
+  justify-self: stretch;
+  align-self: center;
+}
+
+.parent-story-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.parent-story-panel {
+  border: 1px solid rgba(223, 214, 197, 0.12);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 122, 47, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(25, 50, 45, 0.78), rgba(19, 40, 35, 0.62));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 12px 24px rgba(7, 20, 17, 0.14);
+}
+
+.parent-quickrail {
+  border: 1px solid rgba(255, 193, 145, 0.16);
+  background:
+    radial-gradient(circle at top left, rgba(241, 197, 107, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(27, 52, 46, 0.84), rgba(19, 39, 35, 0.74));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 12px 22px rgba(7, 20, 17, 0.16);
+}
+
+@media (min-width: 960px) {
+  .parent-pin-shell {
+    grid-template-columns: minmax(0, 1.2fr) minmax(420px, 0.8fr);
+    gap: 0;
+    padding: 0;
+  }
+
+  .parent-pin-stage {
+    min-height: 100vh;
+    padding: 4rem clamp(2rem, 5vw, 5rem);
+    border-radius: 0;
+    border-left: 0;
+    border-top: 0;
+    border-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .parent-pin-benefits {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .parent-pin-card {
+    max-width: none;
+    min-height: 100vh;
+    padding: 0 clamp(2rem, 5vw, 5rem);
+    border-radius: 0;
+    border-right: 0;
+    border-top: 0;
+    border-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background:
+      radial-gradient(circle at 22% 18%, rgba(255, 122, 47, 0.1), transparent 28%),
+      linear-gradient(180deg, rgba(29, 57, 51, 0.9) 0%, rgba(22, 46, 40, 0.86) 100%);
+  }
+
+  .parent-pin-card > * {
+    max-width: 28rem;
+  }
+
+  .parent-story-grid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  }
 }

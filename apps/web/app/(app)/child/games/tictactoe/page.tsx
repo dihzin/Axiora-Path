@@ -584,7 +584,7 @@ export default function TicTacToePage() {
         {!isGuestMode && !isGuestFromQuery ? (
           <div className="mb-3">
             <Link
-              className="inline-flex items-center gap-1.5 rounded-2xl border-2 border-border bg-white px-2.5 py-1.5 text-sm font-semibold text-muted-foreground shadow-[0_2px_0_rgba(184,200,239,0.7)] transition hover:bg-muted"
+              className="axiora-chunky-btn axiora-chunky-btn--outline inline-flex items-center gap-1.5 rounded-[20px] px-3 py-2 text-sm font-semibold text-muted-foreground"
               href="/child/games"
             >
               <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-muted">
@@ -655,8 +655,8 @@ export default function TicTacToePage() {
                     key={mode}
                     type="button"
                     className={cn(
-                      "rounded-xl px-3 py-1.5 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2",
-                      difficulty === mode ? "bg-primary/15 text-primary" : "text-muted-foreground",
+                      "axiora-chunky-btn axiora-chunky-btn--compact rounded-[18px] px-3 py-1.5 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2",
+                      difficulty === mode ? "axiora-chunky-chip--active text-white" : "axiora-chunky-btn--outline text-muted-foreground",
                     )}
                     onClick={() => setDifficulty(mode)}
                     disabled={aiThinking}

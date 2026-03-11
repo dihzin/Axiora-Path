@@ -111,7 +111,7 @@ export default function PlatformAdminAxionExecutivePage() {
   }
 
   return (
-    <main className="min-h-screen w-full bg-[radial-gradient(circle_at_top_right,_#EDF4FF_0%,_#F6FAFF_40%,_#FCFDFE_100%)] px-4 py-6 md:px-8 xl:px-14">
+      <main className="min-h-screen w-full bg-[radial-gradient(circle_at_top_right,_#F6F2EA_0%,_#F1ECE3_38%,_#FCFAF6_100%)] px-4 py-6 md:px-8 xl:px-14">
       <section className="mx-auto max-w-7xl space-y-5">
         <header className="rounded-3xl border border-[#CADAF0] bg-white/90 p-5 shadow-[0_16px_36px_rgba(16,46,90,0.10)]">
           <div className="flex flex-wrap items-center justify-between gap-3">

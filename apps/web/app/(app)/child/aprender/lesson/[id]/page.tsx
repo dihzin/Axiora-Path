@@ -1792,7 +1792,7 @@ export default function AdaptiveLessonSessionPage() {
       <div className="mb-2 flex flex-wrap items-center gap-1.5 xl:mb-2.5">
         <button
           type="button"
-          className="inline-flex w-full items-center gap-1.5 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(18,31,58,0.9),rgba(11,20,42,0.88))] px-2.5 py-1.5 text-sm font-semibold text-slate-100 shadow-[0_10px_22px_rgba(2,12,35,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-sky-300/22 hover:bg-[linear-gradient(180deg,rgba(22,37,66,0.94),rgba(14,24,48,0.9))]"
+          className="inline-flex w-full items-center gap-1.5 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,49,46,0.9),rgba(18,36,33,0.88))] px-2.5 py-1.5 text-sm font-semibold text-[#FFF4E7] shadow-[0_10px_22px_rgba(16,31,28,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-[#FFBE85]/22 hover:bg-[linear-gradient(180deg,rgba(36,67,63,0.94),rgba(24,49,46,0.9))]"
           onClick={() => void onBackToPath()}
           disabled={backSaving}
         >
@@ -1854,12 +1854,12 @@ export default function AdaptiveLessonSessionPage() {
 
       <ConfettiBurst trigger={confettiTrigger} />
 
-      <Card className="mb-2.5 overflow-hidden border border-white/10 bg-[radial-gradient(circle_at_86%_12%,rgba(45,212,191,0.1),transparent_44%),linear-gradient(180deg,rgba(14,24,52,0.92)_0%,rgba(10,19,42,0.88)_100%)] shadow-[0_10px_28px_rgba(2,12,35,0.32),inset_0_1px_0_rgba(255,255,255,0.08)] xl:mb-3">
+      <Card className="mb-2.5 overflow-hidden border border-white/10 bg-[radial-gradient(circle_at_86%_12%,rgba(255,163,94,0.12),transparent_44%),linear-gradient(180deg,rgba(26,52,47,0.92)_0%,rgba(18,36,33,0.88)_100%)] shadow-[0_10px_28px_rgba(16,31,28,0.32),inset_0_1px_0_rgba(255,255,255,0.08)] xl:mb-3">
         <CardHeader className="pb-1.5 pt-3.5 xl:pt-4">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <CardTitle className="text-[15px] text-slate-100 xl:text-base">Sessão adaptativa</CardTitle>
-              <p className="mt-0.5 text-[11px] font-semibold text-slate-300">{lessonContextLabel ?? "Lição em andamento"}</p>
+              <CardTitle className="text-[15px] text-[#FFF4E7] xl:text-base">Sessão adaptativa</CardTitle>
+              <p className="mt-0.5 text-[11px] font-semibold text-[#E6D8C7]">{lessonContextLabel ?? "Lição em andamento"}</p>
             </div>
             <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/25 bg-amber-400/10 px-2 py-0.5 text-xs font-semibold text-amber-100">
               <Flame className="h-3.5 w-3.5 text-accent" />
@@ -1869,21 +1869,21 @@ export default function AdaptiveLessonSessionPage() {
         </CardHeader>
         <CardContent className="space-y-1.5 pb-3.5 text-sm xl:pb-4">
           <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.05] px-3 py-1.5">
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#E6D8C7]">
               <Zap className="h-4 w-4 text-accent" />
               Energia
             </span>
             <div className="text-right text-xs font-semibold">
-              <p className="text-slate-100">{energyLoading ? "..." : energyStatus ? `${energyStatus.energy}/${energyStatus.maxEnergy}` : "--/--"}</p>
-              {!energyLoading && energyBlocked ? <p className="text-slate-400">Libera em {waitClock}</p> : null}
+              <p className="text-[#FFF4E7]">{energyLoading ? "..." : energyStatus ? `${energyStatus.energy}/${energyStatus.maxEnergy}` : "--/--"}</p>
+              {!energyLoading && energyBlocked ? <p className="text-[#CDBAA6]">Libera em {waitClock}</p> : null}
             </div>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-slate-300">Progresso da sessão</span>
-            <span className="font-semibold text-slate-100">{Math.round(progressPercent)}%</span>
+            <span className="font-semibold text-[#E6D8C7]">Progresso da sessão</span>
+            <span className="font-semibold text-[#FFF4E7]">{Math.round(progressPercent)}%</span>
           </div>
           <ProgressBar value={progressPercent} tone="secondary" />
-          <div className="flex items-center justify-between text-[11px] text-slate-400">
+          <div className="flex items-center justify-between text-[11px] text-[#CDBAA6]">
             <span className="font-semibold">Domínio {masteryPercent}%</span>
             <span className="font-semibold">{answeredCount}/{stepTotal}</span>
           </div>
@@ -1891,19 +1891,19 @@ export default function AdaptiveLessonSessionPage() {
       </Card>
 
       {loading ? (
-        <Card className="border border-white/10 bg-[linear-gradient(180deg,rgba(14,24,52,0.86),rgba(10,19,42,0.82))] shadow-[0_10px_28px_rgba(2,12,35,0.28)]">
-          <CardContent className="p-6 text-sm text-slate-300">Preparando sessão adaptativa...</CardContent>
+        <Card className="border border-white/10 bg-[linear-gradient(180deg,rgba(26,52,47,0.86),rgba(18,36,33,0.82))] shadow-[0_10px_28px_rgba(16,31,28,0.28)]">
+          <CardContent className="p-6 text-sm text-[#E6D8C7]">Preparando sessão adaptativa...</CardContent>
         </Card>
       ) : null}
 
       {error ? (
-        <Card className="border border-white/10 bg-[linear-gradient(180deg,rgba(14,24,52,0.86),rgba(10,19,42,0.82))] shadow-[0_10px_28px_rgba(2,12,35,0.28)]">
-          <CardContent className="p-6 text-sm text-slate-300">{error}</CardContent>
+        <Card className="border border-white/10 bg-[linear-gradient(180deg,rgba(26,52,47,0.86),rgba(18,36,33,0.82))] shadow-[0_10px_28px_rgba(16,31,28,0.28)]">
+          <CardContent className="p-6 text-sm text-[#E6D8C7]">{error}</CardContent>
         </Card>
       ) : null}
 
       {!loading && !error && current ? (
-        <Card className="mb-4 border border-white/10 bg-[linear-gradient(180deg,rgba(12,22,48,0.92),rgba(10,19,42,0.9))] shadow-[0_12px_30px_rgba(2,12,35,0.34),inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <Card className="mb-4 border border-white/10 bg-[linear-gradient(180deg,rgba(24,49,46,0.92),rgba(18,36,33,0.9))] shadow-[0_12px_30px_rgba(16,31,28,0.34),inset_0_1px_0_rgba(255,255,255,0.06)]">
           <CardContent className="space-y-3.5 p-4 md:p-5 xl:space-y-4 xl:p-5">
             {energyBlocked ? (
               <div className="rounded-2xl border border-accent/40 bg-accent/10 p-3">
@@ -1973,7 +1973,7 @@ export default function AdaptiveLessonSessionPage() {
               <h2 className="text-[21px] font-extrabold leading-tight text-foreground md:text-[25px] xl:text-[28px]">{current.prompt}</h2>
               {current.type === "DRAG_DROP" || current.type === "MATCH" ? (
                 <div className="space-y-3">
-                  <div className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(16,28,56,0.94),rgba(11,21,43,0.9))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                  <div className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(28,58,54,0.94),rgba(20,40,37,0.9))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       {current.type === "MATCH" ? "Cartões" : "Itens"}
                     </p>
@@ -1986,7 +1986,7 @@ export default function AdaptiveLessonSessionPage() {
                             type="button"
                             draggable={!currentAnswered}
                             onDragStart={() => setDraggingItemId(pair.itemId)}
-                            className="rounded-full border border-sky-300/25 bg-sky-400/10 px-3 py-1.5 text-xs font-semibold text-sky-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                            className="rounded-full border border-[#FFBE85]/25 bg-[#FF7A2F]/10 px-3 py-1.5 text-xs font-semibold text-[#FFF4E7] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                           >
                             {pair.itemLabel}
                           </button>
@@ -2093,11 +2093,11 @@ export default function AdaptiveLessonSessionPage() {
                         aria-pressed={selectedOption === option.id}
                         className={cn(
                           "group flex min-h-[52px] items-center justify-between rounded-2xl border px-3 py-2.5 text-left text-sm font-semibold transition-transform transition-shadow transition-opacity duration-150 ease-out xl:min-h-[56px] xl:py-3",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-[#18312E]",
                           "active:scale-[0.985]",
                           selectedOption === option.id
-                            ? "border-cyan-300/75 bg-[linear-gradient(180deg,rgba(21,54,78,0.9),rgba(11,31,53,0.94))] text-slate-50 shadow-[0_0_0_1px_rgba(103,232,249,0.18),0_10px_20px_rgba(2,12,35,0.18),inset_0_1px_0_rgba(255,255,255,0.08)]"
-                            : "border-white/12 bg-[linear-gradient(180deg,rgba(15,23,42,0.94),rgba(16,27,48,0.9))] text-slate-50 shadow-[0_8px_20px_rgba(2,12,35,0.14),inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-cyan-300/30 hover:bg-[linear-gradient(180deg,rgba(30,41,59,0.98),rgba(18,29,51,0.92))]",
+                            ? "border-[#FFBE85]/70 bg-[linear-gradient(180deg,rgba(53,92,86,0.94),rgba(28,58,54,0.96))] text-[#FFF4E7] shadow-[0_0_0_1px_rgba(255,163,94,0.16),0_10px_20px_rgba(16,31,28,0.18),inset_0_1px_0_rgba(255,255,255,0.08)]"
+                            : "border-white/12 bg-[linear-gradient(180deg,rgba(24,49,46,0.94),rgba(19,38,35,0.9))] text-[#FFF4E7] shadow-[0_8px_20px_rgba(16,31,28,0.14),inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-[#FFBE85]/30 hover:bg-[linear-gradient(180deg,rgba(36,67,63,0.98),rgba(24,49,46,0.92))]",
                           currentAnswered && correctByStep[index] && selectedOption === option.id ? "answer-correct-pop" : "",
                           currentAnswered && !correctByStep[index] && selectedOption === option.id ? "border-accent/55 bg-accent/10 text-accent-foreground" : "",
                         )}
@@ -2105,7 +2105,7 @@ export default function AdaptiveLessonSessionPage() {
                         onClick={() => void onPickOption(option.id)}
                       >
                         <span className="flex items-center gap-2.5">
-                          <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-[linear-gradient(180deg,rgba(243,248,255,0.14),rgba(191,219,254,0.08))] text-[11px] font-black text-cyan-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+                          <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-[linear-gradient(180deg,rgba(255,246,236,0.14),rgba(255,190,133,0.08))] text-[11px] font-black text-[#FFF4E7] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
                             {OPTION_LETTERS[optionIndex] ?? String(optionIndex + 1)}
                           </span>
                           <span className="text-[15px] font-bold leading-5 text-inherit">{option.label}</span>
@@ -2142,7 +2142,7 @@ export default function AdaptiveLessonSessionPage() {
             <div className="flex gap-2">
               <Button
                 variant="secondary"
-                className="w-full border border-white/10 bg-[linear-gradient(180deg,rgba(18,30,54,0.88),rgba(12,21,40,0.84))] text-slate-200 shadow-[0_8px_18px_rgba(2,12,35,0.12),inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform transition-shadow transition-opacity duration-150 ease-out hover:border-sky-300/22 hover:bg-[linear-gradient(180deg,rgba(22,36,62,0.92),rgba(14,24,45,0.88))] disabled:opacity-45"
+                className="w-full border border-white/10 bg-[linear-gradient(180deg,rgba(24,49,46,0.88),rgba(18,36,33,0.84))] text-[#F0E5D8] shadow-[0_8px_18px_rgba(16,31,28,0.12),inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform transition-shadow transition-opacity duration-150 ease-out hover:border-[#FFBE85]/22 hover:bg-[linear-gradient(180deg,rgba(36,67,63,0.92),rgba(24,49,46,0.88))] disabled:opacity-45"
                 disabled={!canGoPrevious}
                 onClick={() => {
                   setIndex((prev) => Math.max(0, prev - 1));
@@ -2158,7 +2158,7 @@ export default function AdaptiveLessonSessionPage() {
               <Button
                 className={cn(
                   "w-full bg-[#FF7A45] text-white shadow-[0_4px_0_rgba(212,91,49,0.7)] transition-transform transition-shadow transition-opacity duration-150 ease-out hover:brightness-105 active:translate-y-[1px] active:shadow-[0_2px_0_rgba(212,91,49,0.75)]",
-                  shouldHighlightFinish ? "ring-2 ring-secondary/35 ring-offset-2 ring-offset-slate-950" : "",
+                  shouldHighlightFinish ? "ring-2 ring-secondary/35 ring-offset-2 ring-offset-[#18312E]" : "",
                   canGoNext ? "opacity-60 saturate-75" : "",
                 )}
                 disabled={canGoNext}
@@ -2180,16 +2180,16 @@ export default function AdaptiveLessonSessionPage() {
       ) : null}
 
       {!loading && !error && !current ? (
-        <Card className="mb-4 border border-white/10 bg-[linear-gradient(180deg,rgba(12,22,48,0.92),rgba(10,19,42,0.9))] shadow-[0_12px_30px_rgba(2,12,35,0.34)]">
+        <Card className="mb-4 border border-white/10 bg-[linear-gradient(180deg,rgba(24,49,46,0.92),rgba(18,36,33,0.9))] shadow-[0_12px_30px_rgba(16,31,28,0.34)]">
           <CardContent className="space-y-3 p-5">
             {contentUnavailableReason ? (
-              <p className="text-base font-extrabold text-slate-100">{contentUnavailableReason.title}</p>
+              <p className="text-base font-extrabold text-[#FFF4E7]">{contentUnavailableReason.title}</p>
             ) : null}
-            <p className="text-sm font-semibold text-slate-300">
+            <p className="text-sm font-semibold text-[#E6D8C7]">
               {questionError ?? "Ainda não foi possível carregar esta lição."}
             </p>
             {questionRetrying ? (
-              <p className="text-xs font-semibold text-slate-400">Tentando reconectar...</p>
+              <p className="text-xs font-semibold text-[#CDBAA6]">Tentando reconectar...</p>
             ) : null}
             <Button
               type="button"
@@ -2244,17 +2244,17 @@ export default function AdaptiveLessonSessionPage() {
 
       {result ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#18312E]/55 p-4"
           onClick={() => pushPathWithResult(result)}
         >
           <div
-            className="w-full max-w-md rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(12,22,48,0.96),rgba(10,19,42,0.94))] p-5 shadow-[0_24px_60px_rgba(13,25,41,0.48)]"
+            className="w-full max-w-md rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,49,46,0.96),rgba(18,36,33,0.94))] p-5 shadow-[0_24px_60px_rgba(16,31,28,0.48)]"
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
           >
-            <p className="text-lg font-extrabold text-slate-100">Recompensas da sessão</p>
-            <p className="mt-1 text-xs text-slate-300">{starMessage(result.stars)}</p>
+            <p className="text-lg font-extrabold text-[#FFF4E7]">Recompensas da sessão</p>
+            <p className="mt-1 text-xs text-[#E6D8C7]">{starMessage(result.stars)}</p>
             <div className="mt-3 flex items-center justify-center gap-1">
               {[1, 2, 3].map((slot) => (
                 <Star key={slot} className={cn("h-7 w-7", slot <= result.stars ? "star-pop fill-amber-400 text-amber-400" : "text-slate-300")} />

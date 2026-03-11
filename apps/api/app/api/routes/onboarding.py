@@ -56,6 +56,7 @@ def complete_onboarding(
 
     child = ChildProfile(
         tenant_id=tenant.id,
+        created_by_user_id=user.id,
         display_name=payload.child_name,
         avatar_key=_sanitize_avatar_key(payload.child_avatar_key),
         date_of_birth=_default_child_date_of_birth(),
