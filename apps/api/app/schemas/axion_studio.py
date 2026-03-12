@@ -181,3 +181,38 @@ class AxionTenantUpdateRequest(BaseModel):
     adminName: str = Field(min_length=2, max_length=255)
     adminPassword: str | None = Field(default=None, min_length=10)
     resetExistingUserPassword: bool = False
+
+
+class AxionPlatformAdminUserCreateRequest(BaseModel):
+    slug: str = Field(min_length=3, max_length=255)
+    type: str = Field(pattern="^(FAMILY|SCHOOL|SYSTEM_ADMIN)$")
+    adminEmail: str
+    adminName: str = Field(min_length=2, max_length=255)
+    adminPassword: str = Field(min_length=10)
+    resetExistingUserPassword: bool = False
+
+
+class AxionPlatformAdminUserCreateResponse(BaseModel):
+    userId: int
+    adminEmail: str
+    tenantSlug: str
+    tenantType: str
+    userCreated: bool
+    membershipCreated: bool
+    passwordReset: bool
+    tenantId: int
+
+
+class AxionPlatformAdminUserUpdateRequest(BaseModel):
+    slug: str = Field(min_length=3, max_length=255)
+    type: str = Field(pattern="^(FAMILY|SCHOOL|SYSTEM_ADMIN)$")
+    adminEmail: str
+    adminName: str = Field(min_length=2, max_length=255)
+    adminPassword: str | None = Field(default=None, min_length=10)
+    resetExistingUserPassword: bool = False
+
+
+class AxionPlatformAdminUserDeleteResponse(BaseModel):
+    deleted: bool
+    userId: int
+    tenantId: int

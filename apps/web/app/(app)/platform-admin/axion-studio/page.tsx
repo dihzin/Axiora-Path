@@ -6,7 +6,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ApiError,
   changePassword,
+  createPlatformAdminUser,
   createPlatformTenant,
+  deletePlatformAdminUser,
   deletePlatformTenant,
   createAxionStudioPolicy,
   createAxionStudioTemplate,
@@ -29,6 +31,7 @@ import {
   restoreAxionStudioTemplate,
   toggleAxionStudioPolicy,
   toggleAxionStudioTemplate,
+  updatePlatformAdminUser,
   logout,
   type AxionStudioAudit,
   type AxionImpactResponse,
@@ -38,6 +41,7 @@ import {
   type AxionStudioPreviewUser,
   type AxionStudioTemplate,
   type AxionStudioVersion,
+  type PlatformAdminUserCreateResponse,
   type PlatformTenantCreateResponse,
   type PlatformTenantDetail,
   type PlatformTenantSummary,
@@ -47,6 +51,7 @@ import { clearTenantSlug, clearTokens, getAccessToken, getTenantSlug, setTenantS
 type Tab = "policies" | "messages" | "preview" | "audit" | "impact" | "orgs";
 type OrgViewTab = "clients" | "admin";
 type TenantFieldKey = "name" | "slug" | "type" | "adminName" | "adminEmail" | "adminPassword" | "testChildName" | "testChildBirthYear";
+type AdminUserFieldKey = "slug" | "type" | "adminName" | "adminEmail" | "adminPassword";
 
 const CONTEXTS = ["child_tab", "before_learning", "after_learning", "games_tab", "wallet_tab"] as const;
 const TONES = ["CALM", "ENCOURAGE", "CHALLENGE", "CELEBRATE", "SUPPORT"] as const;
@@ -183,6 +188,27 @@ function mapTenant422Errors(payload: unknown): Partial<Record<TenantFieldKey, st
   return mapped;
 }
 
+function validateAdminUserDraft(draft: {
+  slug: string;
+  type: "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN";
+  adminEmail: string;
+  adminName: string;
+  adminPassword: string;
+  resetExistingUserPassword: boolean;
+}, options?: { isEditing?: boolean }): Partial<Record<AdminUserFieldKey, string>> {
+  const isEditing = Boolean(options?.isEditing);
+  const errors: Partial<Record<AdminUserFieldKey, string>> = {};
+  if (!SLUG_REGEX.test(draft.slug.trim().toLowerCase())) {
+    errors.slug = "Use apenas letras minúsculas, números e hífen (ex.: platform-admin).";
+  }
+  if (draft.adminName.trim().length < 2) errors.adminName = "Informe o nome do administrador (mínimo 2 caracteres).";
+  if (!EMAIL_REGEX.test(draft.adminEmail.trim().toLowerCase())) errors.adminEmail = "Informe um e-mail válido.";
+  if (!isEditing || draft.resetExistingUserPassword) {
+    if (draft.adminPassword.length < 10) errors.adminPassword = "A senha inicial deve ter no mínimo 10 caracteres.";
+  }
+  return errors;
+}
+
 function AxionStudioPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -208,6 +234,12 @@ function AxionStudioPage() {
   const [editingTenantId, setEditingTenantId] = useState<number | null>(null);
   const [tenantOperationMessage, setTenantOperationMessage] = useState<string | null>(null);
   const [tenantFieldErrors, setTenantFieldErrors] = useState<Partial<Record<TenantFieldKey, string>>>({});
+  const [platformAdminUserResult, setPlatformAdminUserResult] = useState<PlatformAdminUserCreateResponse | null>(null);
+  const [editingPlatformAdminUserId, setEditingPlatformAdminUserId] = useState<number | null>(null);
+  const [adminUserFieldErrors, setAdminUserFieldErrors] = useState<Partial<Record<AdminUserFieldKey, string>>>({});
+  const [platformAdminMembers, setPlatformAdminMembers] = useState<PlatformTenantDetail["adminMembers"]>([]);
+  const [platformAdminTenantId, setPlatformAdminTenantId] = useState<number | null>(null);
+  const [platformAdminTenantType, setPlatformAdminTenantType] = useState<"FAMILY" | "SCHOOL" | "SYSTEM_ADMIN" | "">("");
   const [tenantDraft, setTenantDraft] = useState({
     name: "",
     slug: "",
@@ -218,6 +250,14 @@ function AxionStudioPage() {
     createTestChild: true,
     testChildName: "Filho Teste",
     testChildBirthYear: "",
+    resetExistingUserPassword: false,
+  });
+  const [platformAdminUserDraft, setPlatformAdminUserDraft] = useState({
+    slug: "platform-admin",
+    type: "SYSTEM_ADMIN" as "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN",
+    adminEmail: "",
+    adminName: "",
+    adminPassword: "",
     resetExistingUserPassword: false,
   });
 
@@ -288,6 +328,15 @@ function AxionStudioPage() {
   const templateCharCount = useMemo(() => templateDraft.text.trim().length, [templateDraft.text]);
   const clientTenants = useMemo(() => tenants.filter((tenant) => tenant.slug !== "platform-admin"), [tenants]);
   const adminTenants = useMemo(() => tenants.filter((tenant) => tenant.slug === "platform-admin"), [tenants]);
+  const filteredPlatformAdminMembers = useMemo(() => {
+    const query = tenantSearch.trim().toLowerCase();
+    if (!query) return platformAdminMembers;
+    return platformAdminMembers.filter((member) => {
+      const name = member.name.toLowerCase();
+      const email = member.email.toLowerCase();
+      return name.includes(query) || email.includes(query);
+    });
+  }, [platformAdminMembers, tenantSearch]);
 
   const redirectToLogin = () => {
     clearTokens();
@@ -380,6 +429,26 @@ function AxionStudioPage() {
     void loadBase();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgViewTab, tab]);
+
+  useEffect(() => {
+    if (tab !== "orgs" || orgViewTab !== "admin") {
+      setPlatformAdminMembers([]);
+      setPlatformAdminTenantId(null);
+      setPlatformAdminTenantType("");
+      return;
+    }
+    const platformTenant = adminTenants[0];
+    if (!platformTenant) {
+      setPlatformAdminMembers([]);
+      setPlatformAdminTenantId(null);
+      setPlatformAdminTenantType("");
+      return;
+    }
+    void loadPlatformAdminMembers(platformTenant.id).catch((err) => {
+      setError(getApiErrorMessage(err, "Falha ao carregar administradores da plataforma."));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, orgViewTab, adminTenants]);
 
   useEffect(() => {
     const requestedTab = searchParams.get("tab");
@@ -517,6 +586,26 @@ function AxionStudioPage() {
     }
   };
 
+  const resetPlatformAdminForm = () => {
+    setEditingPlatformAdminUserId(null);
+    setAdminUserFieldErrors({});
+    setPlatformAdminUserDraft({
+      slug: "platform-admin",
+      type: "SYSTEM_ADMIN",
+      adminEmail: "",
+      adminName: "",
+      adminPassword: "",
+      resetExistingUserPassword: false,
+    });
+  };
+
+  const loadPlatformAdminMembers = async (tenantId: number) => {
+    const detail = await getPlatformTenantDetail(tenantId);
+    setPlatformAdminTenantId(detail.tenant.id);
+    setPlatformAdminTenantType(detail.tenant.type === "SYSTEM_ADMIN" ? "SYSTEM_ADMIN" : detail.tenant.type === "SCHOOL" ? "SCHOOL" : "FAMILY");
+    setPlatformAdminMembers(detail.adminMembers.filter((member) => member.role === "PLATFORM_ADMIN"));
+  };
+
   const saveTenant = async () => {
     const isEditing = editingTenantId !== null;
     const localErrors = validateTenantDraft(tenantDraft, { isEditing });
@@ -601,6 +690,153 @@ function AxionStudioPage() {
         setTenantFieldErrors({});
         setError(getApiErrorMessage(err, isEditing ? "Falha ao atualizar organização." : "Falha ao criar organização."));
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const savePlatformAdminUser = async () => {
+    const isEditing = editingPlatformAdminUserId !== null;
+    const localErrors = validateAdminUserDraft(platformAdminUserDraft, { isEditing });
+    if (Object.keys(localErrors).length > 0) {
+      setAdminUserFieldErrors(localErrors);
+      setError("Revise os campos do administrador da plataforma.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setTenantOperationMessage(null);
+    setPlatformAdminUserResult(null);
+    setAdminUserFieldErrors({});
+    try {
+      const payload = {
+        slug: platformAdminUserDraft.slug.trim().toLowerCase(),
+        type: platformAdminUserDraft.type,
+        adminEmail: platformAdminUserDraft.adminEmail.trim().toLowerCase(),
+        adminName: platformAdminUserDraft.adminName.trim(),
+        adminPassword: platformAdminUserDraft.adminPassword,
+        resetExistingUserPassword: platformAdminUserDraft.resetExistingUserPassword,
+      };
+      const result = isEditing && editingPlatformAdminUserId !== null
+        ? await updatePlatformAdminUser(editingPlatformAdminUserId, {
+          ...payload,
+          adminPassword: payload.resetExistingUserPassword ? payload.adminPassword : null,
+        })
+        : await createPlatformAdminUser(payload);
+      setPlatformAdminUserResult(result);
+      setTenantOperationMessage(isEditing ? "Administrador da plataforma atualizado com sucesso." : "Administrador da plataforma criado com sucesso.");
+      await loadBase();
+      await loadPlatformAdminMembers(result.tenantId);
+      resetPlatformAdminForm();
+    } catch (err) {
+      setError(getApiErrorMessage(err, isEditing ? "Falha ao atualizar administrador da plataforma." : "Falha ao criar administrador da plataforma."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startEditPlatformAdminUser = async (tenant: PlatformTenantSummary) => {
+    setLoading(true);
+    setError(null);
+    setTenantOperationMessage(null);
+    setPlatformAdminUserResult(null);
+    try {
+      const detail = await getPlatformTenantDetail(tenant.id);
+      const adminMember = detail.adminMembers.find((member) => member.role === "PLATFORM_ADMIN") ?? detail.adminMembers[0];
+      if (!adminMember) {
+        setError("Nenhum administrador encontrado para edição.");
+        return;
+      }
+      setEditingPlatformAdminUserId(adminMember.userId);
+      setAdminUserFieldErrors({});
+      setPlatformAdminUserDraft({
+        slug: detail.tenant.slug,
+        type: detail.tenant.type === "SYSTEM_ADMIN" ? "SYSTEM_ADMIN" : detail.tenant.type === "SCHOOL" ? "SCHOOL" : "FAMILY",
+        adminEmail: adminMember.email,
+        adminName: adminMember.name,
+        adminPassword: "",
+        resetExistingUserPassword: false,
+      });
+      setOrgViewTab("admin");
+      setTabWithUrl("orgs");
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Falha ao carregar administrador para edição."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startEditPlatformAdminUserMember = async (userId: number) => {
+    if (!platformAdminTenantId) return;
+    setLoading(true);
+    setError(null);
+    setTenantOperationMessage(null);
+    setPlatformAdminUserResult(null);
+    try {
+      const detail = await getPlatformTenantDetail(platformAdminTenantId);
+      const adminMember = detail.adminMembers.find((member) => member.userId === userId);
+      if (!adminMember) {
+        setError("Administrador não encontrado para edição.");
+        return;
+      }
+      setEditingPlatformAdminUserId(adminMember.userId);
+      setAdminUserFieldErrors({});
+      setPlatformAdminUserDraft({
+        slug: detail.tenant.slug,
+        type: detail.tenant.type === "SYSTEM_ADMIN" ? "SYSTEM_ADMIN" : detail.tenant.type === "SCHOOL" ? "SCHOOL" : "FAMILY",
+        adminEmail: adminMember.email,
+        adminName: adminMember.name,
+        adminPassword: "",
+        resetExistingUserPassword: false,
+      });
+      setOrgViewTab("admin");
+      setTabWithUrl("orgs");
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Falha ao carregar administrador para edição."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removePlatformAdminUserFromTenant = async (tenant: PlatformTenantSummary) => {
+    setLoading(true);
+    setError(null);
+    setTenantOperationMessage(null);
+    setPlatformAdminUserResult(null);
+    try {
+      const detail = await getPlatformTenantDetail(tenant.id);
+      const adminMember = detail.adminMembers.find((member) => member.role === "PLATFORM_ADMIN") ?? detail.adminMembers[0];
+      if (!adminMember) {
+        setError("Nenhum administrador encontrado para exclusão.");
+        return;
+      }
+      await deletePlatformAdminUser(adminMember.userId);
+      setTenantOperationMessage("Administrador da plataforma excluído com sucesso.");
+      await loadBase();
+      resetPlatformAdminForm();
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Falha ao excluir administrador da plataforma."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removePlatformAdminUserMember = async (userId: number) => {
+    setLoading(true);
+    setError(null);
+    setTenantOperationMessage(null);
+    setPlatformAdminUserResult(null);
+    try {
+      await deletePlatformAdminUser(userId);
+      setTenantOperationMessage("Administrador da plataforma excluído com sucesso.");
+      await loadBase();
+      if (platformAdminTenantId) {
+        await loadPlatformAdminMembers(platformAdminTenantId);
+      }
+      resetPlatformAdminForm();
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Falha ao excluir administrador da plataforma."));
     } finally {
       setLoading(false);
     }
@@ -742,7 +978,7 @@ function AxionStudioPage() {
           ].map((item) => (
             <button
               key={item.id}
-              className={`axiora-chunky-btn axiora-admin-btn text-sm ${
+              className={`axiora-chunky-btn axiora-admin-btn px-3 py-2 text-sm ${
                 tab === item.id ? "axiora-chunky-btn--secondary text-white" : "axiora-chunky-btn--outline text-[#34557F]"
               }`}
               onClick={() => setTabWithUrl(item.id as Tab)}
@@ -1140,73 +1376,123 @@ function AxionStudioPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[760px] text-left text-sm">
                     <thead className="bg-[#F4F8FF] text-[#35567F]">
-                      <tr>
-                        <th className="px-3 py-2">Nome</th>
-                        <th className="px-3 py-2">Slug</th>
-                        <th className="px-3 py-2">Tipo</th>
-                        <th className="px-3 py-2">Consentimento</th>
-                        <th className="px-3 py-2">Onboarding</th>
-                        <th className="px-3 py-2">Criada em</th>
-                        <th className="px-3 py-2">Ações</th>
-                      </tr>
+                      {orgViewTab === "admin" ? (
+                        <tr>
+                          <th className="px-3 py-2">Nome</th>
+                          <th className="px-3 py-2">E-mail</th>
+                          <th className="px-3 py-2">Tipo</th>
+                          <th className="px-3 py-2">Role</th>
+                          <th className="px-3 py-2">Ações</th>
+                        </tr>
+                      ) : (
+                        <tr>
+                          <th className="px-3 py-2">Nome</th>
+                          <th className="px-3 py-2">Slug</th>
+                          <th className="px-3 py-2">Tipo</th>
+                          <th className="px-3 py-2">Consentimento</th>
+                          <th className="px-3 py-2">Onboarding</th>
+                          <th className="px-3 py-2">Criada em</th>
+                          <th className="px-3 py-2">Ações</th>
+                        </tr>
+                      )}
                     </thead>
                     <tbody>
-                      {(orgViewTab === "admin" ? adminTenants : clientTenants).length === 0 ? (
-                        <tr>
-                          <td className="px-3 py-6 text-center text-sm font-semibold text-[#6B87AC]" colSpan={7}>
-                            Nenhuma organização encontrada com os filtros atuais.
-                          </td>
-                        </tr>
-                      ) : null}
-                      {(orgViewTab === "admin" ? adminTenants : clientTenants).map((tenant) => (
-                        <tr key={tenant.id} className="border-t border-[#E2EAF8]">
-                          {(() => {
-                            const isPlatformTenant = tenant.slug === "platform-admin";
-                            const consentLabel = isPlatformTenant ? "N/A" : tenant.type === "SCHOOL" || tenant.type === "SYSTEM_ADMIN" ? "N/A" : tenant.consentCompleted ? "Sim" : "Não";
-                            const onboardingLabel = isPlatformTenant ? "N/A" : tenant.onboardingCompleted ? "Concluído" : "Pendente";
-                            return (
-                              <>
-                          <td className="px-3 py-2 font-semibold text-[#223F68]">{tenant.name}</td>
-                          <td className="px-3 py-2 font-mono text-xs text-[#35567F]">{tenant.slug}</td>
-                          <td className="px-3 py-2">{tenant.type === "FAMILY" ? "Família" : tenant.type === "SCHOOL" ? "Escola" : tenant.type === "SYSTEM_ADMIN" ? "Sistema" : tenant.type}</td>
-                          <td className="px-3 py-2">{consentLabel}</td>
-                          <td className="px-3 py-2">{onboardingLabel}</td>
-                          <td className="px-3 py-2">{new Date(tenant.createdAt).toLocaleString("pt-BR")}</td>
-                          <td className="px-3 py-2">
-                            <div className="flex flex-wrap gap-1">
-                              <button
-                                className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn-sm text-[#2F527D]"
-                                onClick={() => void openTenantDetail(tenant.id)}
-                                type="button"
-                              >
-                                Detalhes
-                              </button>
-                              <button
-                                className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
-                                disabled={tenant.slug === "platform-admin"}
-                                onClick={() => void startEditTenant(tenant)}
-                                type="button"
-                              >
-                                Editar
-                              </button>
-                              <button
-                                className="axiora-chunky-btn axiora-chunky-btn--destructive axiora-admin-btn-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
-                                disabled={tenant.slug === "platform-admin"}
-                                onClick={() => {
-                                  setDeleteTargetTenant(tenant);
-                                  setDeleteConfirmSlug("");
-                                }}
-                                type="button"
-                              >
-                                Excluir
-                              </button>
-                            </div>
-                          </td>
-                              </>
-                            );
-                          })()}
-                        </tr>
-                      ))}
+                      {orgViewTab === "admin" ? (
+                        <>
+                          {filteredPlatformAdminMembers.length === 0 ? (
+                            <tr>
+                              <td className="px-3 py-6 text-center text-sm font-semibold text-[#6B87AC]" colSpan={5}>
+                                Nenhum administrador encontrado com os filtros atuais.
+                              </td>
+                            </tr>
+                          ) : null}
+                          {filteredPlatformAdminMembers.map((member) => (
+                            <tr key={member.userId} className="border-t border-[#E2EAF8]">
+                              <td className="px-3 py-2 font-semibold text-[#223F68]">{member.name}</td>
+                              <td className="px-3 py-2 text-[#35567F]">{member.email}</td>
+                              <td className="px-3 py-2">{platformAdminTenantType === "SYSTEM_ADMIN" ? "Sistema" : platformAdminTenantType === "SCHOOL" ? "Escola" : platformAdminTenantType === "FAMILY" ? "Família" : "-"}</td>
+                              <td className="px-3 py-2">{member.role.toLowerCase()}</td>
+                              <td className="px-3 py-2">
+                                <div className="flex flex-wrap gap-1">
+                                  <button
+                                    className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn-sm text-white"
+                                    onClick={() => void startEditPlatformAdminUserMember(member.userId)}
+                                    type="button"
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    className="axiora-chunky-btn axiora-chunky-btn--destructive axiora-admin-btn-sm text-white"
+                                    onClick={() => void removePlatformAdminUserMember(member.userId)}
+                                    type="button"
+                                  >
+                                    Excluir
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </>
+                      ) : (
+                        <>
+                          {clientTenants.length === 0 ? (
+                            <tr>
+                              <td className="px-3 py-6 text-center text-sm font-semibold text-[#6B87AC]" colSpan={7}>
+                                Nenhuma organização encontrada com os filtros atuais.
+                              </td>
+                            </tr>
+                          ) : null}
+                          {clientTenants.map((tenant) => (
+                            <tr key={tenant.id} className="border-t border-[#E2EAF8]">
+                              {(() => {
+                                const isPlatformTenant = tenant.slug === "platform-admin";
+                                const consentLabel = isPlatformTenant ? "N/A" : tenant.type === "SCHOOL" || tenant.type === "SYSTEM_ADMIN" ? "N/A" : tenant.consentCompleted ? "Sim" : "Não";
+                                const onboardingLabel = isPlatformTenant ? "N/A" : tenant.onboardingCompleted ? "Concluído" : "Pendente";
+                                return (
+                                  <>
+                                    <td className="px-3 py-2 font-semibold text-[#223F68]">{tenant.name}</td>
+                                    <td className="px-3 py-2 font-mono text-xs text-[#35567F]">{tenant.slug}</td>
+                                    <td className="px-3 py-2">{tenant.type === "FAMILY" ? "Família" : tenant.type === "SCHOOL" ? "Escola" : tenant.type === "SYSTEM_ADMIN" ? "Sistema" : tenant.type}</td>
+                                    <td className="px-3 py-2">{consentLabel}</td>
+                                    <td className="px-3 py-2">{onboardingLabel}</td>
+                                    <td className="px-3 py-2">{new Date(tenant.createdAt).toLocaleString("pt-BR")}</td>
+                                    <td className="px-3 py-2">
+                                      <div className="flex flex-wrap gap-1">
+                                        <button
+                                          className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn-sm text-[#2F527D]"
+                                          onClick={() => void openTenantDetail(tenant.id)}
+                                          type="button"
+                                        >
+                                          Detalhes
+                                        </button>
+                                        <button
+                                          className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                          disabled={tenant.slug === "platform-admin"}
+                                          onClick={() => void startEditTenant(tenant)}
+                                          type="button"
+                                        >
+                                          Editar
+                                        </button>
+                                        <button
+                                          className="axiora-chunky-btn axiora-chunky-btn--destructive axiora-admin-btn-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                          disabled={tenant.slug === "platform-admin"}
+                                          onClick={() => {
+                                            setDeleteTargetTenant(tenant);
+                                            setDeleteConfirmSlug("");
+                                          }}
+                                          type="button"
+                                        >
+                                          Excluir
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </>
+                                );
+                              })()}
+                            </tr>
+                          ))}
+                        </>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1235,8 +1521,8 @@ function AxionStudioPage() {
                 </div>
               ) : (
                 <div className="mb-3 rounded-xl border border-[#D7E2F4] bg-[#F7FAFF] px-3 py-2 text-xs font-semibold text-[#35567F]">
-                  <p>Aba exclusiva para visualizar e auditar a organização `platform-admin`.</p>
-                  <p className="mt-1">A criação de novas organizações fica disponível na aba `Clientes`.</p>
+                  <p>Use esta aba para gerenciar usuários administradores da organização `platform-admin`.</p>
+                  <p className="mt-1">A criação de novas organizações continua disponível na aba `Clientes`.</p>
                 </div>
               )}
               {orgViewTab === "clients" ? (
@@ -1422,15 +1708,116 @@ function AxionStudioPage() {
               ) : null}
                 </>
               ) : (
-                <div className="rounded-xl border border-[#D7E2F4] bg-white px-3 py-3 text-sm font-semibold text-[#35567F]">
-                  {adminTenants.length > 0 ? (
-                    <p>
-                      Organização admin encontrada: <span className="font-black">{adminTenants[0].name}</span> ({adminTenants[0].slug})
-                    </p>
+                <>
+                  <div className="mb-3 rounded-xl border border-[#D7E2F4] bg-[#F7FAFF] px-3 py-2 text-xs font-semibold text-[#35567F]">
+                    <p>Cria ou vincula um usuário na organização `platform-admin` com papel `PLATFORM_ADMIN`.</p>
+                    <p className="mt-1">Se o usuário já existir, marque a opção para redefinir senha.</p>
+                  </div>
+                  <input
+                    className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm font-mono ${adminUserFieldErrors.slug ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
+                    onChange={(e) => {
+                      setPlatformAdminUserDraft((d) => ({ ...d, slug: e.target.value.toLowerCase() }));
+                      setAdminUserFieldErrors((prev) => ({ ...prev, slug: undefined }));
+                    }}
+                    placeholder="Slug *"
+                    value={platformAdminUserDraft.slug}
+                  />
+                  {adminUserFieldErrors.slug ? <p className="mb-2 text-xs font-semibold text-[#B54C47]">{adminUserFieldErrors.slug}</p> : null}
+                  <select
+                    className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${adminUserFieldErrors.type ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
+                    onChange={(e) => {
+                      setPlatformAdminUserDraft((d) => ({ ...d, type: e.target.value as "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN" }));
+                      setAdminUserFieldErrors((prev) => ({ ...prev, type: undefined }));
+                    }}
+                    value={platformAdminUserDraft.type}
+                  >
+                    <option value="SYSTEM_ADMIN">Sistema</option>
+                    <option value="SCHOOL">Escola</option>
+                    <option value="FAMILY">Família</option>
+                  </select>
+                  {adminUserFieldErrors.type ? (
+                    <p className="mb-2 text-xs font-semibold text-[#B54C47]">{adminUserFieldErrors.type}</p>
                   ) : (
-                    <p>Nenhuma organização administrativa localizada.</p>
+                    <div className="mb-2" />
                   )}
-                </div>
+                  <input
+                    className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${adminUserFieldErrors.adminName ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
+                    onChange={(e) => {
+                      setPlatformAdminUserDraft((d) => ({ ...d, adminName: e.target.value }));
+                      setAdminUserFieldErrors((prev) => ({ ...prev, adminName: undefined }));
+                    }}
+                    placeholder="Nome do administrador *"
+                    value={platformAdminUserDraft.adminName}
+                  />
+                  {adminUserFieldErrors.adminName ? <p className="mb-2 text-xs font-semibold text-[#B54C47]">{adminUserFieldErrors.adminName}</p> : null}
+                  <input
+                    className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${adminUserFieldErrors.adminEmail ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
+                    onChange={(e) => {
+                      setPlatformAdminUserDraft((d) => ({ ...d, adminEmail: e.target.value }));
+                      setAdminUserFieldErrors((prev) => ({ ...prev, adminEmail: undefined }));
+                    }}
+                    placeholder="E-mail do administrador *"
+                    type="email"
+                    autoComplete="off"
+                    value={platformAdminUserDraft.adminEmail}
+                  />
+                  {adminUserFieldErrors.adminEmail ? <p className="mb-2 text-xs font-semibold text-[#B54C47]">{adminUserFieldErrors.adminEmail}</p> : null}
+                  <input
+                    className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${adminUserFieldErrors.adminPassword ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
+                    onChange={(e) => {
+                      setPlatformAdminUserDraft((d) => ({ ...d, adminPassword: e.target.value }));
+                      setAdminUserFieldErrors((prev) => ({ ...prev, adminPassword: undefined }));
+                    }}
+                    placeholder="Senha inicial *"
+                    type="password"
+                    autoComplete="new-password"
+                    value={platformAdminUserDraft.adminPassword}
+                  />
+                  {adminUserFieldErrors.adminPassword ? (
+                    <p className="mb-2 text-xs font-semibold text-[#B54C47]">{adminUserFieldErrors.adminPassword}</p>
+                  ) : (
+                    <p className="mb-2 text-xs font-semibold text-[#6B87AC]">
+                      {editingPlatformAdminUserId ? "Opcional. Marque abaixo para redefinir senha (mínimo 10 caracteres)." : "Mínimo: 10 caracteres."}
+                    </p>
+                  )}
+                  <label className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-[#2B4E79]">
+                    <input
+                      checked={platformAdminUserDraft.resetExistingUserPassword}
+                      onChange={(e) => setPlatformAdminUserDraft((d) => ({ ...d, resetExistingUserPassword: e.target.checked }))}
+                      type="checkbox"
+                    />
+                    Redefinir senha se usuário já existir
+                  </label>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn px-3 py-2 text-sm text-white disabled:opacity-60"
+                      disabled={loading}
+                      onClick={() => void savePlatformAdminUser()}
+                      type="button"
+                    >
+                      {editingPlatformAdminUserId ? "Salvar admin da plataforma" : "Criar admin da plataforma"}
+                    </button>
+                    {editingPlatformAdminUserId ? (
+                      <button
+                        className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn px-3 py-2 text-sm text-[#2F527D]"
+                        disabled={loading}
+                        onClick={() => resetPlatformAdminForm()}
+                        type="button"
+                      >
+                        Cancelar edição
+                      </button>
+                    ) : null}
+                  </div>
+                  {platformAdminUserResult ? (
+                    <div className="mt-3 rounded-xl border border-[#CBE7E4] bg-[#F1FCFA] p-3 text-xs font-semibold text-[#245A67]">
+                      <p className="font-black text-[#1F4F5D]">{editingPlatformAdminUserId ? "Administrador atualizado." : "Administrador criado."}</p>
+                      <p className="mt-1">Slug: {platformAdminUserResult.tenantSlug}</p>
+                      <p>Admin: {platformAdminUserResult.adminEmail}</p>
+                      <p>Perfil criado: {platformAdminUserResult.userCreated ? "sim" : "não (já existia)"}</p>
+                      <p>Vínculo criado: {platformAdminUserResult.membershipCreated ? "sim" : "não (já existia)"}</p>
+                    </div>
+                  ) : null}
+                </>
               )}
             </div>
           </section>

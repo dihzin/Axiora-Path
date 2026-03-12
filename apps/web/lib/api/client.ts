@@ -706,6 +706,23 @@ export type PlatformTenantDetail = {
   membershipsCount: number;
 };
 
+export type PlatformAdminUserCreateResponse = {
+  userId: number;
+  adminEmail: string;
+  tenantSlug: string;
+  tenantType: "SYSTEM_ADMIN" | string;
+  userCreated: boolean;
+  membershipCreated: boolean;
+  passwordReset: boolean;
+  tenantId: number;
+};
+
+export type PlatformAdminUserDeleteResponse = {
+  deleted: boolean;
+  userId: number;
+  tenantId: number;
+};
+
 export type AxionStudioPreviewResponse = {
   state: Record<string, unknown>;
   facts: Record<string, unknown>;
@@ -2374,6 +2391,49 @@ export async function updatePlatformTenant(
   return apiRequest<PlatformTenantDetail>(`/api/platform-admin/tenants/${tenantId}`, {
     method: "PATCH",
     body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function createPlatformAdminUser(payload: {
+  slug: string;
+  type: "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN";
+  adminEmail: string;
+  adminName: string;
+  adminPassword: string;
+  resetExistingUserPassword: boolean;
+}): Promise<PlatformAdminUserCreateResponse> {
+  return apiRequest<PlatformAdminUserCreateResponse>("/api/platform-admin/tenants/platform-admin/admin-users", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function updatePlatformAdminUser(
+  userId: number,
+  payload: {
+    slug: string;
+    type: "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN";
+    adminEmail: string;
+    adminName: string;
+    adminPassword?: string | null;
+    resetExistingUserPassword: boolean;
+  },
+): Promise<PlatformAdminUserCreateResponse> {
+  return apiRequest<PlatformAdminUserCreateResponse>(`/api/platform-admin/tenants/platform-admin/admin-users/${userId}`, {
+    method: "PATCH",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function deletePlatformAdminUser(userId: number): Promise<PlatformAdminUserDeleteResponse> {
+  return apiRequest<PlatformAdminUserDeleteResponse>(`/api/platform-admin/tenants/platform-admin/admin-users/${userId}`, {
+    method: "DELETE",
     requireAuth: true,
     includeTenant: true,
   });
