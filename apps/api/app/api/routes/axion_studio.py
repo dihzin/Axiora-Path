@@ -5,6 +5,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import DBSession, get_current_user, require_role
 from app.core.config import settings
@@ -27,6 +28,10 @@ from app.models import (
 )
 from app.schemas.axion_studio import (
     AxionTenantAdminMemberOut,
+    AxionPlatformAdminUserDeleteResponse,
+    AxionPlatformAdminUserCreateRequest,
+    AxionPlatformAdminUserCreateResponse,
+    AxionPlatformAdminUserUpdateRequest,
     AxionTenantDeleteRequest,
     AxionImpactResponse,
     AxionMessageTemplateCreate,
@@ -87,7 +92,19 @@ def _safe_child_dob_from_birth_year(birth_year: int | None) -> tuple[date, bool]
     return _safe_date(clamped_year), needs_completion
 
 
-def _is_platform_admin(user: User) -> bool:
+def _is_platform_admin(db: DBSession, user: User) -> bool:
+    membership = db.scalar(
+        select(Membership)
+        .join(Tenant, Tenant.id == Membership.tenant_id)
+        .where(
+            Membership.user_id == user.id,
+            Membership.role == MembershipRole.PLATFORM_ADMIN,
+            Tenant.slug == "platform-admin",
+            Tenant.deleted_at.is_(None),
+        )
+    )
+    if membership is not None:
+        return True
     allowlist = {item.strip().lower() for item in settings.platform_admin_emails.split(",") if item.strip()}
     email = user.email.lower().strip()
     if email in allowlist:
@@ -98,8 +115,8 @@ def _is_platform_admin(user: User) -> bool:
     return False
 
 
-def _require_platform_admin(user: User) -> None:
-    if not _is_platform_admin(user):
+def _require_platform_admin(user: User, db: DBSession) -> None:
+    if not _is_platform_admin(db, user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Apenas administradores da plataforma podem acessar o Axion Studio")
 
 
@@ -291,6 +308,15 @@ def _map_cta(actions: list[dict[str, Any]], *, due_reviews: int) -> dict[str, An
     return {"label": "Desafio rÃ¡pido (2 min)", "actionType": "OPEN_MICRO_MISSION", "payload": params or {"durationMinutes": 2}}
 
 
+def _ensure_platform_admin_tenant_type(db: DBSession, tenant: Tenant) -> None:
+    tenant_slug = (tenant.slug or "").strip().lower()
+    tenant_type = tenant.type.value if isinstance(tenant.type, TenantType) else str(tenant.type).upper()
+    if tenant_slug == "platform-admin" and tenant_type != TenantType.SYSTEM_ADMIN.value:
+        tenant.type = TenantType.SYSTEM_ADMIN
+        tenant.onboarding_completed = True
+        db.flush()
+
+
 async def _rate_limit_preview(request: Request, *, user_id: int) -> None:
     redis = getattr(request.app.state, "redis", None)
     if redis is None:
@@ -310,7 +336,7 @@ def list_policies(
     context: str | None = Query(default=None),
     q: str | None = Query(default=None),
 ) -> list[AxionPolicyRuleOut]:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     stmt = select(AxionPolicyRule)
     if context:
         stmt = stmt.where(AxionPolicyRule.context == _validate_context(context))
@@ -322,9 +348,10 @@ def list_policies(
 
 @router.get("/api/platform-admin/axion/me")
 def platform_admin_me(
+    db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> dict[str, Any]:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     return {"userId": user.id, "name": user.name, "email": user.email}
 
 
@@ -335,7 +362,7 @@ def list_tenants(
     q: str | None = Query(default=None),
     tenantType: str | None = Query(default=None),
 ) -> list[AxionTenantSummaryOut]:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     stmt = select(Tenant).where(Tenant.deleted_at.is_(None))
     if q and q.strip():
         query = q.strip()
@@ -366,7 +393,7 @@ def create_tenant(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> AxionTenantCreateResponse:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
 
     slug = payload.slug.strip().lower()
     if not slug:
@@ -488,13 +515,245 @@ def create_tenant(
     )
 
 
+@router.post("/api/platform-admin/tenants/platform-admin/admin-users", response_model=AxionPlatformAdminUserCreateResponse, status_code=status.HTTP_201_CREATED)
+def create_platform_admin_user(
+    payload: AxionPlatformAdminUserCreateRequest,
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> AxionPlatformAdminUserCreateResponse:
+    _require_platform_admin(user, db)
+
+    tenant_slug = payload.slug.strip().lower()
+    tenant_type_value = payload.type.strip().upper()
+    if tenant_type_value not in {"FAMILY", "SCHOOL", "SYSTEM_ADMIN"}:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Tipo de organização inválido para este fluxo")
+
+    admin_email = payload.adminEmail.strip().lower()
+    admin_name = payload.adminName.strip()
+    if not admin_email:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="E-mail do administrador é obrigatório")
+
+    password_error = validate_password_strength(payload.adminPassword)
+    if password_error is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=password_error)
+
+    platform_tenant = db.scalar(select(Tenant).where(Tenant.slug == tenant_slug, Tenant.deleted_at.is_(None)))
+    if platform_tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organização administrativa não encontrada")
+    _ensure_platform_admin_tenant_type(db, platform_tenant)
+
+    existing_user = db.scalar(select(User).where(User.email == admin_email))
+    user_created = False
+    password_reset = False
+    if existing_user is None:
+        existing_user = User(
+            email=admin_email,
+            name=admin_name,
+            password_hash=hash_password(payload.adminPassword),
+            failed_login_attempts=0,
+        )
+        db.add(existing_user)
+        db.flush()
+        user_created = True
+        password_reset = True
+    else:
+        existing_user.name = admin_name or existing_user.name
+        if payload.resetExistingUserPassword:
+            existing_user.password_hash = hash_password(payload.adminPassword)
+            existing_user.failed_login_attempts = 0
+            existing_user.locked_until = None
+            password_reset = True
+
+    membership = db.scalar(
+        select(Membership).where(
+            Membership.user_id == existing_user.id,
+            Membership.tenant_id == platform_tenant.id,
+        )
+    )
+    membership_created = False
+    if membership is None:
+        membership = Membership(
+            user_id=existing_user.id,
+            tenant_id=platform_tenant.id,
+            role=MembershipRole.PLATFORM_ADMIN,
+        )
+        db.add(membership)
+        membership_created = True
+    else:
+        membership.role = MembershipRole.PLATFORM_ADMIN
+
+    _write_audit(
+        db,
+        actor_user_id=user.id,
+        action="PLATFORM_ADMIN_USER_CREATE",
+        entity_type="ORG",
+        entity_id=str(platform_tenant.id),
+        before=None,
+        after={
+            "tenantSlug": platform_tenant.slug,
+            "tenantType": platform_tenant.type.value if isinstance(platform_tenant.type, TenantType) else str(platform_tenant.type),
+            "adminEmail": admin_email,
+            "adminName": existing_user.name,
+            "userCreated": user_created,
+            "membershipCreated": membership_created,
+            "passwordReset": password_reset,
+        },
+    )
+    try:
+        db.commit()
+    except (ValueError, SQLAlchemyError) as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+    return AxionPlatformAdminUserCreateResponse(
+        userId=existing_user.id,
+        adminEmail=existing_user.email,
+        tenantSlug=platform_tenant.slug,
+        tenantType=platform_tenant.type.value if isinstance(platform_tenant.type, TenantType) else str(platform_tenant.type),
+        userCreated=user_created,
+        membershipCreated=membership_created,
+        passwordReset=password_reset,
+        tenantId=platform_tenant.id,
+    )
+
+
+@router.patch("/api/platform-admin/tenants/platform-admin/admin-users/{user_id}", response_model=AxionPlatformAdminUserCreateResponse)
+def update_platform_admin_user(
+    user_id: int,
+    payload: AxionPlatformAdminUserUpdateRequest,
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> AxionPlatformAdminUserCreateResponse:
+    _require_platform_admin(user, db)
+
+    tenant_slug = payload.slug.strip().lower()
+    tenant_type_value = payload.type.strip().upper()
+    if tenant_type_value not in {"FAMILY", "SCHOOL", "SYSTEM_ADMIN"}:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Tipo de organização inválido para este fluxo")
+
+    platform_tenant = db.scalar(select(Tenant).where(Tenant.slug == tenant_slug, Tenant.deleted_at.is_(None)))
+    if platform_tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organização administrativa não encontrada")
+    _ensure_platform_admin_tenant_type(db, platform_tenant)
+
+    membership = db.scalar(
+        select(Membership).where(
+            Membership.user_id == user_id,
+            Membership.tenant_id == platform_tenant.id,
+        )
+    )
+    if membership is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Administrador não encontrado na organização platform-admin")
+
+    target_user = db.scalar(select(User).where(User.id == user_id))
+    if target_user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuário administrador não encontrado")
+
+    next_email = payload.adminEmail.strip().lower()
+    if not next_email:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="E-mail do administrador é obrigatório")
+    existing_user_same_email = db.scalar(select(User).where(User.email == next_email))
+    if existing_user_same_email is not None and existing_user_same_email.id != target_user.id:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Já existe outro usuário com este e-mail")
+
+    password_reset = False
+    if payload.resetExistingUserPassword:
+        if not payload.adminPassword:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Informe a nova senha para redefinir o usuário")
+        password_error = validate_password_strength(payload.adminPassword)
+        if password_error is not None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=password_error)
+        target_user.password_hash = hash_password(payload.adminPassword)
+        target_user.failed_login_attempts = 0
+        target_user.locked_until = None
+        password_reset = True
+
+    target_user.name = payload.adminName.strip()
+    target_user.email = next_email
+    membership.role = MembershipRole.PLATFORM_ADMIN
+
+    _write_audit(
+        db,
+        actor_user_id=user.id,
+        action="PLATFORM_ADMIN_USER_UPDATE",
+        entity_type="ORG",
+        entity_id=str(platform_tenant.id),
+        before={"userId": target_user.id},
+        after={
+            "tenantSlug": platform_tenant.slug,
+            "tenantType": platform_tenant.type.value if isinstance(platform_tenant.type, TenantType) else str(platform_tenant.type),
+            "adminEmail": target_user.email,
+            "adminName": target_user.name,
+            "passwordReset": password_reset,
+        },
+    )
+    try:
+        db.commit()
+    except (ValueError, SQLAlchemyError) as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+    return AxionPlatformAdminUserCreateResponse(
+        userId=target_user.id,
+        adminEmail=target_user.email,
+        tenantSlug=platform_tenant.slug,
+        tenantType=platform_tenant.type.value if isinstance(platform_tenant.type, TenantType) else str(platform_tenant.type),
+        userCreated=False,
+        membershipCreated=False,
+        passwordReset=password_reset,
+        tenantId=platform_tenant.id,
+    )
+
+
+@router.delete("/api/platform-admin/tenants/platform-admin/admin-users/{user_id}", response_model=AxionPlatformAdminUserDeleteResponse)
+def delete_platform_admin_user(
+    user_id: int,
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> AxionPlatformAdminUserDeleteResponse:
+    _require_platform_admin(user, db)
+
+    if user_id == user.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Não é permitido remover o próprio acesso de administrador")
+
+    platform_tenant = db.scalar(select(Tenant).where(Tenant.slug == "platform-admin", Tenant.deleted_at.is_(None)))
+    if platform_tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organização administrativa não encontrada")
+
+    membership = db.scalar(
+        select(Membership).where(
+            Membership.user_id == user_id,
+            Membership.tenant_id == platform_tenant.id,
+        )
+    )
+    if membership is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Administrador não encontrado na organização platform-admin")
+
+    target_user = db.scalar(select(User).where(User.id == user_id))
+    before_email = target_user.email if target_user is not None else ""
+
+    db.delete(membership)
+    _write_audit(
+        db,
+        actor_user_id=user.id,
+        action="PLATFORM_ADMIN_USER_DELETE",
+        entity_type="ORG",
+        entity_id=str(platform_tenant.id),
+        before={"userId": user_id, "adminEmail": before_email},
+        after={"deleted": True},
+    )
+    db.commit()
+
+    return AxionPlatformAdminUserDeleteResponse(deleted=True, userId=user_id, tenantId=platform_tenant.id)
+
+
 @router.get("/api/platform-admin/tenants/{tenant_id}", response_model=AxionTenantDetailOut)
 def get_tenant_detail(
     tenant_id: int,
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> AxionTenantDetailOut:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     tenant = db.scalar(select(Tenant).where(Tenant.id == tenant_id, Tenant.deleted_at.is_(None)))
     if tenant is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OrganizaÃ§Ã£o nÃ£o encontrada")
@@ -541,7 +800,7 @@ def delete_tenant(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> dict[str, Any]:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     tenant = db.scalar(select(Tenant).where(Tenant.id == tenant_id, Tenant.deleted_at.is_(None)))
     if tenant is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OrganizaÃ§Ã£o nÃ£o encontrada")
@@ -579,7 +838,7 @@ def update_tenant(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> AxionTenantDetailOut:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     tenant = db.scalar(select(Tenant).where(Tenant.id == tenant_id, Tenant.deleted_at.is_(None)))
     if tenant is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OrganizaÃ§Ã£o nÃ£o encontrada")
@@ -697,7 +956,7 @@ def create_policy(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> AxionPolicyRuleOut:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     _validate_json_conditions(payload.condition)
     _validate_actions(payload.actions)
     rule = AxionPolicyRule(
@@ -722,7 +981,7 @@ def patch_policy(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> AxionPolicyRuleOut:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     rule = db.get(AxionPolicyRule, policy_id)
     if rule is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regra de polÃ­tica nÃ£o encontrada")
@@ -754,7 +1013,7 @@ def toggle_policy(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> AxionPolicyRuleOut:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     rule = db.get(AxionPolicyRule, policy_id)
     if rule is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regra de polÃ­tica nÃ£o encontrada")
@@ -773,7 +1032,7 @@ def policy_versions(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> list[AxionVersionOut]:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     rows = db.scalars(
         select(AxionPolicyRuleVersion)
         .where(AxionPolicyRuleVersion.rule_id == policy_id)
@@ -789,7 +1048,7 @@ def restore_policy(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> AxionPolicyRuleOut:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     rule = db.get(AxionPolicyRule, policy_id)
     if rule is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regra de polÃ­tica nÃ£o encontrada")
@@ -827,7 +1086,7 @@ def list_templates(
     context: str | None = Query(default=None),
     tone: str | None = Query(default=None),
 ) -> list[AxionMessageTemplateOut]:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     stmt = select(AxionMessageTemplate)
     if context:
         stmt = stmt.where(AxionMessageTemplate.context == _validate_context(context))
@@ -843,7 +1102,7 @@ def create_template(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> AxionMessageTemplateOut:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     _validate_json_conditions(payload.conditions)
     if len(payload.text.strip()) > 220:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="O texto do template deve ter no mÃ¡ximo 220 caracteres")
@@ -870,7 +1129,7 @@ def patch_template(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> AxionMessageTemplateOut:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     template = db.get(AxionMessageTemplate, template_id)
     if template is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template nÃ£o encontrado")
@@ -905,7 +1164,7 @@ def toggle_template(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> AxionMessageTemplateOut:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     template = db.get(AxionMessageTemplate, template_id)
     if template is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template nÃ£o encontrado")
@@ -924,7 +1183,7 @@ def template_versions(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> list[AxionVersionOut]:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     rows = db.scalars(
         select(AxionMessageTemplateVersion)
         .where(AxionMessageTemplateVersion.template_id == template_id)
@@ -940,7 +1199,7 @@ def restore_template(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> AxionMessageTemplateOut:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     template = db.get(AxionMessageTemplate, template_id)
     if template is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template nÃ£o encontrado")
@@ -977,7 +1236,7 @@ def audit_logs(
     actorUserId: int | None = Query(default=None),
     entityType: str | None = Query(default=None),
 ) -> list[AxionStudioAuditLogOut]:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     stmt = select(AxionStudioAuditLog)
     if actorUserId is not None:
         stmt = stmt.where(AxionStudioAuditLog.actor_user_id == actorUserId)
@@ -1003,7 +1262,7 @@ def preview_users(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> list[AxionStudioUserOption]:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     rows = db.scalars(
         select(User)
         .join(Membership, Membership.user_id == User.id)
@@ -1023,7 +1282,7 @@ def axion_impact(
     userId: int = Query(...),
     days: int = Query(default=7),
 ) -> AxionImpactResponse:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     summary = computeAxionImpact(db, userId=userId, days=max(1, days))
     return AxionImpactResponse(
         userId=userId,
@@ -1044,7 +1303,7 @@ async def preview_axion(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> AxionPreviewResponse:
-    _require_platform_admin(user)
+    _require_platform_admin(user, db)
     await _rate_limit_preview(request, user_id=user.id)
     context = _validate_context(payload.context)
     facts = buildAxionFacts(db, userId=payload.userId)
@@ -1095,3 +1354,4 @@ async def preview_axion(
         chosenRuleIds=[int(item.get("id", 0)) for item in matched_rules if int(item.get("id", 0)) > 0],
         chosenTemplateId=int(msg_snapshot.template_id) if msg_snapshot.template_id else None,
     )
+

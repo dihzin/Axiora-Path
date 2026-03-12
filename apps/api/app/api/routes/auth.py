@@ -75,11 +75,6 @@ def _set_auth_cookies(response: Response, refresh_token: str, csrf_token: str) -
     )
 
 
-def _is_platform_admin_email(email: str) -> bool:
-    allowlist = {item.strip().lower() for item in settings.platform_admin_emails.split(",") if item.strip()}
-    return email.strip().lower() in allowlist
-
-
 def _authenticate_user_credentials(db: DBSession, payload: LoginRequest) -> User:
     user = db.scalar(select(User).where(User.email == payload.email))
     if user is None:
@@ -358,9 +353,6 @@ def refresh(
 @router.post("/platform-login", response_model=AuthTokens)
 def platform_login(payload: LoginRequest, db: DBSession, response: Response) -> AuthTokens:
     user = _authenticate_user_credentials(db, payload)
-
-    if not _is_platform_admin_email(user.email):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only platform admins can login here")
 
     platform_tenant = db.scalar(select(Tenant).where(Tenant.slug == "platform-admin", Tenant.deleted_at.is_(None)))
     if platform_tenant is None:

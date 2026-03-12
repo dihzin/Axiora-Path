@@ -13,6 +13,7 @@ from app.api.routes.axion import _resolve_admin_tenant_scope
 from app.api.routes import children
 from app.api.routes import family
 from app.api.routes import school
+from app.api.routes import axion_studio
 from app.models import (
     ChildGuardian,
     ChildProfile,
@@ -35,7 +36,12 @@ from app.models import (
 from app.services.membership_service import assert_can_remove_membership
 from app.schemas.auth import LoginRequest, RefreshRequest, SelectTenantRequest
 from app.schemas.children import FamilyChildCreateRequest
-from app.schemas.axion_studio import AxionTenantCreateRequest, AxionTenantUpdateRequest
+from app.schemas.axion_studio import (
+    AxionPlatformAdminUserCreateRequest,
+    AxionPlatformAdminUserUpdateRequest,
+    AxionTenantCreateRequest,
+    AxionTenantUpdateRequest,
+)
 from app.schemas.school import SchoolStudentCreateRequest, SchoolTeacherCreateRequest
 from app.schemas.school import SchoolEnableStudentLoginRequest
 from app.schemas.school import SchoolStudentFamilyLinkAcceptRequest
@@ -1268,6 +1274,118 @@ def test_axion_studio_tenant_schemas_accept_system_admin() -> None:
     assert update_request.type == "SYSTEM_ADMIN"
 
 
+def test_axion_studio_platform_admin_user_schemas_accept_all_tenant_types() -> None:
+    create_request = AxionPlatformAdminUserCreateRequest(
+        slug="platform-admin",
+        type="SCHOOL",
+        adminEmail="admin@local.com",
+        adminName="Admin",
+        adminPassword="Axion@1234",
+    )
+    update_request = AxionPlatformAdminUserUpdateRequest(
+        slug="platform-admin",
+        type="FAMILY",
+        adminEmail="admin@local.com",
+        adminName="Admin",
+        adminPassword=None,
+        resetExistingUserPassword=False,
+    )
+
+    assert create_request.type == "SCHOOL"
+    assert update_request.type == "FAMILY"
+
+
+def test_create_platform_admin_user_creates_user_and_membership(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(axion_studio, "hash_password", lambda *_args, **_kwargs: "hashed")
+    monkeypatch.setattr(axion_studio, "validate_password_strength", lambda *_args, **_kwargs: None)
+    platform_tenant = Tenant(id=20, type=TenantType.SYSTEM_ADMIN, name="Platform", slug="platform-admin")
+    actor = User(id=1, email="admin@local.com", name="Admin", password_hash="hashed")
+    db = _FakeDB([platform_tenant, None, None])
+
+    result = axion_studio.create_platform_admin_user(
+        axion_studio.AxionPlatformAdminUserCreateRequest(
+            slug="platform-admin",
+            type="SYSTEM_ADMIN",
+            adminEmail="new-admin@local.com",
+            adminName="Novo Admin",
+            adminPassword="Axion@1234",
+            resetExistingUserPassword=False,
+        ),
+        db,  # type: ignore[arg-type]
+        actor,
+    )
+
+    assert result.userCreated is True
+    assert result.membershipCreated is True
+    assert result.passwordReset is True
+    created_membership = next(item for item in db._added if isinstance(item, Membership))
+    assert created_membership.role == MembershipRole.PLATFORM_ADMIN
+    assert created_membership.tenant_id == platform_tenant.id
+
+
+def test_create_platform_admin_user_allows_platform_tenant_not_system_admin(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(axion_studio, "hash_password", lambda *_args, **_kwargs: "hashed")
+    monkeypatch.setattr(axion_studio, "validate_password_strength", lambda *_args, **_kwargs: None)
+    platform_tenant = Tenant(id=20, type=TenantType.SCHOOL, name="Platform", slug="platform-admin")
+    actor = User(id=1, email="admin@local.com", name="Admin", password_hash="hashed")
+    db = _FakeDB([platform_tenant, None, None])
+
+    result = axion_studio.create_platform_admin_user(
+        axion_studio.AxionPlatformAdminUserCreateRequest(
+            slug="platform-admin",
+            type="SYSTEM_ADMIN",
+            adminEmail="new-admin@local.com",
+            adminName="Novo Admin",
+            adminPassword="Axion@1234",
+            resetExistingUserPassword=False,
+        ),
+        db,  # type: ignore[arg-type]
+        actor,
+    )
+
+    assert result.userCreated is True
+    assert result.membershipCreated is True
+    assert result.tenantType == TenantType.SYSTEM_ADMIN.value
+    assert platform_tenant.type == TenantType.SYSTEM_ADMIN
+
+
+def test_create_platform_admin_user_existing_user_resets_password_when_requested(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(axion_studio, "hash_password", lambda *_args, **_kwargs: "hashed-new")
+    monkeypatch.setattr(axion_studio, "validate_password_strength", lambda *_args, **_kwargs: None)
+    platform_tenant = Tenant(id=20, type=TenantType.SYSTEM_ADMIN, name="Platform", slug="platform-admin")
+    actor = User(id=1, email="admin@local.com", name="Admin", password_hash="hashed")
+    existing_user = User(
+        id=33,
+        email="existing@local.com",
+        name="Existing",
+        password_hash="hashed-old",
+        failed_login_attempts=3,
+        locked_until=datetime.now(UTC) + timedelta(minutes=3),
+    )
+    existing_membership = Membership(user_id=existing_user.id, tenant_id=platform_tenant.id, role=MembershipRole.PLATFORM_ADMIN)
+    db = _FakeDB([platform_tenant, existing_user, existing_membership])
+
+    result = axion_studio.create_platform_admin_user(
+        axion_studio.AxionPlatformAdminUserCreateRequest(
+            slug="platform-admin",
+            type="SYSTEM_ADMIN",
+            adminEmail="existing@local.com",
+            adminName="Existing Updated",
+            adminPassword="Axion@1234",
+            resetExistingUserPassword=True,
+        ),
+        db,  # type: ignore[arg-type]
+        actor,
+    )
+
+    assert result.userCreated is False
+    assert result.membershipCreated is False
+    assert result.passwordReset is True
+    assert existing_user.password_hash == "hashed-new"
+    assert existing_user.failed_login_attempts == 0
+    assert existing_user.locked_until is None
+
+
 def test_login_primary_returns_memberships_and_non_tenant_token(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(auth, "verify_password", lambda *_args, **_kwargs: True)
 
@@ -1431,7 +1549,6 @@ def test_refresh_keeps_header_mismatch_protection(monkeypatch: pytest.MonkeyPatc
 def test_platform_login_requires_platform_admin_role(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(auth, "verify_password", lambda *_args, **_kwargs: True)
     monkeypatch.setattr(auth, "_set_auth_cookies", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(auth.settings, "platform_admin_emails", "admin@local.com")
 
     user = User(id=10, email="admin@local.com", name="Admin", password_hash="hashed")
     tenant = Tenant(id=20, type=TenantType.SCHOOL, name="Platform", slug="platform-admin")
@@ -1446,6 +1563,27 @@ def test_platform_login_requires_platform_admin_role(monkeypatch: pytest.MonkeyP
         )
     assert exc_info.value.status_code == 403
     assert exc_info.value.detail == "Platform admin role required for platform login"
+
+
+def test_platform_login_allows_membership_without_email_allowlist(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(auth, "verify_password", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(auth, "_set_auth_cookies", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(auth.settings, "platform_admin_emails", "")
+
+    user = User(id=11, email="ferreira.douglas87@gmail.com", name="Douglas", password_hash="hashed")
+    tenant = Tenant(id=20, type=TenantType.SYSTEM_ADMIN, name="Platform", slug="platform-admin")
+    membership = Membership(user_id=user.id, tenant_id=tenant.id, role=MembershipRole.PLATFORM_ADMIN)
+    db = _FakeDB([user, tenant, membership])
+
+    result = auth.platform_login(
+        LoginRequest(email="ferreira.douglas87@gmail.com", password="Axion@123"),
+        db,  # type: ignore[arg-type]
+        Response(),
+    )
+
+    claims = auth.decode_token(result.access_token)
+    assert claims["tenant_id"] == tenant.id
+    assert claims["role"] == MembershipRole.PLATFORM_ADMIN.value
 
 
 def test_primary_login_token_requires_tenant_selection_for_other_routes() -> None:
