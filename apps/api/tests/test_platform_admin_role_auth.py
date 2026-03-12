@@ -1297,6 +1297,84 @@ def test_login_primary_returns_memberships_and_non_tenant_token(monkeypatch: pyt
     assert [item.role for item in result.memberships] == ["PARENT", "TEACHER"]
 
 
+def test_google_login_returns_primary_token_for_existing_user(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(auth.settings, "google_oauth_client_ids", "google-web-client")
+    monkeypatch.setattr(
+        auth,
+        "_fetch_google_token_info",
+        lambda *_args, **_kwargs: {
+            "aud": "google-web-client",
+            "email": "parent@local.com",
+            "email_verified": "true",
+            "name": "Parent",
+        },
+    )
+
+    user = User(id=10, email="parent@local.com", name="Parent", password_hash="hashed")
+    user.created_at = datetime.now(UTC)
+    family = Tenant(id=21, type=TenantType.FAMILY, name="Family", slug="family-beta")
+    memberships = [
+        (Membership(user_id=user.id, tenant_id=family.id, role=MembershipRole.PARENT), family),
+    ]
+    db = _FakeDB([user], execute_values=[memberships])
+
+    result = auth.google_login(
+        auth.GoogleLoginRequest(id_token="google-token-value-12345"),
+        db,  # type: ignore[arg-type]
+    )
+
+    claims = auth.decode_token(result.access_token)
+    assert claims["sub"] == str(user.id)
+    assert claims["primary_login"] is True
+    assert result.user.email == "parent@local.com"
+    assert [item.tenant_slug for item in result.memberships] == ["family-beta"]
+
+
+def test_google_login_creates_family_account_for_first_access(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(auth.settings, "google_oauth_client_ids", "google-web-client")
+    monkeypatch.setattr(
+        auth,
+        "_fetch_google_token_info",
+        lambda *_args, **_kwargs: {
+            "aud": "google-web-client",
+            "email": "new-parent@local.com",
+            "email_verified": "true",
+            "name": "Ana Silva",
+        },
+    )
+
+    db = _FakeDB([None, None])
+    monkeypatch.setattr(
+        auth,
+        "_list_user_memberships",
+        lambda _db, *, user_id: [
+            (
+                next(item for item in db._added if isinstance(item, Membership) and item.user_id == user_id),
+                next(item for item in db._added if isinstance(item, Tenant)),
+            )
+        ],
+    )
+
+    result = auth.google_login(
+        auth.GoogleLoginRequest(id_token="google-token-value-12345"),
+        db,  # type: ignore[arg-type]
+    )
+
+    user = next(item for item in db._added if isinstance(item, User))
+    tenant = next(item for item in db._added if isinstance(item, Tenant))
+    membership = next(item for item in db._added if isinstance(item, Membership))
+
+    assert user.email == "new-parent@local.com"
+    assert user.password_hash != "google-token-value"
+    assert tenant.type == TenantType.FAMILY
+    assert tenant.name == "Familia Ana"
+    assert membership.user_id == user.id
+    assert membership.tenant_id == tenant.id
+    assert membership.role == MembershipRole.PARENT
+    assert result.user.email == "new-parent@local.com"
+    assert [item.tenant_slug for item in result.memberships] == [tenant.slug]
+
+
 def test_login_keeps_tenant_scoped_token(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(auth, "verify_password", lambda *_args, **_kwargs: True)
     monkeypatch.setattr(auth, "_set_auth_cookies", lambda *_args, **_kwargs: None)
