@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+import json
 import re
+from secrets import token_urlsafe
 from typing import Annotated
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
@@ -27,6 +32,7 @@ from app.schemas.auth import (
     AuthTokens,
     ChangePasswordRequest,
     ChildProfileOut,
+    GoogleLoginRequest,
     LoginRequest,
     MembershipOut,
     MeResponse,
@@ -42,6 +48,7 @@ from app.schemas.auth import (
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+_GOOGLE_TOKENINFO_URL = "https://oauth2.googleapis.com/tokeninfo"
 
 
 def _cookie_samesite() -> str:
@@ -135,6 +142,107 @@ def _generate_unique_tenant_slug(db: DBSession, *, tenant_name: str) -> str:
         candidate = f"{base_slug}-{suffix}"
         suffix += 1
     return candidate
+
+
+def _allowed_google_client_ids() -> set[str]:
+    return {item.strip() for item in settings.google_oauth_client_ids.split(",") if item.strip()}
+
+
+def _derive_google_family_name(name: str, email: str) -> str:
+    cleaned_name = name.strip()
+    if cleaned_name:
+        first_name = cleaned_name.split()[0]
+        return f"Familia {first_name}"
+    email_prefix = email.split("@", 1)[0].strip()
+    return f"Familia {email_prefix or 'Axiora'}"
+
+
+def _fetch_google_token_info(id_token: str) -> dict[str, object]:
+    query = urlencode({"id_token": id_token})
+    try:
+        with urlopen(f"{_GOOGLE_TOKENINFO_URL}?{query}", timeout=5) as response:
+            payload = response.read().decode("utf-8")
+    except (HTTPError, URLError, TimeoutError) as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Google token") from exc
+
+    try:
+        data = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Google token") from exc
+
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Google token")
+    return data
+
+
+def _build_primary_login_response(db: DBSession, user: User) -> PrimaryLoginResponse:
+    memberships = _list_user_memberships(db, user_id=user.id)
+    return PrimaryLoginResponse(
+        access_token=create_primary_access_token(user_id=user.id),
+        user=UserOut(
+            id=user.id,
+            email=user.email,
+            name=user.name,
+            created_at=user.created_at,
+        ),
+        memberships=[
+            PrimaryLoginMembershipOut(
+                tenant_id=tenant.id,
+                tenant_slug=tenant.slug,
+                tenant_name=tenant.name,
+                tenant_type=tenant.type.value,
+                role=membership.role.value,
+            )
+            for membership, tenant in memberships
+        ],
+    )
+
+
+def _find_or_create_google_user(db: DBSession, token_info: dict[str, object]) -> User:
+    email = str(token_info.get("email", "")).strip().lower()
+    if not email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Google account email is missing")
+
+    audience = str(token_info.get("aud", "")).strip()
+    if audience not in _allowed_google_client_ids():
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Google client is not allowed")
+
+    email_verified = str(token_info.get("email_verified", "")).lower()
+    if email_verified != "true":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Google account email is not verified")
+
+    user = db.scalar(select(User).where(User.email == email))
+    if user is not None:
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        db.commit()
+        return user
+
+    name = str(token_info.get("name", "")).strip() or email.split("@", 1)[0]
+    tenant_name = _derive_google_family_name(name, email)
+    tenant = Tenant(
+        type=TenantType.FAMILY,
+        name=tenant_name,
+        slug=_generate_unique_tenant_slug(db, tenant_name=tenant_name),
+    )
+    user = User(
+        email=email,
+        name=name,
+        password_hash=hash_password(token_urlsafe(32)),
+        created_at=datetime.now(UTC),
+    )
+    db.add(tenant)
+    db.add(user)
+    db.flush()
+    db.add(
+        Membership(
+            tenant_id=tenant.id,
+            user_id=user.id,
+            role=MembershipRole.PARENT,
+        )
+    )
+    db.commit()
+    return user
 
 
 @router.post("/signup", response_model=AuthTokens, status_code=status.HTTP_201_CREATED)
@@ -233,31 +341,20 @@ def login(
 @router.post("/login-primary", response_model=PrimaryLoginResponse)
 def login_primary(payload: LoginRequest, db: DBSession) -> PrimaryLoginResponse:
     user = _authenticate_user_credentials(db, payload)
-    memberships = _list_user_memberships(db, user_id=user.id)
-
     user.failed_login_attempts = 0
     user.locked_until = None
     db.commit()
+    return _build_primary_login_response(db, user)
 
-    return PrimaryLoginResponse(
-        access_token=create_primary_access_token(user_id=user.id),
-        user=UserOut(
-            id=user.id,
-            email=user.email,
-            name=user.name,
-            created_at=user.created_at,
-        ),
-        memberships=[
-            PrimaryLoginMembershipOut(
-                tenant_id=tenant.id,
-                tenant_slug=tenant.slug,
-                tenant_name=tenant.name,
-                tenant_type=tenant.type.value,
-                role=membership.role.value,
-            )
-            for membership, tenant in memberships
-        ],
-    )
+
+@router.post("/google", response_model=PrimaryLoginResponse)
+def google_login(payload: GoogleLoginRequest, db: DBSession) -> PrimaryLoginResponse:
+    if not _allowed_google_client_ids():
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Google login is not configured")
+
+    token_info = _fetch_google_token_info(payload.id_token)
+    user = _find_or_create_google_user(db, token_info)
+    return _build_primary_login_response(db, user)
 
 
 @router.post("/select-tenant", response_model=SelectTenantResponse)

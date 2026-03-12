@@ -20,6 +20,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class GoogleLoginRequest(BaseModel):
+    id_token: str = Field(min_length=20)
+
+
 class SelectTenantRequest(BaseModel):
     tenant_slug: str
 

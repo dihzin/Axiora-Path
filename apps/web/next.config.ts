@@ -1,7 +1,14 @@
 import type { NextConfig } from "next";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-const connectSrc = ["'self'", ...(apiUrl ? [apiUrl] : [])].join(" ");
+const connectSrc = [
+  "'self'",
+  ...(apiUrl ? [apiUrl] : []),
+  "https://accounts.google.com",
+  "https://oauth2.googleapis.com",
+].join(" ");
+const scriptSrc = ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://accounts.google.com"].join(" ");
+const frameSrc = ["'self'", "https://accounts.google.com"].join(" ");
 
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -10,7 +17,8 @@ const contentSecurityPolicy = [
   "media-src 'self' data: blob:",
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  `script-src ${scriptSrc}`,
+  `frame-src ${frameSrc}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

@@ -1241,6 +1241,17 @@ export async function loginPrimary(email: string, password: string): Promise<Pri
   return response;
 }
 
+export async function googleLogin(idToken: string): Promise<PrimaryLoginResponse> {
+  const response = await apiRequest<PrimaryLoginResponse>("/auth/google", {
+    method: "POST",
+    body: { id_token: idToken },
+    requireAuth: false,
+    includeTenant: false,
+  });
+  parentalConsentBlocked = false;
+  return response;
+}
+
 export async function platformLogin(email: string, password: string): Promise<AuthTokens> {
   const response = await apiRequest<AuthTokens>("/auth/platform-login", {
     method: "POST",

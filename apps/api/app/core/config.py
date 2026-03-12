@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     coin_conversion_coins_per_real: int = 10
     platform_admin_emails: str = ""
     platform_super_admin_emails: str = ""
+    google_oauth_client_ids: str = ""
     llm_provider_key: str = Field(
         default="noop",
         validation_alias=AliasChoices("LLM_PROVIDER_KEY", "AXIORA_LLM_PROVIDER_KEY"),
