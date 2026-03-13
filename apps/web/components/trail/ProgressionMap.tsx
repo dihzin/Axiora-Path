@@ -10,10 +10,15 @@ import { renderNode } from "./renderNode";
 import "./styles/constellation.css";
 import TrailConstellation from "./TrailConstellation";
 
-export type NodeStatus = "done" | "current" | "locked";
+export type NodeStatus = "done" | "current" | "available" | "locked";
 
 export type MapNode = {
   id: string;
+  lessonId: number;
+  skill: string;
+  difficulty: string;
+  completed: boolean;
+  stars: number;
   title: string;
   subtitle?: string;
   xp?: number;
@@ -135,6 +140,7 @@ function easeOutCubic(t: number) {
 
 function getNodeRadiusByStatus(status: NodeStatus) {
   if (status === "current") return NODE_RADIUS + 4;
+  if (status === "available") return NODE_RADIUS + 2;
   if (status === "done") return NODE_RADIUS + 2;
   return NODE_RADIUS;
 }

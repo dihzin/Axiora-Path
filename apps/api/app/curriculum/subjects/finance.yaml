@@ -1,0 +1,55 @@
+subject: finance
+age_groups:
+  - "6_8"
+  - "9_11"
+  - "12_14"
+skills:
+  money_basics:
+    subskills:
+      - identifying_coins
+      - identifying_bills
+      - simple_values
+    lessons:
+      - money_intro
+      - money_practice
+      - money_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+  saving_and_planning:
+    subskills:
+      - goals
+      - delayed_gratification
+      - budgeting_basics
+    lessons:
+      - saving_intro
+      - saving_practice
+      - saving_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+  conscious_consumption:
+    subskills:
+      - needs_vs_wants
+      - price_comparison
+      - value_decisions
+    lessons:
+      - consumption_intro
+      - consumption_practice
+      - consumption_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+lesson_order:
+  - money_intro
+  - money_practice
+  - money_mastery
+  - saving_intro
+  - saving_practice
+  - saving_mastery
+  - consumption_intro
+  - consumption_practice
+  - consumption_mastery

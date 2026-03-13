@@ -1,0 +1,55 @@
+subject: geography
+age_groups:
+  - "6_8"
+  - "9_11"
+  - "12_14"
+skills:
+  maps_and_location:
+    subskills:
+      - cardinal_directions
+      - map_symbols
+      - coordinates_basics
+    lessons:
+      - maps_intro
+      - maps_practice
+      - maps_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+  landscapes:
+    subskills:
+      - landforms
+      - rivers_and_seas
+      - climate_regions
+    lessons:
+      - landscapes_intro
+      - landscapes_practice
+      - landscapes_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+  human_geography:
+    subskills:
+      - communities
+      - migration
+      - urban_and_rural_spaces
+    lessons:
+      - human_geography_intro
+      - human_geography_practice
+      - human_geography_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+lesson_order:
+  - maps_intro
+  - maps_practice
+  - maps_mastery
+  - landscapes_intro
+  - landscapes_practice
+  - landscapes_mastery
+  - human_geography_intro
+  - human_geography_practice
+  - human_geography_mastery

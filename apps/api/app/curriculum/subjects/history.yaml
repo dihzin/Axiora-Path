@@ -1,0 +1,55 @@
+subject: history
+age_groups:
+  - "6_8"
+  - "9_11"
+  - "12_14"
+skills:
+  chronology:
+    subskills:
+      - before_and_after
+      - timelines
+      - historical_sequence
+    lessons:
+      - chronology_intro
+      - chronology_practice
+      - chronology_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+  local_and_national_history:
+    subskills:
+      - community_memory
+      - national_symbols
+      - important_events
+    lessons:
+      - local_history_intro
+      - local_history_practice
+      - local_history_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+  cultural_heritage:
+    subskills:
+      - traditions
+      - historical_sources
+      - identity_and_change
+    lessons:
+      - heritage_intro
+      - heritage_practice
+      - heritage_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+lesson_order:
+  - chronology_intro
+  - chronology_practice
+  - chronology_mastery
+  - local_history_intro
+  - local_history_practice
+  - local_history_mastery
+  - heritage_intro
+  - heritage_practice
+  - heritage_mastery

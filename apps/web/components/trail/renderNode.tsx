@@ -4,10 +4,15 @@ import { BookOpen, Check, Flag, Lock, Sparkles, Star, Zap } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-export type RenderNodeStatus = "done" | "current" | "locked";
+export type RenderNodeStatus = "done" | "current" | "available" | "locked";
 
 export type RenderableMapNode = {
   id: string;
+  lessonId: number;
+  skill: string;
+  difficulty: string;
+  completed: boolean;
+  stars: number;
   title: string;
   subtitle?: string;
   xp?: number;
@@ -38,6 +43,7 @@ function smoothstep(edge0: number, edge1: number, x: number) {
 const statusLabel: Record<RenderNodeStatus, string> = {
   done: "Concluída",
   current: "Atual",
+  available: "Desbloqueada",
   locked: "Bloqueada",
 };
 const TEXT_PRIMARY = "rgba(255,246,236,0.94)";
@@ -125,6 +131,23 @@ function getNodeVisuals(status: RenderNodeStatus, kind: MissionKind) {
       kindGlow: kindMeta.glow,
     };
   }
+  if (status === "available") {
+    return {
+      shell: "border-2 border-[#D9F3EE] bg-[linear-gradient(180deg,#8EE3D2_0%,#4F9D8A_34%,#285C56_76%,#193533_118%)] text-white shadow-[0_12px_26px_rgba(40,92,86,0.28),0_0_18px_rgba(79,157,138,0.2)]",
+      shellHighlight: "linear-gradient(180deg, rgba(255,255,255,0.34), rgba(255,255,255,0.06))",
+      starFill: "rgba(255,255,255,0.12)",
+      starStroke: "rgba(240,253,250,0.96)",
+      labelBg: "linear-gradient(180deg, rgba(20,49,46,0.96), rgba(12,31,29,0.96))",
+      labelBorder: "rgba(142,227,210,0.24)",
+      labelShadow: "0 12px 24px rgba(8,23,22,0.34), 0 0 16px rgba(79,157,138,0.16)",
+      labelText: "rgba(240,253,250,0.96)",
+      accentA: "rgba(240,253,250,0.96)",
+      accentB: "rgba(167,243,208,0.88)",
+      kindAccent: kindMeta.accent,
+      kindAccentSoft: kindMeta.accentSoft,
+      kindGlow: kindMeta.glow,
+    };
+  }
   return {
     shell: "border border-dashed border-slate-300/20 bg-[linear-gradient(180deg,rgba(100,116,139,0.62),rgba(51,65,85,0.72))] text-white shadow-[0_8px_18px_rgba(15,23,42,0.26)]",
     shellHighlight: "linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.02))",
@@ -155,6 +178,7 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
   reducedMotion?: boolean;
 }) {
   const isCurrent = node.status === "current";
+  const isAvailable = node.status === "available";
   const isLocked = node.status === "locked";
   const isDone = node.status === "done";
   const missionKind = resolveMissionKind(node);
@@ -162,8 +186,16 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
   const visuals = getNodeVisuals(node.status, missionKind);
   const MissionIcon = missionMeta.Icon;
   const showOrbital = isActive;
-  const ringPrimaryOpacityClass = isCurrent ? "opacity-[0.72] group-hover:opacity-[0.84]" : "opacity-[0.40] group-hover:opacity-[0.52]";
-  const ringSecondaryOpacityClass = isCurrent ? "opacity-[0.54] group-hover:opacity-[0.66]" : "opacity-[0.28] group-hover:opacity-[0.40]";
+  const ringPrimaryOpacityClass = isCurrent
+    ? "opacity-[0.72] group-hover:opacity-[0.84]"
+    : isAvailable
+      ? "opacity-[0.56] group-hover:opacity-[0.66]"
+      : "opacity-[0.40] group-hover:opacity-[0.52]";
+  const ringSecondaryOpacityClass = isCurrent
+    ? "opacity-[0.54] group-hover:opacity-[0.66]"
+    : isAvailable
+      ? "opacity-[0.38] group-hover:opacity-[0.48]"
+      : "opacity-[0.28] group-hover:opacity-[0.40]";
   const hoverableClasses = reducedMotion
     ? "transition-opacity duration-200"
     : "transition-transform duration-200 active:scale-105 hover:-translate-y-[2px] hover:scale-[1.12] hover:shadow-[0_0_18px_rgba(255,122,47,0.35)]";
@@ -200,6 +232,9 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
           {typeof node.xp === "number" ? `+${node.xp} XP · ` : ""}
           {statusLabel[node.status]}
         </p>
+        <p className="mt-0.5 font-medium" style={{ color: TEXT_MUTED }}>
+          {node.difficulty} · {node.stars}/3 estrelas
+        </p>
       </div>
       <button
         type="button"
@@ -213,7 +248,7 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
         )}
         style={{ transition: "transform 220ms ease, filter 220ms ease, opacity 200ms ease" }}
         aria-current={isActive ? "step" : undefined}
-        aria-label={`${node.title} · ${missionMeta.label} · ${statusLabel[node.status]}`}
+        aria-label={`${node.title} · ${missionMeta.label} · ${statusLabel[node.status]} · ${node.difficulty}`}
       >
         <span
           aria-hidden
@@ -354,6 +389,9 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
           {missionMeta.label}
         </span>
         <span className="block font-semibold tracking-[-0.01em]" style={{ color: visuals.labelText, textShadow: "0 1px 8px rgba(2,6,23,0.38)" }}>{node.title}</span>
+        <span className="mt-1 block text-[10px] font-medium" style={{ color: TEXT_MUTED }}>
+          {node.difficulty} · {node.stars}/3 estrelas
+        </span>
       </div>
     </div>
   );

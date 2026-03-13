@@ -1,0 +1,55 @@
+subject: english
+age_groups:
+  - "6_8"
+  - "9_11"
+  - "12_14"
+skills:
+  vocabulary:
+    subskills:
+      - everyday_words
+      - thematic_words
+      - context_clues
+    lessons:
+      - vocabulary_intro
+      - vocabulary_practice
+      - vocabulary_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+  reading_in_english:
+    subskills:
+      - phonics_patterns
+      - simple_sentences
+      - short_passages
+    lessons:
+      - english_reading_intro
+      - english_reading_practice
+      - english_reading_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+  conversation_basics:
+    subskills:
+      - greetings
+      - self_introduction
+      - common_questions
+    lessons:
+      - conversation_intro
+      - conversation_practice
+      - conversation_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+lesson_order:
+  - vocabulary_intro
+  - vocabulary_practice
+  - vocabulary_mastery
+  - english_reading_intro
+  - english_reading_practice
+  - english_reading_mastery
+  - conversation_intro
+  - conversation_practice
+  - conversation_mastery

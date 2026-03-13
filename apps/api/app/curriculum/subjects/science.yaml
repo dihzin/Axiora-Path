@@ -1,0 +1,55 @@
+subject: science
+age_groups:
+  - "6_8"
+  - "9_11"
+  - "12_14"
+skills:
+  living_things:
+    subskills:
+      - plants
+      - animals
+      - habitats
+    lessons:
+      - living_things_intro
+      - living_things_practice
+      - living_things_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+  matter_and_materials:
+    subskills:
+      - solids_liquids_gases
+      - material_properties
+      - state_changes
+    lessons:
+      - matter_intro
+      - matter_practice
+      - matter_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+  earth_and_space:
+    subskills:
+      - weather
+      - solar_system
+      - natural_cycles
+    lessons:
+      - earth_space_intro
+      - earth_space_practice
+      - earth_space_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+lesson_order:
+  - living_things_intro
+  - living_things_practice
+  - living_things_mastery
+  - matter_intro
+  - matter_practice
+  - matter_mastery
+  - earth_space_intro
+  - earth_space_practice
+  - earth_space_mastery

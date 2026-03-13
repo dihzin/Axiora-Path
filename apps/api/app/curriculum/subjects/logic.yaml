@@ -1,0 +1,55 @@
+subject: logic
+age_groups:
+  - "6_8"
+  - "9_11"
+  - "12_14"
+skills:
+  pattern_recognition:
+    subskills:
+      - visual_sequences
+      - numeric_patterns
+      - analogies
+    lessons:
+      - patterns_intro
+      - patterns_practice
+      - patterns_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+  deductive_reasoning:
+    subskills:
+      - clues
+      - elimination
+      - conclusion_building
+    lessons:
+      - deduction_intro
+      - deduction_practice
+      - deduction_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+  problem_solving:
+    subskills:
+      - planning_steps
+      - strategy_selection
+      - checking_results
+    lessons:
+      - problem_solving_intro
+      - problem_solving_practice
+      - problem_solving_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+lesson_order:
+  - patterns_intro
+  - patterns_practice
+  - patterns_mastery
+  - deduction_intro
+  - deduction_practice
+  - deduction_mastery
+  - problem_solving_intro
+  - problem_solving_practice
+  - problem_solving_mastery

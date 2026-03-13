@@ -39,7 +39,6 @@ from app.schemas.learning import (
     LearningSessionStartResponse,
 )
 from app.services.adaptive_learning import (
-    build_next_questions,
     daily_completed_learning_lessons,
     finish_adaptive_learning_session,
     resolve_effective_learning_settings,
@@ -47,6 +46,7 @@ from app.services.adaptive_learning import (
     track_question_answer,
 )
 from app.services.learning_insights import get_learning_insights
+from app.services.lesson_engine import LessonEngine
 from app.services.learning_path_events import build_learning_path, complete_path_event, start_path_event
 from app.services.learning_remediation import maybe_enrich_wrong_answer_explanation
 from app.services.axion_child_profile import resolve_child_for_user
@@ -398,14 +398,12 @@ def get_learning_next_questions(
         )
 
     try:
-        plan = build_next_questions(
-            db,
-            user_id=user.id,
+        plan = LessonEngine(db, tenant_id=tenant.id).generate_lesson_contents(
+            student_id=user.id,
             subject_id=payload.subject_id,
             lesson_id=payload.lesson_id,
             focus_skill_id=payload.focus_skill_id,
             force_difficulty=payload.force_difficulty,
-            tenant_id=tenant.id,
             count=payload.count or 10,
         )
         # Persist generated variants so /answer can resolve template attempts.

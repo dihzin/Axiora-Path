@@ -1040,6 +1040,13 @@ export type LearningPathLessonNode = {
   completed: boolean;
   score: number | null;
   starsEarned: number;
+  skill?: string | null;
+  difficulty?: string | null;
+  lessonKey?: string | null;
+  prerequisiteSkill?: string | null;
+  prerequisiteMastery?: number | null;
+  prerequisiteThreshold?: number | null;
+  isRecommended?: boolean;
 };
 
 export type LearningPathEventNode = {
@@ -1090,6 +1097,59 @@ export type AprenderSubjectOption = {
   icon: string | null;
   color: string | null;
   order: number;
+};
+
+export type LearnRecommendation = {
+  subject: string;
+  skill: string;
+  lesson: string;
+  difficulty: string;
+  reason: string;
+};
+
+export type LearnSubjectsResponse = {
+  subjects: string[];
+  lesson: string | null;
+  difficulty: string | null;
+  xpReward: number;
+  nextRecommendation: LearnRecommendation | null;
+};
+
+export type LearnSkillsResponse = {
+  subject: string;
+  skills: string[];
+  prerequisiteMasteryThreshold: number;
+  skillGraph: LearnSkillGraphEntry[];
+  lesson: string | null;
+  difficulty: string | null;
+  xpReward: number;
+  nextRecommendation: LearnRecommendation | null;
+};
+
+export type LearnLessonResponse = {
+  lesson: string | null;
+  difficulty: string | null;
+  xpReward: number;
+  nextRecommendation: LearnRecommendation | null;
+};
+
+export type LearnSkillLesson = {
+  lessonId: number;
+  lesson: string;
+  skill: string;
+  difficulty: string;
+  completed: boolean;
+  stars: number;
+  unlocked: boolean;
+};
+
+export type LearnSkillGraphEntry = {
+  skill: string;
+  mastery: number;
+  prerequisiteSkill: string | null;
+  prerequisiteMastery: number;
+  prerequisiteThreshold: number;
+  lessons: LearnSkillLesson[];
 };
 
 export type LearningEventStartResponse = {
@@ -2298,6 +2358,62 @@ export async function claimMission(missionId: string): Promise<MissionClaimRespo
   return apiRequest<MissionClaimResponse>("/api/missions/claim", {
     method: "POST",
     body: { missionId },
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getLearnSubjects(): Promise<LearnSubjectsResponse> {
+  return apiRequest<LearnSubjectsResponse>("/learn/subjects", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getLearnSkills(subject: string): Promise<LearnSkillsResponse> {
+  const query = new URLSearchParams({ subject });
+  return apiRequest<LearnSkillsResponse>(`/learn/skills?${query.toString()}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function startLearnLesson(payload: {
+  skill?: string;
+  subject?: string;
+}): Promise<LearnLessonResponse> {
+  return apiRequest<LearnLessonResponse>("/learn/lesson/start", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function completeLearnLesson(payload: {
+  subject: string;
+  skill: string;
+  lesson: string;
+  score: number;
+  stars: number;
+  timeSpent: number;
+  mastery?: number;
+  confidence?: number;
+  velocity?: number;
+}): Promise<LearnLessonResponse> {
+  return apiRequest<LearnLessonResponse>("/learn/lesson/complete", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getLearnNext(): Promise<LearnLessonResponse> {
+  return apiRequest<LearnLessonResponse>("/learn/next", {
+    method: "GET",
     requireAuth: true,
     includeTenant: true,
   });
