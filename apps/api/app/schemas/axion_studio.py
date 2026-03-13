@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -216,3 +216,58 @@ class AxionPlatformAdminUserDeleteResponse(BaseModel):
     deleted: bool
     userId: int
     tenantId: int
+
+
+class AxionFinanceBillOut(BaseModel):
+    id: int
+    description: str
+    category: str
+    amount: float
+    dueDate: date
+    recurrence: str
+    status: str
+    notes: str
+    paidAt: datetime | None
+    createdAt: datetime
+    updatedAt: datetime
+
+
+class AxionFinanceBillCreateRequest(BaseModel):
+    description: str = Field(min_length=2, max_length=255)
+    category: str = Field(min_length=1, max_length=120)
+    amount: float = Field(gt=0)
+    dueDate: date
+    recurrence: str = Field(pattern="^(NONE|WEEKLY|MONTHLY|YEARLY)$")
+    notes: str = Field(default="", max_length=5000)
+
+
+class AxionFinanceBillPatchRequest(BaseModel):
+    description: str | None = Field(default=None, min_length=2, max_length=255)
+    category: str | None = Field(default=None, min_length=1, max_length=120)
+    amount: float | None = Field(default=None, gt=0)
+    dueDate: date | None = None
+    recurrence: str | None = Field(default=None, pattern="^(NONE|WEEKLY|MONTHLY|YEARLY)$")
+    notes: str | None = Field(default=None, max_length=5000)
+
+
+class AxionFinanceBillsPageOut(BaseModel):
+    items: list[AxionFinanceBillOut]
+    total: int
+    page: int
+    pageSize: int
+    totalPages: int
+
+
+class AxionFinanceBalanceOut(BaseModel):
+    balance: float
+    updatedAt: datetime | None = None
+
+
+class AxionFinanceBalancePatchRequest(BaseModel):
+    balance: float = Field(ge=0)
+
+
+class AxionFinancePayBillResponse(BaseModel):
+    paidBill: AxionFinanceBillOut
+    recurringBill: AxionFinanceBillOut | None
+    balance: float

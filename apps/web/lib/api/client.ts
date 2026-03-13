@@ -745,6 +745,42 @@ export type AxionImpactResponse = {
   masteryGrowthProxy: number;
 };
 
+export type AxionFinanceRecurrence = "NONE" | "WEEKLY" | "MONTHLY" | "YEARLY";
+export type AxionFinanceStoredStatus = "PENDING" | "PAID";
+
+export type AxionFinanceBill = {
+  id: number;
+  description: string;
+  category: string;
+  amount: number;
+  dueDate: string;
+  recurrence: AxionFinanceRecurrence;
+  status: AxionFinanceStoredStatus;
+  notes: string;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AxionFinanceBillsPage = {
+  items: AxionFinanceBill[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+export type AxionFinanceBalance = {
+  balance: number;
+  updatedAt: string | null;
+};
+
+export type AxionFinancePayBillResponse = {
+  paidBill: AxionFinanceBill;
+  recurringBill: AxionFinanceBill | null;
+  balance: number;
+};
+
 export type CoachResponse = {
   reply: string;
   suggested_actions: string[];
@@ -2608,6 +2644,93 @@ export async function getAxionStudioImpact(params: { userId: number; days?: numb
   if (params.days) query.set("days", String(params.days));
   return apiRequest<AxionImpactResponse>(`/api/platform-admin/axion/impact?${query.toString()}`, {
     method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAxionStudioFinanceBalance(): Promise<AxionFinanceBalance> {
+  return apiRequest<AxionFinanceBalance>("/api/platform-admin/axion/finance/balance", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function patchAxionStudioFinanceBalance(payload: { balance: number }): Promise<AxionFinanceBalance> {
+  return apiRequest<AxionFinanceBalance>("/api/platform-admin/axion/finance/balance", {
+    method: "PATCH",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getAxionStudioFinanceBills(params?: {
+  q?: string;
+  statusFilter?: "ALL" | "PENDING" | "PAID" | "OVERDUE";
+  page?: number;
+  pageSize?: number;
+}): Promise<AxionFinanceBillsPage> {
+  const query = new URLSearchParams();
+  if (params?.q) query.set("q", params.q);
+  if (params?.statusFilter) query.set("statusFilter", params.statusFilter);
+  if (params?.page) query.set("page", String(params.page));
+  if (params?.pageSize) query.set("pageSize", String(params.pageSize));
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<AxionFinanceBillsPage>(`/api/platform-admin/axion/finance/bills${suffix}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function createAxionStudioFinanceBill(payload: {
+  description: string;
+  category: string;
+  amount: number;
+  dueDate: string;
+  recurrence: AxionFinanceRecurrence;
+  notes: string;
+}): Promise<AxionFinanceBill> {
+  return apiRequest<AxionFinanceBill>("/api/platform-admin/axion/finance/bills", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function patchAxionStudioFinanceBill(
+  billId: number,
+  payload: Partial<{
+    description: string;
+    category: string;
+    amount: number;
+    dueDate: string;
+    recurrence: AxionFinanceRecurrence;
+    notes: string;
+  }>
+): Promise<AxionFinanceBill> {
+  return apiRequest<AxionFinanceBill>(`/api/platform-admin/axion/finance/bills/${billId}`, {
+    method: "PATCH",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function deleteAxionStudioFinanceBill(billId: number): Promise<{ deleted: boolean; billId: number }> {
+  return apiRequest<{ deleted: boolean; billId: number }>(`/api/platform-admin/axion/finance/bills/${billId}`, {
+    method: "DELETE",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function payAxionStudioFinanceBill(billId: number): Promise<AxionFinancePayBillResponse> {
+  return apiRequest<AxionFinancePayBillResponse>(`/api/platform-admin/axion/finance/bills/${billId}/pay`, {
+    method: "POST",
     requireAuth: true,
     includeTenant: true,
   });

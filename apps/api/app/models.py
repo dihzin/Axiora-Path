@@ -261,6 +261,18 @@ class AxionOutcomeMetricType(str, Enum):
     REVIEW_DONE = "REVIEW_DONE"
 
 
+class AxionFinanceRecurrence(str, Enum):
+    NONE = "NONE"
+    WEEKLY = "WEEKLY"
+    MONTHLY = "MONTHLY"
+    YEARLY = "YEARLY"
+
+
+class AxionFinanceBillStatus(str, Enum):
+    PENDING = "PENDING"
+    PAID = "PAID"
+
+
 class LLMUseCase(str, Enum):
     REWRITE_MESSAGE = "REWRITE_MESSAGE"
     EXPLAIN_MISTAKE = "EXPLAIN_MISTAKE"
@@ -2400,6 +2412,62 @@ class AxionStudioAuditLog(Base):
     entity_id: Mapped[str] = mapped_column(String(64), nullable=False)
     diff: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AxionStudioFinanceBalance(Base):
+    __tablename__ = "axion_studio_finance_balances"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", name="uq_axion_studio_finance_balances_tenant_id"),
+        Index("ix_axion_studio_finance_balances_tenant_id", "tenant_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    balance: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class AxionStudioFinanceBill(Base):
+    __tablename__ = "axion_studio_finance_bills"
+    __table_args__ = (
+        Index("ix_axion_studio_finance_bills_tenant_due_date", "tenant_id", "due_date"),
+        Index("ix_axion_studio_finance_bills_tenant_status_due_date", "tenant_id", "status", "due_date"),
+        Index("ix_axion_studio_finance_bills_tenant_created_at", "tenant_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    description: Mapped[str] = mapped_column(String(255), nullable=False)
+    category: Mapped[str] = mapped_column(String(120), nullable=False)
+    amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    due_date: Mapped[date] = mapped_column(Date, nullable=False)
+    recurrence: Mapped[AxionFinanceRecurrence] = mapped_column(
+        SqlEnum(AxionFinanceRecurrence, name="axion_finance_recurrence", values_callable=_enum_values),
+        nullable=False,
+        server_default=AxionFinanceRecurrence.NONE.value,
+    )
+    status: Mapped[AxionFinanceBillStatus] = mapped_column(
+        SqlEnum(AxionFinanceBillStatus, name="axion_finance_bill_status", values_callable=_enum_values),
+        nullable=False,
+        server_default=AxionFinanceBillStatus.PENDING.value,
+    )
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
 
 class AxionOutcomeMetric(Base):

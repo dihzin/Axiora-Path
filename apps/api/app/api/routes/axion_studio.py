@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal, InvalidOperation
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -11,6 +12,8 @@ from app.api.deps import DBSession, get_current_user, require_role
 from app.core.config import settings
 from app.core.security import hash_password, validate_password_strength
 from app.models import (
+    AxionFinanceBillStatus,
+    AxionFinanceRecurrence,
     AxionDecisionContext,
     AxionMessageTemplate,
     AxionMessageTemplateVersion,
@@ -18,6 +21,8 @@ from app.models import (
     AxionPolicyRule,
     AxionPolicyRuleVersion,
     AxionStudioAuditLog,
+    AxionStudioFinanceBalance,
+    AxionStudioFinanceBill,
     ChildProfile,
     Membership,
     MembershipRole,
@@ -27,6 +32,13 @@ from app.models import (
     User,
 )
 from app.schemas.axion_studio import (
+    AxionFinanceBalanceOut,
+    AxionFinanceBalancePatchRequest,
+    AxionFinanceBillCreateRequest,
+    AxionFinanceBillOut,
+    AxionFinanceBillPatchRequest,
+    AxionFinanceBillsPageOut,
+    AxionFinancePayBillResponse,
     AxionTenantAdminMemberOut,
     AxionPlatformAdminUserDeleteResponse,
     AxionPlatformAdminUserCreateRequest,
@@ -295,6 +307,76 @@ def _tenant_consent_done(db: DBSession, *, tenant: Tenant) -> bool:
     return consent is not None
 
 
+def _platform_admin_tenant_or_404(db: DBSession) -> Tenant:
+    tenant = db.scalar(select(Tenant).where(Tenant.slug == "platform-admin", Tenant.deleted_at.is_(None)))
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organização administrativa não encontrada")
+    _ensure_platform_admin_tenant_type(db, tenant)
+    return tenant
+
+
+def _to_decimal_amount(value: float | int | str) -> Decimal:
+    try:
+        amount = Decimal(str(value)).quantize(Decimal("0.01"))
+    except (InvalidOperation, ValueError):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Valor financeiro inválido") from None
+    if amount <= Decimal("0.00"):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Valor deve ser maior que zero")
+    return amount
+
+
+def _finance_bill_out(row: AxionStudioFinanceBill) -> AxionFinanceBillOut:
+    return AxionFinanceBillOut(
+        id=row.id,
+        description=row.description,
+        category=row.category,
+        amount=float(row.amount),
+        dueDate=row.due_date,
+        recurrence=row.recurrence.value if isinstance(row.recurrence, AxionFinanceRecurrence) else str(row.recurrence),
+        status=row.status.value if isinstance(row.status, AxionFinanceBillStatus) else str(row.status),
+        notes=row.notes or "",
+        paidAt=row.paid_at,
+        createdAt=row.created_at,
+        updatedAt=row.updated_at,
+    )
+
+
+def _next_finance_due_date(current_due_date: date, recurrence: AxionFinanceRecurrence) -> date | None:
+    if recurrence == AxionFinanceRecurrence.NONE:
+        return None
+    if recurrence == AxionFinanceRecurrence.WEEKLY:
+        return current_due_date + timedelta(days=7)
+    if recurrence == AxionFinanceRecurrence.MONTHLY:
+        year = current_due_date.year + (1 if current_due_date.month == 12 else 0)
+        month = 1 if current_due_date.month == 12 else current_due_date.month + 1
+        day = current_due_date.day
+        while day >= 28:
+            try:
+                return date(year, month, day)
+            except ValueError:
+                day -= 1
+        return date(year, month, day)
+    year = current_due_date.year + 1
+    month = current_due_date.month
+    day = current_due_date.day
+    while day >= 28:
+        try:
+            return date(year, month, day)
+        except ValueError:
+            day -= 1
+    return date(year, month, day)
+
+
+def _get_or_create_finance_balance(db: DBSession, *, tenant_id: int) -> AxionStudioFinanceBalance:
+    row = db.scalar(select(AxionStudioFinanceBalance).where(AxionStudioFinanceBalance.tenant_id == tenant_id))
+    if row is not None:
+        return row
+    row = AxionStudioFinanceBalance(tenant_id=tenant_id, balance=Decimal("0.00"))
+    db.add(row)
+    db.flush()
+    return row
+
+
 def _map_cta(actions: list[dict[str, Any]], *, due_reviews: int) -> dict[str, Any]:
     first = actions[0] if actions else {"type": "OFFER_MICRO_MISSION", "params": {"durationMinutes": 2}}
     action_type = str(first.get("type", "")).upper()
@@ -353,6 +435,279 @@ def platform_admin_me(
 ) -> dict[str, Any]:
     _require_platform_admin(user, db)
     return {"userId": user.id, "name": user.name, "email": user.email}
+
+
+@router.get("/api/platform-admin/axion/finance/balance", response_model=AxionFinanceBalanceOut)
+def get_finance_balance(
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> AxionFinanceBalanceOut:
+    _require_platform_admin(user, db)
+    tenant = _platform_admin_tenant_or_404(db)
+    row = db.scalar(select(AxionStudioFinanceBalance).where(AxionStudioFinanceBalance.tenant_id == tenant.id))
+    if row is None:
+        return AxionFinanceBalanceOut(balance=0.0, updatedAt=None)
+    return AxionFinanceBalanceOut(balance=float(row.balance), updatedAt=row.updated_at)
+
+
+@router.patch("/api/platform-admin/axion/finance/balance", response_model=AxionFinanceBalanceOut)
+def patch_finance_balance(
+    payload: AxionFinanceBalancePatchRequest,
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> AxionFinanceBalanceOut:
+    _require_platform_admin(user, db)
+    tenant = _platform_admin_tenant_or_404(db)
+    row = _get_or_create_finance_balance(db, tenant_id=tenant.id)
+    before_balance = float(row.balance)
+    row.balance = Decimal(str(payload.balance)).quantize(Decimal("0.01"))
+    db.flush()
+    _write_audit(
+        db,
+        actor_user_id=user.id,
+        action="FINANCE_BALANCE_UPDATE",
+        entity_type="FINANCE",
+        entity_id=str(tenant.id),
+        before={"balance": before_balance},
+        after={"balance": float(row.balance)},
+    )
+    db.commit()
+    return AxionFinanceBalanceOut(balance=float(row.balance), updatedAt=row.updated_at)
+
+
+@router.get("/api/platform-admin/axion/finance/bills", response_model=AxionFinanceBillsPageOut)
+def list_finance_bills(
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+    q: str | None = Query(default=None),
+    statusFilter: str = Query(default="ALL"),
+    page: int = Query(default=1, ge=1),
+    pageSize: int = Query(default=20, ge=1, le=100),
+) -> AxionFinanceBillsPageOut:
+    _require_platform_admin(user, db)
+    tenant = _platform_admin_tenant_or_404(db)
+    normalized_status = statusFilter.strip().upper()
+    if normalized_status not in {"ALL", "PENDING", "PAID", "OVERDUE"}:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Filtro de status inválido")
+
+    stmt = select(AxionStudioFinanceBill).where(
+        AxionStudioFinanceBill.tenant_id == tenant.id,
+        AxionStudioFinanceBill.deleted_at.is_(None),
+    )
+    if q and q.strip():
+        query = q.strip()
+        stmt = stmt.where(
+            (AxionStudioFinanceBill.description.ilike(f"%{query}%"))
+            | (AxionStudioFinanceBill.category.ilike(f"%{query}%"))
+            | (AxionStudioFinanceBill.notes.ilike(f"%{query}%"))
+        )
+    today = date.today()
+    if normalized_status == "PAID":
+        stmt = stmt.where(AxionStudioFinanceBill.status == AxionFinanceBillStatus.PAID)
+    elif normalized_status == "PENDING":
+        stmt = stmt.where(AxionStudioFinanceBill.status == AxionFinanceBillStatus.PENDING, AxionStudioFinanceBill.due_date >= today)
+    elif normalized_status == "OVERDUE":
+        stmt = stmt.where(AxionStudioFinanceBill.status == AxionFinanceBillStatus.PENDING, AxionStudioFinanceBill.due_date < today)
+
+    total = int(db.scalar(select(func.count()).select_from(stmt.subquery())) or 0)
+    rows = db.scalars(
+        stmt.order_by(AxionStudioFinanceBill.due_date.asc(), AxionStudioFinanceBill.id.desc())
+        .offset((page - 1) * pageSize)
+        .limit(pageSize)
+    ).all()
+    total_pages = max(1, (total + pageSize - 1) // pageSize)
+    return AxionFinanceBillsPageOut(
+        items=[_finance_bill_out(item) for item in rows],
+        total=total,
+        page=page,
+        pageSize=pageSize,
+        totalPages=total_pages,
+    )
+
+
+@router.post("/api/platform-admin/axion/finance/bills", response_model=AxionFinanceBillOut, status_code=status.HTTP_201_CREATED)
+def create_finance_bill(
+    payload: AxionFinanceBillCreateRequest,
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> AxionFinanceBillOut:
+    _require_platform_admin(user, db)
+    tenant = _platform_admin_tenant_or_404(db)
+    amount = _to_decimal_amount(payload.amount)
+    recurrence = AxionFinanceRecurrence(payload.recurrence.strip().upper())
+    bill = AxionStudioFinanceBill(
+        tenant_id=tenant.id,
+        description=payload.description.strip(),
+        category=payload.category.strip(),
+        amount=amount,
+        due_date=payload.dueDate,
+        recurrence=recurrence,
+        status=AxionFinanceBillStatus.PENDING,
+        notes=payload.notes.strip(),
+        created_by_user_id=user.id,
+    )
+    db.add(bill)
+    db.flush()
+    _write_audit(
+        db,
+        actor_user_id=user.id,
+        action="FINANCE_BILL_CREATE",
+        entity_type="FINANCE",
+        entity_id=str(bill.id),
+        before=None,
+        after=_finance_bill_out(bill).model_dump(mode="json"),
+    )
+    db.commit()
+    return _finance_bill_out(bill)
+
+
+@router.patch("/api/platform-admin/axion/finance/bills/{bill_id}", response_model=AxionFinanceBillOut)
+def patch_finance_bill(
+    bill_id: int,
+    payload: AxionFinanceBillPatchRequest,
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> AxionFinanceBillOut:
+    _require_platform_admin(user, db)
+    tenant = _platform_admin_tenant_or_404(db)
+    bill = db.scalar(
+        select(AxionStudioFinanceBill).where(
+            AxionStudioFinanceBill.id == bill_id,
+            AxionStudioFinanceBill.tenant_id == tenant.id,
+            AxionStudioFinanceBill.deleted_at.is_(None),
+        )
+    )
+    if bill is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conta financeira não encontrada")
+    before = _finance_bill_out(bill).model_dump(mode="json")
+    if payload.description is not None:
+        bill.description = payload.description.strip()
+    if payload.category is not None:
+        bill.category = payload.category.strip()
+    if payload.amount is not None:
+        bill.amount = _to_decimal_amount(payload.amount)
+    if payload.dueDate is not None:
+        bill.due_date = payload.dueDate
+    if payload.recurrence is not None:
+        bill.recurrence = AxionFinanceRecurrence(payload.recurrence.strip().upper())
+    if payload.notes is not None:
+        bill.notes = payload.notes.strip()
+    db.flush()
+    after = _finance_bill_out(bill).model_dump(mode="json")
+    _write_audit(
+        db,
+        actor_user_id=user.id,
+        action="FINANCE_BILL_UPDATE",
+        entity_type="FINANCE",
+        entity_id=str(bill.id),
+        before=before,
+        after=after,
+    )
+    db.commit()
+    return _finance_bill_out(bill)
+
+
+@router.delete("/api/platform-admin/axion/finance/bills/{bill_id}")
+def delete_finance_bill(
+    bill_id: int,
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> dict[str, Any]:
+    _require_platform_admin(user, db)
+    tenant = _platform_admin_tenant_or_404(db)
+    bill = db.scalar(
+        select(AxionStudioFinanceBill).where(
+            AxionStudioFinanceBill.id == bill_id,
+            AxionStudioFinanceBill.tenant_id == tenant.id,
+            AxionStudioFinanceBill.deleted_at.is_(None),
+        )
+    )
+    if bill is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conta financeira não encontrada")
+    before = _finance_bill_out(bill).model_dump(mode="json")
+    bill.deleted_at = datetime.now(UTC)
+    db.flush()
+    _write_audit(
+        db,
+        actor_user_id=user.id,
+        action="FINANCE_BILL_DELETE",
+        entity_type="FINANCE",
+        entity_id=str(bill.id),
+        before=before,
+        after={"deleted": True},
+    )
+    db.commit()
+    return {"deleted": True, "billId": bill_id}
+
+
+@router.post("/api/platform-admin/axion/finance/bills/{bill_id}/pay", response_model=AxionFinancePayBillResponse)
+def pay_finance_bill(
+    bill_id: int,
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> AxionFinancePayBillResponse:
+    _require_platform_admin(user, db)
+    tenant = _platform_admin_tenant_or_404(db)
+    bill = db.scalar(
+        select(AxionStudioFinanceBill).where(
+            AxionStudioFinanceBill.id == bill_id,
+            AxionStudioFinanceBill.tenant_id == tenant.id,
+            AxionStudioFinanceBill.deleted_at.is_(None),
+        )
+    )
+    if bill is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conta financeira não encontrada")
+    before = _finance_bill_out(bill).model_dump(mode="json")
+    if bill.status == AxionFinanceBillStatus.PAID:
+        balance_row = _get_or_create_finance_balance(db, tenant_id=tenant.id)
+        db.commit()
+        return AxionFinancePayBillResponse(
+            paidBill=_finance_bill_out(bill),
+            recurringBill=None,
+            balance=float(balance_row.balance),
+        )
+
+    balance_row = _get_or_create_finance_balance(db, tenant_id=tenant.id)
+    bill.status = AxionFinanceBillStatus.PAID
+    bill.paid_at = datetime.now(UTC)
+    balance_row.balance = (Decimal(str(balance_row.balance)) - Decimal(str(bill.amount))).quantize(Decimal("0.01"))
+
+    recurring_row: AxionStudioFinanceBill | None = None
+    next_due_date = _next_finance_due_date(bill.due_date, bill.recurrence)
+    if next_due_date is not None:
+        recurring_row = AxionStudioFinanceBill(
+            tenant_id=tenant.id,
+            description=bill.description,
+            category=bill.category,
+            amount=bill.amount,
+            due_date=next_due_date,
+            recurrence=bill.recurrence,
+            status=AxionFinanceBillStatus.PENDING,
+            notes=bill.notes,
+            created_by_user_id=user.id,
+        )
+        db.add(recurring_row)
+
+    db.flush()
+    _write_audit(
+        db,
+        actor_user_id=user.id,
+        action="FINANCE_BILL_PAY",
+        entity_type="FINANCE",
+        entity_id=str(bill.id),
+        before=before,
+        after={
+            "paidBill": _finance_bill_out(bill).model_dump(mode="json"),
+            "recurringBill": _finance_bill_out(recurring_row).model_dump(mode="json") if recurring_row is not None else None,
+            "balance": float(balance_row.balance),
+        },
+    )
+    db.commit()
+    return AxionFinancePayBillResponse(
+        paidBill=_finance_bill_out(bill),
+        recurringBill=_finance_bill_out(recurring_row) if recurring_row is not None else None,
+        balance=float(balance_row.balance),
+    )
 
 
 @router.get("/api/platform-admin/tenants", response_model=list[AxionTenantSummaryOut])

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -12,8 +12,12 @@ import {
   deletePlatformTenant,
   createAxionStudioPolicy,
   createAxionStudioTemplate,
+  createAxionStudioFinanceBill,
+  deleteAxionStudioFinanceBill,
   getApiErrorMessage,
   getAxionStudioAudit,
+  getAxionStudioFinanceBalance,
+  getAxionStudioFinanceBills,
   getAxionStudioImpact,
   getAxionStudioMe,
   getPlatformTenants,
@@ -25,7 +29,10 @@ import {
   getAxionStudioTemplates,
   getAxionStudioTemplateVersions,
   patchAxionStudioPolicy,
+  patchAxionStudioFinanceBalance,
+  patchAxionStudioFinanceBill,
   patchAxionStudioTemplate,
+  payAxionStudioFinanceBill,
   previewAxionStudio,
   restoreAxionStudioPolicy,
   restoreAxionStudioTemplate,
@@ -35,6 +42,8 @@ import {
   logout,
   type AxionStudioAudit,
   type AxionImpactResponse,
+  type AxionFinanceBill as AxionFinanceBillApi,
+  type AxionFinanceRecurrence as AxionFinanceRecurrenceApi,
   type AxionStudioMe,
   type AxionStudioPolicy,
   type AxionStudioPreviewResponse,
@@ -48,10 +57,15 @@ import {
 } from "@/lib/api/client";
 import { clearTenantSlug, clearTokens, getAccessToken, getTenantSlug, setTenantSlug } from "@/lib/api/session";
 
-type Tab = "policies" | "messages" | "preview" | "audit" | "impact" | "orgs";
+type Tab = "policies" | "messages" | "preview" | "audit" | "impact" | "finance" | "orgs";
 type OrgViewTab = "clients" | "admin";
 type TenantFieldKey = "name" | "slug" | "type" | "adminName" | "adminEmail" | "adminPassword" | "testChildName" | "testChildBirthYear";
 type AdminUserFieldKey = "slug" | "type" | "adminName" | "adminEmail" | "adminPassword";
+type FinanceRecurrence = AxionFinanceRecurrenceApi;
+type FinanceStoredStatus = "PENDING" | "PAID";
+type FinanceBillStatus = FinanceStoredStatus | "OVERDUE";
+type FinanceFilterStatus = "ALL" | FinanceBillStatus;
+type FinanceBill = AxionFinanceBillApi;
 
 const CONTEXTS = ["child_tab", "before_learning", "after_learning", "games_tab", "wallet_tab"] as const;
 const TONES = ["CALM", "ENCOURAGE", "CHALLENGE", "CELEBRATE", "SUPPORT"] as const;
@@ -89,6 +103,19 @@ const ACTION_LABELS: Record<string, string> = {
   RESTORE_VERSION: "Restauração de versão",
 };
 
+const FINANCE_RECURRENCE_LABELS: Record<FinanceRecurrence, string> = {
+  NONE: "Sem recorrência",
+  WEEKLY: "Semanal",
+  MONTHLY: "Mensal",
+  YEARLY: "Anual",
+};
+const FINANCE_STATUS_LABELS: Record<FinanceBillStatus, string> = {
+  PENDING: "Pendente",
+  PAID: "Pago",
+  OVERDUE: "Atrasado",
+};
+const FINANCE_CATEGORY_OPTIONS = ["Infraestrutura", "Operação", "Marketing", "Serviços", "Impostos", "Outros"];
+
 function pretty(value: unknown): string {
   return JSON.stringify(value, null, 2);
 }
@@ -110,7 +137,32 @@ function toneLabel(value: string): string {
 }
 
 function isValidTab(value: string | null): value is Tab {
-  return value === "policies" || value === "messages" || value === "preview" || value === "audit" || value === "impact" || value === "orgs";
+  return value === "policies" || value === "messages" || value === "preview" || value === "audit" || value === "impact" || value === "finance" || value === "orgs";
+}
+
+function toIsoDateInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateAtNoon(isoDate: string): Date {
+  return new Date(`${isoDate}T12:00:00`);
+}
+
+function formatCurrencyBRL(value: number): string {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+}
+
+function parseCurrencyInput(value: string): number {
+  return Number(value.replace(",", "."));
+}
+
+function financeComputedStatus(bill: FinanceBill, todayIso: string): FinanceBillStatus {
+  if (bill.status === "PAID") return "PAID";
+  if (bill.dueDate < todayIso) return "OVERDUE";
+  return "PENDING";
 }
 
 function validateTenantDraft(draft: {
@@ -307,6 +359,31 @@ function AxionStudioPage() {
   const [impactUserId, setImpactUserId] = useState<number | null>(null);
   const [impactDays, setImpactDays] = useState<number>(7);
   const [impactResult, setImpactResult] = useState<AxionImpactResponse | null>(null);
+  const [financeBills, setFinanceBills] = useState<FinanceBill[]>([]);
+  const [financeBalance, setFinanceBalance] = useState<number>(0);
+  const [financeBalanceDraft, setFinanceBalanceDraft] = useState<string>("0");
+  const [financeSearch, setFinanceSearch] = useState("");
+  const [financeFilterStatus, setFinanceFilterStatus] = useState<FinanceFilterStatus>("ALL");
+  const [financeFeedback, setFinanceFeedback] = useState<string | null>(null);
+  const [financeInsightDismissed, setFinanceInsightDismissed] = useState(false);
+  const [financeEditingBillId, setFinanceEditingBillId] = useState<number | null>(null);
+  const [financeRowsPerPage, setFinanceRowsPerPage] = useState<number>(20);
+  const [financePage, setFinancePage] = useState<number>(1);
+  const [financeDraft, setFinanceDraft] = useState<{
+    description: string;
+    category: string;
+    amount: string;
+    dueDate: string;
+    recurrence: FinanceRecurrence;
+    notes: string;
+  }>({
+    description: "",
+    category: "Operação",
+    amount: "",
+    dueDate: toIsoDateInput(new Date()),
+    recurrence: "MONTHLY",
+    notes: "",
+  });
   const [versions, setVersions] = useState<AxionStudioVersion[]>([]);
   const [versionsTitle, setVersionsTitle] = useState("");
   const [versionsTarget, setVersionsTarget] = useState<{ type: "RULE" | "TEMPLATE"; id: number } | null>(null);
@@ -337,6 +414,72 @@ function AxionStudioPage() {
       return name.includes(query) || email.includes(query);
     });
   }, [platformAdminMembers, tenantSearch]);
+  const filteredFinanceBills = useMemo(() => {
+    const query = financeSearch.trim().toLowerCase();
+    const todayIso = toIsoDateInput(new Date());
+    return financeBills
+      .filter((bill) => {
+        const status = financeComputedStatus(bill, todayIso);
+        const matchesFilter = financeFilterStatus === "ALL" || status === financeFilterStatus;
+        if (!matchesFilter) return false;
+        if (!query) return true;
+        return bill.description.toLowerCase().includes(query) || bill.category.toLowerCase().includes(query) || bill.notes.toLowerCase().includes(query);
+      })
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  }, [financeBills, financeFilterStatus, financeSearch]);
+  const financeStats = useMemo(() => {
+    const today = parseDateAtNoon(toIsoDateInput(new Date()));
+    const todayIso = toIsoDateInput(today);
+    const nextSevenDays = new Date(today);
+    nextSevenDays.setDate(nextSevenDays.getDate() + 7);
+    const nextSevenDaysIso = toIsoDateInput(nextSevenDays);
+
+    let pendingTotal = 0;
+    let overdueTotal = 0;
+    let dueNext7Days = 0;
+    let recurringCommitmentMonthly = 0;
+    let paidTotal = 0;
+
+    for (const bill of financeBills) {
+      const status = financeComputedStatus(bill, todayIso);
+      if (status === "PAID") {
+        paidTotal += bill.amount;
+      }
+      if (status !== "PAID") {
+        pendingTotal += bill.amount;
+      }
+      if (status === "OVERDUE") {
+        overdueTotal += bill.amount;
+      }
+      if (status !== "PAID" && bill.dueDate >= todayIso && bill.dueDate <= nextSevenDaysIso) {
+        dueNext7Days += 1;
+      }
+      if (status !== "PAID") {
+        if (bill.recurrence === "WEEKLY") recurringCommitmentMonthly += bill.amount * 4.33;
+        if (bill.recurrence === "MONTHLY") recurringCommitmentMonthly += bill.amount;
+        if (bill.recurrence === "YEARLY") recurringCommitmentMonthly += bill.amount / 12;
+      }
+    }
+
+    const projectedBalanceAfterPending = financeBalance - pendingTotal;
+    return { pendingTotal, overdueTotal, dueNext7Days, recurringCommitmentMonthly, projectedBalanceAfterPending, paidTotal };
+  }, [financeBalance, financeBills]);
+  const financeInsight = useMemo(() => {
+    if (financeStats.overdueTotal > 0) {
+      return `Prioridade crítica: ${formatCurrencyBRL(financeStats.overdueTotal)} já está em atraso.`;
+    }
+    if (financeStats.dueNext7Days > 0) {
+      return `Atenção: ${financeStats.dueNext7Days} conta(s) vencem nos próximos 7 dias.`;
+    }
+    return null;
+  }, [financeStats]);
+  const financeTotalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredFinanceBills.length / financeRowsPerPage));
+  }, [filteredFinanceBills.length, financeRowsPerPage]);
+  const paginatedFinanceBills = useMemo(() => {
+    const start = (financePage - 1) * financeRowsPerPage;
+    return filteredFinanceBills.slice(start, start + financeRowsPerPage);
+  }, [filteredFinanceBills, financePage, financeRowsPerPage]);
 
   const redirectToLogin = () => {
     clearTokens();
@@ -347,17 +490,28 @@ function AxionStudioPage() {
 
   const isAuthError = (err: unknown): boolean => err instanceof ApiError && err.status === 401;
 
+  const loadFinanceData = async () => {
+    const [balanceResult, billsResult] = await Promise.all([
+      getAxionStudioFinanceBalance(),
+      getAxionStudioFinanceBills({ page: 1, pageSize: 100 }),
+    ]);
+    setFinanceBalance(balanceResult.balance);
+    setFinanceBills(billsResult.items);
+  };
+
   const loadBase = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [meResult, policyResult, templateResult, auditResult, usersResult, tenantsResult] = await Promise.allSettled([
+      const [meResult, policyResult, templateResult, auditResult, usersResult, tenantsResult, financeBalanceResult, financeBillsResult] = await Promise.allSettled([
         getAxionStudioMe(),
         getAxionStudioPolicies({ context: policyContext || undefined, q: policySearch || undefined }),
         getAxionStudioTemplates(),
         getAxionStudioAudit(),
         getAxionStudioPreviewUsers(),
         getPlatformTenants({ q: tenantSearch || undefined, tenantType: orgViewTab === "admin" ? "" : tenantTypeFilter }),
+        getAxionStudioFinanceBalance(),
+        getAxionStudioFinanceBills({ page: 1, pageSize: 100 }),
       ]);
 
       if (meResult.status === "fulfilled") {
@@ -380,6 +534,12 @@ function AxionStudioPage() {
       if (tenantsResult.status === "fulfilled") {
         setTenants(tenantsResult.value);
       }
+      if (financeBalanceResult.status === "fulfilled") {
+        setFinanceBalance(financeBalanceResult.value.balance);
+      }
+      if (financeBillsResult.status === "fulfilled") {
+        setFinanceBills(financeBillsResult.value.items);
+      }
 
       const firstFailure =
         (meResult.status === "rejected" && meResult.reason) ||
@@ -388,6 +548,8 @@ function AxionStudioPage() {
         (auditResult.status === "rejected" && auditResult.reason) ||
         (usersResult.status === "rejected" && usersResult.reason) ||
         (tenantsResult.status === "rejected" && tenantsResult.reason) ||
+        (financeBalanceResult.status === "rejected" && financeBalanceResult.reason) ||
+        (financeBillsResult.status === "rejected" && financeBillsResult.reason) ||
         null;
       if (firstFailure) {
         if (isAuthError(firstFailure)) {
@@ -456,6 +618,24 @@ function AxionStudioPage() {
       setTab(requestedTab);
     }
   }, [searchParams, tab]);
+
+  useEffect(() => {
+    setFinanceBalanceDraft(financeBalance.toFixed(2));
+  }, [financeBalance]);
+
+  useEffect(() => {
+    setFinancePage(1);
+  }, [financeSearch, financeFilterStatus, financeRowsPerPage]);
+
+  useEffect(() => {
+    if (financePage > financeTotalPages) {
+      setFinancePage(financeTotalPages);
+    }
+  }, [financePage, financeTotalPages]);
+
+  useEffect(() => {
+    setFinanceInsightDismissed(false);
+  }, [financeInsight]);
 
   const handleLogout = async () => {
     setLoading(true);
@@ -581,6 +761,129 @@ function AxionStudioPage() {
       setImpactResult(result);
     } catch (err) {
       setError(getApiErrorMessage(err, "Falha ao calcular impacto do Axion."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetFinanceDraft = () => {
+    setFinanceEditingBillId(null);
+    setFinanceDraft({
+      description: "",
+      category: "Operação",
+      amount: "",
+      dueDate: toIsoDateInput(new Date()),
+      recurrence: "MONTHLY",
+      notes: "",
+    });
+  };
+
+  const startEditFinanceBill = (bill: FinanceBill) => {
+    setFinanceEditingBillId(bill.id);
+    setFinanceDraft({
+      description: bill.description,
+      category: bill.category,
+      amount: bill.amount.toFixed(2),
+      dueDate: bill.dueDate,
+      recurrence: bill.recurrence,
+      notes: bill.notes,
+    });
+    setFinanceFeedback("Modo de edicao ativado para a conta selecionada.");
+    setError(null);
+  };
+
+  const saveFinanceBalance = async () => {
+    const parsed = parseCurrencyInput(financeBalanceDraft);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      setError("Informe um saldo válido (zero ou maior).");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await patchAxionStudioFinanceBalance({ balance: parsed });
+      setFinanceBalance(result.balance);
+      setFinanceBalanceDraft(result.balance.toFixed(2));
+      setFinanceFeedback("Saldo atualizado com sucesso.");
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Não foi possível atualizar o saldo."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addFinanceBill = async () => {
+    const amount = parseCurrencyInput(financeDraft.amount);
+    if (financeDraft.description.trim().length < 2) {
+      setError("Informe uma descrição da conta com pelo menos 2 caracteres.");
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError("Informe um valor válido para a conta.");
+      return;
+    }
+    if (!financeDraft.dueDate) {
+      setError("Informe a data de vencimento.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      if (financeEditingBillId !== null) {
+        await patchAxionStudioFinanceBill(financeEditingBillId, {
+          description: financeDraft.description.trim(),
+          category: financeDraft.category,
+          amount,
+          dueDate: financeDraft.dueDate,
+          recurrence: financeDraft.recurrence,
+          notes: financeDraft.notes.trim(),
+        });
+      } else {
+        await createAxionStudioFinanceBill({
+          description: financeDraft.description.trim(),
+          category: financeDraft.category,
+          amount,
+          dueDate: financeDraft.dueDate,
+          recurrence: financeDraft.recurrence,
+          notes: financeDraft.notes.trim(),
+        });
+      }
+      await loadFinanceData();
+      setFinanceFeedback(financeEditingBillId !== null ? "Conta atualizada com sucesso." : "Conta adicionada com sucesso.");
+      resetFinanceDraft();
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Não foi possível salvar a conta."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const registerFinancePayment = async (billId: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await payAxionStudioFinanceBill(billId);
+      setFinanceBalance(result.balance);
+      await loadFinanceData();
+      setFinanceFeedback(result.recurringBill ? "Pagamento registrado e próxima recorrência criada automaticamente." : "Pagamento registrado com sucesso.");
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Não foi possível registrar o pagamento."));
+    } finally {
+      setLoading(false);
+    }
+  };
+  const deleteFinanceBill = async (billId: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await deleteAxionStudioFinanceBill(billId);
+      if (financeEditingBillId === billId) {
+        resetFinanceDraft();
+      }
+      await loadFinanceData();
+      setFinanceFeedback("Conta removida.");
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Não foi possível remover a conta."));
     } finally {
       setLoading(false);
     }
@@ -975,6 +1278,7 @@ function AxionStudioPage() {
             { id: "preview", label: "Prévia" },
             { id: "audit", label: "Auditoria" },
             { id: "impact", label: "Impacto" },
+            { id: "finance", label: "Financeiro" },
           ].map((item) => (
             <button
               key={item.id}
@@ -1328,6 +1632,280 @@ function AxionStudioPage() {
             ) : (
               <p className="text-sm font-semibold text-[#6B87AC]">Selecione um aluno e rode o cálculo para ver correlações reais de resultado.</p>
             )}
+          </section>
+        ) : null}
+
+        {tab === "finance" ? (
+          <section className="mt-5 grid gap-5 2xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+            <div className="rounded-2xl border border-[#C9D8EF] p-3">
+              <div className="mb-3 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+                <div className="rounded-xl border border-[#DCE6F7] bg-[#F7FAFF] p-3">
+                  <p className="text-[11px] font-bold uppercase text-[#6B87AC]">Total pendente</p>
+                  <p className="text-lg font-black text-[#24456F]">{formatCurrencyBRL(financeStats.pendingTotal)}</p>
+                </div>
+                <div className="rounded-xl border border-[#F4CFCC] bg-[#FFF7F6] p-3">
+                  <p className="text-[11px] font-bold uppercase text-[#B5635D]">Em atraso</p>
+                  <p className="text-lg font-black text-[#8F3630]">{formatCurrencyBRL(financeStats.overdueTotal)}</p>
+                </div>
+                <div className="rounded-xl border border-[#DCE6F7] bg-[#F7FAFF] p-3">
+                  <p className="text-[11px] font-bold uppercase text-[#6B87AC]">Vencem em 7 dias</p>
+                  <p className="text-lg font-black text-[#24456F]">{financeStats.dueNext7Days}</p>
+                </div>
+                <div className="rounded-xl border border-[#DCE6F7] bg-[#F7FAFF] p-3">
+                  <p className="text-[11px] font-bold uppercase text-[#6B87AC]">Compromisso mensal</p>
+                  <p className="text-lg font-black text-[#24456F]">{formatCurrencyBRL(financeStats.recurringCommitmentMonthly)}</p>
+                </div>
+                <div className="rounded-xl border border-[#D0E4DA] bg-[#F2FBF8] p-3">
+                  <p className="text-[11px] font-bold uppercase text-[#4F7B69]">Total pago</p>
+                  <p className="text-lg font-black text-[#1D6A4E]">{formatCurrencyBRL(financeStats.paidTotal)}</p>
+                </div>
+                <div className={`rounded-xl border p-3 ${financeBalance >= 0 ? "border-[#CDE4DC] bg-[#F2FBF8]" : "border-[#F4CFCC] bg-[#FFF7F6]"}`}>
+                  <p className="text-[11px] font-bold uppercase text-[#4E7A7A]">Saldo disponível</p>
+                  <p className={`text-lg font-black ${financeBalance >= 0 ? "text-[#1F5E5E]" : "text-[#8F3630]"}`}>{formatCurrencyBRL(financeBalance)}</p>
+                  <p className="text-xs font-semibold text-[#6D89AF]">Após pendências: {formatCurrencyBRL(financeStats.projectedBalanceAfterPending)}</p>
+                </div>
+              </div>
+              {financeInsight && !financeInsightDismissed ? (
+                <div className="mb-3 flex items-start justify-between gap-3 rounded-xl border border-[#CDE4DC] bg-[#F2FBF8] p-3 text-sm font-semibold text-[#285B5D]">
+                  <p>{financeInsight}</p>
+                  <button
+                    aria-label="Fechar aviso"
+                    className="rounded-md px-2 py-0.5 text-xs font-black text-[#2E6A6A] hover:bg-[#DDF3EC]"
+                    onClick={() => setFinanceInsightDismissed(true)}
+                    type="button"
+                  >
+                    x
+                  </button>
+                </div>
+              ) : null}
+              {financeFeedback ? (
+                <div className="mb-3 flex items-start justify-between gap-3 rounded-xl border border-[#CBE7E4] bg-[#F1FCFA] p-3 text-xs font-semibold text-[#245A67]">
+                  <p>{financeFeedback}</p>
+                  <button
+                    aria-label="Fechar mensagem"
+                    className="rounded-md px-2 py-0.5 text-xs font-black text-[#245A67] hover:bg-[#D8F1ED]"
+                    onClick={() => setFinanceFeedback(null)}
+                    type="button"
+                  >
+                    x
+                  </button>
+                </div>
+              ) : null}
+              <div className="mb-3 rounded-xl border border-[#D7E2F4] bg-[#F7FAFF] p-3">
+                <p className="mb-2 text-xs font-black uppercase text-[#5D7EA8]">Saldo editável</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:max-w-[220px]"
+                    onChange={(e) => setFinanceBalanceDraft(e.target.value)}
+                    placeholder="Saldo atual (R$)"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={financeBalanceDraft}
+                  />
+                  <button className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn px-3 py-2 text-sm text-white" onClick={saveFinanceBalance} type="button">
+                    Salvar saldo
+                  </button>
+                </div>
+              </div>
+              <div className="mb-3 flex flex-wrap gap-2">
+                <input
+                  className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[220px] sm:flex-1"
+                  onChange={(e) => setFinanceSearch(e.target.value)}
+                  placeholder="Buscar conta por descrição, categoria ou observação..."
+                  value={financeSearch}
+                />
+                <select
+                  className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[200px] sm:w-auto"
+                  onChange={(e) => setFinanceFilterStatus(e.target.value as FinanceFilterStatus)}
+                  value={financeFilterStatus}
+                >
+                  <option value="ALL">Todos os status</option>
+                  <option value="PENDING">Pendentes</option>
+                  <option value="OVERDUE">Atrasadas</option>
+                  <option value="PAID">Pagas</option>
+                </select>
+                <select
+                  className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[140px] sm:w-auto"
+                  onChange={(e) => setFinanceRowsPerPage(Number(e.target.value))}
+                  value={financeRowsPerPage}
+                >
+                  <option value={10}>10 linhas</option>
+                  <option value={20}>20 linhas</option>
+                  <option value={50}>50 linhas</option>
+                  <option value={100}>100 linhas</option>
+                </select>
+              </div>
+              <div className="max-h-[560px] overflow-auto rounded-xl border border-[#D7E2F4]">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[820px] text-left text-sm">
+                    <thead className="bg-[#F4F8FF] text-[#35567F]">
+                      <tr>
+                        <th className="px-3 py-2">Conta</th>
+                        <th className="px-3 py-2">Categoria</th>
+                        <th className="px-3 py-2">Valor</th>
+                        <th className="px-3 py-2">Vencimento</th>
+                        <th className="px-3 py-2">Recorrência</th>
+                        <th className="px-3 py-2">Status</th>
+                        <th className="px-3 py-2">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredFinanceBills.length === 0 ? (
+                        <tr>
+                          <td className="px-3 py-6 text-center text-sm font-semibold text-[#6B87AC]" colSpan={7}>
+                            Nenhuma conta encontrada com os filtros atuais.
+                          </td>
+                        </tr>
+                      ) : null}
+                      {paginatedFinanceBills.map((bill) => {
+                        const status = financeComputedStatus(bill, toIsoDateInput(new Date()));
+                        return (
+                          <tr key={bill.id} className="border-t border-[#E2EAF8]">
+                            <td className="px-3 py-2 font-semibold text-[#223F68]">
+                              {bill.description}
+                              {bill.notes ? <p className="mt-1 text-xs font-semibold text-[#6D89AF]">{bill.notes}</p> : null}
+                            </td>
+                            <td className="px-3 py-2">{bill.category}</td>
+                            <td className="px-3 py-2 font-black text-[#24456F]">{formatCurrencyBRL(bill.amount)}</td>
+                            <td className="px-3 py-2">{new Date(`${bill.dueDate}T12:00:00`).toLocaleDateString("pt-BR")}</td>
+                            <td className="px-3 py-2">{FINANCE_RECURRENCE_LABELS[bill.recurrence]}</td>
+                            <td className="px-3 py-2">
+                              <span
+                                className={`inline-flex rounded-full px-2 py-1 text-xs font-black ${
+                                  status === "PAID"
+                                    ? "bg-[#E5F6EF] text-[#1D6A4E]"
+                                    : status === "OVERDUE"
+                                      ? "bg-[#FFE8E6] text-[#B54C47]"
+                                      : "bg-[#E7F0FF] text-[#35567F]"
+                                }`}
+                              >
+                                {FINANCE_STATUS_LABELS[status]}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="flex flex-wrap gap-1">
+                                <button
+                                  className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn-sm text-[#2F527D]"
+                                  onClick={() => startEditFinanceBill(bill)}
+                                  type="button"
+                                >
+                                  Editar
+                                </button>
+                                <button
+                                  className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                  disabled={status === "PAID"}
+                                  onClick={() => registerFinancePayment(bill.id)}
+                                  type="button"
+                                >
+                                  Registrar pagamento
+                                </button>
+                                <button
+                                  className="axiora-chunky-btn axiora-chunky-btn--destructive axiora-admin-btn-sm text-white"
+                                  onClick={() => deleteFinanceBill(bill.id)}
+                                  type="button"
+                                >
+                                  Excluir
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              {filteredFinanceBills.length > 20 ? (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-[#6B87AC]">
+                    Página {financePage} de {financeTotalPages} • {filteredFinanceBills.length} registro(s)
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn-sm text-[#2F527D] disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={financePage <= 1}
+                      onClick={() => setFinancePage((prev) => Math.max(1, prev - 1))}
+                      type="button"
+                    >
+                      Anterior
+                    </button>
+                    <button
+                      className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn-sm text-[#2F527D] disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={financePage >= financeTotalPages}
+                      onClick={() => setFinancePage((prev) => Math.min(financeTotalPages, prev + 1))}
+                      type="button"
+                    >
+                      Próxima
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="rounded-2xl border border-[#C9D8EF] p-3 xl:sticky xl:top-4 xl:self-start">
+              <h3 className="mb-2 text-sm font-black text-[#1E3B65]">{financeEditingBillId !== null ? "Editar conta" : "Nova conta"}</h3>
+              <input
+                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                onChange={(e) => setFinanceDraft((prev) => ({ ...prev, description: e.target.value }))}
+                placeholder="Descrição da conta *"
+                value={financeDraft.description}
+              />
+              <select
+                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                onChange={(e) => setFinanceDraft((prev) => ({ ...prev, category: e.target.value }))}
+                value={financeDraft.category}
+              >
+                {FINANCE_CATEGORY_OPTIONS.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+              <input
+                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                onChange={(e) => setFinanceDraft((prev) => ({ ...prev, amount: e.target.value }))}
+                placeholder="Valor (R$) *"
+                type="number"
+                min={0}
+                step="0.01"
+                value={financeDraft.amount}
+              />
+              <input
+                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                onChange={(e) => setFinanceDraft((prev) => ({ ...prev, dueDate: e.target.value }))}
+                type="date"
+                value={financeDraft.dueDate}
+              />
+              <select
+                className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
+                onChange={(e) => setFinanceDraft((prev) => ({ ...prev, recurrence: e.target.value as FinanceRecurrence }))}
+                value={financeDraft.recurrence}
+              >
+                {(Object.keys(FINANCE_RECURRENCE_LABELS) as FinanceRecurrence[]).map((recurrence) => (
+                  <option key={recurrence} value={recurrence}>
+                    {FINANCE_RECURRENCE_LABELS[recurrence]}
+                  </option>
+                ))}
+              </select>
+              <textarea
+                className="mb-3 h-24 w-full rounded-xl border border-[#C9D8EF] p-2 text-sm"
+                onChange={(e) => setFinanceDraft((prev) => ({ ...prev, notes: e.target.value }))}
+                placeholder="Observações"
+                value={financeDraft.notes}
+              />
+              <div className="flex flex-wrap gap-2">
+                <button className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn px-3 py-2 text-sm text-white" onClick={addFinanceBill} type="button">
+                  {financeEditingBillId !== null ? "Salvar alterações" : "Salvar conta"}
+                </button>
+                <button className="axiora-chunky-btn axiora-chunky-btn--outline axiora-admin-btn px-3 py-2 text-sm text-[#2F527D]" onClick={resetFinanceDraft} type="button">
+                  {financeEditingBillId !== null ? "Cancelar edição" : "Limpar"}
+                </button>
+              </div>
+              <p className="mt-3 text-xs font-semibold text-[#6C88AF]">
+                Se a conta tiver recorrência, ao registrar pagamento a próxima cobrança é criada automaticamente.
+              </p>
+            </div>
           </section>
         ) : null}
 
@@ -1977,3 +2555,5 @@ export default function AxionStudioPageWrapper() {
     </Suspense>
   );
 }
+
+
