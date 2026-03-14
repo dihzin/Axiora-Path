@@ -189,12 +189,12 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
   }
   const sideX = displayIndex % 2 === 1 ? -1 : 1;
   const badgeAnchorClass = sideX > 0 ? "left-1/2" : "right-1/2";
-  const badgeTranslateX = sideX > 0 ? "32px" : "-32px";
+  const badgeTranslateX = compactMobile ? (sideX > 0 ? "20px" : "-20px") : sideX > 0 ? "32px" : "-32px";
   const badgeOffsetY = Math.max(-6, Math.min(6, normalY * 8));
 
   return (
     <div className="group relative">
-      <div className="pointer-events-none absolute -top-2 left-1/2 z-30 w-max max-w-[240px] -translate-x-1/2 -translate-y-full rounded-xl border border-white/12 bg-[rgba(23,50,47,0.9)] px-3 py-2 text-center text-[11px] text-white opacity-0 shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-opacity duration-150 group-hover:opacity-100">
+      <div className={cn("pointer-events-none absolute -top-2 left-1/2 z-30 w-max max-w-[240px] -translate-x-1/2 -translate-y-full rounded-xl border border-white/12 bg-[rgba(23,50,47,0.9)] px-3 py-2 text-center text-[11px] text-white opacity-0 shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition-opacity duration-150 group-hover:opacity-100", compactMobile ? "hidden" : "block")}>
         <p className="truncate text-xs font-semibold" style={{ color: TEXT_PRIMARY }}>{node.title}</p>
         <p className="mt-0.5 font-medium" style={{ color: TEXT_MUTED }}>
           {typeof node.xp === "number" ? `+${node.xp} XP · ` : ""}
@@ -209,9 +209,10 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
           visuals.shell,
           isActive && !isCurrent ? "ring-2 ring-white/25 ring-offset-2 ring-offset-transparent" : "",
           isActive && !reducedMotion ? "animate-[pulse_2.8s_ease-in-out_infinite]" : "",
+          "shadow-[0_10px_20px_rgba(2,8,23,0.36),0_2px_0_rgba(255,255,255,0.16)_inset]",
           hoverableClasses,
         )}
-        style={{ transition: "transform 220ms ease, filter 220ms ease, opacity 200ms ease" }}
+        style={{ transition: "transform 220ms ease, filter 220ms ease, opacity 200ms ease", transformStyle: "preserve-3d" }}
         aria-current={isActive ? "step" : undefined}
         aria-label={`${node.title} · ${missionMeta.label} · ${statusLabel[node.status]}`}
       >
@@ -220,6 +221,14 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
           className="pointer-events-none absolute inset-[3px] rounded-full"
           style={{
             background: visuals.shellHighlight,
+          }}
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-[6px] rounded-full"
+          style={{
+            background: "linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.02))",
+            mixBlendMode: "screen",
           }}
         />
         {isDone ? (
@@ -325,36 +334,40 @@ function MapNodeItem({ node, isActive, displayIndex, compactMobile, point, prevP
           </span>
         ) : null}
       </button>
-      <div
-        className={cn(
-          "pointer-events-none absolute top-1/2 z-20 rounded-[16px] text-center opacity-95 transition-opacity duration-[180ms] group-hover:opacity-100",
-          badgeAnchorClass,
-          compactMobile ? "px-2.5 py-1 text-[10px] leading-snug" : "px-3.5 py-1.5 text-[11px] leading-tight",
-        )}
-        style={{
-          transform: `translate(${badgeTranslateX}, calc(-50% + ${badgeOffsetY.toFixed(1)}px))`,
-          background: `linear-gradient(180deg, rgba(8,16,34,0.96), rgba(8,16,34,0.9)), ${visuals.labelBg}`,
-          border: `1px solid ${visuals.labelBorder}`,
-          boxShadow: `${visuals.labelShadow}, ${visuals.kindGlow}, inset 0 1px 0 rgba(255,255,255,0.06)`,
-          transition: "transform 0.4s ease, opacity 180ms ease",
-          whiteSpace: "nowrap",
-          textRendering: "geometricPrecision",
-          WebkitFontSmoothing: "antialiased",
-        }}
-      >
-        <span
-          className="mb-1 inline-flex w-fit items-center gap-1 rounded-full px-2 py-[2px] text-[9px] font-semibold uppercase tracking-[0.08em]"
+      {!compactMobile ? (
+        <div
+          className={cn(
+            "pointer-events-none absolute top-1/2 z-20 rounded-[16px] text-center opacity-95 transition-opacity duration-[180ms] group-hover:opacity-100",
+            badgeAnchorClass,
+            "px-3.5 py-1.5 text-[11px] leading-tight",
+          )}
           style={{
-            color: missionMeta.accent,
-            background: `linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01)), ${visuals.kindAccentSoft}`,
-            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), ${visuals.kindGlow}`,
+            transform: `translate(${badgeTranslateX}, calc(-50% + ${badgeOffsetY.toFixed(1)}px))`,
+            background: `linear-gradient(180deg, rgba(10,22,42,0.74), rgba(10,22,42,0.54))`,
+            border: "1px solid rgba(255,255,255,0.32)",
+            boxShadow: `0 14px 24px rgba(5,14,30,0.36), 0 4px 10px rgba(5,14,30,0.22), ${visuals.kindGlow}, inset 0 1px 0 rgba(255,255,255,0.16)`,
+            transition: "transform 0.4s ease, opacity 180ms ease",
+            whiteSpace: "nowrap",
+            textRendering: "geometricPrecision",
+            WebkitFontSmoothing: "antialiased",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
           }}
         >
-          <MissionIcon className="h-2.5 w-2.5" strokeWidth={2.4} aria-hidden />
-          {missionMeta.label}
-        </span>
-        <span className="block font-semibold tracking-[-0.01em]" style={{ color: visuals.labelText, textShadow: "0 1px 8px rgba(2,6,23,0.38)" }}>{node.title}</span>
-      </div>
+          <span
+            className="mb-1 inline-flex w-fit items-center gap-1 rounded-full px-2 py-[2px] text-[9px] font-semibold uppercase tracking-[0.08em]"
+            style={{
+              color: missionMeta.accent,
+              background: "linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0.12))",
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), ${visuals.kindGlow}`,
+            }}
+          >
+            <MissionIcon className="h-2.5 w-2.5" strokeWidth={2.4} aria-hidden />
+            {missionMeta.label}
+          </span>
+          <span className="block font-semibold tracking-[-0.01em]" style={{ color: visuals.labelText, textShadow: "0 1px 8px rgba(2,6,23,0.38)" }}>{node.title}</span>
+        </div>
+      ) : null}
     </div>
   );
 }

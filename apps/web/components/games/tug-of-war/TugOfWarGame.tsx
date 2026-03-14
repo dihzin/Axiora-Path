@@ -2,10 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { ChildDesktopShell } from "@/components/child-desktop-shell";
 import { PageShell } from "@/components/layout/page-shell";
+import type { GameSessionCompleteResponse } from "@/lib/api/client";
+import { finalizeGameSession } from "@/lib/games/completion";
+import { normalizeGameResult } from "@/lib/games/result-contract";
 
 import { GameScene } from "./GameScene";
 import { Numpad } from "./Numpad";
@@ -47,8 +51,103 @@ export function TugOfWarGame() {
     resetGame,
     constants,
   } = useTugOfWarEngine();
+  const [startedAt, setStartedAt] = useState(() => Date.now());
+  const [resultSessionId, setResultSessionId] = useState(() => `tug-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  const [completion, setCompletion] = useState<GameSessionCompleteResponse | null>(null);
+  const completionSentRef = useRef(false);
+  const onboardingAppliedRef = useRef(false);
+
+  const derivedMetrics = useMemo(() => {
+    const totalRounds = stats.red.wins + stats.blue.wins;
+    const playerWins = stats.red.wins;
+    const wrongAnswers = Math.max(0, totalRounds - playerWins);
+    const playerWon = winner === "red";
+    const score = Math.max(0, playerWins * 120 + (playerWon ? 150 : 0));
+    const maxStreak = Math.max(p1Streak, p2Streak);
+    return {
+      totalRounds,
+      playerWins,
+      wrongAnswers,
+      playerWon,
+      score,
+      maxStreak,
+      durationSeconds: Math.max(1, Math.round((Date.now() - startedAt) / 1000)),
+    };
+  }, [p1Streak, p2Streak, startedAt, stats.blue.wins, stats.red.wins, winner]);
+
+  useEffect(() => {
+    if (onboardingAppliedRef.current) return;
+    if (typeof window === "undefined") return;
+    onboardingAppliedRef.current = true;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("fromHub")?.trim() !== "1") return;
+    const startModeRaw = params.get("startMode")?.trim();
+    const startDifficultyRaw = Number(params.get("startDifficulty") ?? "");
+    const nextMode = startModeRaw === "pvp" || startModeRaw === "cpu" ? startModeRaw : mode;
+    const nextDifficulty = Number.isFinite(startDifficultyRaw) ? Math.min(3, Math.max(1, Math.round(startDifficultyRaw))) : difficulty;
+    if (nextMode === mode && nextDifficulty === difficulty) return;
+    completionSentRef.current = false;
+    setCompletion(null);
+    setStartedAt(Date.now());
+    setResultSessionId(`tug-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    resetGame(nextMode, nextDifficulty);
+  }, [difficulty, mode, resetGame]);
+
+  useEffect(() => {
+    if (winner === null) return;
+    if (completionSentRef.current) return;
+    completionSentRef.current = true;
+    const result = normalizeGameResult("tug-of-war", {
+      score: derivedMetrics.score,
+      accuracy: derivedMetrics.totalRounds > 0 ? derivedMetrics.playerWins / derivedMetrics.totalRounds : null,
+      correctAnswers: derivedMetrics.playerWins,
+      wrongAnswers: derivedMetrics.wrongAnswers,
+      streak: p1Streak,
+      maxStreak: derivedMetrics.maxStreak,
+      durationSeconds: derivedMetrics.durationSeconds,
+      completed: true,
+      personalBestType: "score",
+      metadata: {
+        mode,
+        difficulty,
+        winner,
+        totalRounds: derivedMetrics.totalRounds,
+        playerWins: derivedMetrics.playerWins,
+        gameType: "TUG_OF_WAR",
+      },
+    }, {
+      sessionId: resultSessionId,
+    });
+    void finalizeGameSession(result)
+      .then(setCompletion)
+      .catch(() => setCompletion(null));
+  }, [derivedMetrics, difficulty, mode, p1Streak, resultSessionId, winner]);
 
   const inputDisabled = winner !== null || roundResolved;
+
+  const handlePlayAgain = () => {
+    completionSentRef.current = false;
+    setCompletion(null);
+    setStartedAt(Date.now());
+    setResultSessionId(`tug-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    resetGame(mode, difficulty);
+  };
+
+  const handleModeChange = (nextMode: "cpu" | "pvp") => {
+    completionSentRef.current = false;
+    setCompletion(null);
+    setStartedAt(Date.now());
+    setResultSessionId(`tug-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    setMode(nextMode);
+  };
+
+  const handleDifficultyChange = (level: number) => {
+    completionSentRef.current = false;
+    setCompletion(null);
+    setStartedAt(Date.now());
+    setResultSessionId(`tug-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    setDifficulty(level);
+  };
 
   return (
     <ChildDesktopShell activeNav="jogos">
@@ -74,7 +173,7 @@ export function TugOfWarGame() {
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => setMode("cpu")}
+                  onClick={() => handleModeChange("cpu")}
                   className={`rounded-xl px-3 py-2 text-xs font-black transition ${
                     mode === "cpu" ? "border-2 border-[#0f766e] bg-[#99f6e4] text-[#115e59]" : "border-2 border-[#d1d9ea] bg-white text-[#475569]"
                   }`}
@@ -83,7 +182,7 @@ export function TugOfWarGame() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMode("pvp")}
+                  onClick={() => handleModeChange("pvp")}
                   className={`rounded-xl px-3 py-2 text-xs font-black transition ${
                     mode === "pvp" ? "border-2 border-[#0f766e] bg-[#99f6e4] text-[#115e59]" : "border-2 border-[#d1d9ea] bg-white text-[#475569]"
                   }`}
@@ -100,7 +199,7 @@ export function TugOfWarGame() {
                   <button
                     key={level}
                     type="button"
-                    onClick={() => setDifficulty(level)}
+                    onClick={() => handleDifficultyChange(level)}
                     className={`rounded-xl px-2 py-2 text-xs font-black ${
                       difficulty === level ? "border-2 border-[#1d4ed8] bg-[#dbeafe] text-[#1e3a8a]" : "border-2 border-[#d1d9ea] bg-white text-[#475569]"
                     }`}
@@ -205,7 +304,7 @@ export function TugOfWarGame() {
 
           <button
             type="button"
-            onClick={() => resetGame(mode, difficulty)}
+            onClick={handlePlayAgain}
             className="mt-3 w-full rounded-2xl border-2 border-[#c7d5ee] bg-white px-4 py-2 text-sm font-black text-[#334155]"
           >
             Reiniciar partida
@@ -218,7 +317,16 @@ export function TugOfWarGame() {
           p1Streak={p1Streak}
           p2Streak={p2Streak}
           matchAnalytics={matchAnalytics}
-          onPlayAgain={() => resetGame(mode, difficulty)}
+          score={derivedMetrics.score}
+          correctAnswers={derivedMetrics.playerWins}
+          wrongAnswers={derivedMetrics.wrongAnswers}
+          streak={p1Streak}
+          durationSeconds={derivedMetrics.durationSeconds}
+          xpGained={completion?.dailyLimit.grantedXp ?? null}
+          coinsGained={completion?.session.coinsEarned ?? null}
+          isPersonalBest={completion?.isPersonalBest ?? false}
+          personalBestType={completion?.personalBestType ?? null}
+          onPlayAgain={handlePlayAgain}
           onBackToGames={() => router.push("/child/games")}
         />
 

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { memo } from "react";
@@ -139,16 +140,15 @@ function ShopIcon({ active }: { active: boolean }) {
 }
 
 function ProfileIcon({ active }: { active: boolean }) {
-  const c = active ? "#58CC02" : "#AFAFAF";
   return (
-    <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden>
-      <path d="M8 14l4-6 4 4 4-6 4 8H8z" fill={active ? "#FFD700" : "#CBCBCB"} />
-      <circle cx="16" cy="20" r="7" fill={c} />
-      <circle cx="16" cy="20" r="7" fill="white" fillOpacity="0.15" />
-      <circle cx="13.5" cy="19" r="1.2" fill="white" />
-      <circle cx="18.5" cy="19" r="1.2" fill="white" />
-      <path d="M13 22.5q3 2 6 0" stroke="white" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-    </svg>
+    <Image
+      src="/axiora/mascot/axiora-mascot-icon.png"
+      alt=""
+      aria-hidden
+      width={28}
+      height={28}
+      className={`h-7 w-7 object-contain transition duration-200 ${active ? "opacity-100 saturate-100" : "opacity-70 saturate-50"}`}
+    />
   );
 }
 

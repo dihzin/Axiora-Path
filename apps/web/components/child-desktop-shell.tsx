@@ -15,6 +15,8 @@ type ChildDesktopShellProps = {
   activeNav?: ChildNavIconKey;
   rightRail?: ReactNode;
   rightRailAppend?: ReactNode;
+  menuSkin?: "default" | "trail";
+  topBar?: ReactNode;
 };
 
 const NAV_ITEMS: Array<{ href: string; label: string; iconName: ChildNavIconKey }> = [
@@ -26,11 +28,12 @@ const NAV_ITEMS: Array<{ href: string; label: string; iconName: ChildNavIconKey 
   { href: "/child/axion", label: "Axion", iconName: "axion" },
 ];
 
-export function ChildDesktopShell({ children, activeNav, rightRail, rightRailAppend }: ChildDesktopShellProps) {
+export function ChildDesktopShell({ children, activeNav, rightRail, rightRailAppend, menuSkin = "default", topBar }: ChildDesktopShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const resolvedActive = activeNav ?? resolveActive(pathname);
   const [profileGuardReady, setProfileGuardReady] = useState(false);
+  const isTrailSkin = menuSkin === "trail";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -54,11 +57,29 @@ export function ChildDesktopShell({ children, activeNav, rightRail, rightRailApp
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_46%_16%,rgba(255,163,94,0.16),rgba(24,49,46,0.04)_28%,rgba(2,6,23,0)_56%),radial-gradient(circle_at_72%_24%,rgba(79,157,138,0.12),rgba(2,6,23,0)_24%),linear-gradient(180deg,#112826_0%,#16312E_40%,#17322F_100%)]">
+    <div
+      className={
+        isTrailSkin
+          ? "min-h-screen"
+          : "min-h-screen bg-[radial-gradient(circle_at_46%_16%,rgba(255,163,94,0.16),rgba(24,49,46,0.04)_28%,rgba(2,6,23,0)_56%),radial-gradient(circle_at_72%_24%,rgba(79,157,138,0.12),rgba(2,6,23,0)_24%),linear-gradient(180deg,#112826_0%,#16312E_40%,#17322F_100%)]"
+      }
+    >
       <div className="w-full lg:pl-[208px]">
-        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-white/5 lg:bg-[linear-gradient(180deg,rgba(20,40,37,0.96)_0%,rgba(16,33,31,0.98)_100%)] lg:px-3 lg:py-5 lg:shadow-[inset_-1px_0_0_rgba(255,255,255,0.04)]">
+        <aside
+          className={
+            menuSkin === "trail"
+              ? "hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/12 lg:border-t-white/10 lg:bg-[linear-gradient(180deg,rgba(20,52,47,0.62)_0%,rgba(14,35,32,0.48)_100%)] lg:px-3 lg:py-5 lg:backdrop-blur-xl"
+              : "hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-white/5 lg:bg-[linear-gradient(180deg,rgba(20,40,37,0.96)_0%,rgba(16,33,31,0.98)_100%)] lg:px-3 lg:py-5 lg:shadow-[inset_-1px_0_0_rgba(255,255,255,0.04)]"
+          }
+        >
           <div className="mb-0.5 flex justify-center">
-              <div className="rounded-2xl bg-[linear-gradient(180deg,rgba(30,55,49,0.9),rgba(20,40,37,0.92))] p-1.5 shadow-[0_10px_24px_rgba(7,20,17,0.24),inset_0_1px_12px_rgba(255,255,255,0.04)]">
+              <div
+                className={
+                  menuSkin === "trail"
+                    ? "rounded-2xl bg-[#1C3A36]/82 p-1.5 shadow-[inset_0_1px_12px_rgba(0,0,0,0.3)]"
+                    : "rounded-2xl bg-[linear-gradient(180deg,rgba(30,55,49,0.9),rgba(20,40,37,0.92))] p-1.5 shadow-[0_10px_24px_rgba(7,20,17,0.24),inset_0_1px_12px_rgba(255,255,255,0.04)]"
+                }
+              >
               <div className="scale-90">
                 <AxionCharacter stage={1} moodState="NEUTRAL" reducedMotion={false} />
               </div>
@@ -71,14 +92,41 @@ export function ChildDesktopShell({ children, activeNav, rightRail, rightRailApp
               iconName={item.iconName}
               label={item.label}
               active={resolvedActive === item.iconName}
+              skin={menuSkin}
             />
           ))}
         </aside>
 
-        <div className="mx-auto w-full lg:grid lg:max-w-[1320px] lg:grid-cols-[minmax(680px,820px)_320px] lg:gap-8 lg:px-6 xl:max-w-[1420px] xl:grid-cols-[minmax(720px,880px)_340px] xl:px-8">
-          <div className="mx-auto w-full max-w-sm px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:max-w-[820px] lg:px-0 lg:pb-10 lg:pt-5 xl:max-w-[880px]">{children}</div>
+        {topBar ? (
+          <div
+            className={
+              isTrailSkin
+                ? "relative z-30 mx-auto hidden w-full lg:block lg:px-3 lg:pt-2 xl:px-4 2xl:px-5"
+                : "relative z-30 mx-auto hidden w-full lg:block lg:max-w-[1320px] lg:px-6 lg:pt-2 xl:max-w-[1420px] xl:px-8 xl:pt-2"
+            }
+          >
+            {topBar}
+          </div>
+        ) : null}
 
-          <aside className="hidden lg:block lg:py-5">
+        <div
+          className={
+            isTrailSkin
+              ? "mx-auto w-full lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4 lg:px-3 xl:grid-cols-[minmax(0,1fr)_356px] xl:px-4 2xl:px-5"
+              : "mx-auto w-full lg:grid lg:max-w-[1320px] lg:grid-cols-[minmax(680px,820px)_320px] lg:gap-8 lg:px-6 xl:max-w-[1420px] xl:grid-cols-[minmax(720px,880px)_340px] xl:px-8"
+          }
+        >
+          <div
+            className={
+              isTrailSkin
+                ? "mx-auto w-full max-w-sm px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:max-w-none lg:px-1 lg:pb-10 lg:pt-3"
+                : "mx-auto w-full max-w-sm px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:max-w-[820px] lg:px-0 lg:pb-10 lg:pt-5 xl:max-w-[880px]"
+            }
+          >
+            {children}
+          </div>
+
+          <aside className={isTrailSkin ? "hidden lg:block lg:py-3" : "hidden lg:block lg:py-5"}>
             <div className="sticky top-5 space-y-3.5">
               {rightRail ?? (
                 <>
@@ -103,15 +151,35 @@ function resolveActive(pathname: string): ChildNavIconKey {
   return "inicio";
 }
 
-function DesktopNavItem({ href, iconName, label, active }: { href: string; iconName: ChildNavIconKey; label: string; active: boolean }) {
+function DesktopNavItem({
+  href,
+  iconName,
+  label,
+  active,
+  skin,
+}: {
+  href: string;
+  iconName: ChildNavIconKey;
+  label: string;
+  active: boolean;
+  skin: "default" | "trail";
+}) {
   return (
     <Link
       href={href}
-      className={`mx-1.5 inline-flex items-center gap-2.5 rounded-2xl px-4 py-[7px] text-[15px] font-black uppercase tracking-[0.04em] transition-colors ${
-        active ? "border border-[#FFBE85]/35 bg-[#FF7A2F]/12 text-[#FFE7D1]" : "text-[#D7C7B5] hover:bg-white/5"
-      }`}
+      className={
+        skin === "trail"
+          ? `mx-1.5 inline-flex items-center gap-2.5 rounded-2xl px-4 py-[7px] text-[15px] font-semibold uppercase tracking-[0.04em] text-slate-200/85 transition-all duration-200 ${
+              active
+                ? "border-l-[3px] border-l-amber-300/90 bg-white/14 text-slate-100"
+                : "text-slate-200/80 hover:bg-white/10 hover:text-slate-100/95"
+            }`
+          : `mx-1.5 inline-flex items-center gap-2.5 rounded-2xl px-4 py-[7px] text-[15px] font-black uppercase tracking-[0.04em] transition-colors ${
+              active ? "border border-[#FFBE85]/35 bg-[#FF7A2F]/12 text-[#FFE7D1]" : "text-[#D7C7B5] hover:bg-white/5"
+            }`
+      }
     >
-      <span className={`${active ? "opacity-100" : "opacity-80 grayscale-[22%]"}`}>
+      <span className={skin === "trail" ? "opacity-85 grayscale-[80%]" : `${active ? "opacity-100" : "opacity-80 grayscale-[22%]"}`}>
         <ChildNavIcon name={iconName} active={active} size={42} />
       </span>
       {label}

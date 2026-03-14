@@ -931,7 +931,7 @@ export default function ChildPage() {
               </div>
             ) : null}
             <div className="mx-auto flex w-full max-w-[18rem] justify-center">
-              <div className="rounded-full border border-[#E8D8BF] bg-[radial-gradient(circle_at_50%_35%,rgba(255,163,94,0.12),rgba(30,42,56,0.02)_70%)] p-2.5 shadow-md">
+              <div className="overflow-hidden rounded-full border border-[#E8D8BF] bg-[radial-gradient(circle_at_50%_35%,rgba(255,163,94,0.12),rgba(30,42,56,0.02)_70%)] p-2.5 shadow-md">
                 <AxionCharacter
                   stage={axionState?.stage ?? 1}
                   moodState={effectiveAxionMoodState}

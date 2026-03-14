@@ -6,17 +6,19 @@ import { ArrowLeft, Gauge, Heart, Timer, Trophy, Zap } from "lucide-react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { ChildDesktopShell } from "@/components/child-desktop-shell";
+import { GameResultPanel } from "@/components/games/game-result-panel";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import {
   finishGameEngineSession,
-  registerGameSession,
   submitGameEngineAnswer,
   type GameType,
-  type GameSessionRegisterResponse,
+  type GameSessionCompleteResponse,
 } from "@/lib/api/client";
+import { finalizeGameSession } from "@/lib/games/completion";
+import { normalizeGameResult } from "@/lib/games/result-contract";
 import { UX_SETTINGS_FALLBACK, fetchUXSettings, hapticCompletion, hapticPress, playSfx } from "@/lib/ux-feedback";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +30,7 @@ type Question = {
 };
 
 type QuizTheme = "SUM" | "COMPARE" | "FRACTIONS" | "ENGLISH" | "SCIENCE";
+type QuizTempo = "easy" | "medium" | "hard";
 
 const TEMPLATE_THEME_MAP: Record<string, QuizTheme> = {
   "7f9d501f-7c56-4690-9da5-bf1b95818801": "SUM", // Corrida da Soma
@@ -160,8 +163,8 @@ function buildQuestion(seed: number, theme: QuizTheme): Question {
   return buildSumQuestion(seed);
 }
 
-function buildQuestions(theme: QuizTheme, offset = 1): Question[] {
-  return Array.from({ length: 8 }, (_, i) => buildQuestion(i + offset, theme));
+function buildQuestions(theme: QuizTheme, offset = 1, count = 8): Question[] {
+  return Array.from({ length: count }, (_, i) => buildQuestion(i + offset, theme));
 }
 
 function themeTip(theme: QuizTheme): string {
@@ -185,7 +188,14 @@ function gameTypeForTheme(theme: QuizTheme): GameType {
   return "CROSSWORD";
 }
 
+function resolveRoundSeconds(tempo: QuizTempo): number {
+  if (tempo === "easy") return 14;
+  if (tempo === "hard") return 10;
+  return 12;
+}
+
 export default function QuizGamePage() {
+  const [startedAt, setStartedAt] = useState(() => Date.now());
   const [questions, setQuestions] = useState<Question[]>([]);
   const [theme, setTheme] = useState<QuizTheme>("SUM");
   const [index, setIndex] = useState(0);
@@ -195,10 +205,11 @@ export default function QuizGamePage() {
   const [submitting, setSubmitting] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [title, setTitle] = useState("Corrida da Soma");
-  const [reward, setReward] = useState<GameSessionRegisterResponse | null>(null);
+  const [reward, setReward] = useState<GameSessionCompleteResponse | null>(null);
   const [combo, setCombo] = useState(0);
   const [bestCombo, setBestCombo] = useState(0);
   const [lives, setLives] = useState(3);
+  const [roundSeconds, setRoundSeconds] = useState(12);
   const [timeLeft, setTimeLeft] = useState(12);
   const [feedback, setFeedback] = useState<string>("Escolha uma resposta para continuar.");
   const [streakPoints, setStreakPoints] = useState(0);
@@ -208,9 +219,19 @@ export default function QuizGamePage() {
     let nextTitle = "Corrida da Soma";
     let nextTheme: QuizTheme = "SUM";
     let nextTemplateId: string | null = null;
+    let nextQuestionCount = 8;
+    let nextTempo: QuizTempo = "medium";
     try {
       const params = new URLSearchParams(window.location.search);
       nextTemplateId = params.get("templateId");
+      const questionCountParam = Number(params.get("q") ?? "8");
+      if (questionCountParam === 5 || questionCountParam === 8 || questionCountParam === 10) {
+        nextQuestionCount = questionCountParam;
+      }
+      const tempoParam = params.get("tempo")?.trim().toLowerCase();
+      if (tempoParam === "easy" || tempoParam === "medium" || tempoParam === "hard") {
+        nextTempo = tempoParam;
+      }
       const raw = localStorage.getItem("axiora_active_game_engine_session");
       if (raw) {
         const parsed = JSON.parse(raw) as { sessionId?: string; title?: string; href?: string; templateId?: string | null };
@@ -234,14 +255,17 @@ export default function QuizGamePage() {
       nextTheme = inferThemeFromTitle(nextTitle);
     }
     setTheme(nextTheme);
-    setQuestions(buildQuestions(nextTheme, 1));
+    setQuestions(buildQuestions(nextTheme, 1, nextQuestionCount));
+    const seconds = resolveRoundSeconds(nextTempo);
+    setRoundSeconds(seconds);
+    setTimeLeft(seconds);
     setFeedback(themeTip(nextTheme));
     void fetchUXSettings().then(setUxSettings).catch(() => setUxSettings(UX_SETTINGS_FALLBACK));
   }, []);
 
   const current = questions[index];
   const progress = useMemo(() => (questions.length === 0 ? 0 : Math.round((index / questions.length) * 100)), [index, questions.length]);
-  const timerPercent = useMemo(() => Math.max(0, Math.min(100, (timeLeft / 12) * 100)), [timeLeft]);
+  const timerPercent = useMemo(() => Math.max(0, Math.min(100, (timeLeft / Math.max(1, roundSeconds)) * 100)), [roundSeconds, timeLeft]);
   const scorePoints = useMemo(() => correctCount * pointsByTheme(theme) + bestCombo * 20 + lives * 15 + streakPoints, [bestCombo, correctCount, lives, streakPoints, theme]);
 
   useEffect(() => {
@@ -304,7 +328,7 @@ export default function QuizGamePage() {
     if (index < questions.length - 1) {
       setIndex((prev) => prev + 1);
       setSelected(null);
-      setTimeLeft(12);
+      setTimeLeft(roundSeconds);
       setFeedback(themeTip(theme));
       return;
     }
@@ -317,7 +341,26 @@ export default function QuizGamePage() {
       const comboBonus = Math.min(12, bestCombo) * 2;
       const livesBonus = lives * 5;
       const score = Math.min(100, accuracyScore + comboBonus + livesBonus);
-      const reg = await registerGameSession({ gameType: gameTypeForTheme(theme), score });
+      const reg = await finalizeGameSession(
+        normalizeGameResult("quiz", {
+          score,
+          accuracy: correctCount / Math.max(1, questions.length),
+          correctAnswers: correctCount,
+          wrongAnswers: Math.max(0, questions.length - correctCount),
+          streak: combo,
+          maxStreak: bestCombo,
+          durationSeconds: Math.max(1, Math.round((Date.now() - startedAt) / 1000)),
+          completed: true,
+          personalBestType: "score",
+          metadata: {
+            theme,
+            gameType: gameTypeForTheme(theme),
+            questions: questions.length,
+          },
+        }, {
+          sessionId,
+        }),
+      );
       setReward(reg);
     } catch {
       setReward(null);
@@ -330,14 +373,15 @@ export default function QuizGamePage() {
   }
 
   function onRestart() {
-    setQuestions(buildQuestions(theme, 9));
+    setStartedAt(Date.now());
+    setQuestions(buildQuestions(theme, 9, Math.max(5, questions.length || 8)));
     setIndex(0);
     setCorrectCount(0);
     setSelected(null);
     setCombo(0);
     setBestCombo(0);
     setLives(3);
-    setTimeLeft(12);
+    setTimeLeft(roundSeconds);
     setFeedback(themeTip(theme));
     setStreakPoints(0);
     setDone(false);
@@ -408,18 +452,22 @@ export default function QuizGamePage() {
             </div>
           </div>
           {done ? (
-            <div className="space-y-3 rounded-2xl border border-border bg-white/90 p-4 text-sm">
-              <p className="text-base font-bold">Sessão concluída</p>
-              <p>
-                Você acertou <strong>{correctCount}</strong> de <strong>{questions.length}</strong> questões.
-              </p>
-              <p>Melhor combo: {bestCombo}</p>
-              <p>XP aplicado: {reward?.dailyLimit.grantedXp ?? 0}</p>
-              <p>Moedas: {reward?.session.coinsEarned ?? 0}</p>
-              <Button className="w-full" onClick={onRestart}>
-                Jogar novamente
-              </Button>
-            </div>
+            <GameResultPanel
+              title="Sessão concluída"
+              score={scorePoints}
+              correctAnswers={correctCount}
+              wrongAnswers={Math.max(0, questions.length - correctCount)}
+              streak={bestCombo}
+              durationSeconds={Math.max(1, Math.round((Date.now() - startedAt) / 1000))}
+              xpGained={reward?.dailyLimit.grantedXp ?? 0}
+              coinsGained={reward?.session.coinsEarned ?? 0}
+              isPersonalBest={reward?.isPersonalBest ?? false}
+              personalBestType={reward?.personalBestType ?? null}
+              onReplay={onRestart}
+              onBack={() => {
+                window.location.href = "/child/games";
+              }}
+            />
           ) : (
             <>
               <div className="rounded-2xl border border-border bg-white/90 p-4">

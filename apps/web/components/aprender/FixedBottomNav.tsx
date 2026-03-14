@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { href: "/child/stickers", label: "Figurinhas", iconSrc: "/icons/figurinhas.svg" },
   { href: "/child/games", label: "Jogos", iconSrc: "/icons/jogos.svg" },
   { href: "/child/store", label: "Loja", iconSrc: "/icons/loja.svg" },
-  { href: "/child/axion", label: "Axion", iconSrc: "/icons/axion.svg" },
+  { href: "/child/axion", label: "Axion", iconSrc: "/axiora/mascot/axiora-mascot-icon.png" },
 ] as const;
 
 export function FixedBottomNav() {

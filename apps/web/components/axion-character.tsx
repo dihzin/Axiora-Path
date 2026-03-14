@@ -1,7 +1,6 @@
 "use client";
 
-import { AxionMascot } from "@/components/axion-mascot";
-import type { Mood } from "@/lib/types/mood";
+import Image from "next/image";
 
 type AxionCharacterProps = {
   stage: number;
@@ -29,15 +28,6 @@ function scaleClassByStage(stage: number): string {
   return "axion-stage-1";
 }
 
-function mascotMoodByState(moodState: string): Mood {
-  const mood = normalizeMood(moodState);
-  if (mood === "ANGRY") return "angry";
-  if (mood === "TIRED") return "tired";
-  if (mood === "SAD" || mood === "CONCERNED") return "sad";
-  if (mood === "CELEBRATING" || mood === "EXCITED" || mood === "PROUD" || mood === "HAPPY") return "happy";
-  return "neutral";
-}
-
 function mascotSizeByStage(stage: number): number {
   if (stage >= 3) return 168;
   if (stage === 2) return 156;
@@ -45,13 +35,20 @@ function mascotSizeByStage(stage: number): number {
 }
 
 export function AxionCharacter({ stage, moodState, celebrating = false, reducedMotion = false }: AxionCharacterProps) {
-  const mood = mascotMoodByState(moodState);
+  const mascotSize = mascotSizeByStage(stage);
   return (
     <div
       className={`relative mx-auto flex items-center justify-center ${scaleClassByStage(stage)} ${reducedMotion ? "" : "axion-float"} ${celebrating && !reducedMotion ? "axion-celebrate" : ""}`}
     >
       <div className={`${reducedMotion ? "axion-glow-static" : "axion-glow"} ${glowClassByMood(moodState)} absolute inset-0 rounded-full`} />
-      <AxionMascot mood={mood} size={mascotSizeByStage(stage)} animated={!reducedMotion} className="relative" />
+      <Image
+        src="/axiora/mascot/axiora-mascot-icon.png?v=3"
+        alt="Axion"
+        width={mascotSize}
+        height={mascotSize}
+        className="relative h-auto w-auto object-contain"
+        priority={stage >= 2}
+      />
     </div>
   );
 }

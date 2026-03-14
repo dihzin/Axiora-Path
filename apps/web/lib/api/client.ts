@@ -806,7 +806,18 @@ export type DailyMissionCompleteResponse = {
   streak: number;
 };
 
-export type GameType = "TICTACTOE" | "WORDSEARCH" | "CROSSWORD" | "HANGMAN" | "FINANCE_SIM";
+export type GameType =
+  | "TICTACTOE"
+  | "WORDSEARCH"
+  | "MEMORY"
+  | "CROSSWORD"
+  | "HANGMAN"
+  | "FINANCE_SIM"
+  | "TUG_OF_WAR"
+  | "QUIZ_BATTLE"
+  | "MATH_CHALLENGE"
+  | "PUZZLE_COOP"
+  | "FINANCE_BATTLE";
 export type GameEngineDifficulty = "EASY" | "MEDIUM" | "HARD";
 
 export type GameCatalogItem = {
@@ -889,6 +900,109 @@ export type GameSessionRegisterResponse = {
     remainingXpToday: number;
   };
   unlockedAchievements?: string[];
+};
+
+export type GamePersonalBestType = "score" | "streak" | "speed";
+
+export type GameResultPayload = {
+  gameId: string;
+  sessionId?: string | null;
+  score: number;
+  accuracy?: number | null;
+  correctAnswers?: number | null;
+  wrongAnswers?: number | null;
+  streak?: number | null;
+  maxStreak?: number | null;
+  durationSeconds?: number | null;
+  levelReached?: number | null;
+  completed?: boolean;
+  xpDelta?: number | null;
+  coinsDelta?: number | null;
+  personalBestType?: GamePersonalBestType | null;
+  metadata?: Record<string, unknown>;
+};
+
+export type GamePersonalBestResponse = {
+  id: string;
+  childId: number;
+  gameId: string;
+  bestScore: number | null;
+  bestStreak: number | null;
+  bestDurationSeconds: number | null;
+  lastSurpassedAt: string | null;
+  bestResultPayload: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GameSessionCompleteResponse = GameSessionRegisterResponse & {
+  isPersonalBest: boolean;
+  personalBestType: GamePersonalBestType | null;
+  personalBest: GamePersonalBestResponse | null;
+};
+
+export type GameMetagameMissionScope = "daily" | "weekly";
+export type GameMetagameMissionMetric = "sessions" | "xp" | "records";
+
+export type GameMetagameMission = {
+  id: string;
+  scope: GameMetagameMissionScope;
+  title: string;
+  description: string;
+  metric: GameMetagameMissionMetric;
+  target: number;
+  current: number;
+  progressPercent: number;
+  rewardXp: number;
+  rewardCoins: number;
+  periodStart: string;
+  periodEnd: string;
+  claimed: boolean;
+  rewardReady: boolean;
+  ctaLabel: string;
+};
+
+export type GameMetagameBadge = {
+  id: string;
+  title: string;
+  description: string;
+  unlocked: boolean;
+  progress: number;
+  target: number;
+};
+
+export type GameMetagameSummaryResponse = {
+  generatedAt: string;
+  streak: {
+    current: number;
+    best: number;
+  };
+  stats: {
+    totalSessions: number;
+    weeklySessions: number;
+    dailySessions: number;
+    xpToday: number;
+    xpWeek: number;
+    recordsTotal: number;
+    recordsToday: number;
+    recordsWeek: number;
+    favoriteGameId: string | null;
+    distinctGamesPlayed: number;
+  };
+  dailyMission: GameMetagameMission;
+  weeklyMission: GameMetagameMission;
+  badges: GameMetagameBadge[];
+  motivationMessage: string;
+};
+
+export type GameMetagameClaimResponse = {
+  missionScope: GameMetagameMissionScope;
+  missionId: string;
+  completed: boolean;
+  rewardGranted: boolean;
+  alreadyClaimed: boolean;
+  xpReward: number;
+  coinReward: number;
 };
 
 export type StoreCatalogItem = {
@@ -1909,6 +2023,55 @@ export async function completeDailyMission(missionId: string): Promise<DailyMiss
 
 export async function registerGameSession(payload: { gameType: GameType; score: number }): Promise<GameSessionRegisterResponse> {
   return apiRequest<GameSessionRegisterResponse>("/api/games/session", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function completeGameSession(payload: { childId?: number; result: GameResultPayload }): Promise<GameSessionCompleteResponse> {
+  return apiRequest<GameSessionCompleteResponse>("/api/games/session/complete", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getGamePersonalBest(gameId: string, childId?: number): Promise<GamePersonalBestResponse> {
+  const query = typeof childId === "number" ? `?childId=${childId}` : "";
+  return apiRequest<GamePersonalBestResponse>(`/api/games/personal-best/${encodeURIComponent(gameId)}${query}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getGamePersonalBests(childId?: number): Promise<GamePersonalBestResponse[]> {
+  const query = typeof childId === "number" ? `?childId=${childId}` : "";
+  return apiRequest<GamePersonalBestResponse[]>(`/api/games/personal-best${query}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getGamesMetagameSummary(childId?: number): Promise<GameMetagameSummaryResponse> {
+  const query = typeof childId === "number" ? `?childId=${childId}` : "";
+  return apiRequest<GameMetagameSummaryResponse>(`/api/games/metagame/summary${query}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function claimGamesMetagameMission(payload: {
+  missionScope: GameMetagameMissionScope;
+  missionId: string;
+  childId?: number;
+}): Promise<GameMetagameClaimResponse> {
+  return apiRequest<GameMetagameClaimResponse>("/api/games/metagame/claim", {
     method: "POST",
     body: payload,
     requireAuth: true,

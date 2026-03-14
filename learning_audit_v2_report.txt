@@ -1,0 +1,338 @@
+Axiora Path - APRENDER Semantic Architecture Audit (v2)
+==============================================================
+Repository: C:\DEV\Axiora Path
+Files scanned: 551
+
+Entity counts:
+- subjects: 632
+- skills: 29
+- lessons: 499
+- lesson_generators: 67
+- age_rules: 594
+- progression_nodes: 406
+- student_links: 184
+- api_routes: 62
+- frontend_components: 52
+
+Relationship counts:
+- subject_to_skill: 7
+- skill_to_lesson: 3
+- lesson_to_generator: 140
+- lesson_to_progression_node: 39
+- progression_node_to_frontend: 47
+- lesson_to_api_route: 22
+- student_progress_to_lesson: 21
+
+Learning maturity: 9/9 (100.0%)
+- subject_taxonomy: present
+- skill_graph: present
+- lesson_engine: present
+- difficulty_scaling: present
+- age_based_progression: present
+- mastery_system: present
+- adaptive_learning: present
+- student_telemetry: present
+- progress_persistence: present
+
+Architectural issues (163):
+- [medium] subject_without_skills: Subject 'history' has no detected skill link
+- [medium] subject_without_skills: Subject 'portuguese' has no detected skill link
+- [medium] skill_without_lesson: Skill 'aritmética_e_agilidade' has no detected lesson link
+- [medium] skill_without_lesson: Skill 'aritmética_e_soma' has no detected lesson link
+- [medium] skill_without_lesson: Skill 'educação_financeira' has no detected lesson link
+- [medium] skill_without_lesson: Skill 'geografia_e_memória' has no detected lesson link
+- [medium] skill_without_lesson: Skill 'habilidade' has no detected lesson link
+- [medium] skill_without_lesson: Skill 'inglês_e_vocabulário' has no detected lesson link
+- [medium] skill_without_lesson: Skill 'lógica_e_estratégia' has no detected lesson link
+- [medium] skill_without_lesson: Skill 'problem_solving' has no detected lesson link
+- [medium] skill_without_lesson: Skill 'vocabulário_e_foco' has no detected lesson link
+- [low] lesson_without_age_rule: Lesson 'lesson' in scripts/gamification_phase3_audit.py:97 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in scripts/ux_phase2_audit.py:86 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in docs/redesign/TrailScreen.tsx:52 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/lib/gamification-derivations.ts:16 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/lib/gamification-derivations.ts:18 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/LearningPath.tsx:15 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'currentLessonId' in apps/web/components/aprender/LearningPath.tsx:38 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/LearningPath.tsx:39 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/LearningPath.tsx:66 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/LearningPath.tsx:70 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/LearningPath.tsx:71 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/LearningPath.tsx:72 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/LearningPath.tsx:73 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/LearningSection.tsx:17 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/LearningSection.tsx:48 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/LearningSection.tsx:49 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'completedLessons' in apps/web/components/aprender/LearningSection.tsx:49 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/LearningSection.tsx:50 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'hasCurrentLesson' in apps/web/components/aprender/LearningSection.tsx:50 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'firstLesson' in apps/web/components/aprender/LearningSection.tsx:51 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/Node.tsx:184 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPath.tsx:18 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'recoveryLessonId' in apps/web/components/aprender/SkillPath.tsx:60 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPath.tsx:64 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'reviewAnchorLessonId' in apps/web/components/aprender/SkillPath.tsx:68 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'completedLessons' in apps/web/components/aprender/SkillPath.tsx:70 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPath.tsx:72 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPath.tsx:73 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPath.tsx:155 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPath.tsx:156 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPath.tsx:157 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'nextUnitFirstLesson' in apps/web/components/aprender/SkillPath.tsx:157 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:20 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:52 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:67 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:68 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:69 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:70 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:122 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:123 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:135 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:141 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'checkpointLessons' in apps/web/components/aprender/SkillPathUnit.tsx:142 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:144 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:145 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'milestoneLessonId' in apps/web/components/aprender/SkillPathUnit.tsx:149 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:209 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:210 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:211 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:212 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:213 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:214 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:215 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:216 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:221 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:227 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:234 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:235 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:237 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:238 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:243 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:252 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/aprender/SkillPathUnit.tsx:254 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/trail/LessonNode.tsx:140 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/trail/LessonNode.tsx:186 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/trail/renderNode.tsx:45 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/trail/renderNode.tsx:52 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'hasActiveLesson' in apps/web/components/trail/UnitBlock.tsx:15 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'activity' in apps/web/components/ui/AxioraNeuralField.tsx:453 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/icons/badges/BadgeIcon.tsx:7 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/icons/badges/BadgeIcon.tsx:21 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/icons/badges/BadgeIcon.tsx:30 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/components/icons/badges/BadgeIcon.tsx:39 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/web/app/(app)/platform-admin/axion-studio/page.tsx:1194 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'LastLessonFacts' in apps/api/app/services/axion_facts.py:40 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson '_last_lesson' in apps/api/app/services/axion_facts.py:226 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/api/app/services/axion_facts.py:227 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/api/app/services/axion_facts.py:230 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/api/app/services/axion_facts.py:232 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson_id' in apps/api/app/services/axion_facts.py:232 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/api/app/services/axion_facts.py:233 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson_id' in apps/api/app/services/axion_facts.py:236 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/api/app/services/axion_messaging.py:18 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson '_last_lesson_unit' in apps/api/app/services/axion_messaging.py:160 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/api/app/services/axion_messaging.py:162 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/api/app/services/axion_messaging.py:164 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson_id' in apps/api/app/services/axion_messaging.py:164 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/api/app/services/axion_messaging.py:232 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'register_learning_lesson_completion' in apps/api/app/services/learning_streak.py:55 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'activity' in apps/api/app/api/routes/retention.py:166 has no nearby age/grade rule
+- [low] lesson_without_age_rule: Lesson 'lesson' in apps/api/alembic/versions/0034_learning_achievement_rewards_and_progress_xp.py:1 has no nearby age/grade rule
+- [low] lesson_without_generator: Lesson 'activity' has no generator link
+- [medium] progression_node_without_lesson: Progression node 'constellation' has no lesson link
+- [medium] progression_node_without_lesson: Progression node 'progression' has no lesson link
+- [medium] frontend_without_api_source: Frontend component LessonNode at docs/redesign/LessonNode.tsx:67 has no detected API source
+- [medium] frontend_without_api_source: Frontend component NODE_SPACING at docs/redesign/TrailPath.tsx:18 has no detected API source
+- [medium] frontend_without_api_source: Frontend component TrailPath at docs/redesign/TrailPath.tsx:28 has no detected API source
+- [medium] frontend_without_api_source: Frontend component LessonNode at docs/redesign/done/LessonNode.tsx:65 has no detected API source
+- [medium] frontend_without_api_source: Frontend component NODE_HEIGHT at docs/redesign/done/TrailPath.tsx:18 has no detected API source
+- [medium] frontend_without_api_source: Frontend component TrailPath at docs/redesign/done/TrailPath.tsx:25 has no detected API source
+- [medium] frontend_without_api_source: Frontend component ProgressoCard at docs/redesign/início/ProgressoCard.tsx:18 has no detected API source
+- [medium] frontend_without_api_source: Frontend component DefaultRightRail at apps/web/components/child-desktop-shell.tsx:122 has no detected API source
+- [medium] frontend_without_api_source: Frontend component RECENT_LEARNING_REWARD_KEY at apps/web/lib/learning/reward-cache.ts:3 has no detected API source
+- [medium] frontend_without_api_source: Frontend component LearningPath at apps/web/components/aprender/LearningPath.tsx:26 has no detected API source
+- [medium] frontend_without_api_source: Frontend component LearningSection at apps/web/components/aprender/LearningSection.tsx:27 has no detected API source
+- [medium] frontend_without_api_source: Frontend component NODE_VISUALS at apps/web/components/aprender/Node.tsx:36 has no detected API source
+- [medium] frontend_without_api_source: Frontend component Node at apps/web/components/aprender/Node.tsx:71 has no detected API source
+- [medium] frontend_without_api_source: Frontend component SkillPath at apps/web/components/aprender/SkillPath.tsx:30 has no detected API source
+- [medium] frontend_without_api_source: Frontend component SkillPathUnitComponent at apps/web/components/aprender/SkillPathUnit.tsx:74 has no detected API source
+- [medium] frontend_without_api_source: Frontend component NODE_GAP_MIN at apps/web/components/aprender/SkillPathUnit.tsx:87 has no detected API source
+- [medium] frontend_without_api_source: Frontend component NODE_GAP_MAX at apps/web/components/aprender/SkillPathUnit.tsx:88 has no detected API source
+- [medium] frontend_without_api_source: Frontend component NODE_STEP_BASE at apps/web/components/aprender/SkillPathUnit.tsx:89 has no detected API source
+- [medium] frontend_without_api_source: Frontend component SkillPathUnit at apps/web/components/aprender/SkillPathUnit.tsx:293 has no detected API source
+- [medium] frontend_without_api_source: Frontend component DesktopRightRail at apps/web/components/trail/DesktopRightRail.tsx:13 has no detected API source
+- [medium] frontend_without_api_source: Frontend component NODE_STYLES at apps/web/components/trail/LessonNode.tsx:17 has no detected API source
+- [medium] frontend_without_api_source: Frontend component LessonNode at apps/web/components/trail/LessonNode.tsx:106 has no detected API source
+- [medium] frontend_without_api_source: Frontend component ProgressHeroStrip at apps/web/components/trail/ProgressHeroStrip.tsx:17 has no detected API source
+- [medium] frontend_without_api_source: Frontend component NODE_GAP at apps/web/components/trail/ProgressionMap.tsx:40 has no detected API source
+- [medium] frontend_without_api_source: Frontend component NODE_SIZE at apps/web/components/trail/ProgressionMap.tsx:42 has no detected API source
+- [medium] frontend_without_api_source: Frontend component NODE_RADIUS at apps/web/components/trail/ProgressionMap.tsx:43 has no detected API source
+- [medium] frontend_without_api_source: Frontend component ProgressionMap at apps/web/components/trail/ProgressionMap.tsx:189 has no detected API source
+- [medium] frontend_without_api_source: Frontend component ProgressionMap at apps/web/components/trail/ProgressionMap.tsx:857 has no detected API source
+- [medium] frontend_without_api_source: Frontend component MapNodeItem at apps/web/components/trail/renderNode.tsx:145 has no detected API source
+- [medium] frontend_without_api_source: Frontend component SubjectSelector at apps/web/components/trail/SubjectSelector.tsx:36 has no detected API source
+- [medium] frontend_without_api_source: Frontend component SubjectStreakBadge at apps/web/components/trail/SubjectStreakBadge.tsx:9 has no detected API source
+- [medium] frontend_without_api_source: Frontend component TrailConstellation at apps/web/components/trail/TrailConstellation.tsx:17 has no detected API source
+- [medium] frontend_without_api_source: Frontend component TrailParticles at apps/web/components/trail/TrailParticles.tsx:12 has no detected API source
+- [medium] frontend_without_api_source: Frontend component NODE_STEP at apps/web/components/trail/TrailPath.tsx:17 has no detected API source
+- [medium] frontend_without_api_source: Frontend component TrailPath at apps/web/components/trail/TrailPath.tsx:59 has no detected API source
+- [medium] frontend_without_api_source: Frontend component SUBJECT_VOCABULARY_CANONICAL at apps/web/components/trail/TrailScreen.tsx:39 has no detected API source
+- [medium] frontend_without_api_source: Frontend component TrailScreen at apps/web/components/trail/TrailScreen.tsx:240 has no detected API source
+- [medium] frontend_without_api_source: Frontend component ProgressionMap at apps/web/components/trail/TrailScreen.tsx:810 has no detected API source
+- [medium] frontend_without_api_source: Frontend component ProgressionMap at apps/web/components/trail/TrailScreen.tsx:835 has no detected API source
+- [medium] frontend_without_api_source: Frontend component NODE_MIN at apps/web/components/ui/AxioraCognitiveField.tsx:56 has no detected API source
+- [medium] frontend_without_api_source: Frontend component NODE_MAX at apps/web/components/ui/AxioraCognitiveField.tsx:57 has no detected API source
+- [medium] frontend_without_api_source: Frontend component ProgressBar at apps/web/components/ui/progress-bar.tsx:12 has no detected API source
+- [medium] frontend_without_api_source: Frontend component Progress at apps/web/components/ui/progress.tsx:12 has no detected API source
+- [medium] frontend_without_api_source: Frontend component ProgressBar at apps/web/components/games/tug-of-war/ProgressBar.tsx:7 has no detected API source
+- [medium] frontend_without_api_source: Frontend component LearningPathPage at apps/web/app/(app)/child/aprender/page.tsx:12 has no detected API source
+- [medium] frontend_without_api_source: Frontend component SUBJECT_STATUS_STYLE at apps/web/app/(app)/child/axion/page.tsx:78 has no detected API source
+- [medium] frontend_without_api_source: Frontend component LessonDesktopRail at apps/web/app/(app)/child/aprender/lesson/[id]/page.tsx:235 has no detected API source
+- [medium] frontend_without_api_source: Frontend component AdaptiveLessonSessionPage at apps/web/app/(app)/child/aprender/lesson/[id]/page.tsx:810 has no detected API source
+- [high] student_progress_without_persistence: Student progress references in apps/web/components/aprender/LearningPath.tsx with no persistence signals
+- [high] student_progress_without_persistence: Student progress references in apps/web/components/aprender/SkillPath.tsx with no persistence signals
+- [high] student_progress_without_persistence: Student progress references in apps/api/tests/test_axion_brain_state.py with no persistence signals
+- [high] student_progress_without_persistence: Student progress references in apps/api/tests/test_axion_content_prerequisites.py with no persistence signals
+- [high] student_progress_without_persistence: Student progress references in apps/api/tests/test_axion_metrics.py with no persistence signals
+- [high] student_progress_without_persistence: Student progress references in apps/api/tests/test_axion_subject_mastery.py with no persistence signals
+- [high] student_progress_without_persistence: Student progress references in apps/api/app/observability/axion_metrics.py with no persistence signals
+- [high] student_progress_without_persistence: Student progress references in apps/api/app/schemas/axion_studio.py with no persistence signals
+- [high] student_progress_without_persistence: Student progress references in apps/api/app/schemas/school.py with no persistence signals
+- [low] duplicate_subjects: Subject 'math' appears 13 times; verify deduplication and canonical ownership
+
+Top high-confidence evidence (first 20 per entity):
+subjects:
+- none
+skills:
+- habilidade | apps/api/app/services/learning_remediation.py:178 | conf=0.98 | runtime_logic | skill_name = "habilidade"
+- problem_solving | apps/api/app/api/routes/games.py:330 | conf=0.89 | runtime_logic | {"skillKey": "problem_solving", "mastery": 0.62, "confidence": 0.67, "velocity": 0.05},
+lessons:
+- create_lesson | apps/api/app/api/routes/aprender.py:380 | conf=0.95 | runtime_logic | def create_lesson(
+- create_lesson_content | apps/api/app/api/routes/aprender.py:429 | conf=0.95 | runtime_logic | def create_lesson_content(
+- get_lesson_contents | apps/api/app/api/routes/aprender.py:460 | conf=0.95 | runtime_logic | def get_lesson_contents(
+- complete_lesson_endpoint | apps/api/app/api/routes/aprender.py:555 | conf=0.95 | runtime_logic | def complete_lesson_endpoint(
+- LearningPathLessonNodeOut | apps/api/app/schemas/learning.py:168 | conf=0.95 | canonical_config | class LearningPathLessonNodeOut(BaseModel):
+- _completed_lessons_count | apps/api/app/services/achievement_engine.py:230 | conf=0.95 | runtime_logic | def _completed_lessons_count(db: Session, *, user_id: int) -> int:
+- daily_completed_learning_lessons | apps/api/app/services/adaptive_learning.py:344 | conf=0.95 | runtime_logic | def daily_completed_learning_lessons(db: Session, *, user_id: int) -> int:
+- _upsert_lesson_progress | apps/api/app/services/adaptive_learning.py:1414 | conf=0.95 | runtime_logic | def _upsert_lesson_progress(
+- CompleteLessonResult | apps/api/app/services/aprender.py:93 | conf=0.95 | runtime_logic | class CompleteLessonResult:
+- _lessons_by_unit | apps/api/app/services/aprender.py:156 | conf=0.95 | runtime_logic | def _lessons_by_unit(db: Session, unit_ids: list[int]) -> dict[int, list[Lesson]]:
+- _progress_by_lesson | apps/api/app/services/aprender.py:170 | conf=0.95 | runtime_logic | def _progress_by_lesson(
+- list_lesson_contents | apps/api/app/services/aprender.py:256 | conf=0.95 | runtime_logic | def list_lesson_contents(db: Session, *, lesson_id: int) -> list[LessonContent]:
+- complete_lesson | apps/api/app/services/aprender.py:347 | conf=0.95 | runtime_logic | def complete_lesson(
+- LastLessonFacts | apps/api/app/services/axion_facts.py:40 | conf=0.95 | runtime_logic | class LastLessonFacts:
+- _last_lesson | apps/api/app/services/axion_facts.py:226 | conf=0.95 | runtime_logic | def _last_lesson(db: Session, *, user_id: int) -> LastLessonFacts | None:
+- _last_lesson_unit | apps/api/app/services/axion_messaging.py:160 | conf=0.95 | runtime_logic | def _last_lesson_unit(db: Session, *, user_id: int) -> tuple[str, str]:
+- PathLessonNode | apps/api/app/services/learning_path_events.py:133 | conf=0.95 | runtime_logic | class PathLessonNode:
+- _compute_lesson_stars | apps/api/app/services/learning_path_events.py:393 | conf=0.95 | runtime_logic | def _compute_lesson_stars(score: int | None) -> int:
+- register_learning_lesson_completion | apps/api/app/services/learning_streak.py:55 | conf=0.95 | runtime_logic | def register_learning_lesson_completion(
+- _lesson_blueprint | apps/api/scripts/seed_aprender_content.py:273 | conf=0.95 | canonical_config | def _lesson_blueprint(
+lesson_generators:
+- create_lesson | apps/api/app/api/routes/aprender.py:380 | conf=0.95 | runtime_logic | def create_lesson(
+- create_lesson_content | apps/api/app/api/routes/aprender.py:429 | conf=0.95 | runtime_logic | def create_lesson_content(
+- get_lesson_contents | apps/api/app/api/routes/aprender.py:460 | conf=0.95 | runtime_logic | def get_lesson_contents(
+- complete_lesson_endpoint | apps/api/app/api/routes/aprender.py:555 | conf=0.95 | runtime_logic | def complete_lesson_endpoint(
+- LearningPathLessonNodeOut | apps/api/app/schemas/learning.py:168 | conf=0.95 | canonical_config | class LearningPathLessonNodeOut(BaseModel):
+- _completed_lessons_count | apps/api/app/services/achievement_engine.py:230 | conf=0.95 | runtime_logic | def _completed_lessons_count(db: Session, *, user_id: int) -> int:
+- daily_completed_learning_lessons | apps/api/app/services/adaptive_learning.py:344 | conf=0.95 | runtime_logic | def daily_completed_learning_lessons(db: Session, *, user_id: int) -> int:
+- _upsert_lesson_progress | apps/api/app/services/adaptive_learning.py:1414 | conf=0.95 | runtime_logic | def _upsert_lesson_progress(
+- CompleteLessonResult | apps/api/app/services/aprender.py:93 | conf=0.95 | runtime_logic | class CompleteLessonResult:
+- _lessons_by_unit | apps/api/app/services/aprender.py:156 | conf=0.95 | runtime_logic | def _lessons_by_unit(db: Session, unit_ids: list[int]) -> dict[int, list[Lesson]]:
+- _progress_by_lesson | apps/api/app/services/aprender.py:170 | conf=0.95 | runtime_logic | def _progress_by_lesson(
+- list_lesson_contents | apps/api/app/services/aprender.py:256 | conf=0.95 | runtime_logic | def list_lesson_contents(db: Session, *, lesson_id: int) -> list[LessonContent]:
+- complete_lesson | apps/api/app/services/aprender.py:347 | conf=0.95 | runtime_logic | def complete_lesson(
+- LastLessonFacts | apps/api/app/services/axion_facts.py:40 | conf=0.95 | runtime_logic | class LastLessonFacts:
+- _last_lesson | apps/api/app/services/axion_facts.py:226 | conf=0.95 | runtime_logic | def _last_lesson(db: Session, *, user_id: int) -> LastLessonFacts | None:
+- _last_lesson_unit | apps/api/app/services/axion_messaging.py:160 | conf=0.95 | runtime_logic | def _last_lesson_unit(db: Session, *, user_id: int) -> tuple[str, str]:
+- PathLessonNode | apps/api/app/services/learning_path_events.py:133 | conf=0.95 | runtime_logic | class PathLessonNode:
+- _compute_lesson_stars | apps/api/app/services/learning_path_events.py:393 | conf=0.95 | runtime_logic | def _compute_lesson_stars(score: int | None) -> int:
+- register_learning_lesson_completion | apps/api/app/services/learning_streak.py:55 | conf=0.95 | runtime_logic | def register_learning_lesson_completion(
+- _lesson_blueprint | apps/api/scripts/seed_aprender_content.py:273 | conf=0.95 | canonical_config | def _lesson_blueprint(
+age_rules:
+- age_group | apps/api/alembic/versions/0031_aprender_learning_module.py:67 | conf=0.95 | unknown | age_group subject_age_group NOT NULL,
+- age_group | apps/api/alembic/versions/0031_aprender_learning_module.py:82 | conf=0.95 | unknown | ADD CONSTRAINT uq_subjects_age_group_order UNIQUE (age_group, "order");
+- difficulty | apps/api/alembic/versions/0032_aprender_difficulty_and_adaptive_repeat.py:1 | conf=0.95 | unknown | """add lesson difficulty and adaptive repetition fields
+- difficulty | apps/api/alembic/versions/0032_aprender_difficulty_and_adaptive_repeat.py:35 | conf=0.95 | unknown | ADD COLUMN IF NOT EXISTS difficulty lesson_difficulty NOT NULL DEFAULT 'EASY';
+- difficulty | apps/api/alembic/versions/0032_aprender_difficulty_and_adaptive_repeat.py:63 | conf=0.95 | unknown | op.execute("ALTER TABLE lessons DROP COLUMN IF EXISTS difficulty;")
+- age_group | apps/api/alembic/versions/0038_adaptive_learning_foundation.py:52 | conf=0.95 | unknown | age_group subject_age_group NOT NULL,
+- age_group | apps/api/alembic/versions/0041_path_events_treasure_adventure.py:63 | conf=0.95 | unknown | age_group subject_age_group NOT NULL,
+- age_group | apps/api/alembic/versions/0043_weekly_missions_and_season_events.py:44 | conf=0.95 | unknown | age_group subject_age_group NOT NULL,
+- difficulty | apps/api/alembic/versions/0089_axion_safe_content_seed.py:38 | conf=0.95 | canonical_config | for content_type, subject, difficulty, fingerprint, age_min, age_max in _SEED_ROWS:
+- difficulty | apps/api/alembic/versions/0089_axion_safe_content_seed.py:43 | conf=0.95 | canonical_config | (content_type, subject, difficulty, content_fingerprint, age_min, age_max, safety_tags, is_active)
+- age_group | apps/api/alembic/versions/0092_required_subject_catalog.py:116 | conf=0.95 | canonical_config | INSERT INTO subjects (name, age_group, age_min, age_max, icon, color, "order")
+- age_group | apps/api/alembic/versions/0092_required_subject_catalog.py:117 | conf=0.95 | canonical_config | VALUES (:name, CAST(:age_group AS subject_age_group), :age_min, :age_max, :icon, :color, :order)
+- difficulty | apps/api/alembic/versions/0092_required_subject_catalog.py:198 | conf=0.95 | canonical_config | INSERT INTO lessons (unit_id, title, "order", xp_reward, difficulty, type)
+- difficulty | apps/api/alembic/versions/0092_required_subject_catalog.py:204 | conf=0.95 | canonical_config | CAST(:difficulty AS lesson_difficulty),
+- age_group | apps/api/alembic/versions/0092_required_subject_catalog.py:255 | conf=0.95 | canonical_config | INSERT INTO skills (subject_id, name, description, age_group, "order")
+- age_group | apps/api/alembic/versions/0092_required_subject_catalog.py:260 | conf=0.95 | canonical_config | CAST(:age_group AS subject_age_group),
+- difficulty | apps/api/alembic/versions/0092_required_subject_catalog.py:310 | conf=0.95 | canonical_config | INSERT INTO questions (skill_id, lesson_id, type, difficulty, prompt, explanation, metadata)
+- age_group | apps/api/app/api/routes/aprender.py:283 | conf=0.95 | runtime_logic | ageGroup=subject.age_group,
+- age_group | apps/api/app/api/routes/aprender.py:298 | conf=0.95 | runtime_logic | age_group: Annotated[SubjectAgeGroup | None, Query(alias="ageGroup")] = None,
+- age_group | apps/api/app/api/routes/aprender.py:324 | conf=0.95 | runtime_logic | query = query.where(Subject.age_group == target_age_group)
+progression_nodes:
+- trail | docs/performance_baseline_latest.json:43 | conf=0.93 | canonical_config | "/trail": {
+- trail | docs/redesign/BottomNav.tsx:1 | conf=0.93 | unknown | // components/trail/BottomNav.tsx
+- trail | docs/redesign/LessonNode.tsx:1 | conf=0.93 | unknown | // components/trail/LessonNode.tsx
+- trail | docs/redesign/TopStatsBar.tsx:1 | conf=0.93 | unknown | // components/trail/TopStatsBar.tsx
+- trail | docs/redesign/TrailPath.tsx:1 | conf=0.93 | unknown | // components/trail/TrailPath.tsx
+- trail | docs/redesign/TrailPath.tsx:57 | conf=0.93 | unknown | {/* ── SVG winding trail ── */}
+- trail | docs/redesign/TrailScreen.tsx:1 | conf=0.93 | unknown | // components/trail/TrailScreen.tsx
+- trail | docs/redesign/TrailScreen.tsx:48 | conf=0.93 | unknown | {/* Winding trail */}
+- trail | docs/redesign/UnitBanner.tsx:1 | conf=0.93 | unknown | // components/trail/UnitBanner.tsx
+- trail | docs/redesign/UnitBanner.tsx:22 | conf=0.93 | unknown | zIndex: 10,          // lower than nodes so trail is never covered
+- trail | docs/redesign/done/BottomNav.tsx:1 | conf=0.93 | unknown | // components/trail/BottomNav.tsx
+- trail | docs/redesign/done/LessonNode.tsx:1 | conf=0.93 | unknown | // components/trail/LessonNode.tsx
+- trail | docs/redesign/done/TopStatsBar.tsx:1 | conf=0.93 | unknown | // components/trail/TopStatsBar.tsx
+- trail | docs/redesign/done/TrailPath.tsx:1 | conf=0.93 | unknown | // components/trail/TrailPath.tsx
+- trail | docs/redesign/done/TrailScreen.tsx:1 | conf=0.93 | unknown | // components/trail/TrailScreen.tsx
+- trail | docs/redesign/done/TrailScreen.tsx:43 | conf=0.93 | unknown | {/* Scrollable trail */}
+- trail | docs/redesign/done/UnitBanner.tsx:1 | conf=0.93 | unknown | // components/trail/UnitBanner.tsx
+- trail | docs/redesign/done/UnitBanner.tsx:5 | conf=0.93 | unknown | import { Unit } from '@packages/shared/types/trail'
+- trail | docs/redesign/done/trail-types.ts:1 | conf=0.93 | unknown | // packages/shared/types/trail.ts
+- trail | docs/redesign/início/HomeScreen.tsx:4 | conf=0.93 | unknown | import { TopStatsBar }  from '@/components/trail/TopStatsBar'
+student_links:
+- teacher_students | apps/api/alembic/versions/0101_student_profiles_and_teacher_students.py:44 | conf=0.9 | unknown | "teacher_students",
+- teacher_students | apps/api/alembic/versions/0101_student_profiles_and_teacher_students.py:57 | conf=0.9 | unknown | op.create_index("ix_teacher_students_teacher_user_id", "teacher_students", ["teacher_user_id"], unique=False)
+- teacher_students | apps/api/alembic/versions/0101_student_profiles_and_teacher_students.py:58 | conf=0.9 | unknown | op.create_index("ix_teacher_students_student_profile_id", "teacher_students", ["student_profile_id"], unique=False)
+- teacher_students | apps/api/alembic/versions/0101_student_profiles_and_teacher_students.py:62 | conf=0.9 | unknown | op.drop_index("ix_teacher_students_student_profile_id", table_name="teacher_students")
+- teacher_students | apps/api/alembic/versions/0101_student_profiles_and_teacher_students.py:63 | conf=0.9 | unknown | op.drop_index("ix_teacher_students_teacher_user_id", table_name="teacher_students")
+- teacher_students | apps/api/alembic/versions/0101_student_profiles_and_teacher_students.py:64 | conf=0.9 | unknown | op.drop_table("teacher_students")
+- student_family_links | apps/api/alembic/versions/0102_student_family_links.py:23 | conf=0.9 | unknown | "student_family_links",
+- student_family_links | apps/api/alembic/versions/0102_student_family_links.py:40 | conf=0.9 | unknown | "student_family_links",
+- student_family_links | apps/api/alembic/versions/0102_student_family_links.py:46 | conf=0.9 | unknown | "student_family_links",
+- student_family_links | apps/api/alembic/versions/0102_student_family_links.py:53 | conf=0.9 | unknown | op.drop_index("ix_student_family_links_child_profile_id", table_name="student_family_links")
+- student_family_links | apps/api/alembic/versions/0102_student_family_links.py:54 | conf=0.9 | unknown | op.drop_index("ix_student_family_links_student_profile_id", table_name="student_family_links")
+- student_family_links | apps/api/alembic/versions/0102_student_family_links.py:55 | conf=0.9 | unknown | op.drop_table("student_family_links")
+- student_profile | apps/api/app/api/routes/school.py:61 | conf=0.9 | runtime_logic | student_profile: StudentProfile,
+- student_profile | apps/api/app/api/routes/school.py:65 | conf=0.9 | runtime_logic | created_at = student_profile.created_at or datetime.now(UTC)
+- student_profile | apps/api/app/api/routes/school.py:67 | conf=0.9 | runtime_logic | id=student_profile.id,
+- student_profile | apps/api/app/api/routes/school.py:68 | conf=0.9 | runtime_logic | organization_id=student_profile.tenant_id,
+- student_profile | apps/api/app/api/routes/school.py:69 | conf=0.9 | runtime_logic | name=student_profile.display_name,
+- student_profile | apps/api/app/api/routes/school.py:70 | conf=0.9 | runtime_logic | birth_date=student_profile.date_of_birth,
+- student_profile | apps/api/app/api/routes/school.py:71 | conf=0.9 | runtime_logic | child_profile_id=student_profile.child_profile_id,
+- student_profile | apps/api/app/api/routes/school.py:72 | conf=0.9 | runtime_logic | user_id=student_profile.user_id,
+api_routes:
+- GET /energy | apps/api/app/api/routes/aprender.py:160 | conf=0.96 | runtime_logic | @router.get("/energy", response_model=LearningEnergyStatusOut)
+- POST /energy/consume-wrong | apps/api/app/api/routes/aprender.py:172 | conf=0.96 | runtime_logic | @router.post("/energy/consume-wrong", response_model=LearningEnergyConsumeResponse)
+- POST /energy/refill/wait | apps/api/app/api/routes/aprender.py:186 | conf=0.96 | runtime_logic | @router.post("/energy/refill/wait", response_model=LearningEnergyStatusOut)
+- POST /energy/refill/coins | apps/api/app/api/routes/aprender.py:205 | conf=0.96 | runtime_logic | @router.post("/energy/refill/coins", response_model=LearningEnergyStatusOut)
+- GET /streak | apps/api/app/api/routes/aprender.py:224 | conf=0.96 | runtime_logic | @router.get("/streak", response_model=LearningStreakOut)
+- GET /profile | apps/api/app/api/routes/aprender.py:236 | conf=0.96 | runtime_logic | @router.get("/profile", response_model=LearningGamificationProfileOut)
+- POST /subjects | apps/api/app/api/routes/aprender.py:260 | conf=0.96 | runtime_logic | @router.post("/subjects", response_model=SubjectOut, status_code=status.HTTP_201_CREATED)
+- GET /subjects | apps/api/app/api/routes/aprender.py:292 | conf=0.96 | runtime_logic | @router.get("/subjects", response_model=list[SubjectOut])
+- POST /units | apps/api/app/api/routes/aprender.py:347 | conf=0.96 | runtime_logic | @router.post("/units", response_model=UnitOut, status_code=status.HTTP_201_CREATED)
+- POST /lessons | apps/api/app/api/routes/aprender.py:379 | conf=0.96 | runtime_logic | @router.post("/lessons", response_model=LessonOut, status_code=status.HTTP_201_CREATED)
+- GET /lessons/{lesson_id}/contents | apps/api/app/api/routes/aprender.py:459 | conf=0.96 | runtime_logic | @router.get("/lessons/{lesson_id}/contents", response_model=list[LessonContentOut])
+- GET /subjects/{subject_id}/path | apps/api/app/api/routes/aprender.py:484 | conf=0.96 | runtime_logic | @router.get("/subjects/{subject_id}/path", response_model=SubjectPathResponse)
+- POST /lessons/{lesson_id}/complete | apps/api/app/api/routes/aprender.py:554 | conf=0.96 | runtime_logic | @router.post("/lessons/{lesson_id}/complete", response_model=LessonCompleteResponse)
+- GET /learning-settings | apps/api/app/api/routes/learning_settings.py:90 | conf=0.96 | runtime_logic | @router.get("/learning-settings", response_model=LearningSettingsOut)
+- POST /learning-settings | apps/api/app/api/routes/learning_settings.py:103 | conf=0.96 | runtime_logic | @router.post("/learning-settings", response_model=LearningSettingsOut)
+- GET /me/students | apps/api/app/api/routes/school.py:133 | conf=0.96 | runtime_logic | @router.get("/me/students", response_model=list[SchoolTeacherStudentListItemOut])
+- POST /students/{student_id}/request-family-link | apps/api/app/api/routes/school.py:155 | conf=0.96 | runtime_logic | @router.post("/students/{student_id}/request-family-link", response_model=SchoolStudentFamilyLinkStatusOut, status_code=status.HTTP_201_CREATED)
+- GET /students | apps/api/app/api/routes/school.py:241 | conf=0.96 | runtime_logic | @router.get("/students", response_model=list[SchoolStudentProfileOut])
+- POST /students | apps/api/app/api/routes/school.py:321 | conf=0.96 | runtime_logic | @router.post("/students", response_model=SchoolStudentProfileOut, status_code=status.HTTP_201_CREATED)
+- POST /students/{student_id}/link-family-child | apps/api/app/api/routes/school.py:371 | conf=0.96 | runtime_logic | @router.post("/students/{student_id}/link-family-child", response_model=SchoolStudentProfileOut)
+frontend_components:
+- none
+
+Graph nodes: 196
+Graph edges: 279

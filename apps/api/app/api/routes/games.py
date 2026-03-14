@@ -8,9 +8,19 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import DBSession, get_current_tenant, get_current_user, require_role
-from app.models import ChildProfile, GameSettings, GameType, Membership, Tenant, User
+from app.models import ChildProfile, GamePersonalBest, GameSettings, GameType, Membership, Tenant, User
 from app.schemas.games import (
     DailyXpLimitOut,
+    GameMetagameBadgeOut,
+    GameMetagameClaimRequest,
+    GameMetagameClaimResponse,
+    GameMetagameMissionOut,
+    GameMetagameStatsOut,
+    GameMetagameStreakOut,
+    GameMetagameSummaryResponse,
+    GamePersonalBestOut,
+    GameSessionCompleteRequest,
+    GameSessionCompleteResponse,
     GameSessionCreateRequest,
     GameSessionOut,
     GameSessionRegisterResponse,
@@ -25,7 +35,13 @@ from app.schemas.game_engines import (
     StartGameSessionRequest,
     StartGameSessionResponse,
 )
-from app.services.gamification import MAX_XP_PER_DAY, registerGameSession
+from app.services.gamification import MAX_XP_PER_DAY, complete_game_session, get_personal_best, registerGameSession
+from app.services.gamification import resolve_game_type_strict
+from app.services.game_metagame import (
+    GameMetagameSummary,
+    build_games_metagame_summary,
+    claim_games_metagame_mission,
+)
 from app.services.learning_retention import MissionDelta, track_mission_progress
 
 router = APIRouter(prefix="/api/games", tags=["games"])
@@ -226,7 +242,175 @@ _GAME_CATALOG: list[dict[str, object]] = [
         "coins_reward": 12,
         "tags": ["experimento", "segurança"],
     },
+    {
+        "template_id": "f9a5d5cc-5e4d-4a42-8a07-9e4c36fc9f77",
+        "title": "Cabo de Guerra",
+        "subject": "Matemática",
+        "age_group": "6-8",
+        "engine_key": "REACTION",
+        "difficulty": "MEDIUM",
+        "status": "AVAILABLE",
+        "description": "Duelo matemático de resposta rápida com foco em agilidade e precisão.",
+        "play_route": "/child/games/tug-of-war",
+        "estimated_minutes": 4,
+        "xp_reward": 35,
+        "coins_reward": 10,
+        "tags": ["agilidade", "aritmética", "streak"],
+    },
+    {
+        "template_id": "6be6b566-ae90-4f81-8998-3938f77f8f8b",
+        "title": "Caça-palavras",
+        "subject": "Português",
+        "age_group": "9-12",
+        "engine_key": "WORDSEARCH",
+        "difficulty": "MEDIUM",
+        "status": "AVAILABLE",
+        "description": "Encontre palavras por tema em grades dinâmicas com seleção por arraste.",
+        "play_route": "/child/games/wordsearch",
+        "estimated_minutes": 4,
+        "xp_reward": 32,
+        "coins_reward": 9,
+        "tags": ["vocabulário", "foco"],
+    },
 ]
+
+
+def _resolve_child_context(
+    db: DBSession,
+    *,
+    tenant_id: int,
+    user: User,
+    membership: Membership,
+    requested_child_id: int | None,
+) -> ChildProfile:
+    if requested_child_id is not None:
+        child = db.scalar(
+            select(ChildProfile).where(
+                ChildProfile.id == requested_child_id,
+                ChildProfile.tenant_id == tenant_id,
+                ChildProfile.deleted_at.is_(None),
+            ),
+        )
+        if child is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found in this tenant")
+        membership_role = membership.role.value if hasattr(membership.role, "value") else str(membership.role)
+        if membership_role == "CHILD" and child.user_id != user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Child user cannot submit results for another child")
+        return child
+
+    direct_child = db.scalar(
+        select(ChildProfile).where(
+            ChildProfile.tenant_id == tenant_id,
+            ChildProfile.user_id == user.id,
+            ChildProfile.deleted_at.is_(None),
+        ),
+    )
+    if direct_child is not None:
+        return direct_child
+
+    children = db.scalars(
+        select(ChildProfile).where(
+            ChildProfile.tenant_id == tenant_id,
+            ChildProfile.deleted_at.is_(None),
+        ),
+    ).all()
+    if len(children) == 1:
+        return children[0]
+    if not children:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No child profile found for this tenant")
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Multiple children found. Provide childId explicitly.",
+    )
+
+
+def _resolve_game_settings(
+    db: DBSession,
+    *,
+    tenant_id: int,
+    child_id: int | None,
+) -> tuple[GameSettings | None, int]:
+    max_xp_per_day = MAX_XP_PER_DAY
+    if child_id is None:
+        return None, max_xp_per_day
+    settings = db.scalar(
+        select(GameSettings).where(
+            GameSettings.tenant_id == tenant_id,
+            GameSettings.child_id == child_id,
+        ),
+    )
+    if settings is not None:
+        max_xp_per_day = settings.max_daily_xp
+    return settings, max_xp_per_day
+
+
+def _serialize_games_metagame(summary: GameMetagameSummary) -> GameMetagameSummaryResponse:
+    metagame = summary
+    return GameMetagameSummaryResponse(
+        generatedAt=metagame.generated_at,
+        streak=GameMetagameStreakOut(
+            current=metagame.streak_current,
+            best=metagame.streak_best,
+        ),
+        stats=GameMetagameStatsOut(
+            totalSessions=metagame.stats.total_sessions,
+            weeklySessions=metagame.stats.weekly_sessions,
+            dailySessions=metagame.stats.daily_sessions,
+            xpToday=metagame.stats.xp_today,
+            xpWeek=metagame.stats.xp_week,
+            recordsTotal=metagame.stats.records_total,
+            recordsToday=metagame.stats.records_today,
+            recordsWeek=metagame.stats.records_week,
+            favoriteGameId=metagame.stats.favorite_game_id,
+            distinctGamesPlayed=metagame.stats.distinct_games_played,
+        ),
+        dailyMission=GameMetagameMissionOut(
+            id=metagame.daily_mission.id,
+            scope=metagame.daily_mission.scope,
+            title=metagame.daily_mission.title,
+            description=metagame.daily_mission.description,
+            metric=metagame.daily_mission.metric,
+            target=metagame.daily_mission.target,
+            current=metagame.daily_mission.current,
+            progressPercent=metagame.daily_mission.progress_percent,
+            rewardXp=metagame.daily_mission.reward_xp,
+            rewardCoins=metagame.daily_mission.reward_coins,
+            periodStart=metagame.daily_mission.period_start,
+            periodEnd=metagame.daily_mission.period_end,
+            claimed=metagame.daily_mission.claimed,
+            rewardReady=metagame.daily_mission.reward_ready,
+            ctaLabel=metagame.daily_mission.cta_label,
+        ),
+        weeklyMission=GameMetagameMissionOut(
+            id=metagame.weekly_mission.id,
+            scope=metagame.weekly_mission.scope,
+            title=metagame.weekly_mission.title,
+            description=metagame.weekly_mission.description,
+            metric=metagame.weekly_mission.metric,
+            target=metagame.weekly_mission.target,
+            current=metagame.weekly_mission.current,
+            progressPercent=metagame.weekly_mission.progress_percent,
+            rewardXp=metagame.weekly_mission.reward_xp,
+            rewardCoins=metagame.weekly_mission.reward_coins,
+            periodStart=metagame.weekly_mission.period_start,
+            periodEnd=metagame.weekly_mission.period_end,
+            claimed=metagame.weekly_mission.claimed,
+            rewardReady=metagame.weekly_mission.reward_ready,
+            ctaLabel=metagame.weekly_mission.cta_label,
+        ),
+        badges=[
+            GameMetagameBadgeOut(
+                id=badge.id,
+                title=badge.title,
+                description=badge.description,
+                unlocked=badge.unlocked,
+                progress=badge.progress,
+                target=badge.target,
+            )
+            for badge in metagame.badges
+        ],
+        motivationMessage=metagame.motivation_message,
+    )
 
 
 @router.get("/catalog", response_model=GamesCatalogResponse)
@@ -332,6 +516,236 @@ def finish_game_session_v1(
     )
 
 
+@router.get("/metagame/summary", response_model=GameMetagameSummaryResponse)
+def get_games_metagame_summary(
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    user: Annotated[User, Depends(get_current_user)],
+    membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    childId: int | None = None,
+) -> GameMetagameSummaryResponse:
+    child = _resolve_child_context(
+        db,
+        tenant_id=tenant.id,
+        user=user,
+        membership=membership,
+        requested_child_id=childId,
+    )
+    summary = build_games_metagame_summary(db, child_id=child.id)
+    return _serialize_games_metagame(summary)
+
+
+@router.post("/metagame/claim", response_model=GameMetagameClaimResponse)
+def claim_games_metagame(
+    payload: GameMetagameClaimRequest,
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    user: Annotated[User, Depends(get_current_user)],
+    membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+) -> GameMetagameClaimResponse:
+    child = _resolve_child_context(
+        db,
+        tenant_id=tenant.id,
+        user=user,
+        membership=membership,
+        requested_child_id=payload.child_id,
+    )
+    try:
+        claimed = claim_games_metagame_mission(
+            db,
+            tenant_id=tenant.id,
+            user_id=user.id,
+            child_id=child.id,
+            mission_scope=payload.mission_scope,
+            mission_id=payload.mission_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    db.commit()
+    return GameMetagameClaimResponse(
+        missionScope=claimed.scope,
+        missionId=claimed.mission_id,
+        completed=claimed.completed,
+        rewardGranted=claimed.reward_granted,
+        alreadyClaimed=claimed.already_claimed,
+        xpReward=claimed.xp_reward,
+        coinReward=claimed.coin_reward,
+    )
+
+
+@router.get("/personal-best/{game_id}", response_model=GamePersonalBestOut)
+def get_game_personal_best(
+    game_id: str,
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    user: Annotated[User, Depends(get_current_user)],
+    membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    childId: int | None = None,
+) -> GamePersonalBestOut:
+    child = _resolve_child_context(
+        db,
+        tenant_id=tenant.id,
+        user=user,
+        membership=membership,
+        requested_child_id=childId,
+    )
+    best = get_personal_best(db, child_id=child.id, game_id=game_id)
+    if best is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Personal best not found")
+    return GamePersonalBestOut(
+        id=best.id,
+        childId=best.child_id,
+        gameId=best.game_id,
+        bestScore=best.best_score,
+        bestStreak=best.best_streak,
+        bestDurationSeconds=best.best_duration_seconds,
+        lastSurpassedAt=best.last_surpassed_at,
+        bestResultPayload=best.best_result_payload,
+        createdAt=best.created_at,
+        updatedAt=best.updated_at,
+    )
+
+
+@router.get("/personal-best", response_model=list[GamePersonalBestOut])
+def list_game_personal_bests(
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    user: Annotated[User, Depends(get_current_user)],
+    membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    childId: int | None = None,
+) -> list[GamePersonalBestOut]:
+    child = _resolve_child_context(
+        db,
+        tenant_id=tenant.id,
+        user=user,
+        membership=membership,
+        requested_child_id=childId,
+    )
+    rows = db.scalars(
+        select(GamePersonalBest)
+        .where(GamePersonalBest.child_id == child.id)
+        .order_by(GamePersonalBest.updated_at.desc()),
+    ).all()
+    return [
+        GamePersonalBestOut(
+            id=item.id,
+            childId=item.child_id,
+            gameId=item.game_id,
+            bestScore=item.best_score,
+            bestStreak=item.best_streak,
+            bestDurationSeconds=item.best_duration_seconds,
+            lastSurpassedAt=item.last_surpassed_at,
+            bestResultPayload=item.best_result_payload,
+            createdAt=item.created_at,
+            updatedAt=item.updated_at,
+        )
+        for item in rows
+    ]
+
+
+@router.post("/session/complete", response_model=GameSessionCompleteResponse, status_code=status.HTTP_201_CREATED)
+def complete_game_session_route(
+    payload: GameSessionCompleteRequest,
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    user: Annotated[User, Depends(get_current_user)],
+    membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+) -> GameSessionCompleteResponse:
+    resolved_game_type = resolve_game_type_strict(payload.result.game_id)
+    if resolved_game_type is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unsupported game_id")
+    child = _resolve_child_context(
+        db,
+        tenant_id=tenant.id,
+        user=user,
+        membership=membership,
+        requested_child_id=payload.child_id,
+    )
+    child_id = child.id
+    settings, max_xp_per_day = _resolve_game_settings(db, tenant_id=tenant.id, child_id=child_id)
+    if settings is not None:
+        if settings.enabled_games.get(resolved_game_type.value, True) is False:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Game disabled by parental control")
+
+    try:
+        complete_result = complete_game_session(
+            db,
+            tenant_id=tenant.id,
+            user_id=user.id,
+            child_id=child_id,
+            result=payload.result,
+            resolved_game_type=resolved_game_type,
+            max_xp_per_day=max_xp_per_day,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    try:
+        with db.begin_nested():
+            track_mission_progress(
+                db,
+                user_id=user.id,
+                tenant_id=tenant.id,
+                delta=MissionDelta(
+                    xp_gained=complete_result.register_result.granted_xp,
+                    from_game=True,
+                ),
+                auto_claim=True,
+            )
+    except SQLAlchemyError:
+        pass
+    db.commit()
+
+    register_result = complete_result.register_result
+    personal_best = complete_result.personal_best
+    return GameSessionCompleteResponse(
+        profile=UserGameProfileOut(
+            id=register_result.profile.id,
+            userId=register_result.profile.user_id,
+            xp=register_result.profile.xp,
+            level=register_result.profile.level,
+            axionCoins=register_result.profile.axion_coins,
+            dailyXp=register_result.profile.daily_xp,
+            lastXpReset=register_result.profile.last_xp_reset,
+            createdAt=register_result.profile.created_at,
+            updatedAt=register_result.profile.updated_at,
+        ),
+        session=GameSessionOut(
+            id=register_result.session.id,
+            userId=register_result.session.user_id,
+            gameType=register_result.session.game_type.value,
+            score=register_result.session.score,
+            xpEarned=register_result.session.xp_earned,
+            coinsEarned=register_result.session.coins_earned,
+            createdAt=register_result.session.created_at,
+        ),
+        dailyLimit=DailyXpLimitOut(
+            maxXpPerDay=register_result.max_xp_per_day,
+            grantedXp=register_result.granted_xp,
+            requestedXp=register_result.requested_xp,
+            remainingXpToday=register_result.remaining_xp_today,
+        ),
+        unlockedAchievements=register_result.unlocked_achievements,
+        isPersonalBest=complete_result.is_personal_best,
+        personalBestType=complete_result.personal_best_type,
+        personalBest=(
+            GamePersonalBestOut(
+                id=personal_best.id,
+                childId=personal_best.child_id,
+                gameId=personal_best.game_id,
+                bestScore=personal_best.best_score,
+                bestStreak=personal_best.best_streak,
+                bestDurationSeconds=personal_best.best_duration_seconds,
+                lastSurpassedAt=personal_best.last_surpassed_at,
+                bestResultPayload=personal_best.best_result_payload,
+                createdAt=personal_best.created_at,
+                updatedAt=personal_best.updated_at,
+            )
+            if personal_best is not None
+            else None
+        ),
+    )
+
+
 @router.post(
     "/session",
     response_model=GameSessionRegisterResponse,
@@ -342,51 +756,46 @@ def create_game_session(
     db: DBSession,
     tenant: Annotated[Tenant, Depends(get_current_tenant)],
     user: Annotated[User, Depends(get_current_user)],
-    __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> GameSessionRegisterResponse:
-    children = db.scalars(
-        select(ChildProfile).where(
-            ChildProfile.tenant_id == tenant.id,
-            ChildProfile.deleted_at.is_(None),
-        ),
-    ).all()
-    settings: GameSettings | None = None
-    max_xp_per_day = MAX_XP_PER_DAY
-    if len(children) == 1:
-        child_id = children[0].id
-        settings = db.scalar(
-            select(GameSettings).where(
-                GameSettings.tenant_id == tenant.id,
-                GameSettings.child_id == child_id,
-            ),
-        )
-        if settings is not None:
-            max_xp_per_day = settings.max_daily_xp
-
-            game_enabled = settings.enabled_games.get(payload.game_type, True)
-            if not game_enabled:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Game disabled by parental control")
+    child = _resolve_child_context(
+        db,
+        tenant_id=tenant.id,
+        user=user,
+        membership=membership,
+        requested_child_id=payload.child_id,
+    )
+    child_id = child.id
+    settings, max_xp_per_day = _resolve_game_settings(db, tenant_id=tenant.id, child_id=child_id)
+    if settings is not None:
+        game_enabled = settings.enabled_games.get(payload.game_type, True)
+        if not game_enabled:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Game disabled by parental control")
 
     result = registerGameSession(
         db,
         user_id=user.id,
+        tenant_id=tenant.id,
+        child_id=child_id,
         game_type=GameType(payload.game_type),
         score=payload.score,
+        game_id=payload.game_type.lower(),
         max_xp_per_day=max_xp_per_day,
     )
     try:
-        track_mission_progress(
-            db,
-            user_id=user.id,
-            tenant_id=tenant.id,
-            delta=MissionDelta(
-                xp_gained=result.granted_xp,
-                from_game=True,
-            ),
-            auto_claim=True,
-        )
+        with db.begin_nested():
+            track_mission_progress(
+                db,
+                user_id=user.id,
+                tenant_id=tenant.id,
+                delta=MissionDelta(
+                    xp_gained=result.granted_xp,
+                    from_game=True,
+                ),
+                auto_claim=True,
+            )
     except SQLAlchemyError:
-        db.rollback()
+        pass
     db.commit()
 
     return GameSessionRegisterResponse(

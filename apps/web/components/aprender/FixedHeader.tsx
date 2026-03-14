@@ -52,7 +52,7 @@ export function FixedHeader({ streak, coins, progress, subjectName = "Matéria",
         </button>
           <span className="flex items-center justify-end">
             <span className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-[#D2DDEB] bg-[#F3F7FD]" aria-label="Avatar">
-            <Image src="/icons/axion.svg" alt="Axion" width={24} height={24} className="h-6 w-6 object-contain" />
+            <Image src="/axiora/mascot/axiora-mascot-icon.png" alt="Axion" width={24} height={24} className="h-6 w-6 object-contain" />
             </span>
           </span>
         </div>

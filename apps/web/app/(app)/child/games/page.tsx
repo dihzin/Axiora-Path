@@ -1,268 +1,127 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Coins, Crown, Flame, Grid2x2, MapPinned, PiggyBank, Rocket, Search, Sparkles, Trophy } from "lucide-react";
-import type { ComponentType } from "react";
-import Link from "next/link";
+import { ArrowRight, Sparkles, Trophy } from "lucide-react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { ChildDesktopShell } from "@/components/child-desktop-shell";
-import { PageShell } from "@/components/layout/page-shell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ProgressBar } from "@/components/ui/progress-bar";
+import { GamesBadgeStrip } from "@/components/games/games-badge-strip";
+import { GameHubCard } from "@/components/games/game-hub-card";
+import { GamesMissionCard } from "@/components/games/games-mission-card";
+import { GameOnboardingModal } from "@/components/games/onboarding/game-onboarding-modal";
+import { GameSkillSection } from "@/components/games/game-skill-section";
 import {
+  GAMES_SKILL_GROUPS,
+  resolveGameHubMeta,
+  type GameSkillGroupKey,
+} from "@/components/games/games-hub-config";
+import {
+  GAMES,
+  GAMES_WALLPAPER_SRC,
+  LOCAL_TICTACTOE_GAME,
+  buildPlayHref,
+  difficultyLabel,
+  iconForGame,
+  resolveCatalogRoute,
+  resolveGameIdForPersonalBest,
+  statusLabel,
+  type GameItem,
+} from "@/components/games/games-hub-data";
+import { GamesHero } from "@/components/games/games-hero";
+import { GamesProgressPanel } from "@/components/games/games-progress-panel";
+import { GamesRecommendationCard } from "@/components/games/games-recommendation-card";
+import { GamesStreakCard } from "@/components/games/games-streak-card";
+import { PersonalBestHighlight } from "@/components/games/personal-best-highlight";
+import { PageShell } from "@/components/layout/page-shell";
+import { TopStatsBar } from "@/components/trail/TopStatsBar";
+import { Button } from "@/components/ui/button";
+import {
+  claimGamesMetagameMission,
+  getAprenderLearningProfile,
   getAchievements,
+  getGamePersonalBests,
   getGamesCatalog,
+  getGamesMetagameSummary,
   getLevels,
   getStoreItems,
+  getStreak,
   startGameEngineSession,
   trackAxionSessionStarted,
   type AchievementItem,
-  type GameCatalogItem,
+  type GameMetagameSummaryResponse,
+  type GamePersonalBestResponse,
   type LevelResponse,
 } from "@/lib/api/client";
+import { buildOnboardingLaunchParams, mergeHrefWithParams, type GameOnboardingConfig } from "@/lib/games/onboarding";
 
-type GameItem = {
-  id: string;
-  href: string;
-  templateId?: string;
-  playable?: boolean;
-  status?: "AVAILABLE" | "COMING_SOON" | "BETA" | "LOCKED";
-  title: string;
-  description: string;
-  skill: string;
-  difficulty: "Fácil" | "Médio" | "Difícil";
-  xpReward: number;
-  icon: ComponentType<{ className?: string }>;
-  estimatedMinutes?: number;
+type HubGame = GameItem & {
+  meta: ReturnType<typeof resolveGameHubMeta>;
+  playHref: string;
+  personalBest: GamePersonalBestResponse | null;
 };
 
 function isTicTacToeGame(game: Pick<GameItem, "href" | "title">): boolean {
   return game.href === "/child/games/tictactoe" || game.title.trim().toLowerCase() === "jogo da velha";
 }
 
-const GAMES: GameItem[] = [
-  {
-    id: "local-corrida-soma",
-    href: "/child/games/quiz",
-    templateId: "7f9d501f-7c56-4690-9da5-bf1b95818801",
-    title: "Corrida da Soma",
-    description: "Desafios rápidos de soma com progressão por sessão.",
-    skill: "Aritmética e soma",
-    difficulty: "Fácil",
-    xpReward: 20,
-    icon: Rocket,
-    estimatedMinutes: 3,
-  },
-  {
-    id: "local-mapa-capitais",
-    href: "/child/games/memory",
-    templateId: "7ed50523-7a97-4d65-a687-d2f878f2c199",
-    title: "Mapa de Capitais",
-    description: "Ligue capitais e regiões em rodadas de memória visual.",
-    skill: "Geografia e memória",
-    difficulty: "Médio",
-    xpReward: 28,
-    icon: MapPinned,
-    estimatedMinutes: 5,
-  },
-  {
-    id: "local-estacao-ingles",
-    href: "/child/games/quiz",
-    templateId: "63b8fdd6-a512-487f-b0a4-9860904f7558",
-    title: "Estação de Inglês",
-    description: "Vocabulário e leitura em desafios curtos.",
-    skill: "Inglês e vocabulário",
-    difficulty: "Médio",
-    xpReward: 24,
-    icon: Search,
-    estimatedMinutes: 4,
-  },
-  {
-    id: "local-tic-tac-toe",
-    href: "/child/games/tictactoe",
-    title: "Jogo da Velha",
-    description: "Treine lógica, antecipação e tomada de decisão em partidas rápidas.",
-    skill: "Lógica e estratégia",
-    difficulty: "Fácil",
-    xpReward: 50,
-    icon: Grid2x2,
-    estimatedMinutes: 3,
-  },
-  {
-    id: "local-tug-of-war",
-    href: "/child/games/tug-of-war",
-    title: "Cabo de Guerra",
-    description: "Duelo matemático em tempo real: acerte para puxar a corda e vencer.",
-    skill: "Aritmética e agilidade",
-    difficulty: "Médio",
-    xpReward: 90,
-    icon: Flame,
-    estimatedMinutes: 4,
-  },
-  {
-    id: "local-word-search",
-    href: "/child/games/wordsearch",
-    title: "Caça-palavras",
-    description: "Encontre palavras por tema em grades dinâmicas com seleção por arraste.",
-    skill: "Vocabulário e foco",
-    difficulty: "Médio",
-    xpReward: 130,
-    icon: Search,
-    estimatedMinutes: 4,
-  },
-  {
-    id: "local-finance-sim",
-    href: "/child/games/finance-sim",
-    title: "Mesada Inteligente",
-    description: "Simule decisões financeiras em 5 rodadas com eventos surpresa.",
-    skill: "Educação financeira",
-    difficulty: "Médio",
-    xpReward: 80,
-    icon: PiggyBank,
-    estimatedMinutes: 5,
-  },
-];
-
-const LOCAL_TICTACTOE_GAME: GameItem = GAMES.find((game) => game.href === "/child/games/tictactoe") ?? {
-  id: "local-tic-tac-toe",
-  href: "/child/games/tictactoe",
-  title: "Jogo da Velha",
-  description: "Treine lógica, antecipação e tomada de decisão em partidas rápidas.",
-  skill: "Lógica e estratégia",
-  difficulty: "Fácil",
-  xpReward: 50,
-  icon: Grid2x2,
-  estimatedMinutes: 3,
-};
-
-function difficultyLabel(difficulty: string): "Fácil" | "Médio" | "Difícil" {
-  const value = difficulty.toUpperCase();
-  if (value === "EASY") return "Fácil";
-  if (value === "HARD") return "Difícil";
-  return "Médio";
-}
-
-function iconForGame(item: GameCatalogItem): ComponentType<{ className?: string }> {
-  const title = item.title.trim().toLowerCase();
-  if (title === "corrida da soma") return Rocket;
-  if (title === "mapa de capitais") return MapPinned;
-  const subject = item.subject.toLowerCase();
-  if (subject.includes("financeira")) return PiggyBank;
-  if (subject.includes("portugu")) return Search;
-  if (subject.includes("matem")) return Grid2x2;
-  if (item.engineKey.toUpperCase() === "STRATEGY") return Grid2x2;
-  if (item.engineKey.toUpperCase() === "MEMORY") return Search;
-  if (item.engineKey.toUpperCase() === "SIMULATION") return PiggyBank;
-  if (item.engineKey.toUpperCase() === "DRAG_DROP") return Search;
-  return Grid2x2;
-}
-
-function resolveCatalogRoute(item: GameCatalogItem): string | null {
-  const templateId = item.templateId.toLowerCase();
-  if (templateId.includes("capitais") || templateId.includes("memory")) return "/child/games/memory";
-  if (templateId.includes("soma") || templateId.includes("quiz")) return "/child/games/quiz";
-  if (templateId.includes("troco") || templateId.includes("finance")) return "/child/games/finance-sim";
-  if (templateId.includes("palavra") || templateId.includes("drag")) return "/child/games/wordsearch";
-  if (templateId.includes("tictactoe")) return "/child/games/tictactoe";
-  if (templateId.includes("tug") || templateId.includes("cabo") || templateId.includes("guerra")) return "/child/games/tug-of-war";
-
-  const title = item.title.trim().toLowerCase();
-  if (title === "corrida da soma") return "/child/games/quiz";
-  if (title === "mapa de capitais") return "/child/games/memory";
-  if (title === "mercado do troco") return "/child/games/finance-sim";
-  if (title === "caça-palavras") return "/child/games/wordsearch";
-  if (title === "jogo da velha") return "/child/games/tictactoe";
-  if (title === "cabo de guerra" || title === "tug of war") return "/child/games/tug-of-war";
-
-  const key = item.engineKey.toUpperCase();
-  if (key === "QUIZ") return "/child/games/quiz";
-  if (key === "MEMORY") return "/child/games/memory";
-  if (key === "SIMULATION") return "/child/games/finance-sim";
-  if (key === "DRAG_DROP") return "/child/games/wordsearch";
-
-  return item.playRoute;
-}
-
-function buildPlayHref(game: GameItem): string {
-  if (!game.templateId) return game.href;
-  const separator = game.href.includes("?") ? "&" : "?";
-  return `${game.href}${separator}templateId=${encodeURIComponent(game.templateId)}`;
-}
-
-function estimatedMinutesForGame(game: Pick<GameItem, "difficulty" | "estimatedMinutes">): number {
-  if (typeof game.estimatedMinutes === "number" && game.estimatedMinutes > 0) return game.estimatedMinutes;
-  if (game.difficulty === "Fácil") return 3;
-  if (game.difficulty === "Difícil") return 6;
-  return 4;
-}
-
-function statusLabel(status?: GameItem["status"]): string {
-  if (status === "AVAILABLE") return "Disponível";
-  if (status === "BETA") return "Beta";
-  if (status === "LOCKED") return "Bloqueado";
-  return "Em breve";
-}
-
 export default function ChildGamesPage() {
   const router = useRouter();
   const sessionStartedLoggedRef = useRef<string | null>(null);
+  const recommendationRef = useRef<HTMLDivElement | null>(null);
   const [childId, setChildId] = useState<number | null>(null);
   const [axionDecisionId, setAxionDecisionId] = useState<string | null>(null);
   const [levelData, setLevelData] = useState<LevelResponse | null>(null);
   const [achievements, setAchievements] = useState<AchievementItem[]>([]);
   const [axionCoins, setAxionCoins] = useState(0);
-  const [dailyXp, setDailyXp] = useState(0);
-  const [weeklyXp, setWeeklyXp] = useState(0);
+  const [metagame, setMetagame] = useState<GameMetagameSummaryResponse | null>(null);
+  const [personalBests, setPersonalBests] = useState<GamePersonalBestResponse[]>([]);
   const [catalogGames, setCatalogGames] = useState<GameItem[]>([]);
   const [catalogState, setCatalogState] = useState<"loading" | "remote" | "fallback">("loading");
   const [startingId, setStartingId] = useState<string | null>(null);
+  const [onboardingGame, setOnboardingGame] = useState<HubGame | null>(null);
   const [catalogFilter, setCatalogFilter] = useState<"all" | "available" | "upcoming">("all");
-  const weeklyGoal = 350;
-
-  const refreshLocalXpMetrics = useCallback((activeChildId: number) => {
-    const todayIso = new Date().toISOString().slice(0, 10);
-    const dailyRaw = localStorage.getItem(`axiora_game_daily_xp_${activeChildId}_${todayIso}`);
-    const parsedDaily = Number(dailyRaw ?? "0");
-    setDailyXp(Number.isFinite(parsedDaily) ? Math.max(0, parsedDaily) : 0);
-
-    const rawWeekly = localStorage.getItem(`axiora_game_weekly_xp_${activeChildId}`);
-    if (!rawWeekly) {
-      setWeeklyXp(0);
-      return;
-    }
-    try {
-      const parsed = JSON.parse(rawWeekly) as { weekStart: string; xp: number };
-      const now = new Date();
-      const day = (now.getDay() + 6) % 7;
-      const monday = new Date(now);
-      monday.setDate(now.getDate() - day);
-      monday.setHours(0, 0, 0, 0);
-      const currentWeekStart = monday.toISOString().slice(0, 10);
-      if (parsed.weekStart !== currentWeekStart) {
-        setWeeklyXp(0);
-        return;
-      }
-      setWeeklyXp(Number.isFinite(parsed.xp) ? Math.max(0, parsed.xp) : 0);
-    } catch {
-      setWeeklyXp(0);
-    }
-  }, []);
+  const [activeSessionHint, setActiveSessionHint] = useState<{ href?: string; title?: string; templateId?: string | null } | null>(null);
+  const [claimingScope, setClaimingScope] = useState<"daily" | "weekly" | null>(null);
+  const [shellStreak, setShellStreak] = useState(0);
+  const [shellGems, setShellGems] = useState(0);
+  const [shellXpPercent, setShellXpPercent] = useState(0);
 
   const refreshRemoteStats = useCallback((activeChildId: number) => {
-    void getLevels(activeChildId)
-      .then((data) => setLevelData(data))
-      .catch(() => setLevelData(null));
-
+    void getLevels(activeChildId).then(setLevelData).catch(() => setLevelData(null));
     void getAchievements(activeChildId)
       .then((data) => setAchievements(data.achievements.filter((item) => item.unlocked)))
       .catch(() => setAchievements([]));
+    void getStoreItems().then((data) => setAxionCoins(data.coins)).catch(() => setAxionCoins(0));
+    void getGamePersonalBests(activeChildId).then(setPersonalBests).catch(() => setPersonalBests([]));
+    void getGamesMetagameSummary(activeChildId).then(setMetagame).catch(() => setMetagame(null));
+    void getStreak(activeChildId)
+      .then((data) => setShellStreak(Math.max(0, data.current)))
+      .catch(() => setShellStreak(0));
+    void getAprenderLearningProfile()
+      .then((data) => {
+        setShellGems(Math.max(0, Math.round(data.axionCoins ?? 0)));
+        setShellXpPercent(Math.max(0, Math.min(100, Math.round(data.xpLevelPercent ?? 0))));
+      })
+      .catch(() => {
+        setShellGems(0);
+        setShellXpPercent(0);
+      });
+  }, []);
 
-    void getStoreItems()
-      .then((data) => setAxionCoins(data.coins))
-      .catch(() => setAxionCoins(0));
+  const refreshActiveSessionHint = useCallback(() => {
+    try {
+      const raw = localStorage.getItem("axiora_active_game_engine_session");
+      if (!raw) {
+        setActiveSessionHint(null);
+        return;
+      }
+      const parsed = JSON.parse(raw) as { href?: string; title?: string; templateId?: string | null };
+      setActiveSessionHint(parsed);
+    } catch {
+      setActiveSessionHint(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -272,13 +131,11 @@ export default function ChildGamesPage() {
     const fromQuery = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("decision_id") : null;
     const stored = localStorage.getItem("axion_active_decision_id") || sessionStorage.getItem("axion_active_decision_id");
     const resolvedDecisionId = fromQuery?.trim() || stored?.trim() || null;
-    if (resolvedDecisionId) {
-      setAxionDecisionId(resolvedDecisionId);
-    }
+    if (resolvedDecisionId) setAxionDecisionId(resolvedDecisionId);
     setChildId(parsed);
-    refreshLocalXpMetrics(parsed);
     refreshRemoteStats(parsed);
-  }, [refreshLocalXpMetrics, refreshRemoteStats]);
+    refreshActiveSessionHint();
+  }, [refreshActiveSessionHint, refreshRemoteStats]);
 
   useEffect(() => {
     if (!axionDecisionId) return;
@@ -296,18 +153,18 @@ export default function ChildGamesPage() {
   useEffect(() => {
     if (childId === null) return;
     const onFocus = () => {
-      refreshLocalXpMetrics(childId);
       refreshRemoteStats(childId);
+      refreshActiveSessionHint();
     };
     const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        onFocus();
-      }
+      if (document.visibilityState === "visible") onFocus();
     };
     const onStorage = (event: StorageEvent) => {
       if (!event.key) return;
-      if (event.key.startsWith(`axiora_game_daily_xp_${childId}_`) || event.key === `axiora_game_weekly_xp_${childId}`) {
-        refreshLocalXpMetrics(childId);
+      if (
+        event.key === "axiora_active_game_engine_session"
+      ) {
+        refreshActiveSessionHint();
       }
     };
     window.addEventListener("focus", onFocus);
@@ -318,7 +175,7 @@ export default function ChildGamesPage() {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("storage", onStorage);
     };
-  }, [childId, refreshLocalXpMetrics, refreshRemoteStats]);
+  }, [childId, refreshActiveSessionHint, refreshRemoteStats]);
 
   useEffect(() => {
     let active = true;
@@ -341,7 +198,7 @@ export default function ChildGamesPage() {
             difficulty: difficultyLabel(item.difficulty),
             xpReward: item.xpReward,
             icon: iconForGame(item),
-            estimatedMinutes: item.difficulty.toUpperCase() === "HARD" ? 6 : item.difficulty.toUpperCase() === "EASY" ? 3 : 4,
+            estimatedMinutes: item.estimatedMinutes,
           });
           return acc;
         }, []);
@@ -380,249 +237,549 @@ export default function ChildGamesPage() {
     () => (catalogState === "remote" ? catalogGames : catalogState === "fallback" ? GAMES : []),
     [catalogGames, catalogState],
   );
-  const availableGames = useMemo(() => games.filter((game) => game.playable !== false), [games]);
-  const upcomingGames = useMemo(() => games.filter((game) => game.playable === false), [games]);
+
+  const personalBestByGameId = useMemo(() => {
+    return personalBests.reduce<Record<string, GamePersonalBestResponse>>((acc, item) => {
+      acc[item.gameId] = item;
+      return acc;
+    }, {});
+  }, [personalBests]);
+
+  const hubGames = useMemo<HubGame[]>(
+    () =>
+      games.map((game) => {
+        const meta = resolveGameHubMeta({
+          title: game.title,
+          href: game.href,
+          description: game.description,
+          estimatedMinutes: game.estimatedMinutes,
+        });
+        const gameId = meta.gameId ?? resolveGameIdForPersonalBest(game.href);
+        return {
+          ...game,
+          playHref: buildPlayHref(game),
+          meta: { ...meta, gameId },
+          personalBest: gameId ? (personalBestByGameId[gameId] ?? null) : null,
+        };
+      }),
+    [games, personalBestByGameId],
+  );
+
+  const availableGames = useMemo(() => hubGames.filter((game) => game.playable !== false), [hubGames]);
+  const upcomingGames = useMemo(() => hubGames.filter((game) => game.playable === false), [hubGames]);
   const visibleAvailable = catalogFilter === "upcoming" ? [] : availableGames;
   const visibleUpcoming = catalogFilter === "available" ? [] : upcomingGames;
 
+  const activeSessionGame = useMemo(() => {
+    if (!activeSessionHint) return null;
+    return availableGames.find((game) => {
+      if (activeSessionHint.templateId && game.templateId && activeSessionHint.templateId === game.templateId) return true;
+      if (activeSessionHint.href && activeSessionHint.href === game.href) return true;
+      if (activeSessionHint.title && activeSessionHint.title.trim().toLowerCase() === game.title.trim().toLowerCase()) return true;
+      return false;
+    });
+  }, [activeSessionHint, availableGames]);
+
+  const gameTitleById = useMemo(() => {
+    return availableGames.reduce<Record<string, string>>((acc, game) => {
+      if (game.meta.gameId) acc[game.meta.gameId] = game.title;
+      return acc;
+    }, {});
+  }, [availableGames]);
+
+  const favoriteGameId = metagame?.stats.favoriteGameId ?? null;
+  const favoriteGameLabel = favoriteGameId ? (gameTitleById[favoriteGameId] ?? null) : null;
+  const dailyXp = metagame?.stats.xpToday ?? 0;
+  const weeklyXp = metagame?.stats.xpWeek ?? 0;
+  const weeklyGoal = metagame?.weeklyMission.metric === "xp" ? metagame.weeklyMission.target : 350;
+  const totalSessionsLabelValue = metagame ? metagame.stats.totalSessions : null;
+
+  const recommendedGame = useMemo(() => {
+    if (activeSessionGame) {
+      return { game: activeSessionGame, reason: "Continue de onde parou para manter sua sequência.", ctaLabel: "Continuar partida" };
+    }
+    const bestToBeat = availableGames.find((game) => game.personalBest !== null);
+    if (bestToBeat) {
+      return { game: bestToBeat, reason: "Você já tem recorde aqui. Tente bater sua melhor marca.", ctaLabel: "Bater recorde" };
+    }
+    const quickGame = [...availableGames].sort((a, b) => (a.estimatedMinutes ?? 4) - (b.estimatedMinutes ?? 4))[0] ?? null;
+    if (quickGame) {
+      return { game: quickGame, reason: "Partida rápida para aquecer seu raciocínio agora.", ctaLabel: "Partida rápida" };
+    }
+    return null;
+  }, [activeSessionGame, availableGames]);
+
+  const groupedAvailableGames = useMemo(() => {
+    return visibleAvailable.reduce<Record<GameSkillGroupKey, HubGame[]>>(
+      (acc, game) => {
+        acc[game.meta.skillGroup].push(game);
+        return acc;
+      },
+      { calculo: [], estrategia: [], memoria: [], financeiro: [] },
+    );
+  }, [visibleAvailable]);
+
+  const bestPersonalBest = useMemo(() => {
+    if (personalBests.length === 0) return null;
+    return [...personalBests].sort((a, b) => {
+      const aScore = a.bestScore ?? -1;
+      const bScore = b.bestScore ?? -1;
+      if (aScore !== bScore) return bScore - aScore;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    })[0];
+  }, [personalBests]);
+
+  const recentPersonalBest = useMemo(() => {
+    if (personalBests.length === 0) return null;
+    return [...personalBests].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
+  }, [personalBests]);
+
+  const openOnboarding = useCallback((game: HubGame) => {
+    if (game.playable === false) return;
+    setOnboardingGame(game);
+  }, []);
+
+  const launchGameFromOnboarding = useCallback(
+    async (game: HubGame, config: GameOnboardingConfig) => {
+      if (game.playable === false) return;
+      const launchParams = buildOnboardingLaunchParams(game.meta.gameId, config);
+      const nextHref = mergeHrefWithParams(game.playHref, launchParams);
+      if (!game.templateId) {
+        setOnboardingGame(null);
+        router.push(nextHref);
+        return;
+      }
+      localStorage.setItem(
+        "axiora_active_game_engine_session",
+        JSON.stringify({
+          sessionId: null,
+          templateId: game.templateId,
+          title: game.title,
+          href: game.href,
+          startedAt: new Date().toISOString(),
+        }),
+      );
+      try {
+        setStartingId(game.id);
+        const started = await startGameEngineSession({ templateId: game.templateId });
+        localStorage.setItem(
+          "axiora_active_game_engine_session",
+          JSON.stringify({
+            sessionId: started.sessionId,
+            templateId: game.templateId,
+            title: game.title,
+            href: game.href,
+            startedAt: new Date().toISOString(),
+          }),
+        );
+      } catch {
+        // fallback: mantém navegação para rota mapeada pelo backend
+      } finally {
+        setStartingId(null);
+        setOnboardingGame(null);
+        router.push(nextHref);
+      }
+    },
+    [router],
+  );
+
+  const claimMissionReward = useCallback(
+    async (scope: "daily" | "weekly") => {
+      if (!childId || !metagame) return;
+      const mission = scope === "daily" ? metagame.dailyMission : metagame.weeklyMission;
+      setClaimingScope(scope);
+      try {
+        await claimGamesMetagameMission({
+          childId,
+          missionScope: scope,
+          missionId: mission.id,
+        });
+        refreshRemoteStats(childId);
+      } finally {
+        setClaimingScope(null);
+      }
+    },
+    [childId, metagame, refreshRemoteStats],
+  );
+
+  const recommendationText = recommendedGame ? `Jogue ${recommendedGame.game.title} agora.` : "Escolha um jogo curto para manter sua evolução.";
+  const recordsCount = personalBests.length;
+  const bestGameLabel = bestPersonalBest ? (gameTitleById[bestPersonalBest.gameId] ?? bestPersonalBest.gameId) : null;
+  const bestScoreLabel =
+    bestPersonalBest && typeof bestPersonalBest.bestScore === "number"
+      ? `${bestPersonalBest.bestScore} pontos`
+      : bestPersonalBest && typeof bestPersonalBest.bestStreak === "number"
+        ? `Sequencia ${bestPersonalBest.bestStreak}`
+        : null;
+  const recentRecordLabel = recentPersonalBest ? `Recorde recente em ${gameTitleById[recentPersonalBest.gameId] ?? recentPersonalBest.gameId}` : null;
+
   return (
-    <ChildDesktopShell activeNav="jogos">
-      <PageShell tone="child" width="wide" className="relative overflow-hidden">
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute left-[-10%] top-16 h-64 w-64 rounded-full bg-[#6FD9CA]/10 blur-2xl" />
-          <div className="absolute right-[-8%] top-[24%] h-72 w-72 rounded-full bg-[#B2C7FF]/11 blur-3xl" />
-          <div className="absolute bottom-24 left-[22%] h-52 w-52 rounded-full bg-[#FFD28A]/10 blur-3xl" />
+    <ChildDesktopShell
+      activeNav="jogos"
+      menuSkin="trail"
+      topBar={
+        <TopStatsBar
+          streak={shellStreak}
+          gems={shellGems}
+          xp={shellXpPercent}
+          xpTotal={levelData?.xp_total ?? 0}
+          variant="global"
+          className="w-full"
+        />
+      }
+      rightRail={
+        <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(160deg,rgba(28,54,48,0.88)_0%,rgba(24,48,43,0.84)_55%,rgba(18,39,35,0.92)_100%)] p-4 shadow-[0_10px_28px_rgba(7,20,17,0.32),inset_0_1px_0_rgba(255,255,255,0.08)]">
+          <p className="text-xs font-black uppercase tracking-[0.08em] text-[#CDBAA6]">Consistência</p>
+          <p className="mt-1 text-lg font-black text-[#FFF4E7]">
+            {metagame ? `${metagame.streak.current} dias em sequência` : "Você está indo bem!"}
+          </p>
+          <p className="mt-1 text-sm font-semibold text-[#E6D8C7]">
+            {metagame?.motivationMessage ?? "Continue explorando para evoluir no Axiora."}
+          </p>
+        </div>
+      }
+    >
+      <PageShell tone="child" width="wide" className="relative z-0 overflow-hidden">
+        <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
+          <div
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.88]"
+            style={{ backgroundImage: `url('${GAMES_WALLPAPER_SRC}')` }}
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,19,32,0.38)_0%,rgba(8,19,32,0.7)_100%)]" />
         </div>
 
-      <div className="mb-3">
-        <Link
-          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[#C9D8EF] bg-white/95 px-3 py-1.5 text-sm font-black text-[#4A5E7D] shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
-          href="/child"
-        >
-          Voltar
-        </Link>
-      </div>
+        <div className="relative z-10 pb-24">
+          <header className="mb-2 lg:hidden">
+            <TopStatsBar
+              streak={shellStreak}
+              gems={shellGems}
+              xp={shellXpPercent}
+              className="w-full"
+            />
+          </header>
 
-      <Card className="mb-4 overflow-hidden border-[#CFE6F3] bg-[linear-gradient(140deg,#FFFFFF_0%,#F4FBFF_52%,#EFF8FF_100%)] shadow-[0_14px_32px_rgba(65,98,151,0.10)]">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-lg">Arena de Jogos</CardTitle>
-            <span className="inline-flex items-center gap-1 rounded-full border border-secondary/30 bg-secondary/10 px-2 py-0.5 text-xs font-semibold text-secondary">
-              <Crown className="h-3.5 w-3.5" />
-              Nível {levelData?.level ?? 1}
-            </span>
+          <div className="mb-3">
+            <Link
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[#C9D8EF] bg-white/95 px-3 py-1.5 text-sm font-black text-[#4A5E7D] shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
+              href="/child"
+            >
+              Voltar
+            </Link>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="rounded-2xl border border-border bg-white/90 p-3">
-            <div className="mb-1 flex items-center justify-between text-xs">
-              <span className="font-semibold text-muted-foreground">Progresso de XP</span>
-              <span className="font-semibold text-foreground">{Math.round(levelData?.level_progress_percent ?? 0)}%</span>
-            </div>
-            <ProgressBar value={levelData?.level_progress_percent ?? 0} tone="secondary" />
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-2xl border border-border bg-white/90 p-3">
-              <p className="text-xs text-muted-foreground">XP de hoje</p>
-              <p className="mt-1 text-lg font-extrabold text-foreground">{dailyXp}</p>
-              <p className="mt-1 text-[10px] font-semibold text-muted-foreground">Atualiza ao concluir partidas</p>
-            </div>
-            <div className="rounded-2xl border border-border bg-white/90 p-3">
-              <p className="text-xs text-muted-foreground">Meta semanal</p>
-              <p className="mt-1 text-lg font-extrabold text-foreground">{weeklyXp}/{weeklyGoal}</p>
-              <ProgressBar value={(weeklyXp / weeklyGoal) * 100} tone="secondary" />
-            </div>
-            <div className="rounded-2xl border border-accent/35 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,245,236,0.96)_100%)] p-3">
-              <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <Coins className="h-3.5 w-3.5 text-accent-foreground" />
-                AxionCoins
-              </p>
-              <p className="mt-1 text-lg font-extrabold text-accent-foreground">{axionCoins}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      <section className="mb-4 flex gap-2 overflow-x-auto pb-1">
-        {([
-          { id: "all", label: "Todos" },
-          { id: "available", label: `Disponiveis ${availableGames.length}` },
-          { id: "upcoming", label: `Em breve ${upcomingGames.length}` },
-        ] as const).map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => setCatalogFilter(option.id)}
-            className={`min-h-[40px] rounded-full border px-3 text-xs font-black transition ${
-              catalogFilter === option.id ? "border-[#36C8B5] bg-[#E8FBF8] text-[#129A8A]" : "border-[#D6E0EE] bg-white text-[#6A7F9D]"
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
-      </section>
+          <GamesHero
+            level={levelData?.level ?? 1}
+            xpTotal={levelData?.xp_total ?? 0}
+            availableCount={availableGames.length}
+            recordsCount={recordsCount}
+            onPrimaryAction={() => {
+              if (recommendedGame) {
+                openOnboarding(recommendedGame.game);
+                return;
+              }
+              recommendationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+          />
 
-      <section className="mb-4 rounded-3xl border border-border bg-[linear-gradient(110deg,rgba(14,165,164,0.18),rgba(255,255,255,0.96)_42%,rgba(67,190,187,0.18))] p-4 shadow-[0_2px_0_rgba(184,200,239,0.68)]">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Desafio da semana</p>
-            <p className="mt-1 text-sm font-bold text-foreground">Conquiste 350 XP em jogos educativos</p>
-          </div>
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl border border-border bg-white/90">
-            <Flame className="h-4 w-4 text-accent" />
-          </span>
-        </div>
-        <div className="mt-3">
-          <ProgressBar value={(weeklyXp / weeklyGoal) * 100} tone="secondary" />
-        </div>
-      </section>
+          <section ref={recommendationRef} className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[1.08fr_1fr]">
+            {recommendedGame ? (
+              <GamesRecommendationCard
+                title={recommendedGame.game.title}
+                subtitle={recommendedGame.game.meta.shortDescription}
+                reason={recommendedGame.reason}
+                ctaLabel={recommendedGame.ctaLabel}
+                icon={recommendedGame.game.icon}
+                disabled={startingId === recommendedGame.game.id}
+                infoChips={[
+                  `${recommendedGame.game.meta.durationLabel} de sessão`,
+                  recommendedGame.game.meta.skillLabel,
+                  recommendedGame.game.meta.playStyle,
+                ]}
+                onPlay={() => {
+                  openOnboarding(recommendedGame.game);
+                }}
+              />
+            ) : (
+              <article className="rounded-[24px] border border-[#C8E7DD]/80 bg-white/90 p-4 text-sm font-semibold text-[#356476]">
+                Nenhum jogo disponível agora. Tente novamente em instantes.
+              </article>
+            )}
 
-      <section className="mb-4">
-        <div className="mb-2 flex items-center gap-2">
-          <Trophy className="h-4 w-4 text-secondary" />
-          <p className="text-sm font-bold text-foreground">Conquistas</p>
-        </div>
-        <div className="games-achievements-scroll">
-          {(achievements.length > 0 ? achievements : [{ id: -1, title: "Primeira vitória", description: "Ganhe uma partida no Jogo da Velha", slug: "", icon_key: "", unlocked: false, unlocked_at: null }]).map((achievement) => (
-            <article key={achievement.id} className="games-achievement-pill">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-secondary/15 text-xs font-extrabold text-secondary">
-                {(achievement.title || "A").slice(0, 1).toUpperCase()}
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-xs font-semibold text-foreground">{achievement.title}</p>
-                <p className="truncate text-[11px] text-muted-foreground">{achievement.description}</p>
+            <GamesProgressPanel
+              dailyXp={dailyXp}
+              weeklyXp={weeklyXp}
+              weeklyGoal={weeklyGoal}
+              totalSessions={totalSessionsLabelValue}
+              xpTotal={levelData?.xp_total ?? 0}
+              coins={axionCoins}
+              recordsCount={recordsCount}
+              favoriteGame={favoriteGameLabel}
+              recommendation={recommendationText}
+            />
+          </section>
+
+          <section className="mt-4 flex gap-2 overflow-x-auto pb-1">
+            {([
+              { id: "all", label: "Todos" },
+              { id: "available", label: `Disponíveis ${availableGames.length}` },
+              { id: "upcoming", label: `Em breve ${upcomingGames.length}` },
+            ] as const).map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setCatalogFilter(option.id)}
+                className={`min-h-[40px] rounded-full border px-3 text-xs font-black transition ${
+                  catalogFilter === option.id ? "border-[#36C8B5] bg-[#E8FBF8] text-[#129A8A]" : "border-[#D6E0EE] bg-white text-[#6A7F9D]"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </section>
+
+          {metagame ? (
+            <section className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[1fr_1fr]">
+              <GamesMissionCard
+                mission={metagame.dailyMission}
+                title="Missão de hoje"
+                subtitle="Seu objetivo agora"
+                onPlayNow={() => {
+                  if (!recommendedGame) return;
+                  openOnboarding(recommendedGame.game);
+                }}
+                onClaim={() => {
+                  void claimMissionReward("daily");
+                }}
+                claimLoading={claimingScope === "daily"}
+              />
+              <GamesMissionCard
+                mission={metagame.weeklyMission}
+                title="Missão da semana"
+                subtitle="Construindo seu ritmo"
+                actionLabel="Continuar semana"
+                onPlayNow={() => {
+                  if (!recommendedGame) return;
+                  openOnboarding(recommendedGame.game);
+                }}
+                onClaim={() => {
+                  void claimMissionReward("weekly");
+                }}
+                claimLoading={claimingScope === "weekly"}
+              />
+            </section>
+          ) : null}
+
+          {metagame ? (
+            <section className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[1.05fr_1fr]">
+              <GamesStreakCard
+                currentStreak={metagame.streak.current}
+                bestStreak={metagame.streak.best}
+                weeklySessions={metagame.stats.weeklySessions}
+                totalSessions={metagame.stats.totalSessions}
+                message={metagame.motivationMessage}
+              />
+              <GamesBadgeStrip badges={metagame.badges} />
+            </section>
+          ) : (
+            <section className="mt-4">
+              <div className="mb-2 flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-[#F7BE53]" />
+                <p className="text-sm font-bold text-[#E9F3FF]">Conquistas desbloqueadas</p>
               </div>
-            </article>
-          ))}
-        </div>
-      </section>
+              <div className="games-achievements-scroll">
+                {(achievements.length > 0
+                  ? achievements
+                  : [{ id: -1, title: "Primeira vitória", description: "Ganhe uma partida no Jogo da Velha", slug: "", icon_key: "", unlocked: false, unlocked_at: null }]
+                ).map((achievement) => (
+                  <article key={achievement.id} className="games-achievement-pill">
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-secondary/15 text-xs font-extrabold text-secondary">
+                      {(achievement.title || "A").slice(0, 1).toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-foreground">{achievement.title}</p>
+                      <p className="truncate text-[11px] text-muted-foreground">{achievement.description}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
 
-      <section className="space-y-3 pb-24">
-        {catalogState === "loading" && games.length === 0 ? (
-          <article className="rounded-2xl border border-border bg-white/85 p-3 text-xs text-muted-foreground">
-            Carregando catálogo de jogos...
-          </article>
-        ) : null}
-        {catalogState === "fallback" ? (
-          <article className="rounded-2xl border border-border bg-white/85 p-3 text-xs text-muted-foreground">
-            Catálogo online indisponível no momento. Exibindo jogos locais para você continuar.
-          </article>
-        ) : null}
-        {visibleAvailable.length > 0 ? <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Disponíveis agora</p> : null}
-        {visibleAvailable.map((game) => {
-          const Icon = game.icon;
-          return (
-            <article key={game.id} className="games-gradient-shell games-gradient-shell--brand">
-              <div className="games-gradient-shell__inner">
-                <div className="flex items-start gap-3">
-                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-white shadow-[0_2px_0_rgba(184,200,239,0.72)]">
-                    <Icon className="h-5 w-5 stroke-[2.6] text-primary" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <p className="truncate text-sm font-bold text-foreground">{game.title}</p>
-                      <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{game.difficulty}</span>
-                    </div>
-                    <p className="text-xs leading-relaxed text-muted-foreground">{game.description}</p>
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <span className="inline-flex items-center gap-1 rounded-full border border-secondary/30 bg-secondary/10 px-2 py-0.5 text-[10px] font-semibold text-secondary">
-                        <Sparkles className="h-3 w-3" />
-                        +{game.xpReward} XP
-                      </span>
-                      <span className="truncate text-[11px] font-medium text-foreground/80">{game.skill}</span>
-                    </div>
-                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      Sessão de ~{estimatedMinutesForGame(game)} min
-                    </p>
-                    <Button
-                      className="games-play-button mt-3 w-full"
-                      size="sm"
-                      disabled={startingId === game.id}
-                      onClick={async () => {
-                        const nextHref = buildPlayHref(game);
-                        if (!game.templateId) {
-                          router.push(nextHref);
-                          return;
+          <section className="mt-5 space-y-5">
+            {catalogState === "loading" && hubGames.length === 0 ? (
+              <article className="rounded-2xl border border-[#D6E2F1] bg-white/90 p-3 text-xs font-semibold text-[#607E9E]">
+                Carregando catálogo de jogos...
+              </article>
+            ) : null}
+            {catalogState === "fallback" ? (
+              <article className="rounded-2xl border border-[#D6E2F1] bg-white/90 p-3 text-xs font-semibold text-[#607E9E]">
+                Catálogo online indisponível no momento. Exibindo jogos locais para você continuar.
+              </article>
+            ) : null}
+            {GAMES_SKILL_GROUPS.map((group) => {
+              const groupGames = groupedAvailableGames[group.key];
+              if (groupGames.length === 0) return null;
+              return (
+                <GameSkillSection key={group.key} title={group.title} subtitle={group.subtitle}>
+                  {groupGames.map((game) => {
+                    const state =
+                      recommendedGame?.game.id === game.id
+                        ? "Jogar agora"
+                        : game.personalBest
+                          ? "Seu recorde"
+                          : favoriteGameId && favoriteGameId === game.meta.gameId
+                            ? "Favorito"
+                            : "Pronto para jogar";
+                    return (
+                      <GameHubCard
+                        key={game.id}
+                        title={game.title}
+                        description={game.meta.shortDescription}
+                        skillLabel={game.meta.skillLabel}
+                        durationLabel={game.meta.durationLabel}
+                        ageBand={game.meta.ageBand}
+                        playStyle={game.meta.playStyle}
+                        whyItMatters={game.meta.whyItMatters}
+                        xpReward={game.xpReward}
+                        available
+                        stateLabel={state}
+                        isRecommended={recommendedGame?.game.id === game.id}
+                        isFavorite={Boolean(favoriteGameId && favoriteGameId === game.meta.gameId)}
+                        personalBest={
+                          game.personalBest
+                            ? {
+                                bestScore: game.personalBest.bestScore,
+                                bestStreak: game.personalBest.bestStreak,
+                                bestDurationSeconds: game.personalBest.bestDurationSeconds,
+                              }
+                            : null
                         }
-                        localStorage.setItem(
-                          "axiora_active_game_engine_session",
-                          JSON.stringify({
-                            sessionId: null,
-                            templateId: game.templateId,
-                            title: game.title,
-                            href: game.href,
-                            startedAt: new Date().toISOString(),
-                          }),
-                        );
-                        try {
-                          setStartingId(game.id);
-                          const started = await startGameEngineSession({ templateId: game.templateId });
-                          localStorage.setItem(
-                            "axiora_active_game_engine_session",
-                            JSON.stringify({
-                              sessionId: started.sessionId,
-                              templateId: game.templateId,
-                              title: game.title,
-                              href: game.href,
-                              startedAt: new Date().toISOString(),
-                            }),
-                          );
-                        } catch {
-                          // fallback: mantém navegação para rota já mapeada pelo backend
-                        } finally {
-                          setStartingId(null);
-                          router.push(nextHref);
-                        }
-                      }}
-                    >
-                      Jogar
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </article>
-          );
-        })}
-        {visibleUpcoming.length > 0 ? <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Em breve</p> : null}
-        {visibleUpcoming.map((game) => {
-          const Icon = game.icon;
-          return (
-            <article key={game.id} className="games-gradient-shell games-gradient-shell--brand games-gradient-shell--muted">
-              <div className="games-gradient-shell__inner">
-                <div className="flex items-start gap-3">
-                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-white shadow-[0_2px_0_rgba(184,200,239,0.72)]">
-                    <Icon className="h-5 w-5 stroke-[2.6] text-primary" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <p className="truncate text-sm font-bold text-foreground">{game.title}</p>
-                      <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{statusLabel(game.status)}</span>
-                    </div>
-                    <p className="text-xs leading-relaxed text-muted-foreground">{game.description}</p>
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <span className="inline-flex items-center gap-1 rounded-full border border-secondary/30 bg-secondary/10 px-2 py-0.5 text-[10px] font-semibold text-secondary">
-                        <Sparkles className="h-3 w-3" />
-                        +{game.xpReward} XP
-                      </span>
-                      <span className="truncate text-[11px] font-medium text-foreground/80">{game.skill}</span>
-                    </div>
-                    <Button
-                      className="games-play-button mt-3 w-full"
-                      size="sm"
-                      disabled
-                    >
-                      Em breve
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </article>
-          );
-        })}
-      </section>
+                        icon={game.icon}
+                        disabled={startingId === game.id}
+                        onPlay={() => {
+                          openOnboarding(game);
+                        }}
+                      />
+                    );
+                  })}
+                </GameSkillSection>
+              );
+            })}
+          </section>
 
-        <ChildBottomNav />
+          <section className="mt-5">
+            <PersonalBestHighlight
+              recordsCount={recordsCount}
+              bestGameLabel={bestGameLabel}
+              bestScoreLabel={bestScoreLabel}
+              recentRecordLabel={recentRecordLabel}
+              replayLabel={recommendedGame ? `Jogar ${recommendedGame.game.title}` : "Escolher jogo para recorde"}
+              disabled={recommendedGame ? startingId === recommendedGame.game.id : false}
+              onReplay={() => {
+                if (recommendedGame) {
+                  openOnboarding(recommendedGame.game);
+                  return;
+                }
+                recommendationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            />
+          </section>
+
+          {visibleUpcoming.length > 0 ? (
+            <section className="mt-5 space-y-3">
+              <header>
+                <h2 className="text-lg font-black text-[#E8F3FF]">Em breve no hub</h2>
+                <p className="text-xs font-semibold text-[#AFC5DE]">Novas práticas para continuar sua evolução.</p>
+              </header>
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                {visibleUpcoming.map((game) => (
+                  <GameHubCard
+                    key={game.id}
+                    title={game.title}
+                    description={game.meta.shortDescription}
+                    skillLabel={game.meta.skillLabel}
+                    durationLabel={game.meta.durationLabel}
+                    ageBand={game.meta.ageBand}
+                    playStyle={game.meta.playStyle}
+                    whyItMatters={game.meta.whyItMatters}
+                    xpReward={game.xpReward}
+                    available={false}
+                    stateLabel={statusLabel(game.status)}
+                    icon={game.icon}
+                    onPlay={() => undefined}
+                    disabled
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <section className="mt-5 rounded-[24px] border border-[#D2E2F4]/70 bg-[linear-gradient(145deg,rgba(255,255,255,0.97)_0%,rgba(242,250,255,0.95)_100%)] p-4 shadow-[0_10px_24px_rgba(17,45,77,0.12)] sm:p-5">
+            <p className="text-xs font-black uppercase tracking-[0.09em] text-[#6382A2]">Evolução Axiora</p>
+            <h2 className="mt-1 text-lg font-black text-[#153A55]">Jogar hoje acelera seu progresso amanhã</h2>
+            <p className="mt-1 text-sm font-semibold leading-relaxed text-[#426684]">
+              Jogos rápidos treinam sua mente para aprender mais rápido nas trilhas e tomar decisões financeiras melhores no dia a dia.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2.5">
+              {recommendedGame ? (
+                <Button
+                  onClick={() => {
+                    openOnboarding(recommendedGame.game);
+                  }}
+                  disabled={startingId === recommendedGame.game.id}
+                >
+                  Praticar agora
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              ) : null}
+              <Button asChild variant="outline" className="border-[#BCD3E8] bg-white/92 text-[#264A68] hover:bg-white">
+                <Link href="/child/aprender">
+                  Continuar aprender
+                  <Sparkles className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </section>
+
+          <GameOnboardingModal
+            open={Boolean(onboardingGame)}
+            game={
+              onboardingGame
+                ? {
+                    title: onboardingGame.title,
+                    description: onboardingGame.meta.shortDescription,
+                    icon: onboardingGame.icon,
+                    meta: {
+                      gameId: onboardingGame.meta.gameId,
+                      skillLabel: onboardingGame.meta.skillLabel,
+                      ageBand: onboardingGame.meta.ageBand,
+                      durationLabel: onboardingGame.meta.durationLabel,
+                      playStyle: onboardingGame.meta.playStyle,
+                      whyItMatters: onboardingGame.meta.whyItMatters,
+                    },
+                    personalBest: onboardingGame.personalBest
+                      ? {
+                          bestScore: onboardingGame.personalBest.bestScore,
+                          bestStreak: onboardingGame.personalBest.bestStreak,
+                          bestDurationSeconds: onboardingGame.personalBest.bestDurationSeconds,
+                        }
+                      : null,
+                  }
+                : null
+            }
+            loading={Boolean(onboardingGame && startingId === onboardingGame.id)}
+            onClose={() => {
+              if (startingId) return;
+              setOnboardingGame(null);
+            }}
+            onConfirm={(config) => {
+              if (!onboardingGame) return;
+              void launchGameFromOnboarding(onboardingGame, config);
+            }}
+          />
+
+          <ChildBottomNav />
+        </div>
       </PageShell>
     </ChildDesktopShell>
   );

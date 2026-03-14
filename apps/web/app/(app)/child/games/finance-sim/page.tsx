@@ -7,11 +7,14 @@ import { ArrowLeft, Coins, PiggyBank, Shield, Sparkles, TrendingUp } from "lucid
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { ChildDesktopShell } from "@/components/child-desktop-shell";
 import { ConfettiBurst } from "@/components/confetti-burst";
+import { GameResultPanel } from "@/components/games/game-result-panel";
 import { LevelUpOverlay } from "@/components/level-up-overlay";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { registerGameSession, type GameSessionRegisterResponse } from "@/lib/api/client";
+import type { GameSessionCompleteResponse } from "@/lib/api/client";
+import { finalizeGameSession } from "@/lib/games/completion";
+import { normalizeGameResult } from "@/lib/games/result-contract";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { UX_SETTINGS_FALLBACK, fetchUXSettings, hapticCompletion, hapticPress, playSfx } from "@/lib/ux-feedback";
 import { cn } from "@/lib/utils";
@@ -36,19 +39,6 @@ type RoundLog = {
 const TOTAL_ROUNDS = 5;
 const INITIAL_COINS = 100;
 const LEVEL_STORAGE_PREFIX = "axiora_game_level_";
-
-function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function currentWeekStartIso(): string {
-  const now = new Date();
-  const day = (now.getDay() + 6) % 7;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - day);
-  monday.setHours(0, 0, 0, 0);
-  return monday.toISOString().slice(0, 10);
-}
 
 function eventTitle(key: EventKey): string {
   if (key === "EXPENSE") return "Despesa inesperada";
@@ -89,6 +79,7 @@ function computeEducationalBonuses(logs: RoundLog[], finalBalance: number): { re
 }
 
 export default function FinanceSimPage() {
+  const [startedAt, setStartedAt] = useState(() => Date.now());
   const [childId, setChildId] = useState<number | null>(null);
   const [round, setRound] = useState(1);
   const [balance, setBalance] = useState(INITIAL_COINS);
@@ -97,7 +88,7 @@ export default function FinanceSimPage() {
   const [investPercent, setInvestPercent] = useState(30);
   const [logs, setLogs] = useState<RoundLog[]>([]);
   const [score, setScore] = useState(0);
-  const [sessionResult, setSessionResult] = useState<GameSessionRegisterResponse | null>(null);
+  const [sessionResult, setSessionResult] = useState<GameSessionCompleteResponse | null>(null);
   const [registering, setRegistering] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [levelUpLevel, setLevelUpLevel] = useState<number | null>(null);
@@ -152,39 +143,25 @@ export default function FinanceSimPage() {
     localStorage.setItem(`${LEVEL_STORAGE_PREFIX}${childId}`, String(level));
   };
 
-  const persistEarnedXp = (earnedXp: number) => {
-    if (childId === null || earnedXp <= 0) return;
-    const dailyKey = `axiora_game_daily_xp_${childId}_${todayIsoDate()}`;
-    const currentDaily = Number(localStorage.getItem(dailyKey) ?? "0");
-    const safeDaily = Number.isFinite(currentDaily) ? Math.max(0, currentDaily) : 0;
-    localStorage.setItem(dailyKey, String(safeDaily + earnedXp));
-
-    const weeklyKey = `axiora_game_weekly_xp_${childId}`;
-    const weekStart = currentWeekStartIso();
-    const rawWeekly = localStorage.getItem(weeklyKey);
-    let weeklyXp = 0;
-    if (rawWeekly) {
-      try {
-        const parsed = JSON.parse(rawWeekly) as { weekStart: string; xp: number };
-        if (parsed.weekStart === weekStart && Number.isFinite(parsed.xp)) {
-          weeklyXp = Math.max(0, parsed.xp);
-        }
-      } catch {
-        weeklyXp = 0;
-      }
-    }
-    localStorage.setItem(weeklyKey, JSON.stringify({ weekStart, xp: weeklyXp + earnedXp }));
-  };
-
   const registerSessionOnce = async (finalScore: number) => {
     setRegistering(true);
     try {
-      const response = await registerGameSession({
-        gameType: "FINANCE_SIM",
-        score: finalScore,
-      });
+      const response = await finalizeGameSession(
+        normalizeGameResult("finance-sim", {
+          score: finalScore,
+          durationSeconds: Math.max(1, Math.round((Date.now() - startedAt) / 1000)),
+          completed: true,
+          personalBestType: "score",
+          metadata: {
+            gameType: "FINANCE_SIM",
+            rounds: TOTAL_ROUNDS,
+            rating: classifyRating(finalScore),
+            finalBalance: balance,
+          },
+        }),
+        { childId },
+      );
       setSessionResult(response);
-      persistEarnedXp(response.dailyLimit.grantedXp);
       const previousLevel = getStoredLevel();
       if (previousLevel > 0 && response.profile.level > previousLevel) {
         setLevelUpLevel(response.profile.level);
@@ -277,6 +254,7 @@ export default function FinanceSimPage() {
   };
 
   const restartGame = () => {
+    setStartedAt(Date.now());
     setRound(1);
     setBalance(INITIAL_COINS);
     setSpendPercent(30);
@@ -503,15 +481,26 @@ export default function FinanceSimPage() {
               <p>Score da sessão: {finalScore}</p>
               {registering ? <p className="text-muted-foreground">Registrando sessão...</p> : null}
               {sessionResult ? (
-                <div className="rounded-xl border border-border bg-muted/40 p-3">
-                  <p>XP ganho: {sessionResult.session.xpEarned}</p>
-                  <p>Moedas: {sessionResult.session.coinsEarned}</p>
-                  <p>Nível atual: {sessionResult.profile.level}</p>
-                </div>
-              ) : null}
-              <Button className="w-full" onClick={restartGame}>
-                Jogar novamente
-              </Button>
+                <GameResultPanel
+                  title="Resultado final"
+                  score={finalScore}
+                  correctAnswers={null}
+                  wrongAnswers={null}
+                  durationSeconds={Math.max(1, Math.round((Date.now() - startedAt) / 1000))}
+                  xpGained={sessionResult.dailyLimit.grantedXp}
+                  coinsGained={sessionResult.session.coinsEarned}
+                  isPersonalBest={sessionResult.isPersonalBest}
+                  personalBestType={sessionResult.personalBestType}
+                  onReplay={restartGame}
+                  onBack={() => {
+                    window.location.href = "/child/games";
+                  }}
+                />
+              ) : (
+                <Button className="w-full" onClick={restartGame}>
+                  Jogar novamente
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : null}

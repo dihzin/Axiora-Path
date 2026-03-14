@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/icons/favicon-axion.svg",
     shortcut: "/icons/favicon-axion.svg",
-    apple: "/icons/axion.svg",
+    apple: "/axiora/mascot/axiora-mascot-icon.png",
   },
   appleWebApp: {
     capable: true,

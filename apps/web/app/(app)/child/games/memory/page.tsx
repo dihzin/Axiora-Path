@@ -2,21 +2,22 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Brain, Sparkles, Target, Zap } from "lucide-react";
+import { ArrowLeft, Brain, Target, Zap } from "lucide-react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { ChildDesktopShell } from "@/components/child-desktop-shell";
 import { ConfettiBurst } from "@/components/confetti-burst";
+import { GameResultPanel } from "@/components/games/game-result-panel";
 import { PageShell } from "@/components/layout/page-shell";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   finishGameEngineSession,
-  registerGameSession,
   submitGameEngineAnswer,
   type UserUXSettings,
-  type GameSessionRegisterResponse,
+  type GameSessionCompleteResponse,
 } from "@/lib/api/client";
+import { finalizeGameSession } from "@/lib/games/completion";
+import { normalizeGameResult } from "@/lib/games/result-contract";
 import { UX_SETTINGS_FALLBACK, fetchUXSettings, hapticCompletion, hapticPress, playSfx } from "@/lib/ux-feedback";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +56,7 @@ function buildDeck(): CardItem[] {
 }
 
 export default function MemoryGamePage() {
+  const [startedAt, setStartedAt] = useState(() => Date.now());
   const [deck, setDeck] = useState<CardItem[]>([]);
   const [flipped, setFlipped] = useState<string[]>([]);
   const [matched, setMatched] = useState<Set<string>>(new Set());
@@ -62,7 +64,7 @@ export default function MemoryGamePage() {
   const [busy, setBusy] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [title, setTitle] = useState("Mapa de Capitais");
-  const [reward, setReward] = useState<GameSessionRegisterResponse | null>(null);
+  const [reward, setReward] = useState<GameSessionCompleteResponse | null>(null);
   const [finished, setFinished] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uxSettings, setUxSettings] = useState<UserUXSettings>(UX_SETTINGS_FALLBACK);
@@ -154,10 +156,28 @@ export default function MemoryGamePage() {
           void finishGameEngineSession(sessionId).catch(() => undefined);
         }
         const baseScore = Math.max(55, 100 - moves * 4);
-        const response = await registerGameSession({
-          gameType: "WORDSEARCH",
-          score: baseScore,
-        });
+        const response = await finalizeGameSession(
+          normalizeGameResult(
+            "memory",
+            {
+              score: baseScore,
+              accuracy: 1,
+              correctAnswers: donePairs,
+              wrongAnswers: Math.max(0, moves - donePairs),
+              streak,
+              maxStreak: bestStreak,
+              durationSeconds: Math.max(1, Math.round((Date.now() - startedAt) / 1000)),
+              completed: true,
+              personalBestType: "score",
+              metadata: {
+                gameType: "MEMORY",
+                moves,
+                totalPairs,
+              },
+            },
+            { sessionId },
+          ),
+        );
         setReward(response);
       } catch {
         setReward(null);
@@ -170,9 +190,10 @@ export default function MemoryGamePage() {
         setSubmitting(false);
       }
     })();
-  }, [finished, matched.size, moves, sessionId, totalPairs, uxSettings]);
+  }, [bestStreak, donePairs, finished, matched.size, moves, sessionId, startedAt, streak, totalPairs, uxSettings]);
 
   function restart() {
+    setStartedAt(Date.now());
     setDeck(buildDeck());
     setFlipped([]);
     setMatched(new Set());
@@ -258,17 +279,22 @@ export default function MemoryGamePage() {
             <span>Movimentos: {moves} • Melhor sequência: {bestStreak}</span>
           </div>
           {finished ? (
-            <div className="space-y-2 rounded-xl border border-border bg-white/90 p-3 text-sm">
-              <p className="inline-flex items-center gap-2 font-semibold text-secondary">
-                <Sparkles className="h-4 w-4" />
-                Sessão concluída!
-              </p>
-              <p>XP aplicado: {reward?.dailyLimit.grantedXp ?? 0}</p>
-              <p>Moedas: {reward?.session.coinsEarned ?? 0}</p>
-              <Button className="w-full" onClick={restart}>
-                Jogar novamente
-              </Button>
-            </div>
+            <GameResultPanel
+              title="Sessão concluída!"
+              score={Math.max(55, 100 - moves * 4)}
+              correctAnswers={donePairs}
+              wrongAnswers={Math.max(0, moves - donePairs)}
+              streak={bestStreak}
+              durationSeconds={Math.max(1, Math.round((Date.now() - startedAt) / 1000))}
+              xpGained={reward?.dailyLimit.grantedXp ?? 0}
+              coinsGained={reward?.session.coinsEarned ?? 0}
+              isPersonalBest={reward?.isPersonalBest ?? false}
+              personalBestType={reward?.personalBestType ?? null}
+              onReplay={restart}
+              onBack={() => {
+                window.location.href = "/child/games";
+              }}
+            />
           ) : null}
         </CardContent>
       </Card>

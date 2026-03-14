@@ -11,6 +11,7 @@ type SubjectSelectorProps = {
   streak: number;
   gems: number;
   xp: number;
+  xpTotal?: number;
   selectedSubjectName: string;
   subjects: AprenderSubjectOption[];
   selectedSubjectId: number | null;
@@ -37,6 +38,7 @@ export function SubjectSelector({
   streak,
   gems,
   xp,
+  xpTotal = 0,
   selectedSubjectName,
   subjects,
   selectedSubjectId,
@@ -67,9 +69,14 @@ export function SubjectSelector({
 
   return (
     <div className="relative z-50">
-      <TopStatsBar streak={streak} gems={gems} xp={xp} className={className} />
-      <div className="mt-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex min-w-full items-center gap-2" role="tablist" aria-label="Selecionar matéria">
+      <div className="lg:hidden">
+        <TopStatsBar streak={streak} gems={gems} xp={xp} className={className} />
+      </div>
+      <div className="hidden lg:block">
+        <TopStatsBar streak={streak} gems={gems} xp={xp} xpTotal={xpTotal} variant="global" className={className} />
+      </div>
+      <div className="mt-2.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex min-w-full items-center gap-2.5" role="tablist" aria-label="Selecionar matéria">
           {subjects.length === 0 ? (
             <p className="px-2 text-[12px] font-medium text-slate-300/60">Sem matérias</p>
           ) : (
@@ -89,14 +96,14 @@ export function SubjectSelector({
                   tabIndex={activeSubject || (selectedIndex < 0 && index === 0) ? 0 : -1}
                   onClick={() => onSelectSubject(subject.id)}
                   onKeyDown={(event) => onChipKeyDown(event, index)}
-                  className={`axiora-chunky-btn axiora-chunky-chip axiora-hover-magic inline-flex h-10 shrink-0 items-center gap-2 px-3.5 text-[13px] font-semibold leading-none tracking-[-0.01em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF8A63] focus-visible:ring-offset-2 ${axioraMotionClasses.interactive} ${
+                  className={`axiora-hover-magic inline-flex h-[36px] shrink-0 items-center gap-2 rounded-full border px-4 text-[13px] font-semibold leading-none tracking-[-0.01em] shadow-[0_8px_14px_rgba(5,12,24,0.24),inset_0_1px_0_rgba(255,255,255,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF8A63] focus-visible:ring-offset-2 ${axioraMotionClasses.interactive} ${
                     activeSubject
-                      ? "axiora-chunky-chip--active text-white/90"
-                      : "text-slate-900/85"
+                      ? "border-[#9DD2F0]/28 bg-[linear-gradient(180deg,rgba(58,110,155,0.9),rgba(36,72,104,0.94))] text-white/95"
+                      : "border-[#8EC7E6]/20 bg-[linear-gradient(180deg,rgba(18,48,72,0.9),rgba(13,34,52,0.9))] text-slate-100/90 hover:text-white"
                   }`}
                 >
                   <span
-                    className={`inline-flex h-5 w-5 items-center justify-center rounded-[10px] bg-white/70 ${getSubjectTextColor(
+                    className={`inline-flex h-5 w-5 items-center justify-center rounded-[10px] bg-white/80 ${getSubjectTextColor(
                       normalizeSubjectName(subject.name),
                       activeSubject,
                     )}`}
@@ -109,9 +116,7 @@ export function SubjectSelector({
             })
           )}
         </div>
-        {subjects.length === 1 ? (
-          <p className="mt-1 px-1 text-[11px] font-medium text-slate-300/60">Sem outras matérias disponíveis para troca.</p>
-        ) : null}
+        {null}
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import { MultiplayerWaitingCard } from "@/components/games/tictactoe/multiplayer
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { ChildDesktopShell } from "@/components/child-desktop-shell";
 import { ConfettiBurst } from "@/components/confetti-burst";
+import { GameResultPanel } from "@/components/games/game-result-panel";
 import { LevelUpOverlay } from "@/components/level-up-overlay";
 import { useMultiplayerSession } from "@/hooks/use-multiplayer-session";
 import { PageShell } from "@/components/layout/page-shell";
@@ -22,10 +23,11 @@ import {
   getApiErrorMessage,
   joinMultiplayerSession,
   postMultiplayerMove,
-  registerGameSession,
-  type GameSessionRegisterResponse,
+  type GameSessionCompleteResponse,
   type MultiplayerCreateResponse,
 } from "@/lib/api/client";
+import { finalizeGameSession } from "@/lib/games/completion";
+import { normalizeGameResult } from "@/lib/games/result-contract";
 import { cn } from "@/lib/utils";
 
 type Mark = "X" | "O";
@@ -51,19 +53,6 @@ const XP_BY_RESULT: Record<MatchResult, number> = {
   DRAW: 20,
   LOSS: 5,
 };
-
-function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function currentWeekStartIso(): string {
-  const now = new Date();
-  const day = (now.getDay() + 6) % 7;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - day);
-  monday.setHours(0, 0, 0, 0);
-  return monday.toISOString().slice(0, 10);
-}
 
 function emptyBoard(): Board {
   return Array.from({ length: 9 }, () => null);
@@ -168,11 +157,14 @@ type RewardModalProps = {
   result: MatchResult;
   baseXp: number;
   bonusXp: number;
-  apiResult: GameSessionRegisterResponse | null;
+  apiResult: GameSessionCompleteResponse | null;
+  durationSeconds: number;
   onClose: () => void;
+  onReplay: () => void;
+  onBack: () => void;
 };
 
-function RewardModal({ open, result, baseXp, bonusXp, apiResult, onClose }: RewardModalProps) {
+function RewardModal({ open, result, baseXp, bonusXp, apiResult, durationSeconds, onClose, onReplay, onBack }: RewardModalProps) {
   if (!open) return null;
   const requestedXp = baseXp + bonusXp;
   const grantedXp = apiResult?.dailyLimit.grantedXp ?? requestedXp;
@@ -191,14 +183,19 @@ function RewardModal({ open, result, baseXp, bonusXp, apiResult, onClose }: Rewa
         <CardContent className="space-y-2 text-sm">
           <p>XP base: {baseXp}</p>
           {bonusXp > 0 ? <p>Bônus sequência: +{bonusXp}</p> : null}
-          <p>XP aplicado: {grantedXp}</p>
-          <p>Moedas recebidas: {coins}</p>
-          {apiResult && apiResult.dailyLimit.grantedXp < apiResult.dailyLimit.requestedXp ? (
-            <p className="text-xs text-accent-foreground">Limite diário aplicado neste jogo.</p>
-          ) : null}
-          <Button className="mt-2 w-full" onClick={onClose}>
-            Continuar
-          </Button>
+          <GameResultPanel
+            title={title}
+            score={(baseXp + bonusXp) * 10}
+            durationSeconds={durationSeconds}
+            xpGained={grantedXp}
+            coinsGained={coins}
+            isPersonalBest={apiResult?.isPersonalBest ?? false}
+            personalBestType={apiResult?.personalBestType ?? null}
+            onReplay={onReplay}
+            onBack={onBack}
+          />
+          {apiResult && apiResult.dailyLimit.grantedXp < apiResult.dailyLimit.requestedXp ? <p className="text-xs text-accent-foreground">Limite diário aplicado neste jogo.</p> : null}
+          <Button className="mt-2 w-full" onClick={onClose}>Continuar</Button>
         </CardContent>
       </Card>
     </div>
@@ -206,6 +203,8 @@ function RewardModal({ open, result, baseXp, bonusXp, apiResult, onClose }: Rewa
 }
 
 export default function TicTacToePage() {
+  const [startedAt, setStartedAt] = useState(() => Date.now());
+  const [soloSessionId, setSoloSessionId] = useState(() => `ttt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
   const [childId, setChildId] = useState<number | null>(null);
   const [playMode, setPlayMode] = useState<PlayMode>("SOLO");
   const [difficulty, setDifficulty] = useState<Difficulty>("MEDIUM");
@@ -219,7 +218,7 @@ export default function TicTacToePage() {
   const [rewardOpen, setRewardOpen] = useState(false);
   const [baseXp, setBaseXp] = useState(0);
   const [bonusXp, setBonusXp] = useState(0);
-  const [lastSession, setLastSession] = useState<GameSessionRegisterResponse | null>(null);
+  const [lastSession, setLastSession] = useState<GameSessionCompleteResponse | null>(null);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [levelUpLevel, setLevelUpLevel] = useState<number | null>(null);
   const [levelUpReward, setLevelUpReward] = useState<string | null>(null);
@@ -256,6 +255,8 @@ export default function TicTacToePage() {
     const joinToken = params.get("joinToken")?.trim();
     const sessionId = params.get("session")?.trim();
     const mode = params.get("mode")?.trim();
+    const fromHub = params.get("fromHub")?.trim() === "1";
+    const soloDifficulty = params.get("soloDifficulty")?.trim().toUpperCase();
     if (mode === "guest" || Boolean(joinToken)) {
       setIsGuestFromQuery(true);
     }
@@ -273,10 +274,19 @@ export default function TicTacToePage() {
       setIsGuestMode(true);
       return;
     }
-    if (!joinCode) return;
-    setFlowStep("JOIN");
-    setJoinCodeInput(joinCode);
-    setPlayMode("MULTI_GUEST");
+    if (soloDifficulty === "EASY" || soloDifficulty === "MEDIUM" || soloDifficulty === "HARD") {
+      setDifficulty(soloDifficulty);
+    }
+    if (joinCode) {
+      setFlowStep("JOIN");
+      setJoinCodeInput(joinCode);
+      setPlayMode("MULTI_GUEST");
+      return;
+    }
+    if (fromHub) {
+      setPlayMode("SOLO");
+      setFlowStep("PLAY");
+    }
   }, []);
 
   const statusText = useMemo(() => {
@@ -334,7 +344,23 @@ export default function TicTacToePage() {
     }
     void (async () => {
       try {
-        const response = await registerGameSession({ gameType: "TICTACTOE", score: base * 10 });
+        const response = await finalizeGameSession(
+          normalizeGameResult(
+            "tictactoe",
+            {
+              score: base * 10,
+              completed: true,
+              personalBestType: "score",
+              metadata: {
+                gameType: "TICTACTOE",
+                mode: "MULTI",
+                winner: multiplayerState.winner,
+              },
+            },
+            { sessionId: multiplayerState.sessionId },
+          ),
+          { childId },
+        );
         setLastSession(response);
       } catch {
         setLastSession(null);
@@ -342,7 +368,7 @@ export default function TicTacToePage() {
         setRewardOpen(true);
       }
     })();
-  }, [multiplayerState, playMode, resultRewardKey]);
+  }, [childId, multiplayerState, playMode, resultRewardKey]);
 
   const startMultiplayerHost = async () => {
     setFlowError(null);
@@ -384,30 +410,6 @@ export default function TicTacToePage() {
     localStorage.setItem(`axiora_game_level_${childId}`, String(next));
   };
 
-  const persistEarnedXp = (earnedXp: number) => {
-    if (childId === null || earnedXp <= 0) return;
-    const dailyKey = `axiora_game_daily_xp_${childId}_${todayIsoDate()}`;
-    const currentDaily = Number(localStorage.getItem(dailyKey) ?? "0");
-    const safeDaily = Number.isFinite(currentDaily) ? Math.max(0, currentDaily) : 0;
-    localStorage.setItem(dailyKey, String(safeDaily + earnedXp));
-
-    const weeklyKey = `axiora_game_weekly_xp_${childId}`;
-    const weekStart = currentWeekStartIso();
-    const rawWeekly = localStorage.getItem(weeklyKey);
-    let weeklyXp = 0;
-    if (rawWeekly) {
-      try {
-        const parsed = JSON.parse(rawWeekly) as { weekStart: string; xp: number };
-        if (parsed.weekStart === weekStart && Number.isFinite(parsed.xp)) {
-          weeklyXp = Math.max(0, parsed.xp);
-        }
-      } catch {
-        weeklyXp = 0;
-      }
-    }
-    localStorage.setItem(weeklyKey, JSON.stringify({ weekStart, xp: weeklyXp + earnedXp }));
-  };
-
   const getStoredLevel = (): number => {
     if (childId === null) return 0;
     const raw = localStorage.getItem(`axiora_game_level_${childId}`);
@@ -435,12 +437,26 @@ export default function TicTacToePage() {
 
     try {
       const requestedXp = base + bonus;
-      const response = await registerGameSession({
-        gameType: "TICTACTOE",
-        score: requestedXp * 10,
-      });
+      const response = await finalizeGameSession(
+        normalizeGameResult(
+          "tictactoe",
+          {
+            score: requestedXp * 10,
+            completed: true,
+            personalBestType: "score",
+            metadata: {
+              gameType: "TICTACTOE",
+              mode: "SOLO",
+              difficulty,
+              result,
+              winStreak: nextStreak,
+            },
+          },
+          { sessionId: soloSessionId },
+        ),
+        { childId },
+      );
       setLastSession(response);
-      persistEarnedXp(response.dailyLimit.grantedXp);
       const previousLevel = getStoredLevel();
       if (previousLevel > 0 && response.profile.level > previousLevel) {
         setLevelUpLevel(response.profile.level);
@@ -541,6 +557,8 @@ export default function TicTacToePage() {
       setFlowError(null);
     }
     setBoard(emptyBoard());
+    setStartedAt(Date.now());
+    setSoloSessionId(`ttt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
     setPlayerTurn(true);
     setAiThinking(false);
     setMatchResult(null);
@@ -568,7 +586,12 @@ export default function TicTacToePage() {
         baseXp={baseXp}
         bonusXp={bonusXp}
         apiResult={lastSession}
+        durationSeconds={Math.max(1, Math.round((Date.now() - startedAt) / 1000))}
         onClose={() => setRewardOpen(false)}
+        onReplay={startNewMatch}
+        onBack={() => {
+          window.location.href = "/child/games";
+        }}
       />
 
       <MultiplayerLaunchModal

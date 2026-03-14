@@ -1,5 +1,7 @@
 "use client";
 
+import { GameResultPanel } from "@/components/games/game-result-panel";
+
 import type { MatchAnalytics } from "./useTugOfWarEngine";
 
 type VictoryModalProps = {
@@ -8,11 +10,37 @@ type VictoryModalProps = {
   p1Streak: number;
   p2Streak: number;
   matchAnalytics: MatchAnalytics;
+  score?: number | null;
+  correctAnswers?: number | null;
+  wrongAnswers?: number | null;
+  streak?: number | null;
+  durationSeconds?: number | null;
+  xpGained?: number | null;
+  coinsGained?: number | null;
+  isPersonalBest?: boolean;
+  personalBestType?: string | null;
   onPlayAgain: () => void;
   onBackToGames: () => void;
 };
 
-export function VictoryModal({ open, winner, p1Streak, p2Streak, matchAnalytics, onPlayAgain, onBackToGames }: VictoryModalProps) {
+export function VictoryModal({
+  open,
+  winner,
+  p1Streak,
+  p2Streak,
+  matchAnalytics,
+  score,
+  correctAnswers,
+  wrongAnswers,
+  streak,
+  durationSeconds,
+  xpGained,
+  coinsGained,
+  isPersonalBest,
+  personalBestType,
+  onPlayAgain,
+  onBackToGames,
+}: VictoryModalProps) {
   if (!open || !winner) return null;
 
   const winnerLabel = winner === "red" ? "Vermelho" : "Azul";
@@ -41,21 +69,23 @@ export function VictoryModal({ open, winner, p1Streak, p2Streak, matchAnalytics,
           <p>Winner: {winnerLabel}</p>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={onPlayAgain}
-            className="axiora-chunky-btn axiora-chunky-btn--secondary w-full text-sm text-white"
-          >
-            Play again
-          </button>
-          <button
-            type="button"
-            onClick={onBackToGames}
-            className="axiora-chunky-btn axiora-chunky-btn--outline w-full text-sm text-[#334155]"
-          >
-            Back to games
-          </button>
+        <div className="mt-4">
+          <GameResultPanel
+            title={`${winnerLabel} venceu!`}
+            score={score}
+            correctAnswers={correctAnswers}
+            wrongAnswers={wrongAnswers}
+            streak={streak}
+            durationSeconds={durationSeconds}
+            xpGained={xpGained}
+            coinsGained={coinsGained}
+            isPersonalBest={isPersonalBest}
+            personalBestType={personalBestType}
+            onReplay={onPlayAgain}
+            onBack={onBackToGames}
+            replayLabel="Play again"
+            backLabel="Back to games"
+          />
         </div>
       </div>
     </div>

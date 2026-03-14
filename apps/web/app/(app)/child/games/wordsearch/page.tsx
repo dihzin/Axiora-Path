@@ -7,11 +7,14 @@ import { ArrowLeft, CheckCircle2, Search, Sparkles } from "lucide-react";
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { ChildDesktopShell } from "@/components/child-desktop-shell";
 import { ConfettiBurst } from "@/components/confetti-burst";
+import { GameResultPanel } from "@/components/games/game-result-panel";
 import { LevelUpOverlay } from "@/components/level-up-overlay";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { registerGameSession, type GameSessionRegisterResponse } from "@/lib/api/client";
+import type { GameSessionCompleteResponse } from "@/lib/api/client";
+import { finalizeGameSession } from "@/lib/games/completion";
+import { normalizeGameResult } from "@/lib/games/result-contract";
 import { cn } from "@/lib/utils";
 
 type ThemeId = "FINANCAS" | "EMOCOES" | "HABITOS" | "VALORES";
@@ -142,29 +145,33 @@ function generateBoard(theme: ThemeId): { grid: string[][]; placements: Placemen
   return { grid, placements };
 }
 
-function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function currentWeekStartIso(): string {
-  const now = new Date();
-  const day = (now.getDay() + 6) % 7;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - day);
-  monday.setHours(0, 0, 0, 0);
-  return monday.toISOString().slice(0, 10);
-}
-
 type RewardModalProps = {
   open: boolean;
   wordsFound: number;
   baseXp: number;
   bonusXp: number;
-  apiResult: GameSessionRegisterResponse | null;
+  apiResult: GameSessionCompleteResponse | null;
+  durationSeconds: number;
+  isPersonalBest: boolean;
+  personalBestType: string | null;
+  onReplay: () => void;
+  onBack: () => void;
   onClose: () => void;
 };
 
-function RewardModal({ open, wordsFound, baseXp, bonusXp, apiResult, onClose }: RewardModalProps) {
+function RewardModal({
+  open,
+  wordsFound,
+  baseXp,
+  bonusXp,
+  apiResult,
+  durationSeconds,
+  isPersonalBest,
+  personalBestType,
+  onReplay,
+  onBack,
+  onClose,
+}: RewardModalProps) {
   if (!open) return null;
   const requestedXp = baseXp + bonusXp;
   const grantedXp = apiResult?.dailyLimit.grantedXp ?? requestedXp;
@@ -183,8 +190,19 @@ function RewardModal({ open, wordsFound, baseXp, bonusXp, apiResult, onClose }: 
           <p>Palavras encontradas: {wordsFound}</p>
           <p>XP por palavras: {baseXp}</p>
           <p>Bônus conclusão: +{bonusXp}</p>
-          <p>XP aplicado: {grantedXp}</p>
-          <p>Moedas recebidas: {coins}</p>
+          <GameResultPanel
+            title="Tabuleiro completo"
+            score={wordsFound * WORD_XP + COMPLETE_BONUS_XP}
+            correctAnswers={wordsFound}
+            wrongAnswers={null}
+            durationSeconds={durationSeconds}
+            xpGained={grantedXp}
+            coinsGained={coins}
+            isPersonalBest={isPersonalBest}
+            personalBestType={personalBestType}
+            onReplay={onReplay}
+            onBack={onBack}
+          />
           <Button className="mt-2 w-full" onClick={onClose}>
             Continuar
           </Button>
@@ -195,6 +213,7 @@ function RewardModal({ open, wordsFound, baseXp, bonusXp, apiResult, onClose }: 
 }
 
 export default function WordSearchPage() {
+  const [startedAt, setStartedAt] = useState(() => Date.now());
   const [childId, setChildId] = useState<number | null>(null);
   const [theme, setTheme] = useState<ThemeId>("FINANCAS");
   const [grid, setGrid] = useState<string[][]>([]);
@@ -205,7 +224,7 @@ export default function WordSearchPage() {
   const [dragCurrent, setDragCurrent] = useState<Pos | null>(null);
   const [selectedPath, setSelectedPath] = useState<Pos[]>([]);
   const [tapStart, setTapStart] = useState<Pos | null>(null);
-  const [sessionResult, setSessionResult] = useState<GameSessionRegisterResponse | null>(null);
+  const [sessionResult, setSessionResult] = useState<GameSessionCompleteResponse | null>(null);
   const [rewardOpen, setRewardOpen] = useState(false);
   const [levelUpLevel, setLevelUpLevel] = useState<number | null>(null);
   const [levelUpReward, setLevelUpReward] = useState<string | null>(null);
@@ -231,6 +250,7 @@ export default function WordSearchPage() {
     setTapStart(null);
     setSessionResult(null);
     setRewardOpen(false);
+    setStartedAt(Date.now());
   };
 
   useEffect(() => {
@@ -252,39 +272,27 @@ export default function WordSearchPage() {
     return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
   }, [childId]);
 
-  const persistEarnedXp = useCallback((earnedXp: number) => {
-    if (childId === null || earnedXp <= 0) return;
-    const dailyKey = `axiora_game_daily_xp_${childId}_${todayIsoDate()}`;
-    const currentDaily = Number(localStorage.getItem(dailyKey) ?? "0");
-    const safeDaily = Number.isFinite(currentDaily) ? Math.max(0, currentDaily) : 0;
-    localStorage.setItem(dailyKey, String(safeDaily + earnedXp));
-
-    const weeklyKey = `axiora_game_weekly_xp_${childId}`;
-    const weekStart = currentWeekStartIso();
-    const rawWeekly = localStorage.getItem(weeklyKey);
-    let weeklyXp = 0;
-    if (rawWeekly) {
-      try {
-        const parsed = JSON.parse(rawWeekly) as { weekStart: string; xp: number };
-        if (parsed.weekStart === weekStart && Number.isFinite(parsed.xp)) {
-          weeklyXp = Math.max(0, parsed.xp);
-        }
-      } catch {
-        weeklyXp = 0;
-      }
-    }
-    localStorage.setItem(weeklyKey, JSON.stringify({ weekStart, xp: weeklyXp + earnedXp }));
-  }, [childId]);
-
   const registerSession = useCallback(async () => {
     const totalXp = baseXp + COMPLETE_BONUS_XP;
     try {
-      const response = await registerGameSession({
-        gameType: "WORDSEARCH",
-        score: totalXp * 10,
-      });
+      const response = await finalizeGameSession(
+        normalizeGameResult("wordsearch", {
+          score: totalXp * 10,
+          correctAnswers: foundWords.size,
+          wrongAnswers: null,
+          durationSeconds: Math.max(1, Math.round((Date.now() - startedAt) / 1000)),
+          completed: true,
+          personalBestType: "score",
+          metadata: {
+            gameType: "WORDSEARCH",
+            theme,
+            wordsFound: foundWords.size,
+            totalWords: placements.length,
+          },
+        }),
+        { childId },
+      );
       setSessionResult(response);
-      persistEarnedXp(response.dailyLimit.grantedXp);
       const previousLevel = getStoredLevel();
       if (previousLevel > 0 && response.profile.level > previousLevel) {
         setLevelUpLevel(response.profile.level);
@@ -297,7 +305,7 @@ export default function WordSearchPage() {
       setRewardOpen(true);
       setConfettiTrigger((prev) => prev + 1);
     }
-  }, [baseXp, getStoredLevel, persistEarnedXp, persistLevel]);
+  }, [baseXp, childId, foundWords.size, getStoredLevel, persistLevel, placements.length, startedAt, theme]);
 
   useEffect(() => {
     if (!completed || rewardOpen) return;
@@ -379,6 +387,13 @@ export default function WordSearchPage() {
         baseXp={baseXp}
         bonusXp={COMPLETE_BONUS_XP}
         apiResult={sessionResult}
+        durationSeconds={Math.max(1, Math.round((Date.now() - startedAt) / 1000))}
+        isPersonalBest={sessionResult?.isPersonalBest ?? false}
+        personalBestType={sessionResult?.personalBestType ?? null}
+        onReplay={() => createBoard(theme)}
+        onBack={() => {
+          window.location.href = "/child/games";
+        }}
         onClose={() => setRewardOpen(false)}
       />
 

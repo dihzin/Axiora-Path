@@ -1,5 +1,6 @@
 "use client";
 
+import { Medal, Sparkles, Target } from "lucide-react";
 import type { LearningInsightsResponse, MissionProgress, MissionsCurrentResponse } from "@/lib/api/client";
 type DesktopRightRailProps = {
   insights: LearningInsightsResponse | null;
@@ -22,14 +23,17 @@ export function DesktopRightRail({
 
   return (
     <div className="space-y-3">
-      <div className="relative overflow-hidden rounded-2xl border border-white/14 bg-[linear-gradient(160deg,rgba(24,49,43,0.88)_0%,rgba(28,59,52,0.84)_55%,rgba(19,39,35,0.92)_100%)] p-3.5 shadow-[0_10px_28px_rgba(7,20,17,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
-        <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/5 via-white/[0.03] to-transparent" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[radial-gradient(70%_90%_at_50%_0%,rgba(255,176,122,0.16),transparent_65%)]" />
-        <p className="relative z-10 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">Progresso</p>
-        <p className="relative z-10 mt-1 text-[20px] font-semibold leading-[1.2] tracking-tight text-white">
+      <div className="relative overflow-hidden rounded-2xl border border-[#E8DCC8]/80 bg-[linear-gradient(160deg,rgba(252,248,239,0.9)_0%,rgba(247,241,231,0.88)_58%,rgba(241,234,222,0.9)_100%)] p-3.5 shadow-[0_10px_22px_rgba(45,35,20,0.16)] backdrop-blur-xl">
+        <div className="relative z-10 flex items-center gap-2">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+            <Target className="h-4 w-4" />
+          </span>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5D6B64]">Progresso</p>
+        </div>
+        <p className="relative z-10 mt-1 text-[20px] font-semibold leading-[1.2] tracking-tight text-[#1F2A33]">
           {insights ? `${insights.weeklyXpEarned} XP na semana` : insightsLoading ? "Carregando progresso..." : "Você está indo bem!"}
         </p>
-        <p className="relative z-10 mt-1 text-[13px] font-medium leading-5 text-white/75">
+        <p className="relative z-10 mt-1 text-[13px] font-medium leading-5 text-[#465867]">
           {insights
             ? `${insights.dueReviewsCount} revisões pendentes`
             : insightsLoading
@@ -38,12 +42,15 @@ export function DesktopRightRail({
         </p>
       </div>
 
-      <div className="relative overflow-hidden rounded-2xl border border-white/14 bg-[linear-gradient(160deg,rgba(24,49,43,0.88)_0%,rgba(28,59,52,0.84)_55%,rgba(19,39,35,0.92)_100%)] p-3.5 shadow-[0_10px_28px_rgba(7,20,17,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
-        <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/5 via-white/[0.03] to-transparent" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[radial-gradient(70%_90%_at_50%_0%,rgba(241,197,107,0.15),transparent_65%)]" />
+      <div className="relative overflow-hidden rounded-2xl border border-[#E8DCC8]/80 bg-[linear-gradient(160deg,rgba(252,248,239,0.9)_0%,rgba(247,241,231,0.88)_58%,rgba(241,234,222,0.9)_100%)] p-3.5 shadow-[0_10px_22px_rgba(45,35,20,0.16)] backdrop-blur-xl">
         <div className="relative z-10 flex items-center justify-between">
-          <p className="text-[17px] font-semibold leading-none tracking-tight text-white">Missões do dia</p>
-          <span className="rounded-full border border-[#F1C56B]/30 bg-[#FF9A48]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#FFE7D1]">Top 3</span>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+              <Medal className="h-4 w-4" />
+            </span>
+            <p className="text-[17px] font-semibold leading-none tracking-tight text-[#1F2A33]">Missões do dia</p>
+          </div>
+          <span className="rounded-full border border-amber-300/45 bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-800">Top 3</span>
         </div>
         {desktopMissions.length > 0 ? (
           <div className="relative z-10 mt-2.5 space-y-2">
@@ -57,7 +64,7 @@ export function DesktopRightRail({
             ))}
           </div>
         ) : (
-          <p className="relative z-10 mt-3 rounded-xl border border-white/20 bg-[rgba(15,23,42,0.65)] px-3 py-2 text-sm font-semibold text-white">
+          <p className="relative z-10 mt-3 rounded-xl border border-[#E2D4BD]/80 bg-white/70 px-3 py-2 text-sm font-semibold text-[#364756]">
             {missionsLoading ? "Carregando missões..." : "Sem missões disponíveis no momento."}
           </p>
         )}
@@ -72,18 +79,22 @@ function DesktopMission({ mission, onClaim, claiming = false }: { mission: Missi
   const percent = Math.max(0, Math.min(100, Number.isFinite(mission.progressPercent) ? mission.progressPercent : (safeValue / safeTotal) * 100));
   const claimable = mission.completed && !mission.rewardGranted;
   return (
-    <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-2.5 shadow-[inset_0_0_0_1px_rgba(241,197,107,0.06)]">
-      <div className="flex items-center justify-between text-[13px] font-semibold text-white/90">
+    <div className="space-y-1.5 rounded-xl border border-[#E2D4BD]/78 bg-white/66 p-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28)]">
+      <div className="flex items-center justify-between text-[13px] font-semibold text-[#243649]">
         <span className="truncate">{mission.title}</span>
-        <span className="shrink-0 rounded-full border border-[#F1C56B]/35 bg-[#FF9A48]/10 px-2 py-0.5 text-[10px] font-semibold text-[#FFE7D1]">
+        <span className="shrink-0 rounded-full border border-amber-300/45 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
           {safeValue}/{safeTotal}
         </span>
       </div>
-      <div className="h-1.5 rounded-full border border-white/15 bg-white/10">
+      <div className="h-1.5 rounded-full border border-[#DCCCB4]/80 bg-[#F3EBDD]">
         <div
           className={`h-full rounded-full transition-transform transition-shadow transition-opacity duration-[180ms] ${mission.completed ? "bg-gradient-to-r from-emerald-300 to-emerald-500" : "bg-gradient-to-r from-[#F1C56B] via-[#FF9A48] to-[#D96C2A]"}`}
           style={{ width: `${percent}%` }}
         />
+      </div>
+      <div className="flex items-center gap-1.5 text-[11px] text-[#5B4C79]">
+        <Sparkles className="h-3.5 w-3.5 text-fuchsia-500" />
+        <span>{mission.completed ? "Meta concluída hoje" : "Continue para concluir esta meta"}</span>
       </div>
       {claimable ? (
         <button

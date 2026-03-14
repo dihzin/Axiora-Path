@@ -8,7 +8,6 @@ import AxioraCosmicDust, { type AxioraCosmicDustHandle } from "./AxioraCosmicDus
 import AxioraStarField, { type AxioraStarFieldHandle } from "./AxioraStarField";
 import { renderNode } from "./renderNode";
 import "./styles/constellation.css";
-import TrailConstellation from "./TrailConstellation";
 
 export type NodeStatus = "done" | "current" | "locked";
 
@@ -38,7 +37,7 @@ type ProgressionMapProps = {
 };
 
 const NODE_GAP = 156;
-const START_Y = 210;
+const START_Y = 230;
 const NODE_SIZE = 56;
 const NODE_RADIUS = NODE_SIZE / 2;
 const SAFE_TOP = 96;
@@ -313,6 +312,14 @@ export default function ProgressionMap({
   const isMobile = trackWidth < 768;
   const compactMobile = trackWidth < 480;
   const quality: "low" | "high" = isMobile ? "low" : "high";
+  const nodeGap = useMemo(() => {
+    if (nodes.length <= 1) return NODE_GAP;
+    if (!isMobile) {
+      const verticalAvailable = Math.max(440, view.h - 220);
+      return Math.max(96, Math.min(NODE_GAP, Math.floor(verticalAvailable / (nodes.length - 1))));
+    }
+    return NODE_GAP;
+  }, [isMobile, nodes.length, view.h]);
   const desktopHD = quality === "high";
   const desktopPresetConfig = desktopHD
     ? DESKTOP_GRAPHICS_PRESET === "ultra"
@@ -330,13 +337,13 @@ export default function ProgressionMap({
   const computedPoints = useMemo<PersistedMapData>(() => {
     if (!nodes || nodes.length === 0) return EMPTY_MAP_DATA;
 
-    const estimatedWorldHeight = Math.max(START_Y + Math.max(nodes.length - 1, 0) * NODE_GAP + SAFE_BOTTOM + NODE_RADIUS, 780);
+    const estimatedWorldHeight = Math.max(START_Y + Math.max(nodes.length - 1, 0) * nodeGap + SAFE_BOTTOM + NODE_RADIUS, 780);
     const rawPoints = nodes.map((_, gi) => {
       let x = trackCenter + PATH_PATTERN[gi % PATH_PATTERN.length] * amplitude;
       x = Math.max(SAFE_MARGIN, x);
       x = Math.min(trackWidth - SAFE_MARGIN, x);
 
-      let y = START_Y + gi * NODE_GAP;
+      let y = START_Y + gi * nodeGap;
       y = Math.max(SAFE_TOP, y);
       y = Math.min(estimatedWorldHeight - SAFE_BOTTOM, y);
 
@@ -362,7 +369,8 @@ export default function ProgressionMap({
 
     minX -= SAFE_PAD.left;
     maxX += SAFE_PAD.right;
-    minY -= SAFE_PAD.top + BADGE_ALLOW;
+    const desktopTopInset = isMobile ? 0 : 56;
+    minY -= SAFE_PAD.top + BADGE_ALLOW + desktopTopInset;
     maxY += SAFE_PAD.bottom + 18;
 
     const offsetX = -minX;
@@ -379,7 +387,8 @@ export default function ProgressionMap({
       x: point.x - minPointX,
       y: point.y - minPointY,
     }));
-    const worldHeight = Math.max(1, maxY - minY + WORLD_END_PADDING);
+    const worldEndPadding = isMobile ? WORLD_END_PADDING : 120;
+    const worldHeight = Math.max(1, maxY - minY + worldEndPadding);
 
     const activeIndex = (() => {
       if (!nodes.length) return -1;
@@ -403,7 +412,7 @@ export default function ProgressionMap({
       curvedPath,
       progressPath,
     };
-  }, [activeNodeId, amplitude, nodes, trackCenter, trackWidth]);
+  }, [activeNodeId, amplitude, isMobile, nodeGap, nodes, trackCenter, trackWidth]);
 
   useEffect(() => {
     if (computedPoints.points.length > 0) {
@@ -424,17 +433,20 @@ export default function ProgressionMap({
     if (!points.length || view.h <= 0 || worldHeight <= 0) {
       return { clampedCamera: 0, minCamera: 0, maxCamera: 0 };
     }
+    const minCamera = 0;
+    const maxCamera = Math.max(0, worldHeight - view.h);
+    if (!isMobile && points.length <= 6) {
+      return { clampedCamera: 0, minCamera, maxCamera };
+    }
     const safeIndex = clamp(activeIndex, 0, points.length - 1);
     const activeNodeY = points[safeIndex]?.y ?? points[0]?.y ?? 0;
     const targetY = activeNodeY - view.h / 2;
-    const minCamera = 0;
-    const maxCamera = Math.max(0, worldHeight - view.h);
     return {
       clampedCamera: Math.max(minCamera, Math.min(maxCamera, targetY)),
       minCamera,
       maxCamera,
     };
-  }, [activeIndex, points, view.h, worldHeight]);
+  }, [activeIndex, isMobile, points, view.h, worldHeight]);
 
   const minNodeX = points.length ? Math.min(...points.map((point) => point.x)) : 0;
   const maxNodeX = points.length ? Math.max(...points.map((point) => point.x)) : 0;
@@ -443,7 +455,7 @@ export default function ProgressionMap({
   const worldOffsetX = viewportCenterX - nodesCenterX;
   const opticalOffset = -view.w * 0.01;
   const finalOffsetX = worldOffsetX + opticalOffset;
-  const verticalOpticalOffset = view.h * 0.12;
+  const verticalOpticalOffset = isMobile ? view.h * 0.12 : 36;
 
   useEffect(() => {
     targetCameraRef.current = cameraRange.clampedCamera;
@@ -891,7 +903,7 @@ export default function ProgressionMap({
   return (
     <div
       ref={containerRef}
-      className={cn("axiora-parallax cosmic-breathe relative w-full", className)}
+      className={cn("relative w-full", className)}
       style={{
         position: "relative",
         width: "100%",
@@ -910,80 +922,27 @@ export default function ProgressionMap({
             overflow: "hidden",
           }}
         >
-          <div ref={nebulaRef} className={cn("nebula-layer pointer-events-none absolute inset-0 z-[0]", quality === "high" ? "nebula-high" : "nebula-low")} />
+          <div ref={nebulaRef} className="hidden" />
 
-          <div
-            className="pointer-events-none absolute inset-0 z-[0]"
-            style={{
-              background:
-                "linear-gradient(90deg, rgba(17,24,39,0.28) 0%, rgba(17,24,39,0.06) 16%, rgba(17,24,39,0) 28%, rgba(17,24,39,0) 72%, rgba(17,24,39,0.06) 84%, rgba(17,24,39,0.24) 100%)",
-            }}
-            aria-hidden
-          />
+          <div className="hidden" aria-hidden />
 
-          <div
-            className="pointer-events-none absolute inset-0 z-[0] opacity-[0.9]"
-            style={{
-              background: `
-                radial-gradient(circle at 18% 24%, rgba(56,189,248,0.18), transparent 18%),
-                radial-gradient(circle at 78% 30%, rgba(34,211,238,0.16), transparent 16%),
-                radial-gradient(circle at 52% 68%, rgba(96,165,250,0.14), transparent 20%),
-                radial-gradient(circle at 30% 78%, rgba(59,130,246,0.12), transparent 18%),
-                radial-gradient(circle at 68% 62%, rgba(251,191,36,0.10), transparent 14%),
-                radial-gradient(circle at 44% 18%, rgba(192,132,252,0.10), transparent 15%)
-              `,
-            }}
-            aria-hidden
-          />
+          <div className="hidden" aria-hidden />
 
-          <div
-            className="pointer-events-none absolute inset-0 z-[0] opacity-[0.95]"
-            style={{
-              background: `
-                radial-gradient(ellipse at 50% 44%, rgba(96,165,250,0.20) 0%, rgba(37,99,235,0.11) 22%, rgba(2,6,23,0) 58%),
-                radial-gradient(ellipse at 50% 62%, rgba(34,211,238,0.15) 0%, rgba(14,165,233,0.06) 24%, rgba(2,6,23,0) 62%),
-                radial-gradient(ellipse at 66% 48%, rgba(167,139,250,0.10) 0%, rgba(167,139,250,0.04) 18%, rgba(2,6,23,0) 52%),
-                radial-gradient(ellipse at 50% 52%, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 48%)
-              `,
-            }}
-            aria-hidden
-          />
+          <div className="hidden" aria-hidden />
 
-          <div
-            className="pointer-events-none absolute inset-0 z-[0] opacity-[0.9]"
-            style={{
-              background: `
-                linear-gradient(115deg, rgba(250,204,21,0.08) 0%, rgba(250,204,21,0) 18%),
-                linear-gradient(245deg, rgba(192,132,252,0.10) 0%, rgba(192,132,252,0) 20%),
-                linear-gradient(35deg, rgba(45,212,191,0.06) 0%, rgba(45,212,191,0) 16%),
-                linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0))
-              `,
-            }}
-            aria-hidden
-          />
+          <div className="hidden" aria-hidden />
 
-          <div
-            className="pointer-events-none absolute inset-0 z-[0]"
-            style={{
-              background: "linear-gradient(180deg, rgba(3,7,18,0.08), rgba(3,7,18,0) 18%, rgba(3,7,18,0) 78%, rgba(3,7,18,0.12))",
-            }}
-            aria-hidden
-          />
+          <div className="hidden" aria-hidden />
 
-          <div ref={starsLayerRef} className="pointer-events-none absolute inset-0 z-[1] will-change-transform" aria-hidden>
+          <div ref={starsLayerRef} className="hidden" aria-hidden>
             <AxioraStarField ref={starFieldRef} width={view.w} height={view.h} cameraY={cameraYRef.current} quality={quality} densityScale={starsDensityScale} />
           </div>
 
-          <div ref={dustLayerRef} className="pointer-events-none absolute inset-0 z-[2] will-change-transform" aria-hidden>
+          <div ref={dustLayerRef} className="hidden" aria-hidden>
             <AxioraCosmicDust ref={cosmicDustRef} width={view.w} height={view.h} cameraY={cameraYRef.current} quality={quality} densityScale={dustDensityScale} />
           </div>
 
-          <div
-            ref={lensRef}
-            className={cn("pointer-events-none absolute inset-0 z-[3] will-change-transform", quality === "high" ? "opacity-[0.35]" : "opacity-[0.22]")}
-            style={{ mixBlendMode: "screen", background: "radial-gradient(closest-side, rgba(125,211,252,0.10), transparent 60%)" }}
-            aria-hidden
-          />
+          <div ref={lensRef} className="hidden" aria-hidden />
 
           <div
             ref={worldRef}
@@ -998,9 +957,9 @@ export default function ProgressionMap({
               transform: `translate3d(${Math.round(finalOffsetX)}px, ${Math.round(-cameraYRef.current + verticalOpticalOffset)}px, 0)`,
             }}
           >
-            <TrailConstellation isCurrent={activeIndex >= 0} />
+            {null}
 
-            <div className="pointer-events-none absolute left-1/2 top-0 z-[4] -translate-x-1/2" style={{ width: `${trackWidth}px`, height: `${worldHeight}px` }} aria-hidden>
+            <div className="hidden" style={{ width: `${trackWidth}px`, height: `${worldHeight}px` }} aria-hidden>
               {renderNodes.map((node, index) => {
                 const point = points[index];
                 if (!point) return null;
@@ -1045,85 +1004,32 @@ export default function ProgressionMap({
                 style={{ overflow: "visible" }}
                 aria-hidden
               >
-                <defs>
-                  <linearGradient id="energyGradient" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#38bdf8" stopOpacity="0" />
-                    <stop offset="30%" stopColor="#60a5fa" />
-                    <stop offset="52%" stopColor="#22d3ee" />
-                    <stop offset="74%" stopColor="#a78bfa" />
-                    <stop offset="100%" stopColor="#38bdf8" stopOpacity="0" />
-                  </linearGradient>
-                  <linearGradient id="trailEnergy" x1="0%" y1="0%" x2="100%" y2="0%" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#93c5fd" />
-                    <stop offset="30%" stopColor="#67e8f9" />
-                    <stop offset="58%" stopColor="#38bdf8" />
-                    <stop offset="78%" stopColor="#a78bfa" />
-                    <stop offset="100%" stopColor="#fde68a" />
-                  </linearGradient>
-                  <linearGradient id="trailCore" x1="0%" y1="0%" x2="100%" y2="0%" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="rgba(255,255,255,0)" />
-                    <stop offset="22%" stopColor="rgba(255,255,255,0.65)" />
-                    <stop offset="52%" stopColor="rgba(255,255,255,0.9)" />
-                    <stop offset="78%" stopColor="rgba(255,255,255,0.58)" />
-                    <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-                  </linearGradient>
-                </defs>
+                <defs />
 
                 <path
                   ref={pathRef}
                   d={curvedPath}
-                  stroke={isMobile ? "rgba(255,255,255,0.34)" : "rgba(255,255,255,0.20)"}
-                  strokeWidth={isMobile ? 6 : 3}
+                  stroke={isMobile ? "rgba(255,255,255,0.62)" : "rgba(255,255,255,0.5)"}
+                  strokeWidth={isMobile ? 5 : 3}
                   fill="none"
                   strokeLinecap="round"
-                  vectorEffect="non-scaling-stroke"
-                />
-                <path
-                  d={curvedPath}
-                  fill="none"
-                  stroke="url(#energyGradient)"
-                  strokeWidth={4.5}
-                  strokeLinecap="round"
-                  strokeDasharray="12 18"
-                  className="energy-flow"
-                  opacity={0.4}
                   vectorEffect="non-scaling-stroke"
                 />
                 {progressPath ? (
-                  <>
-                    <path
-                      d={progressPath}
-                      stroke="#38bdf8"
-                      strokeWidth={(isMobile ? 7 : 4) * 2.2}
-                      opacity={quality === "high" ? 0.22 : 0.18}
-                      fill="none"
-                      strokeLinecap="round"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                    <path
-                      d={progressPath}
-                      stroke="url(#trailEnergy)"
-                      strokeWidth={isMobile ? 7 : 4}
-                      opacity={0.86}
-                      fill="none"
-                      strokeLinecap="round"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                    <path
-                      d={progressPath}
-                      stroke="url(#trailCore)"
-                      strokeWidth={isMobile ? 2.4 : 1.5}
-                      opacity={0.54}
-                      fill="none"
-                      strokeLinecap="round"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                  </>
+                  <path
+                    d={progressPath}
+                    stroke="#ffffff"
+                    strokeWidth={isMobile ? 6 : 4}
+                    opacity={0.82}
+                    fill="none"
+                    strokeLinecap="round"
+                    vectorEffect="non-scaling-stroke"
+                  />
                 ) : null}
               </svg>
             </div>
 
-            <div className="pointer-events-none absolute left-1/2 top-0 z-[6] -translate-x-1/2" style={{ width: `${trackWidth}px`, height: `${worldHeight}px` }} aria-hidden>
+            <div className="hidden" style={{ width: `${trackWidth}px`, height: `${worldHeight}px` }} aria-hidden>
               {Array.from({ length: MAX_ENERGY_PARTICLES }).map((_, index) => (
                 <div
                   key={`energy-slot-${index}`}
@@ -1136,7 +1042,7 @@ export default function ProgressionMap({
               ))}
             </div>
 
-            <div className="pointer-events-none absolute left-1/2 top-0 z-[7] -translate-x-1/2" style={{ width: `${trackWidth}px`, height: `${worldHeight}px` }} aria-hidden>
+            <div className="hidden" style={{ width: `${trackWidth}px`, height: `${worldHeight}px` }} aria-hidden>
               {Array.from({ length: MAX_UNLOCK_COMETS }).map((_, index) => (
                 <div
                   key={`comet-${index}`}
@@ -1181,20 +1087,22 @@ export default function ProgressionMap({
             </div>
           </div>
 
-          <div className="legend-chips pointer-events-none absolute right-6 top-6 z-[30] flex gap-2">
-            <div className="inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[12px]" style={{ background: "rgba(10,18,34,0.76)", color: TEXT_MUTED, border: "1px solid rgba(255,255,255,0.06)" }}>
-              <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
-              Concluído
+          {debug ? (
+            <div className="legend-chips pointer-events-none absolute right-6 top-6 z-[30] flex gap-2">
+              <div className="inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[12px]" style={{ background: "rgba(10,18,34,0.76)", color: TEXT_MUTED, border: "1px solid rgba(255,255,255,0.06)" }}>
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
+                Concluído
+              </div>
+              <div className="inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[12px]" style={{ background: "rgba(10,18,34,0.76)", color: TEXT_PRIMARY, border: "1px solid rgba(255,255,255,0.06)" }}>
+                <span className="inline-block h-2 w-2 rounded-full bg-[#FF9A48]" />
+                Atual
+              </div>
+              <div className="inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[12px]" style={{ background: "rgba(10,18,34,0.76)", color: TEXT_MUTED, border: "1px solid rgba(255,255,255,0.06)" }}>
+                <span className="inline-block h-2 w-2 rounded-full bg-slate-500" />
+                Bloqueado
+              </div>
             </div>
-            <div className="inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[12px]" style={{ background: "rgba(10,18,34,0.76)", color: TEXT_PRIMARY, border: "1px solid rgba(255,255,255,0.06)" }}>
-              <span className="inline-block h-2 w-2 rounded-full bg-[#FF9A48]" />
-              Atual
-            </div>
-            <div className="inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[12px]" style={{ background: "rgba(10,18,34,0.76)", color: TEXT_MUTED, border: "1px solid rgba(255,255,255,0.06)" }}>
-              <span className="inline-block h-2 w-2 rounded-full bg-slate-500" />
-              Bloqueado
-            </div>
-          </div>
+          ) : null}
         </div>
       </div>
 

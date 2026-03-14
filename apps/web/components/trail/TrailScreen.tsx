@@ -9,6 +9,7 @@ import { AxionCharacter } from "@/components/axion-character";
 import { ChildNavIcon, type ChildNavIconKey } from "@/components/child-bottom-nav";
 import { BottomNav } from "@/components/trail/BottomNav";
 import { DailyMissionsPanel } from "@/components/trail/DailyMissionsPanel";
+import { DesktopRightRail } from "@/components/trail/DesktopRightRail";
 import { DomainSection } from "@/components/trail/DomainSection";
 import { HeroMissionCard } from "@/components/trail/HeroMissionCard";
 import ProgressionMap, { type MapNode, type MapSection, type NodeStatus } from "@/components/trail/ProgressionMap";
@@ -676,9 +677,39 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   };
 
   return (
-    <div className="relative overflow-hidden min-h-screen bg-transparent lg:h-screen">
+    <div className="relative min-h-screen overflow-hidden bg-transparent lg:h-screen">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -inset-[4px] z-0 lg:hidden"
+        style={{
+          backgroundImage: "url('/axiora/aprender/trail-bg-clean-mobile.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-y-0 left-0 right-0 z-0 hidden lg:block"
+        style={{
+          backgroundImage: "url('/axiora/aprender/trail-bg-clean-4k.png')",
+          backgroundSize: "118% 118%",
+          backgroundPosition: "30% 72%",
+          backgroundRepeat: "no-repeat",
+          transform: "scale(1.02)",
+          transformOrigin: "center center",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -inset-[4px] z-0"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(8,20,34,0.2) 0%, rgba(8,20,34,0.06) 24%, rgba(8,20,34,0.08) 100%)",
+        }}
+      />
       <div className="w-full lg:h-screen lg:overflow-hidden lg:pl-[208px]">
-        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/5 lg:border-t-white/5 lg:bg-[linear-gradient(180deg,#17322F_0%,#112825_100%)] lg:px-3 lg:py-5">
+        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/12 lg:border-t-white/10 lg:bg-[linear-gradient(180deg,rgba(20,52,47,0.62)_0%,rgba(14,35,32,0.48)_100%)] lg:px-3 lg:py-5 lg:backdrop-blur-xl">
           <div className="mb-0.5 flex justify-center">
             <div className="rounded-2xl bg-[#1C3A36]/82 p-1.5 shadow-[inset_0_1px_12px_rgba(0,0,0,0.3)]">
               <div className="scale-90">
@@ -694,24 +725,12 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
           <DesktopNavItem href="/child/axion" active={pathname.startsWith("/child/axion")} iconName="axion" label="Axion" />
         </aside>
 
-        <div className="mx-auto w-full lg:h-screen lg:max-w-[1420px] lg:px-8 xl:max-w-[1560px] xl:px-12 2xl:px-16">
-          <div className="mx-auto w-full max-w-sm pb-24 pt-1 md:max-w-4xl md:pb-8 lg:flex lg:h-screen lg:max-w-[1360px] lg:flex-col lg:overflow-hidden lg:pb-0 lg:pt-4 xl:max-w-[1480px]">
-            <div className="mx-auto w-full max-w-[760px] px-4 sm:px-6 lg:max-w-none lg:px-2">
+        <div className="w-full lg:h-screen lg:px-3 xl:px-4 2xl:px-5">
+          <div className="w-full pb-24 pt-1 md:pb-8 lg:flex lg:h-screen lg:flex-col lg:overflow-hidden lg:pb-0 lg:pt-2">
+            <div className="w-full px-4 sm:px-5 lg:px-1">
               <header ref={headerRef} className="relative z-50 space-y-2 bg-[rgba(24,49,46,0.08)] pb-2 [backdrop-filter:blur(2px)] lg:flex-none lg:space-y-2 lg:bg-transparent lg:pb-2">
                 {initialPathLoading ? (
-                  <div className="space-y-3 rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(25,53,48,0.82),rgba(18,37,34,0.76))] p-3 shadow-[0_24px_80px_rgba(6,18,16,0.28)]">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <div className="h-10 w-[196px] animate-pulse rounded-full border border-white/8 bg-[linear-gradient(90deg,rgba(248,225,195,0.08),rgba(79,157,138,0.18),rgba(255,163,94,0.14))]" />
-                        <div className="h-10 w-[132px] animate-pulse rounded-full border border-white/8 bg-white/[0.06]" />
-                      </div>
-                      <div className="hidden h-9 w-[92px] animate-pulse rounded-full bg-white/[0.08] lg:block" />
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="h-3 w-44 animate-pulse rounded-full bg-[#F0E3D2]/10" />
-                      <div className="h-3 w-28 animate-pulse rounded-full bg-[#F0E3D2]/8" />
-                    </div>
-                  </div>
+                  <div className="h-10" />
                 ) : (
                   <>
                     <div className="motion-safe:animate-[fade-in-up_280ms_ease-out]">
@@ -719,6 +738,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
                         streak={subjectStreakDays}
                         gems={coins}
                         xp={xpPercent}
+                        xpTotal={xpTotal}
                         selectedSubjectName={selectedSubjectName}
                         subjects={visibleSubjects}
                         selectedSubjectId={selectedSubjectId}
@@ -739,98 +759,53 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
               <main className="lg:flex lg:min-h-0 lg:flex-1 lg:overflow-hidden lg:pt-1">
                 {initialPathLoading ? (
                   <section className="relative w-full">
-                    <div className="hidden lg:grid lg:grid-cols-[minmax(0,1fr)_356px] lg:gap-4" style={{ height: `${desktopStageHeight}px` }}>
-                      <div className="overflow-hidden rounded-[34px] border border-white/8 bg-[linear-gradient(180deg,rgba(23,47,43,0.88),rgba(16,31,28,0.82))] shadow-[0_30px_90px_rgba(5,16,14,0.24)]">
-                        <div className="relative h-full w-full overflow-hidden">
-                          <div className="absolute inset-x-10 top-10 h-16 animate-pulse rounded-[24px] bg-[linear-gradient(90deg,rgba(240,227,210,0.06),rgba(255,163,94,0.14),rgba(79,157,138,0.16))]" />
-                          <div className="absolute left-[12%] top-[22%] h-20 w-20 animate-pulse rounded-[28px] bg-[#4F9D8A]/18 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]" />
-                          <div className="absolute left-[26%] top-[34%] h-16 w-16 animate-pulse rounded-[24px] bg-[#FF9A5C]/16 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]" />
-                          <div className="absolute left-[44%] top-[19%] h-24 w-24 animate-pulse rounded-[32px] bg-[#F0C779]/14 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]" />
-                          <div className="absolute left-[56%] top-[41%] h-16 w-16 animate-pulse rounded-[24px] bg-[#4F9D8A]/16 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]" />
-                          <div className="absolute left-[70%] top-[27%] h-20 w-20 animate-pulse rounded-[28px] bg-[#FF9A5C]/15 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]" />
-                          <div className="absolute inset-x-[14%] bottom-14 h-28 animate-pulse rounded-[32px] border border-white/6 bg-[linear-gradient(180deg,rgba(14,30,27,0.62),rgba(14,30,27,0.22))]" />
-                          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_34%,rgba(255,163,94,0.12),rgba(79,157,138,0.1)_34%,rgba(2,6,23,0)_72%)]" />
-                        </div>
-                      </div>
-                      <div className="flex min-h-0 flex-col gap-3">
-                        <div className="rounded-[30px] border border-white/8 bg-[linear-gradient(180deg,rgba(24,49,45,0.9),rgba(18,35,31,0.82))] p-5 shadow-[0_22px_60px_rgba(5,16,14,0.22)]">
-                          <div className="h-3 w-24 animate-pulse rounded-full bg-[#F0E3D2]/12" />
-                          <div className="mt-4 h-8 w-[68%] animate-pulse rounded-full bg-[linear-gradient(90deg,rgba(255,163,94,0.16),rgba(79,157,138,0.18))]" />
-                          <div className="mt-3 h-3 w-full animate-pulse rounded-full bg-white/[0.07]" />
-                          <div className="mt-2 h-3 w-[84%] animate-pulse rounded-full bg-white/[0.06]" />
-                          <div className="mt-6 grid grid-cols-2 gap-3">
-                            <div className="h-24 animate-pulse rounded-[22px] bg-white/[0.05]" />
-                            <div className="h-24 animate-pulse rounded-[22px] bg-white/[0.05]" />
-                          </div>
-                        </div>
-                        <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(23,46,42,0.86),rgba(17,34,30,0.78))] p-4 shadow-[0_18px_46px_rgba(5,16,14,0.18)]">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="h-3 w-28 animate-pulse rounded-full bg-[#F0E3D2]/12" />
-                            <div className="h-8 w-16 animate-pulse rounded-full bg-white/[0.06]" />
-                          </div>
-                          <div className="mt-4 h-16 animate-pulse rounded-[20px] bg-[linear-gradient(90deg,rgba(79,157,138,0.14),rgba(255,163,94,0.12))]" />
-                        </div>
-                        <div className="flex-1 rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(22,44,40,0.84),rgba(16,31,28,0.76))] p-4 shadow-[0_18px_46px_rgba(5,16,14,0.18)]">
-                          <div className="h-3 w-32 animate-pulse rounded-full bg-[#F0E3D2]/12" />
-                          <div className="mt-4 space-y-3">
-                            <div className="h-14 animate-pulse rounded-[18px] bg-white/[0.05]" />
-                            <div className="h-14 animate-pulse rounded-[18px] bg-white/[0.05]" />
-                            <div className="h-14 animate-pulse rounded-[18px] bg-white/[0.05]" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-4 lg:hidden">
-                      <div className="rounded-[30px] border border-white/8 bg-[linear-gradient(180deg,rgba(23,47,43,0.88),rgba(16,31,28,0.82))] p-4 shadow-[0_24px_70px_rgba(5,16,14,0.22)]">
-                        <div className="h-6 w-40 animate-pulse rounded-full bg-[linear-gradient(90deg,rgba(255,163,94,0.14),rgba(79,157,138,0.18))]" />
-                        <div className="mt-4 h-[280px] animate-pulse rounded-[26px] bg-[radial-gradient(ellipse_at_50%_30%,rgba(255,163,94,0.14),rgba(79,157,138,0.1)_36%,rgba(2,6,23,0)_74%)]" />
-                      </div>
-                      <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(24,49,45,0.88),rgba(18,35,31,0.8))] p-4 shadow-[0_18px_46px_rgba(5,16,14,0.18)]">
-                        <div className="h-3 w-28 animate-pulse rounded-full bg-[#F0E3D2]/12" />
-                        <div className="mt-4 h-20 animate-pulse rounded-[20px] bg-white/[0.05]" />
-                        <div className="mt-3 h-20 animate-pulse rounded-[20px] bg-white/[0.05]" />
-                      </div>
+                    <div className="flex items-center justify-center py-16 lg:py-24">
+                      <span className="inline-flex rounded-full bg-[rgba(8,27,42,0.36)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-white/85">
+                        Carregando trilha...
+                      </span>
                     </div>
                   </section>
                 ) : (
                   <div className={cn("flex w-full flex-col gap-5", compactDesktop ? "lg:gap-4" : "lg:gap-5")}>
                     {hasProgressionMap ? (
                     <>
-                      <section className="relative isolate w-full motion-safe:animate-[fade-in-up_340ms_ease-out] lg:hidden">
-                        <div
-                          aria-hidden
-                          className="pointer-events-none absolute inset-x-0 top-10 z-0 h-[760px]"
-                          style={{
-                            background:
-                              "radial-gradient(ellipse at 50% 24%, rgba(255,163,94,0.12), rgba(79,157,138,0.08) 34%, rgba(2,6,23,0) 72%)",
-                            filter: "blur(22px)",
-                          }}
-                        />
-                        <div className="relative z-10 w-full">
+                      <section className="relative isolate w-full space-y-3 motion-safe:animate-[fade-in-up_340ms_ease-out] lg:hidden">
+                        <div className="relative z-10 overflow-hidden rounded-[24px] border border-white/20 bg-[rgba(10,28,44,0.22)] shadow-[0_14px_34px_rgba(3,10,22,0.26)]">
                           <ProgressionMap
                             nodes={progressionNodes}
                             activeNodeId={resolvedActiveMapNodeId}
                             selectedNodeId={mapHighlightedNodeId}
                             onNodeClick={openMapNode}
-                            viewportHeight={980}
-                            className="mx-auto w-full max-w-[1560px]"
+                            viewportHeight={640}
+                            className="relative z-10 mx-auto w-full"
                           />
                         </div>
+                        <section className="relative overflow-hidden rounded-2xl border border-white/16 bg-[linear-gradient(160deg,rgba(14,36,58,0.92)_0%,rgba(15,45,74,0.84)_58%,rgba(10,30,48,0.9)_100%)] p-3.5 shadow-[0_10px_24px_rgba(3,10,22,0.22)]">
+                          <p className="text-[12px] font-semibold text-white/95">Ativo Trail</p>
+                          <p className="mt-1 text-[14px] font-semibold leading-tight text-white">
+                            {nodeForHeroMission?.title ?? "Missão ativa"}
+                          </p>
+                        </section>
+                        <DailyMissionsPanel
+                          compact
+                          missions={missions}
+                          missionsLoading={missionsLoading}
+                          claimingMissionId={claimingMissionId}
+                          onClaimMission={(missionId) => void onClaimMission(missionId)}
+                        />
+                        <WeeklyGoalCard
+                          compact
+                          completed={weeklyGoal.completed}
+                          target={weeklyGoal.target}
+                          weekLabel={weeklyGoal.weekLabel}
+                        />
+                        <div className="h-20" />
                       </section>
 
                       <section
                         className="relative hidden w-full lg:grid lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_356px] lg:gap-4 motion-safe:animate-[fade-in-up_340ms_ease-out]"
                         style={{ height: `${desktopStageHeight}px` }}
                       >
-                        <div
-                          aria-hidden
-                          className="pointer-events-none absolute inset-0 -z-10 rounded-[40px]"
-                          style={{
-                            background:
-                              "radial-gradient(ellipse at 38% 22%, rgba(255,163,94,0.14), rgba(79,157,138,0.08) 34%, rgba(2,6,23,0) 72%), radial-gradient(ellipse at 78% 86%, rgba(241,197,107,0.08), transparent 22%)",
-                            filter: "blur(22px)",
-                          }}
-                        />
                         <div className="relative z-10 min-w-0 lg:min-h-0">
                           <ProgressionMap
                             nodes={progressionNodes}
@@ -838,40 +813,23 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
                             selectedNodeId={mapHighlightedNodeId}
                             onNodeClick={openMapNode}
                             viewportHeight={progressionViewportHeight}
-                            className="mx-auto w-full max-w-none"
+                            className="relative z-10 mx-auto w-full max-w-none rounded-[30px]"
                           />
                         </div>
                         <div className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
-                          <HeroMissionCard
-                            className="max-w-none"
-                            compact
-                            subjectName={selectedSubjectName}
-                            areaLabel={selectedArea}
-                            streakDays={subjectStreakDays}
-                            medalTier={domainCompletion.medal}
-                            completionPercent={domainCompletion.completionPercent}
-                            xpTotal={xpTotal}
-                            level={xpLevel}
-                            xpPercent={xpPercent}
-                            xpInLevel={xpInLevel}
-                            xpToNextLevel={xpToNextLevel}
-                            currentMission={{
-                              title: nodeForHeroMission?.title ?? "Adição no Cotidiano",
-                              xp: nodeForHeroMission?.xp ?? 30,
-                            }}
-                            encouragementText={encouragementText}
-                            onContinue={handleContinueLearning}
-                            onStartMission={handleStartMission}
-                          />
-                          <WeeklyGoalCard
-                            compact
-                            completed={weeklyGoal.completed}
-                            target={weeklyGoal.target}
-                            weekLabel={weeklyGoal.weekLabel}
-                          />
+                          <section className="relative overflow-hidden rounded-2xl border border-white/16 bg-[linear-gradient(160deg,rgba(14,36,58,0.92)_0%,rgba(15,45,74,0.84)_58%,rgba(10,30,48,0.9)_100%)] p-4 shadow-[0_12px_30px_rgba(3,10,22,0.28)]">
+                            <p className="text-[13px] font-semibold text-white/95">Ativo Trail</p>
+                            <p className="mt-1 text-[15px] font-semibold leading-tight text-white">
+                              {nodeForHeroMission?.title ?? "Missão ativa"}
+                            </p>
+                            <p className="mt-2 text-[12px] text-white/70">
+                              Continue a trilha para manter sequência e desbloquear novos desafios.
+                            </p>
+                          </section>
                           <div className="min-h-0 flex-1 overflow-auto pr-1">
-                            <DailyMissionsPanel
-                              compact
+                            <DesktopRightRail
+                              insights={insights}
+                              insightsLoading={insightsLoading}
                               missions={missions}
                               missionsLoading={missionsLoading}
                               claimingMissionId={claimingMissionId}
@@ -906,62 +864,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
                       />
                     </div>
                   )}
-                  {hasProgressionMap ? (
-                    <section className="relative w-full motion-safe:animate-[fade-in-up_380ms_ease-out] lg:hidden">
-                      <div
-                        aria-hidden
-                        className="pointer-events-none absolute inset-0 -z-10 rounded-[40px] opacity-80"
-                        style={{
-                          background:
-                            "radial-gradient(ellipse at 18% 14%, rgba(255,163,94,0.1), transparent 28%), radial-gradient(ellipse at 82% 80%, rgba(241,197,107,0.08), transparent 24%)",
-                          filter: "blur(18px)",
-                        }}
-                      />
-                      <div className={cn("grid gap-4 lg:grid-cols-[1.15fr_0.85fr] lg:grid-rows-[auto_auto]", compactDesktop ? "lg:gap-4" : "lg:gap-5")}>
-                        <div className="lg:col-span-2">
-                          <HeroMissionCard
-                            className="max-w-none"
-                            compact={compactDesktop}
-                            subjectName={selectedSubjectName}
-                            areaLabel={selectedArea}
-                            streakDays={subjectStreakDays}
-                            medalTier={domainCompletion.medal}
-                            completionPercent={domainCompletion.completionPercent}
-                            xpTotal={xpTotal}
-                            level={xpLevel}
-                            xpPercent={xpPercent}
-                            xpInLevel={xpInLevel}
-                            xpToNextLevel={xpToNextLevel}
-                            currentMission={{
-                              title: nodeForHeroMission?.title ?? "Adição no Cotidiano",
-                              xp: nodeForHeroMission?.xp ?? 30,
-                            }}
-                            encouragementText={encouragementText}
-                            onContinue={handleContinueLearning}
-                            onStartMission={handleStartMission}
-                          />
-                        </div>
-                        <div className="grid gap-4">
-                          <DailyMissionsPanel
-                            className="h-full"
-                            compact={compactDesktop}
-                            missions={missions}
-                            missionsLoading={missionsLoading}
-                            claimingMissionId={claimingMissionId}
-                            onClaimMission={(missionId) => void onClaimMission(missionId)}
-                          />
-                        </div>
-                        <div className="grid content-start gap-4">
-                          <WeeklyGoalCard
-                            compact={compactDesktop}
-                            completed={weeklyGoal.completed}
-                            target={weeklyGoal.target}
-                            weekLabel={weeklyGoal.weekLabel}
-                          />
-                        </div>
-                      </div>
-                    </section>
-                  ) : null}
+                  {null}
                   </div>
                 )}
                 {pathRefreshing ? (
@@ -1052,8 +955,8 @@ function DesktopNavItem({ href, iconName, label, active }: { href: string; iconN
       href={href}
       className={`mx-1.5 inline-flex items-center gap-2.5 rounded-2xl px-4 py-[7px] text-[15px] font-semibold uppercase tracking-[0.04em] text-slate-200/85 transition-all duration-200 ${
         active
-          ? "border-l-[3px] border-l-orange-400/90 bg-white/5 text-slate-100/90"
-          : "text-slate-300/80 hover:bg-white/5 hover:text-slate-100/90"
+          ? "border-l-[3px] border-l-amber-300/90 bg-white/14 text-slate-100"
+          : "text-slate-200/80 hover:bg-white/10 hover:text-slate-100/95"
       }`}
     >
       <span className="opacity-85 grayscale-[80%]">
