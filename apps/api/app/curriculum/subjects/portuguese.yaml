@@ -1,0 +1,55 @@
+subject: portuguese
+age_groups:
+  - "6_8"
+  - "9_11"
+  - "12_14"
+skills:
+  reading_comprehension:
+    subskills:
+      - literal_understanding
+      - inference
+      - main_idea
+    lessons:
+      - reading_intro
+      - reading_practice
+      - reading_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+  grammar_basics:
+    subskills:
+      - nouns_and_verbs
+      - sentence_structure
+      - punctuation
+    lessons:
+      - grammar_intro
+      - grammar_practice
+      - grammar_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+  writing_fluency:
+    subskills:
+      - sentence_writing
+      - paragraph_building
+      - revision
+    lessons:
+      - writing_intro
+      - writing_practice
+      - writing_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+lesson_order:
+  - reading_intro
+  - reading_practice
+  - reading_mastery
+  - grammar_intro
+  - grammar_practice
+  - grammar_mastery
+  - writing_intro
+  - writing_practice
+  - writing_mastery

@@ -24,6 +24,7 @@ from app.api.routes.game_settings import router as game_settings_router
 from app.api.routes.games import router as games_router
 from app.api.routes.games_multiplayer import router as games_multiplayer_router
 from app.api.routes.legal import router as legal_router
+from app.api.routes.learn_v2 import router as learn_v2_router
 from app.api.routes.learning_settings import router as learning_settings_router
 from app.api.routes.learning import router as learning_router
 from app.api.routes.mood import router as mood_router
@@ -112,6 +113,7 @@ app.include_router(game_settings_router)
 app.include_router(games_router)
 app.include_router(games_multiplayer_router)
 app.include_router(legal_router)
+app.include_router(learn_v2_router)
 app.include_router(learning_settings_router)
 app.include_router(learning_router)
 app.include_router(mood_router)

@@ -136,6 +136,7 @@ class NextQuestionsPlan:
     items: list[NextQuestionItem]
     focus_skills: list[FocusSkillPlan]
     difficulty_mix: DifficultyMix
+    diagnostics: dict[str, Any] | None = None
 
 
 @dataclass(slots=True)

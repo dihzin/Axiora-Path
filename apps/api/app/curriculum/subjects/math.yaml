@@ -1,0 +1,55 @@
+subject: math
+age_groups:
+  - "6_8"
+  - "9_11"
+  - "12_14"
+skills:
+  addition:
+    subskills:
+      - single_digit
+      - double_digit
+      - word_problems
+    lessons:
+      - addition_intro
+      - addition_practice
+      - addition_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+  subtraction:
+    subskills:
+      - single_digit_subtraction
+      - regrouping
+      - story_subtraction
+    lessons:
+      - subtraction_intro
+      - subtraction_practice
+      - subtraction_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+  multiplication:
+    subskills:
+      - repeated_addition
+      - times_tables
+      - array_models
+    lessons:
+      - multiplication_intro
+      - multiplication_practice
+      - multiplication_mastery
+    difficulty_progression:
+      - easy
+      - medium
+      - hard
+lesson_order:
+  - addition_intro
+  - addition_practice
+  - addition_mastery
+  - subtraction_intro
+  - subtraction_practice
+  - subtraction_mastery
+  - multiplication_intro
+  - multiplication_practice
+  - multiplication_mastery
