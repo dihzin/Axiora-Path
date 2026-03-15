@@ -11,6 +11,8 @@ import { GamesBadgeStrip } from "@/components/games/games-badge-strip";
 import { GameHubCard } from "@/components/games/game-hub-card";
 import { GamesMissionCard } from "@/components/games/games-mission-card";
 import { GameOnboardingModal } from "@/components/games/onboarding/game-onboarding-modal";
+import { GamesRankingCard } from "@/components/games/games-ranking-card";
+import { GamesLeagueCard } from "@/components/games/games-league-card";
 import { GameSkillSection } from "@/components/games/game-skill-section";
 import {
   GAMES_SKILL_GROUPS,
@@ -39,17 +41,24 @@ import { TopStatsBar } from "@/components/trail/TopStatsBar";
 import { Button } from "@/components/ui/button";
 import {
   claimGamesMetagameMission,
+  claimGamesLeagueReward,
+  getGameWeeklyRanking,
   getAprenderLearningProfile,
   getAchievements,
   getGamePersonalBests,
   getGamesCatalog,
   getGamesMetagameSummary,
+  getGamesLeagueSummary,
+  getMyGamesRanking,
   getLevels,
   getStoreItems,
   getStreak,
   startGameEngineSession,
   trackAxionSessionStarted,
   type AchievementItem,
+  type GamePersonalRankingResponse,
+  type GameWeeklyRankingResponse,
+  type GameLeagueSummaryResponse,
   type GameMetagameSummaryResponse,
   type GamePersonalBestResponse,
   type LevelResponse,
@@ -76,6 +85,9 @@ export default function ChildGamesPage() {
   const [achievements, setAchievements] = useState<AchievementItem[]>([]);
   const [axionCoins, setAxionCoins] = useState(0);
   const [metagame, setMetagame] = useState<GameMetagameSummaryResponse | null>(null);
+  const [weeklyRanking, setWeeklyRanking] = useState<GameWeeklyRankingResponse | null>(null);
+  const [personalRanking, setPersonalRanking] = useState<GamePersonalRankingResponse | null>(null);
+  const [leagueSummary, setLeagueSummary] = useState<GameLeagueSummaryResponse | null>(null);
   const [personalBests, setPersonalBests] = useState<GamePersonalBestResponse[]>([]);
   const [catalogGames, setCatalogGames] = useState<GameItem[]>([]);
   const [catalogState, setCatalogState] = useState<"loading" | "remote" | "fallback">("loading");
@@ -84,6 +96,7 @@ export default function ChildGamesPage() {
   const [catalogFilter, setCatalogFilter] = useState<"all" | "available" | "upcoming">("all");
   const [activeSessionHint, setActiveSessionHint] = useState<{ href?: string; title?: string; templateId?: string | null } | null>(null);
   const [claimingScope, setClaimingScope] = useState<"daily" | "weekly" | null>(null);
+  const [claimingLeague, setClaimingLeague] = useState(false);
   const [shellStreak, setShellStreak] = useState(0);
   const [shellGems, setShellGems] = useState(0);
   const [shellXpPercent, setShellXpPercent] = useState(0);
@@ -96,6 +109,10 @@ export default function ChildGamesPage() {
     void getStoreItems().then((data) => setAxionCoins(data.coins)).catch(() => setAxionCoins(0));
     void getGamePersonalBests(activeChildId).then(setPersonalBests).catch(() => setPersonalBests([]));
     void getGamesMetagameSummary(activeChildId).then(setMetagame).catch(() => setMetagame(null));
+    void getMyGamesRanking(activeChildId, 5).then(setPersonalRanking).catch(() => setPersonalRanking(null));
+    const browserTimezone =
+      typeof window !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined;
+    void getGamesLeagueSummary(activeChildId, browserTimezone).then(setLeagueSummary).catch(() => setLeagueSummary(null));
     void getStreak(activeChildId)
       .then((data) => setShellStreak(Math.max(0, data.current)))
       .catch(() => setShellStreak(0));
@@ -309,6 +326,20 @@ export default function ChildGamesPage() {
     return null;
   }, [activeSessionGame, availableGames]);
 
+  useEffect(() => {
+    if (childId === null) return;
+    const gameId = recommendedGame?.game.meta.gameId ?? availableGames[0]?.meta.gameId ?? null;
+    if (!gameId) {
+      setWeeklyRanking(null);
+      return;
+    }
+    const browserTimezone =
+      typeof window !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined;
+    void getGameWeeklyRanking(gameId, childId, 10, browserTimezone)
+      .then(setWeeklyRanking)
+      .catch(() => setWeeklyRanking(null));
+  }, [availableGames, childId, recommendedGame]);
+
   const groupedAvailableGames = useMemo(() => {
     return visibleAvailable.reduce<Record<GameSkillGroupKey, HubGame[]>>(
       (acc, game) => {
@@ -401,6 +432,17 @@ export default function ChildGamesPage() {
     },
     [childId, metagame, refreshRemoteStats],
   );
+
+  const claimLeagueReward = useCallback(async () => {
+    if (!childId) return;
+    setClaimingLeague(true);
+    try {
+      await claimGamesLeagueReward(childId);
+      refreshRemoteStats(childId);
+    } finally {
+      setClaimingLeague(false);
+    }
+  }, [childId, refreshRemoteStats]);
 
   const recommendationText = recommendedGame ? `Jogue ${recommendedGame.game.title} agora.` : "Escolha um jogo curto para manter sua evolução.";
   const recordsCount = personalBests.length;
@@ -604,6 +646,23 @@ export default function ChildGamesPage() {
               </div>
             </section>
           )}
+
+          <section className="mt-4">
+            <GamesRankingCard weekly={weeklyRanking} personal={personalRanking} />
+          </section>
+
+          <section className="mt-4">
+            <GamesLeagueCard
+              league={leagueSummary}
+              claimLoading={claimingLeague}
+              onClaim={() => {
+                void claimLeagueReward();
+              }}
+              onPlayNow={() => {
+                if (recommendedGame) openOnboarding(recommendedGame.game);
+              }}
+            />
+          </section>
 
           <section className="mt-5 space-y-5">
             {catalogState === "loading" && hubGames.length === 0 ? (

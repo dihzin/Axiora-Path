@@ -463,6 +463,10 @@ export default function QuizGamePage() {
               coinsGained={reward?.session.coinsEarned ?? 0}
               isPersonalBest={reward?.isPersonalBest ?? false}
               personalBestType={reward?.personalBestType ?? null}
+              rankingPosition={reward?.weeklyRanking?.position ?? null}
+              rankingTotalPlayers={reward?.weeklyRanking?.totalPlayers ?? null}
+              rankingInTop={reward?.weeklyRanking?.inTop ?? false}
+              leagueMessage={reward?.leagueImpact?.message ?? null}
               onReplay={onRestart}
               onBack={() => {
                 window.location.href = "/child/games";

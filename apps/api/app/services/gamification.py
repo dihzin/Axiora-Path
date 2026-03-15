@@ -12,6 +12,7 @@ from app.models import GamePersonalBest, GameSession, GameType, UserGameProfile,
 from app.schemas.games import GameResultPayload
 from app.services.achievement_engine import evaluate_achievements_after_game
 from app.services.axion_intelligence_v2 import apply_axion_decisions, compute_behavior_metrics
+from app.services.game_economy import EconomyReward, award_economy_event, get_economy_reward
 
 XP_PER_LEVEL = 100
 MAX_XP_PER_DAY = 200
@@ -242,17 +243,36 @@ def registerGameSession(
     effective_max_xp_per_day = max(0, max_xp_per_day)
     remaining_before = max(0, effective_max_xp_per_day - profile.daily_xp)
     granted_xp = min(requested_xp, remaining_before)
-    if granted_xp > 0:
-        profile.daily_xp += granted_xp
-        profile.xp += granted_xp
-        profile.level = calculate_level(profile.xp)
-
     granted_coins = 0
     if requested_xp > 0 and granted_xp > 0 and requested_coins > 0:
         granted_coins = max(1, (requested_coins * granted_xp) // requested_xp)
-
-    if granted_coins > 0:
-        profile.axion_coins += granted_coins
+    if granted_xp > 0 or granted_coins > 0:
+        if child_id is not None:
+            game_played_base = get_economy_reward("GAME_PLAYED")
+            economy_award = award_economy_event(
+                db,
+                child_id=child_id,
+                beneficiary_user_id=user_id,
+                tenant_id=tenant_id,
+                event_type="GAME_PLAYED",
+                metadata={
+                    "gameId": normalized_game_id,
+                    "sessionExternalId": dedupe_session_id,
+                },
+                reward_override=EconomyReward(
+                    xp=granted_xp,
+                    coins=granted_coins,
+                    season_xp=game_played_base.season_xp,
+                ),
+                track_daily_xp=True,
+            )
+            granted_xp = economy_award.granted.xp
+            granted_coins = economy_award.granted.coins
+        else:
+            profile.daily_xp += granted_xp
+            profile.xp += granted_xp
+            profile.level = calculate_level(profile.xp)
+            profile.axion_coins += granted_coins
 
     game_session = GameSession(
         tenant_id=tenant_id,
@@ -407,6 +427,18 @@ def complete_game_session(
             game_id=normalize_game_id(result.game_id, game_type),
             result=result,
         )
+        if is_personal_best:
+            award_economy_event(
+                db,
+                child_id=child_id,
+                beneficiary_user_id=user_id,
+                tenant_id=tenant_id,
+                event_type="PERSONAL_BEST",
+                metadata={
+                    "gameId": normalize_game_id(result.game_id, game_type),
+                    "personalBestType": personal_best_type or "score",
+                },
+            )
 
     return CompleteGameSessionResult(
         register_result=register_result,

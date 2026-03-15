@@ -14,6 +14,10 @@ type GameResultPanelProps = {
   coinsGained?: number | null;
   isPersonalBest?: boolean;
   personalBestType?: string | null;
+  rankingPosition?: number | null;
+  rankingTotalPlayers?: number | null;
+  rankingInTop?: boolean;
+  leagueMessage?: string | null;
   onReplay: () => void;
   onBack: () => void;
   replayLabel?: string;
@@ -36,6 +40,10 @@ export function GameResultPanel({
   coinsGained,
   isPersonalBest,
   personalBestType,
+  rankingPosition,
+  rankingTotalPlayers,
+  rankingInTop,
+  leagueMessage,
   onReplay,
   onBack,
   replayLabel = "Jogar novamente",
@@ -59,6 +67,18 @@ export function GameResultPanel({
         {isPersonalBest ? (
           <p className="rounded-xl border border-secondary/40 bg-secondary/10 px-3 py-2 text-secondary">
             Novo recorde pessoal{personalBestType ? ` (${personalBestType})` : ""}.
+          </p>
+        ) : null}
+        {rankingPosition ? (
+          <p className="rounded-xl border border-[#7DE8C6]/35 bg-[#103E4E]/20 px-3 py-2 text-[#95FFDF]">
+            Você está em #{rankingPosition}
+            {rankingTotalPlayers ? ` de ${rankingTotalPlayers}` : ""} nesta semana
+            {rankingInTop ? ". Top 10 alcançado!" : ". Continue jogando para subir!"}
+          </p>
+        ) : null}
+        {leagueMessage ? (
+          <p className="rounded-xl border border-[#FFDCA4]/35 bg-[#4D3216]/30 px-3 py-2 text-[#FFE2B8]">
+            {leagueMessage}
           </p>
         ) : null}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

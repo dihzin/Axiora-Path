@@ -18,12 +18,21 @@ from app.schemas.games import (
     GameMetagameStatsOut,
     GameMetagameStreakOut,
     GameMetagameSummaryResponse,
+    GameLeagueClaimResponse,
+    GameLeagueImpactOut,
+    GameLeagueSummaryResponse,
+    GamePersonalRankingItemOut,
+    GamePersonalRankingResponse,
     GamePersonalBestOut,
+    GameRankingMetricOut,
     GameSessionCompleteRequest,
     GameSessionCompleteResponse,
     GameSessionCreateRequest,
     GameSessionOut,
     GameSessionRegisterResponse,
+    GameWeeklyPlayerRankingOut,
+    GameWeeklyRankingEntryOut,
+    GameWeeklyRankingResponse,
     UserGameProfileOut,
 )
 from app.schemas.game_engines import (
@@ -42,6 +51,8 @@ from app.services.game_metagame import (
     build_games_metagame_summary,
     claim_games_metagame_mission,
 )
+from app.services.game_league import build_games_league_summary, claim_games_league_reward
+from app.services.game_ranking import get_personal_ranking_snapshot, get_weekly_ranking_snapshot
 from app.services.learning_retention import MissionDelta, track_mission_progress
 
 router = APIRouter(prefix="/api/games", tags=["games"])
@@ -344,6 +355,15 @@ def _resolve_game_settings(
     return settings, max_xp_per_day
 
 
+def _resolve_child_beneficiary_user_id(child: ChildProfile) -> int:
+    if child.user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Child profile is not linked to a user account for reward crediting",
+        )
+    return int(child.user_id)
+
+
 def _serialize_games_metagame(summary: GameMetagameSummary) -> GameMetagameSummaryResponse:
     metagame = summary
     return GameMetagameSummaryResponse(
@@ -573,6 +593,188 @@ def claim_games_metagame(
     )
 
 
+@router.get("/league/summary", response_model=GameLeagueSummaryResponse)
+def get_games_league_summary(
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    user: Annotated[User, Depends(get_current_user)],
+    membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    childId: int | None = None,
+    timezone: str | None = None,
+) -> GameLeagueSummaryResponse:
+    child = _resolve_child_context(
+        db,
+        tenant_id=tenant.id,
+        user=user,
+        membership=membership,
+        requested_child_id=childId,
+    )
+    beneficiary_user_id = _resolve_child_beneficiary_user_id(child)
+    summary = build_games_league_summary(
+        db,
+        tenant_id=tenant.id,
+        child_id=child.id,
+        user_id=beneficiary_user_id,
+        timezone_name=timezone,
+    )
+    db.commit()
+    return GameLeagueSummaryResponse(
+        tier=summary.tier,
+        tierLabel=summary.tier_label,
+        groupId=summary.group_id,
+        weekStart=summary.week_start,
+        weekEnd=summary.week_end,
+        scoreWeek=summary.score_week,
+        position=summary.position,
+        groupSize=summary.group_size,
+        promotionZoneMax=summary.promotion_zone_max,
+        relegationZoneMin=summary.relegation_zone_min,
+        status=summary.status,
+        positionsToPromotion=summary.positions_to_promotion,
+        topEntries=[
+            {
+                "position": item.position,
+                "player": item.player,
+                "avatarKey": item.avatar_key,
+                "score": item.score,
+            }
+            for item in summary.top_entries
+        ],
+        motivationMessage=summary.motivation_message,
+        reward={
+            "rewardXp": summary.reward.reward_xp,
+            "rewardCoins": summary.reward.reward_coins,
+            "readyToClaim": summary.reward.ready_to_claim,
+            "resultStatus": summary.reward.result_status,
+            "cycleWeekStart": summary.reward.cycle_week_start,
+            "cycleWeekEnd": summary.reward.cycle_week_end,
+        },
+    )
+
+
+@router.post("/league/claim", response_model=GameLeagueClaimResponse)
+def claim_games_league(
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    user: Annotated[User, Depends(get_current_user)],
+    membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    childId: int | None = None,
+) -> GameLeagueClaimResponse:
+    child = _resolve_child_context(
+        db,
+        tenant_id=tenant.id,
+        user=user,
+        membership=membership,
+        requested_child_id=childId,
+    )
+    beneficiary_user_id = _resolve_child_beneficiary_user_id(child)
+    claimed = claim_games_league_reward(
+        db,
+        tenant_id=tenant.id,
+        child_id=child.id,
+        beneficiary_user_id=beneficiary_user_id,
+    )
+    db.commit()
+    return GameLeagueClaimResponse(
+        rewardGranted=claimed.reward_granted,
+        alreadyClaimed=claimed.already_claimed,
+        xpReward=claimed.xp_reward,
+        coinReward=claimed.coin_reward,
+        cycleWeekStart=claimed.cycle_week_start,
+        cycleWeekEnd=claimed.cycle_week_end,
+        tierFrom=claimed.tier_from,
+        tierTo=claimed.tier_to,
+        resultStatus=claimed.result_status,
+    )
+
+
+@router.get("/ranking/weekly/{game_id}", response_model=GameWeeklyRankingResponse)
+def get_game_weekly_ranking(
+    game_id: str,
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    user: Annotated[User, Depends(get_current_user)],
+    membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    childId: int | None = None,
+    limit: int = 10,
+    timezone: str | None = None,
+) -> GameWeeklyRankingResponse:
+    child = _resolve_child_context(
+        db,
+        tenant_id=tenant.id,
+        user=user,
+        membership=membership,
+        requested_child_id=childId,
+    )
+    snapshot = get_weekly_ranking_snapshot(
+        db,
+        tenant_id=tenant.id,
+        child_id=child.id,
+        game_id=game_id,
+        limit=limit,
+        timezone_name=timezone,
+    )
+    return GameWeeklyRankingResponse(
+        gameId=snapshot.game_id,
+        metric=GameRankingMetricOut(
+            key=snapshot.metric.key,
+            label=snapshot.metric.label,
+            direction=snapshot.metric.direction,
+            unit=snapshot.metric.unit,
+        ),
+        weekStart=snapshot.week_start,
+        weekEnd=snapshot.week_end,
+        top=[
+            GameWeeklyRankingEntryOut(
+                position=item.position,
+                player=item.player,
+                avatarKey=item.avatar_key,
+                score=item.score,
+                lastPlayedAt=item.last_played_at,
+            )
+            for item in snapshot.top
+        ],
+        me=GameWeeklyPlayerRankingOut(
+            position=snapshot.me.position,
+            score=snapshot.me.score,
+            inTop=snapshot.me.in_top,
+            totalPlayers=snapshot.me.total_players,
+        ),
+    )
+
+
+@router.get("/ranking/me", response_model=GamePersonalRankingResponse)
+def get_my_games_ranking(
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    user: Annotated[User, Depends(get_current_user)],
+    membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    childId: int | None = None,
+    limit: int = 5,
+) -> GamePersonalRankingResponse:
+    child = _resolve_child_context(
+        db,
+        tenant_id=tenant.id,
+        user=user,
+        membership=membership,
+        requested_child_id=childId,
+    )
+    ranking = get_personal_ranking_snapshot(db, tenant_id=tenant.id, child_id=child.id, limit=limit)
+    return GamePersonalRankingResponse(
+        items=[
+            GamePersonalRankingItemOut(
+                position=index + 1,
+                gameId=item.game_id,
+                gameLabel=item.game_label,
+                metricLabel=item.metric_label,
+                score=item.score,
+                unit=item.unit,
+            )
+            for index, item in enumerate(ranking.items)
+        ]
+    )
+
+
 @router.get("/personal-best/{game_id}", response_model=GamePersonalBestOut)
 def get_game_personal_best(
     game_id: str,
@@ -697,6 +899,26 @@ def complete_game_session_route(
 
     register_result = complete_result.register_result
     personal_best = complete_result.personal_best
+    weekly_ranking = get_weekly_ranking_snapshot(
+        db,
+        tenant_id=tenant.id,
+        child_id=child_id,
+        game_id=payload.result.game_id,
+        limit=10,
+    )
+    league_summary = build_games_league_summary(
+        db,
+        tenant_id=tenant.id,
+        child_id=child_id,
+        user_id=_resolve_child_beneficiary_user_id(child),
+    )
+    league_impact_message = (
+        f"+{register_result.granted_xp} XP para sua liga."
+        if register_result.granted_xp > 0
+        else "Partida registrada na sua liga desta semana."
+    )
+    if league_summary.position is not None:
+        league_impact_message = f"{league_impact_message} Você está em #{league_summary.position} na {league_summary.tier_label}."
     return GameSessionCompleteResponse(
         profile=UserGameProfileOut(
             id=register_result.profile.id,
@@ -742,6 +964,17 @@ def complete_game_session_route(
             )
             if personal_best is not None
             else None
+        ),
+        weeklyRanking=GameWeeklyPlayerRankingOut(
+            position=weekly_ranking.me.position,
+            score=weekly_ranking.me.score,
+            inTop=weekly_ranking.me.in_top,
+            totalPlayers=weekly_ranking.me.total_players,
+        ),
+        leagueImpact=GameLeagueImpactOut(
+            xpContribution=register_result.granted_xp,
+            position=league_summary.position,
+            message=league_impact_message,
         ),
     )
 

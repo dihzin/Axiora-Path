@@ -8,7 +8,7 @@ from sqlalchemy import Date, desc, func, select
 from sqlalchemy.orm import Session
 
 from app.models import GameMetagameMissionClaim, GamePersonalBest, GameSession
-from app.services.gamification import addCoins, addXP
+from app.services.game_economy import EconomyReward, award_economy_event, get_economy_reward
 
 MissionScope = Literal["daily", "weekly"]
 MissionMetric = Literal["sessions", "xp", "records"]
@@ -484,14 +484,26 @@ def claim_games_metagame_mission(
             coin_reward=0,
         )
 
-    addXP(
-        db,
-        user_id=user_id,
-        xp_amount=mission.reward_xp,
-        target_date=date.today(),
-        max_xp_per_day=100000,
+    event_type: Literal["DAILY_MISSION_COMPLETED", "WEEKLY_MISSION_COMPLETED"] = (
+        "DAILY_MISSION_COMPLETED" if mission_scope == "daily" else "WEEKLY_MISSION_COMPLETED"
     )
-    addCoins(db, user_id=user_id, coin_amount=mission.reward_coins)
+    base_reward = get_economy_reward(event_type)
+    award_economy_event(
+        db,
+        child_id=child_id,
+        beneficiary_user_id=user_id,
+        tenant_id=tenant_id,
+        event_type=event_type,
+        metadata={
+            "missionId": mission.id,
+            "missionScope": mission_scope,
+        },
+        reward_override=EconomyReward(
+            xp=mission.reward_xp,
+            coins=mission.reward_coins,
+            season_xp=base_reward.season_xp,
+        ),
+    )
 
     db.add(
         GameMetagameMissionClaim(
@@ -517,4 +529,3 @@ def claim_games_metagame_mission(
         xp_reward=mission.reward_xp,
         coin_reward=mission.reward_coins,
     )
-

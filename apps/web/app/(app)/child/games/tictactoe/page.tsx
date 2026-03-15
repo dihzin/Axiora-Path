@@ -191,6 +191,10 @@ function RewardModal({ open, result, baseXp, bonusXp, apiResult, durationSeconds
             coinsGained={coins}
             isPersonalBest={apiResult?.isPersonalBest ?? false}
             personalBestType={apiResult?.personalBestType ?? null}
+            rankingPosition={apiResult?.weeklyRanking?.position ?? null}
+            rankingTotalPlayers={apiResult?.weeklyRanking?.totalPlayers ?? null}
+            rankingInTop={apiResult?.weeklyRanking?.inTop ?? false}
+            leagueMessage={apiResult?.leagueImpact?.message ?? null}
             onReplay={onReplay}
             onBack={onBack}
           />

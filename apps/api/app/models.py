@@ -586,6 +586,64 @@ class GameMetagameMissionClaim(Base):
     claimed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
+class GameLeagueProfile(Base):
+    __tablename__ = "game_league_profiles"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "child_id", name="uq_game_league_profiles_tenant_child"),
+        Index("ix_game_league_profiles_tenant_tier", "tenant_id", "current_tier"),
+        Index("ix_game_league_profiles_tenant_last_cycle", "tenant_id", "last_cycle_applied_week_start"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        nullable=False,
+        server_default=text("gen_random_uuid()"),
+    )
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    child_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    current_tier: Mapped[str] = mapped_column(String(24), nullable=False, server_default="BRONZE")
+    last_cycle_applied_week_start: Mapped[date | None] = mapped_column(Date, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class GameLeagueRewardClaim(Base):
+    __tablename__ = "game_league_reward_claims"
+    __table_args__ = (
+        UniqueConstraint("child_id", "cycle_week_start", name="uq_game_league_reward_claims_child_cycle"),
+        Index("ix_game_league_reward_claims_child_claimed_at", "child_id", "claimed_at"),
+        Index("ix_game_league_reward_claims_tenant_cycle", "tenant_id", "cycle_week_start"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        nullable=False,
+        server_default=text("gen_random_uuid()"),
+    )
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    child_id: Mapped[int] = mapped_column(ForeignKey("child_profiles.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    cycle_week_start: Mapped[date] = mapped_column(Date, nullable=False)
+    cycle_week_end: Mapped[date] = mapped_column(Date, nullable=False)
+    tier_from: Mapped[str] = mapped_column(String(24), nullable=False)
+    tier_to: Mapped[str] = mapped_column(String(24), nullable=False)
+    result_status: Mapped[str] = mapped_column(String(24), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    group_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    reward_xp: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    reward_coins: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class GameMove(Base):
     __tablename__ = "game_moves"
     __table_args__ = (

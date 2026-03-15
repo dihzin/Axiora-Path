@@ -491,6 +491,10 @@ export default function FinanceSimPage() {
                   coinsGained={sessionResult.session.coinsEarned}
                   isPersonalBest={sessionResult.isPersonalBest}
                   personalBestType={sessionResult.personalBestType}
+                  rankingPosition={sessionResult.weeklyRanking?.position ?? null}
+                  rankingTotalPlayers={sessionResult.weeklyRanking?.totalPlayers ?? null}
+                  rankingInTop={sessionResult.weeklyRanking?.inTop ?? false}
+                  leagueMessage={sessionResult.leagueImpact?.message ?? null}
                   onReplay={restartGame}
                   onBack={() => {
                     window.location.href = "/child/games";

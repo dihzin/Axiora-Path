@@ -22,6 +22,8 @@ GameTypeLiteral = Literal[
 PersonalBestTypeLiteral = Literal["score", "streak", "speed"]
 GameMissionScopeLiteral = Literal["daily", "weekly"]
 GameMissionMetricLiteral = Literal["sessions", "xp", "records"]
+GameLeagueTierLiteral = Literal["BRONZE", "SILVER", "GOLD", "DIAMOND"]
+GameLeagueStatusLiteral = Literal["promoted", "safe", "relegated"]
 
 
 class GameSessionCreateRequest(BaseModel):
@@ -131,6 +133,8 @@ class GameSessionCompleteResponse(BaseModel):
     is_personal_best: bool = Field(alias="isPersonalBest")
     personal_best_type: PersonalBestTypeLiteral | None = Field(default=None, alias="personalBestType")
     personal_best: GamePersonalBestOut | None = Field(default=None, alias="personalBest")
+    weekly_ranking: "GameWeeklyPlayerRankingOut | None" = Field(default=None, alias="weeklyRanking")
+    league_impact: "GameLeagueImpactOut | None" = Field(default=None, alias="leagueImpact")
 
 
 class GameMetagameStreakOut(BaseModel):
@@ -212,3 +216,119 @@ class GameMetagameClaimResponse(BaseModel):
     already_claimed: bool = Field(alias="alreadyClaimed")
     xp_reward: int = Field(alias="xpReward")
     coin_reward: int = Field(alias="coinReward")
+
+
+class GameRankingMetricOut(BaseModel):
+    key: str
+    label: str
+    direction: Literal["asc", "desc"]
+    unit: str
+
+
+class GameWeeklyRankingEntryOut(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    position: int
+    player: str
+    avatar_key: str | None = Field(default=None, alias="avatarKey")
+    score: float
+    last_played_at: datetime = Field(alias="lastPlayedAt")
+
+
+class GameWeeklyPlayerRankingOut(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    position: int | None = None
+    score: float | None = None
+    in_top: bool = Field(alias="inTop")
+    total_players: int = Field(alias="totalPlayers")
+
+
+class GameWeeklyRankingResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    game_id: str = Field(alias="gameId")
+    metric: GameRankingMetricOut
+    week_start: date = Field(alias="weekStart")
+    week_end: date = Field(alias="weekEnd")
+    top: list[GameWeeklyRankingEntryOut]
+    me: GameWeeklyPlayerRankingOut
+
+
+class GamePersonalRankingItemOut(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    position: int
+    game_id: str = Field(alias="gameId")
+    game_label: str = Field(alias="gameLabel")
+    metric_label: str = Field(alias="metricLabel")
+    score: float
+    unit: str
+
+
+class GamePersonalRankingResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    items: list[GamePersonalRankingItemOut]
+
+
+class GameLeagueTopEntryOut(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    position: int
+    player: str
+    avatar_key: str | None = Field(default=None, alias="avatarKey")
+    score: int
+
+
+class GameLeagueRewardOut(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    reward_xp: int = Field(alias="rewardXp")
+    reward_coins: int = Field(alias="rewardCoins")
+    ready_to_claim: bool = Field(alias="readyToClaim")
+    result_status: GameLeagueStatusLiteral | None = Field(default=None, alias="resultStatus")
+    cycle_week_start: date | None = Field(default=None, alias="cycleWeekStart")
+    cycle_week_end: date | None = Field(default=None, alias="cycleWeekEnd")
+
+
+class GameLeagueSummaryResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    tier: GameLeagueTierLiteral
+    tier_label: str = Field(alias="tierLabel")
+    group_id: str = Field(alias="groupId")
+    week_start: date = Field(alias="weekStart")
+    week_end: date = Field(alias="weekEnd")
+    score_week: int = Field(alias="scoreWeek")
+    position: int | None = None
+    group_size: int = Field(alias="groupSize")
+    promotion_zone_max: int = Field(alias="promotionZoneMax")
+    relegation_zone_min: int | None = Field(default=None, alias="relegationZoneMin")
+    status: GameLeagueStatusLiteral | None = None
+    positions_to_promotion: int | None = Field(default=None, alias="positionsToPromotion")
+    top_entries: list[GameLeagueTopEntryOut] = Field(alias="topEntries")
+    motivation_message: str = Field(alias="motivationMessage")
+    reward: GameLeagueRewardOut
+
+
+class GameLeagueClaimResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    reward_granted: bool = Field(alias="rewardGranted")
+    already_claimed: bool = Field(alias="alreadyClaimed")
+    xp_reward: int = Field(alias="xpReward")
+    coin_reward: int = Field(alias="coinReward")
+    cycle_week_start: date | None = Field(default=None, alias="cycleWeekStart")
+    cycle_week_end: date | None = Field(default=None, alias="cycleWeekEnd")
+    tier_from: GameLeagueTierLiteral | None = Field(default=None, alias="tierFrom")
+    tier_to: GameLeagueTierLiteral | None = Field(default=None, alias="tierTo")
+    result_status: GameLeagueStatusLiteral | None = Field(default=None, alias="resultStatus")
+
+
+class GameLeagueImpactOut(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    xp_contribution: int = Field(alias="xpContribution")
+    position: int | None = None
+    message: str

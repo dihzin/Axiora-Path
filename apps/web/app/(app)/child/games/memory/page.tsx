@@ -290,6 +290,10 @@ export default function MemoryGamePage() {
               coinsGained={reward?.session.coinsEarned ?? 0}
               isPersonalBest={reward?.isPersonalBest ?? false}
               personalBestType={reward?.personalBestType ?? null}
+              rankingPosition={reward?.weeklyRanking?.position ?? null}
+              rankingTotalPlayers={reward?.weeklyRanking?.totalPlayers ?? null}
+              rankingInTop={reward?.weeklyRanking?.inTop ?? false}
+              leagueMessage={reward?.leagueImpact?.message ?? null}
               onReplay={restart}
               onBack={() => {
                 window.location.href = "/child/games";

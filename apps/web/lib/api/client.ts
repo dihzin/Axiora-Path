@@ -939,6 +939,17 @@ export type GameSessionCompleteResponse = GameSessionRegisterResponse & {
   isPersonalBest: boolean;
   personalBestType: GamePersonalBestType | null;
   personalBest: GamePersonalBestResponse | null;
+  weeklyRanking?: {
+    position: number | null;
+    score: number | null;
+    inTop: boolean;
+    totalPlayers: number;
+  } | null;
+  leagueImpact?: {
+    xpContribution: number;
+    position: number | null;
+    message: string;
+  } | null;
 };
 
 export type GameMetagameMissionScope = "daily" | "weekly";
@@ -1003,6 +1014,91 @@ export type GameMetagameClaimResponse = {
   alreadyClaimed: boolean;
   xpReward: number;
   coinReward: number;
+};
+
+export type GameRankingMetric = {
+  key: string;
+  label: string;
+  direction: "asc" | "desc";
+  unit: string;
+};
+
+export type GameWeeklyRankingEntry = {
+  position: number;
+  player: string;
+  avatarKey: string | null;
+  score: number;
+  lastPlayedAt: string;
+};
+
+export type GameWeeklyRankingResponse = {
+  gameId: string;
+  metric: GameRankingMetric;
+  weekStart: string;
+  weekEnd: string;
+  top: GameWeeklyRankingEntry[];
+  me: {
+    position: number | null;
+    score: number | null;
+    inTop: boolean;
+    totalPlayers: number;
+  };
+};
+
+export type GamePersonalRankingResponse = {
+  items: Array<{
+    position: number;
+    gameId: string;
+    gameLabel: string;
+    metricLabel: string;
+    score: number;
+    unit: string;
+  }>;
+};
+
+export type GameLeagueTier = "BRONZE" | "SILVER" | "GOLD" | "DIAMOND";
+export type GameLeagueStatus = "promoted" | "safe" | "relegated";
+
+export type GameLeagueSummaryResponse = {
+  tier: GameLeagueTier;
+  tierLabel: string;
+  groupId: string;
+  weekStart: string;
+  weekEnd: string;
+  scoreWeek: number;
+  position: number | null;
+  groupSize: number;
+  promotionZoneMax: number;
+  relegationZoneMin: number | null;
+  status: GameLeagueStatus | null;
+  positionsToPromotion: number | null;
+  topEntries: Array<{
+    position: number;
+    player: string;
+    avatarKey: string | null;
+    score: number;
+  }>;
+  motivationMessage: string;
+  reward: {
+    rewardXp: number;
+    rewardCoins: number;
+    readyToClaim: boolean;
+    resultStatus: GameLeagueStatus | null;
+    cycleWeekStart: string | null;
+    cycleWeekEnd: string | null;
+  };
+};
+
+export type GameLeagueClaimResponse = {
+  rewardGranted: boolean;
+  alreadyClaimed: boolean;
+  xpReward: number;
+  coinReward: number;
+  cycleWeekStart: string | null;
+  cycleWeekEnd: string | null;
+  tierFrom: GameLeagueTier | null;
+  tierTo: GameLeagueTier | null;
+  resultStatus: GameLeagueStatus | null;
 };
 
 export type StoreCatalogItem = {
@@ -2134,6 +2230,61 @@ export async function claimGamesMetagameMission(payload: {
   return apiRequest<GameMetagameClaimResponse>("/api/games/metagame/claim", {
     method: "POST",
     body: payload,
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getGameWeeklyRanking(
+  gameId: string,
+  childId?: number,
+  limit = 10,
+  timezone?: string,
+): Promise<GameWeeklyRankingResponse> {
+  const query = new URLSearchParams();
+  if (typeof childId === "number") query.set("childId", String(childId));
+  query.set("limit", String(limit));
+  if (timezone && timezone.trim().length > 0) {
+    query.set("timezone", timezone.trim());
+  }
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<GameWeeklyRankingResponse>(`/api/games/ranking/weekly/${encodeURIComponent(gameId)}${suffix}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getMyGamesRanking(childId?: number, limit = 5): Promise<GamePersonalRankingResponse> {
+  const query = new URLSearchParams();
+  if (typeof childId === "number") query.set("childId", String(childId));
+  query.set("limit", String(limit));
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<GamePersonalRankingResponse>(`/api/games/ranking/me${suffix}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function getGamesLeagueSummary(childId?: number, timezone?: string): Promise<GameLeagueSummaryResponse> {
+  const query = new URLSearchParams();
+  if (typeof childId === "number") query.set("childId", String(childId));
+  if (timezone && timezone.trim().length > 0) query.set("timezone", timezone.trim());
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<GameLeagueSummaryResponse>(`/api/games/league/summary${suffix}`, {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: true,
+  });
+}
+
+export async function claimGamesLeagueReward(childId?: number): Promise<GameLeagueClaimResponse> {
+  const query = new URLSearchParams();
+  if (typeof childId === "number") query.set("childId", String(childId));
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<GameLeagueClaimResponse>(`/api/games/league/claim${suffix}`, {
+    method: "POST",
     requireAuth: true,
     includeTenant: true,
   });
