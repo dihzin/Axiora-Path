@@ -14,8 +14,6 @@ type DailyMissionsPanelProps = {
 };
 
 export function DailyMissionsPanel({ missions, missionsLoading, claimingMissionId, onClaimMission, className, compact = false }: DailyMissionsPanelProps) {
-  void claimingMissionId;
-  void onClaimMission;
   const dailyMissions = useMemo(() => missions?.missions ?? [], [missions]);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -33,12 +31,12 @@ export function DailyMissionsPanel({ missions, missionsLoading, claimingMissionI
     <section className={cn("relative overflow-hidden rounded-[28px] border border-white/12 bg-[linear-gradient(155deg,rgba(24,49,43,0.9)_0%,rgba(28,64,56,0.82)_54%,rgba(20,42,38,0.9)_100%)] shadow-[0_16px_40px_rgba(7,20,17,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-[2px]", compact ? "p-3.5" : "p-4", className)}>
       <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-gradient-to-b from-white/5 via-white/[0.03] to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[radial-gradient(70%_90%_at_50%_0%,rgba(255,176,122,0.12),transparent_65%)]" />
-      <div className="relative z-10 flex items-end justify-between gap-3">
+      <div className="relative z-10 flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">Desafios do dia</p>
-          <h3 className={cn("mt-1 font-semibold leading-tight text-white", compact ? "text-[15px]" : "text-[18px]")}>{compact ? "Desafio em foco" : "Pequenas conquistas para hoje"}</h3>
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "rgba(255,180,100,0.82)" }}>✦ Desafios do dia</p>
+          <h3 className={cn("mt-1 font-bold leading-tight text-white", compact ? "text-[15px]" : "text-[18px]")}>{compact ? "Desafio em foco" : "Pequenas conquistas para hoje"}</h3>
         </div>
-        <span className="rounded-full border border-[#F1C56B]/18 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-slate-200">
+        <span className="rounded-full border border-[#F1C56B]/25 bg-[#F1C56B]/10 px-2.5 py-1 text-[11px] font-bold text-[#FFF1D8] shadow-[0_0_10px_rgba(241,197,107,0.12)]">
           {dailyMissions.length} ativos
         </span>
       </div>
@@ -79,12 +77,12 @@ export function DailyMissionsPanel({ missions, missionsLoading, claimingMissionI
                   ))}
                 </div>
               </div>
-              {activeMission ? <MissionTile mission={activeMission} index={activeIndex} compact /> : null}
+              {activeMission ? <MissionTile mission={activeMission} index={activeIndex} compact onClaimMission={onClaimMission} claimingMissionId={claimingMissionId} /> : null}
             </div>
           ) : (
-            <div className={cn("grid sm:grid-cols-2 xl:grid-cols-1", compact ? "gap-2.5" : "gap-3")}>
+            <div className="grid gap-3">
               {dailyMissions.map((mission, index) => (
-                <MissionTile key={mission.missionId} mission={mission} index={index} compact={compact} />
+                <MissionTile key={mission.missionId} mission={mission} index={index} compact={compact} onClaimMission={onClaimMission} claimingMissionId={claimingMissionId} />
               ))}
             </div>
           )
@@ -123,10 +121,25 @@ function NavButton({
   );
 }
 
-function MissionTile({ mission, index, compact }: { mission: MissionProgress; index: number; compact: boolean }) {
+function MissionTile({
+  mission,
+  index,
+  compact,
+  onClaimMission,
+  claimingMissionId,
+}: {
+  mission: MissionProgress;
+  index: number;
+  compact: boolean;
+  onClaimMission: (missionId: string) => void;
+  claimingMissionId: string | null;
+}) {
   const safeTotal = Math.max(1, mission.targetValue);
   const safeValue = Math.max(0, mission.currentValue);
   const done = mission.completed || safeValue >= safeTotal;
+  const claimed = mission.rewardGranted;
+  const canClaim = done && !claimed;
+  const isClaiming = claimingMissionId === mission.missionId;
   const percent = Math.min(100, Math.round((safeValue / safeTotal) * 100));
   const accents = [
     "from-[#F1C56B]/18 to-[#FF9A48]/10 border-[#F1C56B]/18",
@@ -140,7 +153,9 @@ function MissionTile({ mission, index, compact }: { mission: MissionProgress; in
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className={cn("font-semibold leading-tight text-white", compact ? "text-[13px]" : "text-[14px]")}>{mission.title}</p>
-          <p className="mt-1 text-[11px] text-slate-300">{done ? "Conquista pronta para celebrar" : "Continue para acender esta estrela"}</p>
+          <p className="mt-1 text-[11px] text-slate-300">
+            {claimed ? "Recompensa resgatada ✓" : done ? "Conquista pronta para celebrar!" : "Continue para acender esta estrela"}
+          </p>
         </div>
         <p className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${done ? "border-emerald-300/45 bg-emerald-400/15 text-emerald-100" : "border-[#F1C56B]/40 bg-[#FF9A48]/15 text-[#FFE7D1]"}`}>
           {safeValue}/{safeTotal}
@@ -152,10 +167,21 @@ function MissionTile({ mission, index, compact }: { mission: MissionProgress; in
           style={{ width: `${percent}%` }}
         />
       </div>
-      <div className="mt-2 flex items-center justify-between text-[11px] text-slate-300">
-        <span>{percent}% completo</span>
-        <span>{done ? "Pronto" : "Em progresso"}</span>
-      </div>
+      {canClaim ? (
+        <button
+          type="button"
+          onClick={() => onClaimMission(mission.missionId)}
+          disabled={isClaiming}
+          className="mt-2.5 w-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 px-3 py-1.5 text-[11px] font-semibold text-white shadow-[0_0_12px_rgba(52,211,153,0.28)] transition-all hover:shadow-[0_0_20px_rgba(52,211,153,0.44)] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isClaiming ? "Resgatando..." : "✦ Resgatar recompensa"}
+        </button>
+      ) : (
+        <div className="mt-2 flex items-center justify-between text-[11px] text-slate-300">
+          <span>{percent}% completo</span>
+          <span>{claimed ? "Resgatado" : done ? "Pronto" : "Em progresso"}</span>
+        </div>
+      )}
     </div>
   );
 }

@@ -28,8 +28,7 @@ function normalizeSubjectName(value: string): string {
     .toLowerCase();
 }
 
-const getSubjectTextColor = (normalized: string, isActive: boolean) => {
-  void normalized;
+const getSubjectTextColor = (isActive: boolean) => {
   if (isActive) return "text-[var(--axiora-energy)]";
   return "text-[var(--axiora-text-secondary)]";
 }
@@ -103,10 +102,7 @@ export function SubjectSelector({
                   }`}
                 >
                   <span
-                    className={`inline-flex h-5 w-5 items-center justify-center rounded-[10px] bg-white/80 ${getSubjectTextColor(
-                      normalizeSubjectName(subject.name),
-                      activeSubject,
-                    )}`}
+                    className={`inline-flex h-5 w-5 items-center justify-center rounded-[10px] bg-white/80 ${getSubjectTextColor(activeSubject)}`}
                   >
                     <BrainIcon className="h-3.5 w-3.5" />
                   </span>

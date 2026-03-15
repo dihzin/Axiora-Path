@@ -71,6 +71,10 @@ function lessonStatus(lesson: LearningPathLessonNode, currentLessonId: number | 
   return "available";
 }
 
+const NODE_GAP_MIN = 22;
+const NODE_GAP_MAX = 32;
+const NODE_STEP_BASE = 102;
+
 function SkillPathUnitComponent({
   unit,
   unitIndex,
@@ -84,9 +88,6 @@ function SkillPathUnitComponent({
   onEventPress,
 }: SkillPathUnitProps) {
   const nodes = unit.nodes;
-  const NODE_GAP_MIN = 22;
-  const NODE_GAP_MAX = 32;
-  const NODE_STEP_BASE = 102;
 
   const points = useMemo(() => {
     let y = 92;

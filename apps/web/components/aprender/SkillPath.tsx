@@ -27,6 +27,9 @@ type SkillPathProps = {
   onPathReady?: () => void;
 };
 
+const UNIT_GAP_MIN = 96;
+const UNIT_GAP_MAX = 136;
+
 export function SkillPath({
   units,
   pathPriority,
@@ -42,8 +45,6 @@ export function SkillPath({
   onActiveUnitChange,
   onPathReady,
 }: SkillPathProps) {
-  const UNIT_GAP_MIN = 96;
-  const UNIT_GAP_MAX = 136;
   const unitRefs = useRef<Array<HTMLElement | null>>([]);
   const activeUnitIndexRef = useRef(0);
   const [activeUnitIndex, setActiveUnitIndex] = useState(0);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 import { useParallax } from "@/hooks/useParallax";
 import { cn } from "@/lib/utils";
@@ -1012,27 +1012,75 @@ export default function ProgressionMap({
                 style={{ overflow: "visible" }}
                 aria-hidden
               >
-                <defs />
+                <defs>
+                  <filter id="dotGlow" x="-100%" y="-50%" width="300%" height="200%" colorInterpolationFilters="sRGB">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                  <filter id="dotGlowWarm" x="-100%" y="-50%" width="300%" height="200%" colorInterpolationFilters="sRGB">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+                    <feColorMatrix in="blur" type="matrix" values="1.1 0.1 0 0 0  0.2 0.8 0 0 0  0 0 0.6 0 0  0 0 0 1 0" result="warmBlur" />
+                    <feMerge>
+                      <feMergeNode in="warmBlur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                  {/* Soft white glow for the main trail path (item 3) */}
+                  <filter id="pathGlow" x="-60%" y="-50%" width="220%" height="200%" colorInterpolationFilters="sRGB">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
 
+                {/* ── UPCOMING PATH — slim + glow (item 3) ── */}
+                {/* Soft shadow for readability against colorful bg */}
                 <path
-                  ref={pathRef}
                   d={curvedPath}
-                  stroke={isMobile ? "rgba(255,255,255,0.62)" : "rgba(255,255,255,0.5)"}
-                  strokeWidth={isMobile ? 5 : 3}
+                  stroke="rgba(0,0,0,0.38)"
+                  strokeWidth={isMobile ? 10 : 9}
                   fill="none"
                   strokeLinecap="round"
                   vectorEffect="non-scaling-stroke"
                 />
+                {/* Main slim path */}
+                <path
+                  ref={pathRef}
+                  d={curvedPath}
+                  stroke="rgba(255,255,255,0.55)"
+                  strokeWidth={isMobile ? 7 : 6}
+                  fill="none"
+                  strokeLinecap="round"
+                  filter="url(#pathGlow)"
+                  vectorEffect="non-scaling-stroke"
+                />
+
+                {/* ── PROGRESS PATH — amber slim + warm glow ── */}
                 {progressPath ? (
-                  <path
-                    d={progressPath}
-                    stroke="#ffffff"
-                    strokeWidth={isMobile ? 6 : 4}
-                    opacity={0.82}
-                    fill="none"
-                    strokeLinecap="round"
-                    vectorEffect="non-scaling-stroke"
-                  />
+                  <>
+                    <path
+                      d={progressPath}
+                      stroke="rgba(0,0,0,0.35)"
+                      strokeWidth={isMobile ? 10 : 9}
+                      fill="none"
+                      strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                    <path
+                      d={progressPath}
+                      stroke="#FF9A48"
+                      strokeWidth={isMobile ? 7 : 6}
+                      fill="none"
+                      strokeLinecap="round"
+                      filter="url(#dotGlowWarm)"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </>
                 ) : null}
               </svg>
             </div>
@@ -1074,24 +1122,63 @@ export default function ProgressionMap({
             </div>
 
             <div className="absolute left-1/2 top-0 z-[11] -translate-x-1/2" style={{ width: `${trackWidth}px`, height: `${worldHeight}px` }}>
-              {renderNodes.map((node, index) => {
-                const point = points[index];
-                if (!point) return null;
-                return renderNode({
-                  node,
-                  point,
-                  prevPoint: points[index - 1],
-                  nextPoint: points[index + 1],
-                  nodeIndex: index,
-                  compactMobile,
-                  highlightedNodeId: selectedNodeId ?? activeNodeId,
-                  onNodeClick,
-                  quality,
-                  reducedMotion,
-                  enterProgress: enterProgressVisual,
-                  unlockBurstProgress: unlockVisual.nodeId === node.id ? unlockVisual.progress : 0,
+              {(() => {
+                let unitCount = 0;
+                return renderNodes.map((node, index) => {
+                  const point = points[index];
+                  if (!point) return null;
+                  const isCheckpoint = node.isCheckpoint === true;
+                  if (isCheckpoint) unitCount += 1;
+                  const thisUnit = unitCount;
+                  return (
+                    <Fragment key={node.id}>
+                      {isCheckpoint ? (
+                        <div
+                          aria-hidden
+                          className="pointer-events-none absolute z-[12] flex items-center gap-3"
+                          style={{
+                            left: 0,
+                            right: 0,
+                            top: point.y - (nodeGap ?? 156) * 0.52,
+                            transform: "translateY(-50%)",
+                            padding: "0 24px",
+                          }}
+                        >
+                          <div className="h-px flex-1 rounded-full" style={{ background: "linear-gradient(90deg, transparent, rgba(110,231,183,0.45), rgba(110,231,183,0.22))" }} />
+                          <span
+                            className="shrink-0 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em]"
+                            style={{
+                              background: "linear-gradient(135deg, rgba(20,55,46,0.92), rgba(12,36,30,0.92))",
+                              border: "1.5px solid rgba(110,231,183,0.35)",
+                              color: "rgba(110,231,183,0.92)",
+                              boxShadow: "0 0 18px rgba(52,211,153,0.18), inset 0 1px 0 rgba(255,255,255,0.08)",
+                              backdropFilter: "blur(12px)",
+                            }}
+                          >
+                            ✦ Unidade {thisUnit}
+                          </span>
+                          <div className="h-px flex-1 rounded-full" style={{ background: "linear-gradient(90deg, rgba(110,231,183,0.22), rgba(110,231,183,0.45), transparent)" }} />
+                        </div>
+                      ) : null}
+                      {renderNode({
+                        node,
+                        point,
+                        prevPoint: points[index - 1],
+                        nextPoint: points[index + 1],
+                        nodeIndex: index,
+                        compactMobile,
+                        highlightedNodeId: selectedNodeId ?? activeNodeId,
+                        onNodeClick,
+                        quality,
+                        reducedMotion,
+                        enterProgress: enterProgressVisual,
+                        unlockBurstProgress: unlockVisual.nodeId === node.id ? unlockVisual.progress : 0,
+                        canvasWidth: trackWidth,
+                      })}
+                    </Fragment>
+                  );
                 });
-              })}
+              })()}
             </div>
           </div>
 

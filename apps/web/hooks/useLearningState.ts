@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   completeLearnLesson,
@@ -55,8 +55,13 @@ type LearningState = {
 };
 
 function stableId(value: string): number {
-  const raw = Array.from(String(value || "")).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return Math.max(1, raw);
+  // djb2 hash — position-sensitive, so anagrams produce different IDs
+  let hash = 5381;
+  const str = String(value || "");
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash + str.charCodeAt(i)) & 0xffffffff;
+  }
+  return Math.abs(hash) || 1;
 }
 
 function titleize(value: string): string {
@@ -166,6 +171,11 @@ export function useLearningState(options: UseLearningStateOptions = {}): Learnin
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Ref to avoid currentLesson in the skills effect dependency array (would cause loop)
+  const currentLessonRef = useRef(currentLesson);
+  useEffect(() => {
+    currentLessonRef.current = currentLesson;
+  }, [currentLesson]);
 
   const selectedSubject = useMemo(
     () => subjectOptions.find((subject) => subject.id === selectedSubjectId) ?? null,
@@ -220,7 +230,7 @@ export function useLearningState(options: UseLearningStateOptions = {}): Learnin
         if (!active) return;
         setSkills(response.skills);
         setSkillGraph(response.skillGraph);
-        if (!currentLesson?.lesson) {
+        if (!currentLessonRef.current?.lesson) {
           setCurrentLesson({
             lesson: response.lesson,
             difficulty: response.difficulty,
@@ -245,7 +255,7 @@ export function useLearningState(options: UseLearningStateOptions = {}): Learnin
     return () => {
       active = false;
     };
-  }, [currentLesson?.lesson, selectedSubject]);
+  }, [selectedSubject]);
 
   const { path, lessonSkillMap } = useMemo(
     () => buildSyntheticPath(selectedSubject, skillGraph, nextRecommendation),

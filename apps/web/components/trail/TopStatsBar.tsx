@@ -1,7 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Bell, CircleHelp, Coins, UserCircle2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { BellDot, Coins, HelpCircle, UserRound, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FlameIcon } from "@/components/ui/icons/FlameIcon";
 import { GemIcon } from "@/components/ui/icons/GemIcon";
@@ -18,41 +19,59 @@ type TopStatsBarProps = {
 };
 
 export function TopStatsBar({ streak, gems, xp, xpTotal = 0, variant = "compact", className, action }: TopStatsBarProps) {
+  const router = useRouter();
   const safeXp = Math.max(0, Math.min(100, xp));
   const safeGems = Math.max(0, Math.floor(gems));
   const safeXpTotal = Math.max(0, Math.floor(xpTotal));
-  const coinsApprox = Math.max(0, safeGems * 2);
   const formatInt = (value: number) => new Intl.NumberFormat("pt-BR").format(value);
 
   if (variant === "global") {
     return (
       <div
         className={cn(
-          "relative z-30 mx-auto flex h-[52px] w-full items-center justify-between gap-3 rounded-[14px] border border-[#78BFE3]/20 bg-[linear-gradient(180deg,rgba(17,56,82,0.92),rgba(14,42,64,0.92))] px-3.5 shadow-[0_8px_18px_rgba(2,10,20,0.28),inset_0_1px_0_rgba(255,255,255,0.12)]",
+          "relative z-30 mx-auto flex h-[52px] w-full items-center justify-between gap-3 rounded-[14px] border border-[#78BFE3]/20 bg-[linear-gradient(180deg,rgba(17,56,82,0.94),rgba(14,42,64,0.94))] px-3.5 shadow-[0_8px_24px_rgba(2,10,20,0.32),inset_0_1px_0_rgba(255,255,255,0.14)]",
           className,
         )}
       >
+        {/* Left: activity stats */}
         <div className="flex min-w-0 items-center gap-2">
           <HudPill
-            icon={<span className="text-[12px] text-slate-200">🕒</span>}
+            icon={<FlameIcon className="h-4 w-4 text-orange-400" />}
             value={`${Math.max(0, Math.floor(streak))}`}
             label="dias"
             className="min-w-[96px] justify-center"
           />
           <HudPill
-            icon={<span className="text-[12px] text-amber-200">⚡</span>}
+            icon={<Zap className="h-4 w-4 text-amber-300" strokeWidth={2.2} />}
             value={`${safeXp}%`}
-            label="xp"
+            label="nível"
             className="min-w-[82px] justify-center"
           />
         </div>
+
+        {/* Right: economy + actions */}
         <div className="flex min-w-0 items-center gap-1.5">
-          <HudPill icon={<GemIcon className="h-4 w-4 text-fuchsia-300" />} value={formatInt(safeGems)} className="min-w-[94px] justify-center" />
-          <HudPill icon={<Coins className="h-4 w-4 text-amber-300" />} value={formatInt(coinsApprox)} className="min-w-[108px] justify-center" />
-          <HudPill icon={<StarIcon className="h-4 w-4 text-yellow-300" />} value={formatInt(safeXpTotal)} className="min-w-[102px] justify-center" />
-          <IconPill icon={<Bell className="h-3.5 w-3.5" />} alert />
-          <IconPill icon={<CircleHelp className="h-3.5 w-3.5" />} />
-          <IconPill icon={<UserCircle2 className="h-4 w-4" />} />
+          <HudPill icon={<GemIcon className="h-4 w-4 text-fuchsia-300" />} value={formatInt(safeGems)} className="min-w-[88px] justify-center" />
+          <HudPill icon={<Coins className="h-4 w-4 text-amber-300" strokeWidth={2} />} value={formatInt(safeGems)} className="min-w-[88px] justify-center" />
+          <HudPill icon={<StarIcon className="h-4 w-4 text-yellow-300" />} value={formatInt(safeXpTotal)} label="xp" className="min-w-[102px] justify-center" />
+
+          <ActionPill
+            icon={<BellDot className="h-4 w-4" strokeWidth={1.8} />}
+            label="Notificações"
+            alert
+            onClick={() => router.push("/child/notifications")}
+          />
+          <ActionPill
+            icon={<HelpCircle className="h-4 w-4" strokeWidth={1.8} />}
+            label="Ajuda"
+            onClick={() => router.push("/child/help")}
+          />
+          <ActionPill
+            icon={<UserRound className="h-[18px] w-[18px]" strokeWidth={1.8} />}
+            label="Perfil"
+            onClick={() => router.push("/child/profile")}
+            highlight
+          />
         </div>
       </div>
     );
@@ -74,12 +93,12 @@ export function TopStatsBar({ streak, gems, xp, xpTotal = 0, variant = "compact"
         <StatItem
           label="gemas"
           value={Math.max(0, Math.floor(gems))}
-          icon={<StarIcon className="h-[18px] w-[18px] text-amber-300/90" />}
+          icon={<GemIcon className="h-[18px] w-[18px] text-fuchsia-300/90" />}
         />
         <StatItem
           label="xp"
           value={`${safeXp}%`}
-          icon={<span className="text-[13px] font-semibold leading-none text-slate-100/90">%</span>}
+          icon={<Zap className="h-[16px] w-[16px] text-amber-300/90" strokeWidth={2.2} />}
         />
       </div>
       {action}
@@ -102,12 +121,39 @@ function HudPill({ icon, value, label, className }: { icon: ReactNode; value: st
   );
 }
 
-function IconPill({ icon, alert = false }: { icon: ReactNode; alert?: boolean }) {
+function ActionPill({
+  icon,
+  label,
+  alert = false,
+  highlight = false,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  alert?: boolean;
+  highlight?: boolean;
+  onClick?: () => void;
+}) {
   return (
-    <div className="relative inline-flex h-[34px] w-[34px] items-center justify-center rounded-full border border-[#8EC7E6]/18 bg-[#0D2B44]/88 text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      className={cn(
+        "relative inline-flex h-[34px] w-[34px] items-center justify-center rounded-full border transition-all duration-150",
+        highlight
+          ? "border-[#78BFE3]/35 bg-[linear-gradient(135deg,rgba(30,80,120,0.9),rgba(15,50,80,0.9))] text-sky-200 shadow-[0_0_12px_rgba(120,191,227,0.18),inset_0_1px_0_rgba(255,255,255,0.12)] hover:border-[#78BFE3]/55 hover:shadow-[0_0_18px_rgba(120,191,227,0.28)]"
+          : "border-[#8EC7E6]/18 bg-[#0D2B44]/88 text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:border-[#8EC7E6]/35 hover:bg-[#0D3558]/90 hover:text-slate-100",
+      )}
+    >
       {icon}
-      {alert ? <span className="absolute right-[6px] top-[6px] h-2 w-2 rounded-full bg-red-500" /> : null}
-    </div>
+      {alert ? (
+        <span
+          aria-hidden
+          className="absolute right-[7px] top-[7px] h-[7px] w-[7px] rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)] ring-1 ring-[#0D2B44]"
+        />
+      ) : null}
+    </button>
   );
 }
 

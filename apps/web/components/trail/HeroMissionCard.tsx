@@ -40,6 +40,7 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
     xpInLevel,
     xpToNextLevel,
     currentMission,
+    onContinue,
     onStartMission,
     className,
     compact = false,
@@ -88,7 +89,7 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
     <section
       className={cn(
         `relative z-0 mx-auto w-full max-w-[760px] overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(155deg,rgba(24,49,43,0.9)_0%,rgba(28,64,56,0.82)_54%,rgba(20,42,38,0.9)_100%)] shadow-[0_16px_40px_rgba(7,20,17,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-500 will-change-transform hover:-translate-y-[1px] hover:shadow-[0_22px_48px_rgba(7,20,17,0.38)] ${axioraMotionClasses.transition}`,
-        compact ? "p-3.5 md:p-4" : "p-4 md:p-5",
+        compact ? "p-3 md:p-3.5" : "p-4 md:p-5",
         levelGlow ? "hero-level-glow" : "",
         className,
       )}
@@ -117,10 +118,20 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
                 Nível {safeLevel}
               </span>
             </div>
-            <h2 className={cn("mt-3 max-w-[94%] font-semibold leading-[1.02] tracking-tight", compact ? "text-[21px]" : "text-[24px]")} style={{ color: TEXT_PRIMARY }}>{subjectName}</h2>
-            <p className={cn("mt-2 font-medium", compact ? "text-[11px]" : "text-[12px]")} style={{ color: TEXT_MUTED }}>
-              Sua próxima descoberta está logo ali. Mais {remainingXp} XP para abrir o próximo marco.
-            </p>
+            <h2
+              className={cn("mt-3 max-w-[94%] font-black leading-[1.02] tracking-tight", compact ? "text-[22px]" : "text-[26px]")}
+              style={{
+                background: "linear-gradient(130deg, rgba(255,246,236,0.98) 0%, rgba(241,197,107,0.92) 52%, rgba(255,154,72,0.86) 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >{subjectName}</h2>
+            {!compact && (
+              <p className="mt-2 text-[12px] font-medium" style={{ color: TEXT_MUTED }}>
+                Sua próxima descoberta está logo ali. Mais <span style={{ color: "rgba(241,197,107,0.9)", fontWeight: 700 }}>{remainingXp} XP</span> para abrir o próximo marco.
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2 rounded-full border border-[#F1C56B]/18 bg-[#F1C56B]/8 px-3 py-2 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
             <span className="inline-flex h-2.5 w-2.5 rounded-full bg-[#FF9A48] shadow-[0_0_10px_rgba(255,154,72,0.6)]" />
@@ -135,55 +146,69 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
           }}
         >
           <div className={cn("mb-2 flex items-center justify-between gap-2 px-0.5", compact && "mb-1.5")}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_MUTED }}>Energia da trilha</p>
-            <span className="text-[11px] font-semibold" style={{ color: TEXT_PRIMARY }}>{safeInLevel}/{safeToNext} XP</span>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "rgba(255,180,100,0.82)" }}>✦ Energia da trilha</p>
+            <span className="text-[11px] font-bold" style={{ color: TEXT_PRIMARY }}>{safeInLevel}/{safeToNext} XP</span>
           </div>
-            <div className="relative h-2.5 w-full overflow-hidden rounded-full border border-[#E6D8C6]/45 bg-[linear-gradient(180deg,rgba(244,238,229,0.92)_0%,rgba(234,225,214,0.92)_100%)] shadow-[inset_0_1px_3px_rgba(58,67,62,0.12)]">
+          <div className="relative h-3 w-full overflow-hidden rounded-full border border-[#E6D8C6]/40 bg-[linear-gradient(180deg,rgba(244,238,229,0.88)_0%,rgba(234,225,214,0.88)_100%)] shadow-[inset_0_1px_4px_rgba(58,67,62,0.16)]">
             <div aria-hidden className="pointer-events-none absolute inset-0 z-10">
-              <span className="absolute left-1/4 top-0 h-full w-px bg-[#1F3552]/20" />
-              <span className="absolute left-1/2 top-0 h-full w-px bg-[#1F3552]/20" />
-              <span className="absolute left-3/4 top-0 h-full w-px bg-[#1F3552]/20" />
+              <span className="absolute left-1/4 top-0 h-full w-px bg-[#1F3552]/15" />
+              <span className="absolute left-1/2 top-0 h-full w-px bg-[#1F3552]/15" />
+              <span className="absolute left-3/4 top-0 h-full w-px bg-[#1F3552]/15" />
             </div>
             <div
-              className="relative z-0 h-full rounded-full bg-gradient-to-r from-[#F1C56B] via-[#FF9A48] to-[#D96C2A] shadow-[0_0_12px_rgba(255,154,72,0.46)] transition-transform transition-shadow transition-opacity duration-[400ms] ease-out"
+              className="relative z-0 h-full rounded-full bg-gradient-to-r from-[#F1C56B] via-[#FF9A48] to-[#D96C2A] shadow-[0_0_18px_rgba(255,154,72,0.62),0_0_6px_rgba(255,154,72,0.38)] transition-all duration-[400ms] ease-out"
               style={{ width: `${safeXpPercent}%` }}
             />
           </div>
 
           <div className={cn("grid", compact ? "mt-3 gap-2.5" : "mt-4 gap-3 md:grid-cols-[1.25fr_auto] md:items-center")}>
             <div className={cn("grid", compact ? "gap-2.5" : "gap-3 md:grid-cols-[1.2fr_0.8fr]")}>
-              <div className={cn("rounded-[22px] border border-[#E5D5C0]/14 bg-[linear-gradient(145deg,rgba(24,49,43,0.52),rgba(63,96,88,0.18))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]", compact ? "px-3.5 py-2.5" : "px-4 py-3")}>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_MUTED }}>Missão brilhando agora</p>
-                <p className={cn("mt-1 font-semibold leading-tight", compact ? "text-[14px]" : "text-[15px]")} style={{ color: TEXT_PRIMARY }}>{missionTitle}</p>
+              <div className={cn("relative overflow-hidden rounded-[22px] border border-[#FF9A48]/20 bg-[linear-gradient(145deg,rgba(30,55,46,0.65),rgba(50,82,66,0.28))] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_18px_rgba(255,122,47,0.06)]", compact ? "px-3.5 py-2.5" : "px-4 py-3")}>
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-[3px] rounded-l-[22px] bg-gradient-to-b from-[#F1C56B] to-[#FF9A48]" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "rgba(255,180,100,0.82)" }}>✦ Missão brilhando agora</p>
+                <p className={cn("mt-1 font-bold leading-tight", compact ? "text-[14px]" : "text-[15px]")} style={{ color: TEXT_PRIMARY }}>{missionTitle}</p>
                 <div className={cn("mt-2 flex flex-wrap", compact ? "gap-1.5" : "gap-2")}>
-                  <span className="rounded-full border border-[#F1C56B]/28 bg-[#F1C56B]/12 px-2.5 py-1 text-[11px] font-medium text-[#FFF1D8]">
+                  <span className="rounded-full border border-[#F1C56B]/35 bg-[#F1C56B]/15 px-2.5 py-1 text-[11px] font-bold text-[#FFF1D8] shadow-[0_0_10px_rgba(241,197,107,0.18)]">
                     +{missionXp} XP
                   </span>
-                  <span className="rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium" style={{ color: TEXT_MUTED }}>
+                  <span className="rounded-full border border-white/14 bg-white/[0.05] px-2.5 py-1 text-[11px] font-medium" style={{ color: TEXT_MUTED }}>
                     Missão pronta
                   </span>
                 </div>
               </div>
 
-              <div className={cn("rounded-[22px] border border-emerald-300/12 bg-[linear-gradient(145deg,rgba(93,188,168,0.16),rgba(241,197,107,0.08))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]", compact ? "px-3.5 py-2.5" : "px-4 py-3")}>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_MUTED }}>Próximo portal</p>
-                <p className={cn("mt-1 font-semibold", compact ? "text-[13px]" : "text-[14px]")} style={{ color: TEXT_PRIMARY }}>Nível {nextLevel}</p>
+              <div className={cn("relative overflow-hidden rounded-[22px] border border-emerald-400/18 bg-[linear-gradient(145deg,rgba(52,120,100,0.22),rgba(30,70,55,0.18))] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]", compact ? "px-3.5 py-2.5" : "px-4 py-3")}>
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-[3px] rounded-l-[22px] bg-gradient-to-b from-emerald-300 to-emerald-500" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "rgba(110,231,183,0.82)" }}>▲ Próximo portal</p>
+                <p className={cn("mt-1 font-bold", compact ? "text-[13px]" : "text-[14px]")} style={{ color: TEXT_PRIMARY }}>Nível {nextLevel}</p>
                 <p className={cn("mt-1 leading-snug", compact ? "text-[11px]" : "text-[12px]")} style={{ color: TEXT_MUTED }}>
-                  Cerca de {missionsToUnlock} missões para desbloquear.
+                  Cerca de <span style={{ color: "rgba(110,231,183,0.85)", fontWeight: 600 }}>{missionsToUnlock}</span> missões para desbloquear.
                 </p>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={onStartMission}
-              className={cn(
-                "axiora-chunky-btn inline-flex items-center justify-center font-black text-white",
-                compact ? "min-h-[50px] w-full px-4 py-2.5 text-[13px]" : "min-h-[56px] px-5 py-3 text-[14px] md:min-w-[188px]",
-              )}
-            >
-              Iniciar missão
-            </button>
+            <div className={cn("flex flex-col", compact ? "gap-2" : "gap-2.5")}>
+              <button
+                type="button"
+                onClick={onStartMission}
+                className={cn(
+                  "axiora-chunky-btn inline-flex items-center justify-center font-black text-white",
+                  compact ? "min-h-[50px] w-full px-4 py-2.5 text-[13px]" : "min-h-[56px] px-5 py-3 text-[14px] md:min-w-[188px]",
+                )}
+              >
+                Iniciar missão
+              </button>
+              {onContinue ? (
+                <button
+                  type="button"
+                  onClick={onContinue}
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3 py-2 text-[11px] font-semibold text-slate-300 transition-colors hover:border-white/20 hover:bg-white/[0.07] hover:text-slate-100"
+                >
+                  <span aria-hidden className="text-[10px]">↑</span>
+                  Ver na trilha
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

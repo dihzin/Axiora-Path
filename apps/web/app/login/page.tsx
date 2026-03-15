@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
+
+import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,20 +33,6 @@ declare global {
   }
 }
 
-function AxionMascot() {
-  return (
-    <div className="axion-float axion-glow relative h-[124px] w-[124px] drop-shadow-[0_20px_40px_rgba(7,20,17,0.26)]">
-      <Image
-        src="/axiora/mascot/axiora-mascot.png"
-        alt="Mascote Axiora"
-        fill
-        sizes="124px"
-        className="object-contain"
-        priority
-      />
-    </div>
-  );
-}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -218,7 +205,7 @@ export default function LoginPage() {
         aria-hidden="true"
       />
       <div
-        className="pointer-events-none fixed left-[-12px] top-[-12px] z-0 h-[calc(100vh+24px)] w-[calc(100vw+24px)] bg-[linear-gradient(90deg,rgba(8,18,27,0.7)_0%,rgba(10,24,35,0.46)_34%,rgba(16,30,34,0.22)_100%)]"
+        className="pointer-events-none fixed left-[-12px] top-[-12px] z-0 h-[calc(100vh+24px)] w-[calc(100vw+24px)] bg-[linear-gradient(90deg,rgba(6,14,22,0.82)_0%,rgba(10,22,32,0.52)_38%,rgba(16,28,32,0.18)_100%)]"
         aria-hidden="true"
       />
       <div
@@ -228,15 +215,19 @@ export default function LoginPage() {
 
       <main className="axiora-brand-content relative z-10 min-h-screen w-full overflow-hidden">
         <section className="relative z-10 mx-auto grid min-h-screen w-full max-w-[1480px] items-center gap-8 px-4 py-6 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-10 lg:py-10">
-          <div className="axiora-login-hero flex min-h-[44vh] flex-col justify-start gap-8 rounded-[2rem] border border-white/8 bg-[rgba(8,18,28,0.16)] p-5 backdrop-blur-[1px] sm:p-8 lg:min-h-[78vh] lg:border-transparent lg:bg-transparent lg:p-8 lg:backdrop-blur-0">
-            <div className="flex items-start justify-between gap-4 lg:pt-3">
-              <div />
-              <div className="hidden lg:block lg:translate-x-0 lg:translate-y-[-0.9rem] lg:scale-[0.8]">
-                <AxionMascot />
+          <div className="axiora-login-hero flex min-h-[44vh] flex-col justify-center gap-8 rounded-[2rem] border border-white/8 bg-[rgba(8,18,28,0.16)] p-5 backdrop-blur-[1px] sm:p-8 lg:min-h-[78vh] lg:border-transparent lg:bg-transparent lg:justify-start lg:p-8 lg:pt-16 lg:backdrop-blur-0">
+            <div className="max-w-[36rem] space-y-6 text-white">
+              {/* Mascot — prominent above tagline */}
+              <div className="mb-2">
+                <Image
+                  src="/axiora/mascot/axiora-mascot.png"
+                  alt="Mascote Axiora"
+                  width={172}
+                  height={172}
+                  priority
+                />
               </div>
-            </div>
 
-            <div className="max-w-[36rem] space-y-6 pt-2 text-white lg:pt-8">
               <div className="space-y-4">
                 <h1 className="max-w-[10ch] text-4xl font-black uppercase leading-[0.81] tracking-[-0.045em] sm:text-5xl lg:text-[5.1rem]">
                   <span className="block text-[#fffaf4] drop-shadow-[0_10px_22px_rgba(7,20,17,0.28)]">Abrir</span>
@@ -254,47 +245,61 @@ export default function LoginPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="axiora-login-info-card relative overflow-hidden rounded-[1.7rem] border border-[rgba(255,235,210,0.78)] bg-[linear-gradient(180deg,rgba(255,251,246,0.98),rgba(242,232,220,0.93))] px-4 py-5 shadow-[0_24px_54px_rgba(6,17,28,0.24)]">
-                  <div className="absolute inset-x-0 top-0 h-1.5 bg-[linear-gradient(90deg,#f6dfb7,#e8b97c)]" aria-hidden="true" />
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.86),transparent_38%)]" aria-hidden="true" />
+                {/* Famílias */}
+                <div className="axiora-login-info-card relative overflow-hidden rounded-[1.7rem] border border-[rgba(241,197,107,0.28)] bg-[linear-gradient(160deg,rgba(20,36,28,0.78),rgba(14,28,22,0.72))] px-4 py-5 shadow-[0_16px_36px_rgba(4,12,8,0.36)] backdrop-blur-md">
+                  <div className="absolute inset-x-0 top-0 h-[2px] bg-[linear-gradient(90deg,#f6dfb7,#e8b97c)]" aria-hidden="true" />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(246,223,183,0.10),transparent_52%)]" aria-hidden="true" />
                   <div className="relative">
-                    <p className="text-[0.7rem] font-black uppercase tracking-[0.18em] text-[#a67845]">Famílias</p>
-                    <p className="mt-2 text-sm font-black leading-[1.75] text-[#183654]">Progresso, rotina e consentimento com mais tranquilidade.</p>
+                    <p className="text-[0.7rem] font-black uppercase tracking-[0.18em] text-[#f6c870]">Famílias</p>
+                    <p className="mt-2 text-sm font-bold leading-[1.7] text-white/88">Progresso, rotina e consentimento com mais tranquilidade.</p>
                   </div>
                 </div>
-                <div className="axiora-login-info-card relative overflow-hidden rounded-[1.7rem] border border-[rgba(218,243,237,0.78)] bg-[linear-gradient(180deg,rgba(250,255,253,0.98),rgba(227,241,237,0.93))] px-4 py-5 shadow-[0_24px_54px_rgba(6,17,28,0.24)]">
-                  <div className="absolute inset-x-0 top-0 h-1.5 bg-[linear-gradient(90deg,#d7f1eb,#7fd8c5)]" aria-hidden="true" />
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.88),transparent_38%)]" aria-hidden="true" />
+                {/* Crianças */}
+                <div className="axiora-login-info-card relative overflow-hidden rounded-[1.7rem] border border-[rgba(110,231,183,0.24)] bg-[linear-gradient(160deg,rgba(14,38,34,0.78),rgba(10,28,25,0.72))] px-4 py-5 shadow-[0_16px_36px_rgba(4,12,8,0.36)] backdrop-blur-md">
+                  <div className="absolute inset-x-0 top-0 h-[2px] bg-[linear-gradient(90deg,#7fd8c5,#4fb8a8)]" aria-hidden="true" />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(110,231,183,0.08),transparent_52%)]" aria-hidden="true" />
                   <div className="relative">
-                    <p className="text-[0.7rem] font-black uppercase tracking-[0.18em] text-[#3a8e83]">Crianças</p>
-                    <p className="mt-2 text-sm font-black leading-[1.75] text-[#163752]">Perfil, trilha e conquistas com mais autonomia.</p>
+                    <p className="text-[0.7rem] font-black uppercase tracking-[0.18em] text-[#6ee7b7]">Crianças</p>
+                    <p className="mt-2 text-sm font-bold leading-[1.7] text-white/88">Perfil, trilha e conquistas com mais autonomia.</p>
                   </div>
                 </div>
-                <div className="axiora-login-info-card relative overflow-hidden rounded-[1.7rem] border border-[rgba(244,221,212,0.78)] bg-[linear-gradient(180deg,rgba(255,251,249,0.98),rgba(244,231,224,0.93))] px-4 py-5 shadow-[0_24px_54px_rgba(6,17,28,0.24)]">
-                  <div className="absolute inset-x-0 top-0 h-1.5 bg-[linear-gradient(90deg,#f6ddd3,#e8ab92)]" aria-hidden="true" />
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.88),transparent_38%)]" aria-hidden="true" />
+                {/* Escolas */}
+                <div className="axiora-login-info-card relative overflow-hidden rounded-[1.7rem] border border-[rgba(255,163,94,0.24)] bg-[linear-gradient(160deg,rgba(28,24,18,0.78),rgba(20,18,14,0.72))] px-4 py-5 shadow-[0_16px_36px_rgba(4,12,8,0.36)] backdrop-blur-md">
+                  <div className="absolute inset-x-0 top-0 h-[2px] bg-[linear-gradient(90deg,#f6a878,#e8845a)]" aria-hidden="true" />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,163,94,0.08),transparent_52%)]" aria-hidden="true" />
                   <div className="relative">
-                    <p className="text-[0.7rem] font-black uppercase tracking-[0.18em] text-[#b67357]">Escolas</p>
-                    <p className="mt-2 text-sm font-black leading-[1.75] text-[#183654]">Organizações e fluxos com mais clareza operacional.</p>
+                    <p className="text-[0.7rem] font-black uppercase tracking-[0.18em] text-[#ffa35e]">Escolas</p>
+                    <p className="mt-2 text-sm font-bold leading-[1.7] text-white/88">Organizações e fluxos com mais clareza operacional.</p>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-white/72">
-                <span className="axiora-login-chip rounded-full border border-[rgba(255,235,208,0.52)] bg-[rgba(255,248,237,0.92)] px-3 py-2 text-[#7d6645] shadow-[0_4px_10px_rgba(6,17,28,0.1)]">Seguro por padrão</span>
-                <span className="axiora-login-chip rounded-full border border-[rgba(244,221,212,0.52)] bg-[rgba(255,248,245,0.92)] px-3 py-2 text-[#8e6555] shadow-[0_4px_10px_rgba(6,17,28,0.1)]">Acesso com Google</span>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="axiora-login-chip inline-flex items-center gap-1.5 rounded-full border border-[rgba(246,223,183,0.30)] bg-[rgba(10,22,16,0.62)] px-3.5 py-2 text-[0.72rem] font-bold text-[#f6c870] shadow-[0_4px_12px_rgba(4,10,6,0.22)] backdrop-blur-sm">
+                  <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#f6c870] shadow-[0_0_6px_#f6c870]" />
+                  Seguro por padrão
+                </span>
+                <span className="axiora-login-chip inline-flex items-center gap-1.5 rounded-full border border-[rgba(110,231,183,0.26)] bg-[rgba(10,22,16,0.62)] px-3.5 py-2 text-[0.72rem] font-bold text-[#6ee7b7] shadow-[0_4px_12px_rgba(4,10,6,0.22)] backdrop-blur-sm">
+                  <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#6ee7b7] shadow-[0_0_6px_#6ee7b7]" />
+                  Acesso com Google
+                </span>
               </div>
             </div>
           </div>
 
           <div className="relative flex items-center justify-center lg:justify-end">
             <div className="absolute inset-0 hidden lg:block bg-[radial-gradient(circle_at_65%_50%,rgba(255,248,238,0.18),transparent_34%)]" aria-hidden="true" />
-            <div className="axiora-login-panel relative z-10 w-full max-w-[28.5rem] overflow-hidden rounded-[2.15rem] border border-[rgba(255,239,221,0.84)] bg-[linear-gradient(180deg,rgba(255,252,248,0.96),rgba(242,234,225,0.91))] p-5 shadow-[0_30px_74px_rgba(15,24,22,0.34)] backdrop-blur-xl sm:p-6">
+            <div className="axiora-login-panel relative z-10 w-full max-w-[28.5rem] overflow-hidden rounded-[2.15rem] border border-[rgba(255,239,221,0.72)] bg-[linear-gradient(160deg,rgba(255,251,246,0.88)_0%,rgba(244,234,222,0.84)_100%)] p-5 shadow-[0_32px_80px_rgba(10,18,14,0.42),0_2px_0_rgba(255,255,255,0.55)_inset] backdrop-blur-2xl sm:p-6">
               <div className="absolute inset-x-0 top-0 h-1.5 bg-[linear-gradient(90deg,#f3d7b0,#eeb17d,#dcefe8)]" aria-hidden="true" />
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.92),transparent_34%)]" aria-hidden="true" />
               <div className="mb-6 flex items-center gap-4 lg:hidden">
                 <div className="shrink-0">
-                  <AxionMascot />
+                  <Image
+                    src="/axiora/mascot/axiora-mascot.png"
+                    alt="Mascote Axiora"
+                    width={80}
+                    height={80}
+                  />
                 </div>
                 <div>
                   <p className="text-[0.68rem] font-black uppercase tracking-[0.22em] text-[#8b755d]">Boas-vindas</p>
@@ -497,7 +502,8 @@ export default function LoginPage() {
 
         .axiora-login-info-card:hover {
           transform: translateY(-4px);
-          box-shadow: 0 28px 58px rgba(6, 17, 28, 0.28);
+          box-shadow: 0 28px 58px rgba(4, 12, 8, 0.42);
+          border-color: rgba(255, 255, 255, 0.18);
         }
 
         .axiora-login-chip {

@@ -1820,3 +1820,52 @@ h2 {
     grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
   }
 }
+
+/* ── Trail Screen animations ──────────────────────────────────────────────── */
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hero-scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes hero-bounce-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.9);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(3px) scale(1.04);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hero-streak-underline {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scaleX(0.7);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
