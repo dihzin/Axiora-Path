@@ -668,7 +668,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   return (
     <div className="relative overflow-hidden min-h-screen bg-transparent lg:h-screen">
       <div className="w-full lg:h-screen lg:overflow-hidden lg:pl-[208px]">
-        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/5 lg:border-t-white/5 lg:bg-[linear-gradient(180deg,#0F172A_0%,#0D1626_100%)] lg:px-3 lg:py-5">
+        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/10 lg:border-t-white/10 lg:bg-[linear-gradient(180deg,rgba(6,18,39,0.58)_0%,rgba(4,13,30,0.52)_100%)] lg:backdrop-blur-md lg:px-3 lg:py-5">
           <div className="mb-0.5 flex justify-center">
             <div className="rounded-2xl bg-[#12213D]/80 p-1.5 shadow-[inset_0_1px_12px_rgba(0,0,0,0.35)]">
               <div className="scale-90">

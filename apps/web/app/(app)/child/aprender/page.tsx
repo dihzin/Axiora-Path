@@ -14,8 +14,21 @@ export default function LearningPathPage() {
     <>
       <AxioraCognitiveField />
       <div className="relative z-10 min-h-screen overflow-x-hidden bg-transparent">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0"
+          style={{
+            backgroundImage: "url('/axiora/trilha/mockup.png')",
+            backgroundPosition: "center top",
+            backgroundSize: "cover",
+            backgroundRepeat: "no-repeat",
+            opacity: 0.96,
+          }}
+        />
         <Suspense fallback={null}>
-          <TrailScreen />
+          <div className="relative z-10">
+            <TrailScreen />
+          </div>
         </Suspense>
       </div>
     </>
