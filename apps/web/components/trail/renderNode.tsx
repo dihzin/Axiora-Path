@@ -284,7 +284,8 @@ function MapNodeItem({
           "relative z-20 flex h-14 w-14 items-center justify-center rounded-full",
           visuals.shell,
           isActive && !isCurrent ? "ring-2 ring-white/25 ring-offset-2 ring-offset-transparent" : "",
-          isActive && !reducedMotion ? "animate-[pulse_2.8s_ease-in-out_infinite]" : "",
+          // Crystal float: current nodes levitate like magic crystals; others use pulse
+          isCurrent && !reducedMotion ? "crystal-float" : (isActive && !isCurrent && !reducedMotion ? "animate-[pulse_2.8s_ease-in-out_infinite]" : ""),
           hoverableClasses,
         )}
         style={{ transition: "transform 220ms ease, filter 220ms ease, opacity 200ms ease" }}
@@ -403,6 +404,8 @@ function MapNodeItem({
         aria-hidden
         className={cn(
           "pointer-events-none absolute top-1/2 z-20 overflow-hidden rounded-2xl",
+          // Current node badge gets golden rune pulse (if not reduced motion)
+          isCurrent && !reducedMotion ? "rune-pulse" : "",
         )}
         style={{
           ...badgeAnchorStyle,

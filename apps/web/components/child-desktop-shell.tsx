@@ -68,16 +68,16 @@ export function ChildDesktopShell({ children, activeNav, rightRail, rightRailApp
         <aside
           className={
             menuSkin === "trail"
-              ? "hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/12 lg:border-t-white/10 lg:bg-[linear-gradient(180deg,rgba(20,52,47,0.62)_0%,rgba(14,35,32,0.48)_100%)] lg:px-3 lg:py-5 lg:backdrop-blur-xl"
-              : "hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-white/5 lg:bg-[linear-gradient(180deg,rgba(20,40,37,0.96)_0%,rgba(16,33,31,0.98)_100%)] lg:px-3 lg:py-5 lg:shadow-[inset_-1px_0_0_rgba(255,255,255,0.04)]"
+              ? "hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r-[3px] lg:border-r-[#6D4C41]/70 lg:border-t lg:border-t-[#FFB703]/12 lg:bg-[linear-gradient(180deg,rgba(42,24,16,0.78)_0%,rgba(30,14,8,0.72)_100%)] lg:px-3 lg:py-5 lg:shadow-[inset_-1px_0_0_rgba(255,183,3,0.06)] lg:backdrop-blur-xl"
+              : "hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r-[3px] lg:border-r-[#5C4033] lg:bg-[linear-gradient(180deg,#3E2723_0%,#2A1810_100%)] lg:px-3 lg:py-5 lg:shadow-[4px_0_24px_rgba(0,0,0,0.4),inset_-1px_0_0_rgba(255,183,3,0.08)]"
           }
         >
           <div className="mb-0.5 flex justify-center">
               <div
                 className={
                   menuSkin === "trail"
-                    ? "rounded-2xl bg-[#1C3A36]/82 p-1.5 shadow-[inset_0_1px_12px_rgba(0,0,0,0.3)]"
-                    : "rounded-2xl bg-[linear-gradient(180deg,rgba(30,55,49,0.9),rgba(20,40,37,0.92))] p-1.5 shadow-[0_10px_24px_rgba(7,20,17,0.24),inset_0_1px_12px_rgba(255,255,255,0.04)]"
+                    ? "rounded-2xl border border-[#FFB703]/20 bg-[rgba(42,24,16,0.72)] p-1.5 shadow-[0_0_18px_rgba(255,183,3,0.12),inset_0_1px_0_rgba(255,255,255,0.06)]"
+                    : "rounded-2xl border border-[#6D4C41]/60 bg-[linear-gradient(180deg,#4A2E22,#321A10)] p-1.5 shadow-[0_10px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,183,3,0.10)]"
                 }
               >
               <div className="scale-90">
@@ -169,17 +169,19 @@ function DesktopNavItem({
       href={href}
       className={
         skin === "trail"
-          ? `mx-1.5 inline-flex items-center gap-2.5 rounded-2xl px-4 py-[7px] text-[15px] font-semibold uppercase tracking-[0.04em] text-slate-200/85 transition-all duration-200 ${
+          ? `mx-1.5 inline-flex items-center gap-2.5 rounded-2xl px-4 py-[7px] text-[15px] font-bold uppercase tracking-[0.04em] transition-all duration-200 ${
               active
-                ? "border-l-[3px] border-l-amber-300/90 bg-white/14 text-slate-100"
-                : "text-slate-200/80 hover:bg-white/10 hover:text-slate-100/95"
+                ? "border-l-[3px] border-l-[#FFB703] bg-[rgba(255,183,3,0.12)] text-[#FFF3CC] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                : "text-[#FAEBD7]/80 hover:bg-[rgba(255,183,3,0.07)] hover:text-[#FFF3CC]"
             }`
-          : `mx-1.5 inline-flex items-center gap-2.5 rounded-2xl px-4 py-[7px] text-[15px] font-black uppercase tracking-[0.04em] transition-colors ${
-              active ? "border border-[#FFBE85]/35 bg-[#FF7A2F]/12 text-[#FFE7D1]" : "text-[#D7C7B5] hover:bg-white/5"
+          : `mx-1.5 inline-flex items-center gap-2.5 rounded-2xl px-4 py-[7px] text-[15px] font-black uppercase tracking-[0.04em] transition-all duration-200 ${
+              active
+                ? "border border-[#FFB703]/40 bg-[linear-gradient(135deg,rgba(255,183,3,0.18),rgba(255,140,0,0.12))] text-[#FFF3CC] shadow-[0_0_12px_rgba(255,183,3,0.18),inset_0_1px_0_rgba(255,255,255,0.08)]"
+                : "text-[#C8A882] hover:bg-[rgba(255,183,3,0.08)] hover:text-[#F5DEB3]"
             }`
       }
     >
-      <span className={skin === "trail" ? "opacity-85 grayscale-[80%]" : `${active ? "opacity-100" : "opacity-80 grayscale-[22%]"}`}>
+      <span className={skin === "trail" ? "opacity-90" : `${active ? "opacity-100" : "opacity-75"}`}>
         <ChildNavIcon name={iconName} active={active} size={42} />
       </span>
       {label}
@@ -241,10 +243,12 @@ function DefaultRightRail() {
   return (
     <>
       <TopStatsBar streak={streak} gems={gems} xp={xp} className="max-w-none" />
-      <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(160deg,rgba(28,54,48,0.88)_0%,rgba(24,48,43,0.84)_55%,rgba(18,39,35,0.92)_100%)] p-4 shadow-[0_10px_28px_rgba(7,20,17,0.32),inset_0_1px_0_rgba(255,255,255,0.08)]">
-        <p className="text-xs font-black uppercase tracking-[0.08em] text-[#CDBAA6]">Progresso</p>
-        <p className="mt-1 text-lg font-black text-[#FFF4E7]">Você está indo bem!</p>
-        <p className="mt-1 text-sm font-semibold text-[#E6D8C7]">Continue explorando para evoluir no Axiora.</p>
+      <div className="medieval-parchment-glass p-4">
+        <div className="rune-divider mb-3" />
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#A07850]">✦ Progresso</p>
+        <p className="mt-1 text-lg font-black text-[#2C1E16]">Você está indo bem!</p>
+        <p className="mt-1 text-sm font-semibold text-[#5C4A3A]">Continue explorando para evoluir no Axiora.</p>
+        <div className="rune-divider mt-3" />
       </div>
     </>
   );

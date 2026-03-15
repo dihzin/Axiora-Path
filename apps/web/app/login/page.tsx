@@ -255,11 +255,11 @@ export default function LoginPage() {
                   </div>
                 </div>
                 {/* Crianças */}
-                <div className="axiora-login-info-card relative overflow-hidden rounded-[1.7rem] border border-[rgba(110,231,183,0.24)] bg-[linear-gradient(160deg,rgba(14,38,34,0.78),rgba(10,28,25,0.72))] px-4 py-5 shadow-[0_16px_36px_rgba(4,12,8,0.36)] backdrop-blur-md">
-                  <div className="absolute inset-x-0 top-0 h-[2px] bg-[linear-gradient(90deg,#7fd8c5,#4fb8a8)]" aria-hidden="true" />
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(110,231,183,0.08),transparent_52%)]" aria-hidden="true" />
+                <div className="axiora-login-info-card relative overflow-hidden rounded-[1.7rem] border border-[rgba(245,188,137,0.24)] bg-[linear-gradient(160deg,rgba(52,38,31,0.78),rgba(34,24,20,0.72))] px-4 py-5 shadow-[0_16px_36px_rgba(4,12,8,0.36)] backdrop-blur-md">
+                  <div className="absolute inset-x-0 top-0 h-[2px] bg-[linear-gradient(90deg,#f5c18d,#ee9e64)]" aria-hidden="true" />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(245,188,137,0.08),transparent_52%)]" aria-hidden="true" />
                   <div className="relative">
-                    <p className="text-[0.7rem] font-black uppercase tracking-[0.18em] text-[#6ee7b7]">Crianças</p>
+                    <p className="text-[0.7rem] font-black uppercase tracking-[0.18em] text-[#f5c18d]">Crianças</p>
                     <p className="mt-2 text-sm font-bold leading-[1.7] text-white/88">Perfil, trilha e conquistas com mais autonomia.</p>
                   </div>
                 </div>
@@ -279,8 +279,8 @@ export default function LoginPage() {
                   <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#f6c870] shadow-[0_0_6px_#f6c870]" />
                   Seguro por padrão
                 </span>
-                <span className="axiora-login-chip inline-flex items-center gap-1.5 rounded-full border border-[rgba(110,231,183,0.26)] bg-[rgba(10,22,16,0.62)] px-3.5 py-2 text-[0.72rem] font-bold text-[#6ee7b7] shadow-[0_4px_12px_rgba(4,10,6,0.22)] backdrop-blur-sm">
-                  <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#6ee7b7] shadow-[0_0_6px_#6ee7b7]" />
+                <span className="axiora-login-chip inline-flex items-center gap-1.5 rounded-full border border-[rgba(245,188,137,0.26)] bg-[rgba(30,22,16,0.62)] px-3.5 py-2 text-[0.72rem] font-bold text-[#f5c18d] shadow-[0_4px_12px_rgba(20,12,6,0.24)] backdrop-blur-sm">
+                  <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#f5c18d] shadow-[0_0_6px_#f5c18d]" />
                   Acesso com Google
                 </span>
               </div>

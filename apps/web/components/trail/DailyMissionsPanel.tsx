@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { MissionProgress, MissionsCurrentResponse } from "@/lib/api/client";
+import { ParchmentCard } from "@/components/ui/ParchmentCard";
 import { cn } from "@/lib/utils";
 
 type DailyMissionsPanelProps = {
@@ -28,10 +29,12 @@ export function DailyMissionsPanel({ missions, missionsLoading, claimingMissionI
   const canNavigate = dailyMissions.length > 1;
 
   return (
-    <section className={cn("relative overflow-hidden rounded-[28px] border border-white/12 bg-[linear-gradient(155deg,rgba(24,49,43,0.9)_0%,rgba(28,64,56,0.82)_54%,rgba(20,42,38,0.9)_100%)] shadow-[0_16px_40px_rgba(7,20,17,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-[2px]", compact ? "p-3.5" : "p-4", className)}>
-      <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-gradient-to-b from-white/5 via-white/[0.03] to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[radial-gradient(70%_90%_at_50%_0%,rgba(255,176,122,0.12),transparent_65%)]" />
-      <div className="relative z-10 flex items-start justify-between gap-3">
+    <ParchmentCard
+      as="section"
+      variant="glass"
+      className={cn(compact ? "p-3.5" : "p-4", className)}
+    >
+      <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "rgba(255,180,100,0.82)" }}>✦ Desafios do dia</p>
           <h3 className={cn("mt-1 font-bold leading-tight text-white", compact ? "text-[15px]" : "text-[18px]")}>{compact ? "Desafio em foco" : "Pequenas conquistas para hoje"}</h3>
@@ -92,7 +95,7 @@ export function DailyMissionsPanel({ missions, missionsLoading, claimingMissionI
           </p>
         )}
       </div>
-    </section>
+    </ParchmentCard>
   );
 }
 

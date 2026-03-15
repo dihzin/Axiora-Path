@@ -1,6 +1,7 @@
 "use client";
 
 import type { MapNode } from "@/components/trail/ProgressionMap";
+import { ParchmentCard } from "@/components/ui/ParchmentCard";
 import { cn } from "@/lib/utils";
 
 type MissionDetailCardProps = {
@@ -19,12 +20,11 @@ export function MissionDetailCard({ node, onStart, className }: MissionDetailCar
   const buttonLabel = isLocked ? "Bloqueada" : isDone ? "Revisar missão" : "Iniciar missão";
 
   return (
-    <section
-      className={cn(
-        "mx-auto w-full max-w-[760px] rounded-2xl bg-white/95 p-6 shadow-lg",
-        className,
-      )}
-      aria-label="Detalhes da missão selecionada"
+    <ParchmentCard
+      as="section"
+      variant="light"
+      ariaLabel="Detalhes da missão selecionada"
+      className={cn("mx-auto w-full max-w-[760px] p-6", className)}
     >
       <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Missão atual</p>
       <h3 className="mt-1 text-xl font-semibold leading-tight text-slate-900">{node.title}</h3>
@@ -41,6 +41,6 @@ export function MissionDetailCard({ node, onStart, className }: MissionDetailCar
       >
         {buttonLabel}
       </button>
-    </section>
+    </ParchmentCard>
   );
 }

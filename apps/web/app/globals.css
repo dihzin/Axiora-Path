@@ -3,11 +3,11 @@
 @tailwind utilities;
 
 :root {
-  --app-bg-color: #18312e;
-  --app-fg-color: #2e3a35;
+  --app-bg-color: #2a211c;
+  --app-fg-color: #3a3028;
   --app-bg-gradient: radial-gradient(circle at 50% -12%, rgba(255, 122, 47, 0.18) 0%, transparent 70%);
   --theme-primary-rgb: 255 107 61;
-  --theme-secondary-rgb: 79 157 138;
+  --theme-secondary-rgb: 223 155 95;
   --theme-accent-rgb: 241 197 107;
   --axiora-ink-strong: #f8f5ee;
   --axiora-ink-soft: rgba(247, 242, 232, 0.78);
@@ -15,7 +15,7 @@
   --axiora-panel-dark: rgba(25, 50, 45, 0.78);
   --axiora-panel-dark-2: rgba(18, 39, 35, 0.72);
   --axiora-panel-light: #fff9f1;
-  --axiora-teal-glow: rgba(93, 188, 168, 0.18);
+  --axiora-teal-glow: rgba(241, 177, 118, 0.18);
   --axiora-orange-glow: rgba(255, 122, 47, 0.16);
   --axiora-ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
   --axiora-shadow-xs: 2px 2px 4px rgba(43, 47, 66, 0.06);
@@ -33,26 +33,26 @@
   --card-highlight-inset: inset 0 1px 0 rgba(255, 255, 255, 0.8);
   --card-gloss-overlay: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 100%);
   --progress-track: #d7e2ee;
-  --progress-fill: linear-gradient(90deg, #40d7c0 0%, #6edfd0 100%);
+  --progress-fill: linear-gradient(90deg, #ffb170 0%, #ff8a45 100%);
   --progress-thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.16);
-  --action-btn-bg: #11afa0;
+  --action-btn-bg: #e47939;
   --action-btn-shadow: 0 3px 8px rgba(0, 0, 0, 0.14);
 
-  --card-shell-bg-default: #12ac9c;
-  --card-shell-border-default: #109e92;
-  --card-shell-bg-inprogress: #12ac9c;
-  --card-shell-border-inprogress: #109e92;
-  --card-shell-bg-completed: #11b3a2;
-  --card-shell-border-completed: #0e9b8f;
+  --card-shell-bg-default: #e98b4f;
+  --card-shell-border-default: #cf6e2f;
+  --card-shell-bg-inprogress: #e98b4f;
+  --card-shell-border-inprogress: #cf6e2f;
+  --card-shell-bg-completed: #e3813f;
+  --card-shell-border-completed: #c6672c;
   --card-shell-bg-locked: #7fa2ad;
   --card-shell-border-locked: #89a8b1;
   --card-shell-fg-default: #ffffff;
   --card-shell-fg-locked: rgba(255, 255, 255, 0.9);
 
-  --action-btn-bg-default: #11afa0;
-  --action-btn-border-default: #0b9589;
-  --action-btn-bg-completed: #11a899;
-  --action-btn-border-completed: #0a8f83;
+  --action-btn-bg-default: #e47939;
+  --action-btn-border-default: #c9662f;
+  --action-btn-bg-completed: #de7235;
+  --action-btn-border-completed: #bd5e2a;
   --action-btn-bg-locked: #86a5af;
   --action-btn-border-locked: #7e99a4;
 
@@ -95,14 +95,14 @@ body::-webkit-scrollbar {
 
 html::-webkit-scrollbar-track,
 body::-webkit-scrollbar-track {
-  background: #18312e;
+  background: #2a211c;
 }
 
 html::-webkit-scrollbar-thumb,
 body::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(79, 157, 138, 0.65), rgba(255, 122, 47, 0.55));
+  background: linear-gradient(180deg, rgba(241, 177, 118, 0.72), rgba(224, 107, 44, 0.62));
   border-radius: 9999px;
-  border: 2px solid #18312e;
+  border: 2px solid #2a211c;
 }
 
 img,
@@ -296,9 +296,10 @@ h2 {
 }
 
 .axiora-chunky-btn--secondary {
-  --axiora-btn-face: linear-gradient(180deg, #6ab7a6 0%, #4f9d8a 100%);
-  --axiora-btn-edge: #317564;
-  --axiora-btn-floor: rgba(46, 96, 83, 0.44);
+  --axiora-btn-face: linear-gradient(180deg, #ffb170 0%, #ff8a45 100%);
+  --axiora-btn-edge: #cf6a2d;
+  --axiora-btn-floor: rgba(148, 72, 29, 0.42);
+  --axiora-btn-text: #fff9f2;
 }
 
 .axiora-chunky-btn--destructive {
@@ -372,10 +373,10 @@ h2 {
 }
 
 .axiora-control-btn--teal {
-  --axiora-btn-face: linear-gradient(180deg, #67b6a4 0%, #4f9d8a 100%);
-  --axiora-btn-edge: #327564;
-  --axiora-btn-floor: rgba(43, 95, 82, 0.4);
-  --axiora-btn-text: #f8fbf9;
+  --axiora-btn-face: linear-gradient(180deg, #ffb170 0%, #ff8a45 100%);
+  --axiora-btn-edge: #cf6a2d;
+  --axiora-btn-floor: rgba(148, 72, 29, 0.42);
+  --axiora-btn-text: #fff9f2;
 }
 
 .axiora-control-btn--orange {
@@ -1355,7 +1356,7 @@ h2 {
 }
 
 .games-gradient-shell--teal {
-  background-image: linear-gradient(120deg, rgba(14, 165, 164, 0.95), rgba(78, 196, 194, 0.95), rgba(14, 165, 164, 0.95));
+  background-image: linear-gradient(120deg, rgba(255, 138, 69, 0.95), rgba(255, 177, 112, 0.95), rgba(255, 138, 69, 0.95));
 }
 
 .games-gradient-shell--brand {
@@ -1425,10 +1426,10 @@ h2 {
   position: relative;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 16% 18%, rgba(93, 188, 168, 0.16), transparent 38%),
-    radial-gradient(circle at 84% 12%, rgba(255, 122, 47, 0.12), transparent 34%),
-    radial-gradient(circle at 48% 70%, rgba(53, 93, 82, 0.16), transparent 56%),
-    linear-gradient(180deg, #17322f 0%, #142b29 48%, #102422 100%);
+    radial-gradient(circle at 16% 18%, rgba(255, 188, 133, 0.18), transparent 40%),
+    radial-gradient(circle at 84% 12%, rgba(255, 122, 47, 0.16), transparent 36%),
+    radial-gradient(circle at 48% 70%, rgba(214, 154, 111, 0.14), transparent 58%),
+    linear-gradient(180deg, #2d241f 0%, #231b17 52%, #1a1411 100%);
 }
 
 .axiora-brand-page::before {
@@ -1440,7 +1441,7 @@ h2 {
     radial-gradient(2px 2px at 10% 18%, rgba(255, 255, 255, 0.6), transparent),
     radial-gradient(1.5px 1.5px at 24% 36%, rgba(241, 197, 107, 0.35), transparent),
     radial-gradient(2px 2px at 42% 72%, rgba(255, 255, 255, 0.42), transparent),
-    radial-gradient(2px 2px at 63% 22%, rgba(93, 188, 168, 0.46), transparent),
+    radial-gradient(2px 2px at 63% 22%, rgba(255, 179, 117, 0.42), transparent),
     radial-gradient(1.5px 1.5px at 81% 62%, rgba(255, 255, 255, 0.5), transparent),
     radial-gradient(1.5px 1.5px at 92% 84%, rgba(255, 207, 163, 0.3), transparent);
   opacity: 0.42;
@@ -1454,11 +1455,47 @@ h2 {
 
 .axiora-glass-card {
   border-color: rgba(223, 214, 197, 0.2);
-  background: linear-gradient(180deg, rgba(31, 58, 52, 0.88) 0%, rgba(23, 46, 41, 0.84) 100%);
+  background: linear-gradient(180deg, rgba(75, 53, 44, 0.82) 0%, rgba(53, 38, 32, 0.8) 100%);
   box-shadow:
     inset 0 1px 0 rgba(255, 247, 235, 0.1),
     0 14px 32px rgba(7, 20, 17, 0.34);
   backdrop-filter: blur(6px);
+}
+
+.axiora-auth-panel {
+  border: 1px solid rgba(255, 239, 221, 0.72);
+  background: linear-gradient(160deg, rgba(255, 251, 246, 0.9) 0%, rgba(244, 234, 222, 0.86) 100%);
+  color: #203846;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.58),
+    0 24px 64px rgba(10, 18, 14, 0.3);
+  backdrop-filter: blur(14px);
+}
+
+.axiora-auth-muted {
+  color: #6f665d;
+}
+
+.axiora-auth-field {
+  border: 1px solid rgba(230, 213, 195, 0.92);
+  background: rgba(245, 248, 252, 0.96);
+  color: #203846;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.94),
+    0 10px 20px rgba(194, 170, 144, 0.14);
+}
+
+.axiora-auth-field::placeholder {
+  color: #9e9386;
+}
+
+.axiora-auth-option {
+  border: 1px solid rgba(233, 217, 200, 0.9);
+  background: rgba(255, 255, 255, 0.82);
+  color: #203846;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.94),
+    0 10px 20px rgba(194, 170, 144, 0.12);
 }
 
 .axiora-glass-soft {
@@ -1480,15 +1517,15 @@ h2 {
 
 .apple-parent-page {
   background:
-    radial-gradient(1100px 520px at 50% -14%, rgba(93, 188, 168, 0.12), transparent 62%),
-    radial-gradient(900px 420px at 100% 18%, rgba(255, 122, 47, 0.08), transparent 68%),
-    radial-gradient(700px 360px at 22% 100%, rgba(127, 166, 118, 0.08), transparent 72%),
-    linear-gradient(180deg, #132b28 0%, #112522 48%, #15302b 100%);
+    radial-gradient(1100px 520px at 50% -14%, rgba(255, 188, 133, 0.12), transparent 62%),
+    radial-gradient(900px 420px at 100% 18%, rgba(255, 122, 47, 0.1), transparent 68%),
+    radial-gradient(700px 360px at 22% 100%, rgba(191, 137, 97, 0.08), transparent 72%),
+    linear-gradient(180deg, #2b221d 0%, #241b17 48%, #1d1714 100%);
 }
 
 .apple-panel {
   border: 1px solid rgba(223, 214, 197, 0.14);
-  background: linear-gradient(180deg, rgba(29, 55, 49, 0.84) 0%, rgba(22, 44, 39, 0.78) 100%);
+  background: linear-gradient(180deg, rgba(64, 46, 38, 0.84) 0%, rgba(48, 35, 30, 0.78) 100%);
   backdrop-filter: blur(16px);
   box-shadow:
     inset 0 1px 0 rgba(255, 247, 235, 0.08),
@@ -1868,4 +1905,138 @@ h2 {
     opacity: 1;
     transform: scaleX(1);
   }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MEDIEVAL FANTASY THEME — Design tokens & utility classes
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  --parchment:          #FDF5E6;
+  --parchment-dark:     #FAEBD7;
+  --parchment-deep:     #F0DEC0;
+  --wood:               #5C4033;
+  --wood-dark:          #3E2723;
+  --wood-medium:        #6D4C41;
+  --magic-blue:         #48CAE4;
+  --magic-gold:         #FFB703;
+  --magic-green:        #52B788;
+  --magic-amber:        #FB8C00;
+  --text-parchment:     #2C1E16;
+  --text-parchment-soft:#5C4A3A;
+  --rune-glow:          rgba(255, 183, 3, 0.42);
+  --crystal-glow:       rgba(72, 202, 228, 0.45);
+  --parchment-border:   #A07850;
+  --parchment-shadow:   rgba(44, 30, 18, 0.32);
+}
+
+/* Crystal floating animation */
+@keyframes crystal-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
+/* Rune glow pulse */
+@keyframes rune-pulse {
+  0%, 100% { box-shadow: 0 0 10px var(--rune-glow), 0 0 22px rgba(255,183,3,0.18); }
+  50%       { box-shadow: 0 0 20px var(--rune-glow), 0 0 40px rgba(255,183,3,0.32); }
+}
+
+/* Crystal shimmer */
+@keyframes crystal-shimmer {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.06); }
+}
+
+/* Enchant border sweep */
+@keyframes enchant-border {
+  0%   { border-color: var(--magic-gold); }
+  33%  { border-color: var(--magic-blue); }
+  66%  { border-color: var(--magic-green); }
+  100% { border-color: var(--magic-gold); }
+}
+
+.crystal-float  { animation: crystal-float  3s ease-in-out infinite; }
+.rune-pulse     { animation: rune-pulse     2.4s ease-in-out infinite; }
+.crystal-shimmer{ animation: crystal-shimmer 2.8s ease-in-out infinite; }
+
+/* Parchment card */
+.medieval-parchment {
+  background: linear-gradient(155deg, #FDF5E6 0%, #F5E4C4 55%, #EDD3A4 100%);
+  border: 3px solid var(--parchment-border);
+  border-radius: 18px;
+  box-shadow:
+    0 10px 28px var(--parchment-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.68),
+    inset 0 -2px 0 rgba(44, 30, 18, 0.10);
+}
+
+/* Dark-wood panel (sidebar) */
+.medieval-wood-panel {
+  background: linear-gradient(180deg, #3E2723 0%, #2A1810 100%);
+  border-right: 3px solid var(--wood);
+  box-shadow: inset -1px 0 0 rgba(255, 183, 3, 0.08);
+}
+
+/* Parchment-tinted glass (trail overlay panels) */
+.medieval-parchment-glass {
+  background: linear-gradient(155deg, rgba(253,245,230,0.88) 0%, rgba(240,222,188,0.84) 100%);
+  border: 2px solid rgba(160, 120, 80, 0.55);
+  border-radius: 20px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow:
+    0 12px 32px rgba(44, 30, 18, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+/* Magic crystal button */
+.medieval-btn {
+  background: linear-gradient(135deg, #48CAE4, #0077B6);
+  border: 2px solid var(--magic-gold);
+  color: white;
+  border-radius: 14px;
+  font-weight: 800;
+  box-shadow: 0 6px 20px rgba(72, 202, 228, 0.28), 0 4px 0 rgba(0, 80, 140, 0.4);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.medieval-btn:hover {
+  transform: scale(1.05) translateY(-1px);
+  box-shadow: 0 0 18px rgba(72, 202, 228, 0.65), 0 6px 0 rgba(0, 80, 140, 0.4);
+}
+.medieval-btn:active {
+  transform: scale(0.98) translateY(2px);
+  box-shadow: 0 2px 8px rgba(72, 202, 228, 0.3), 0 1px 0 rgba(0, 80, 140, 0.4);
+}
+
+/* Golden focus ring (accessibility) */
+*:focus-visible {
+  outline: 2px solid var(--magic-gold);
+  outline-offset: 3px;
+}
+
+/* Parchment scrollbar */
+::-webkit-scrollbar-track { background: #2A1810; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--wood-medium), var(--parchment-border));
+  border-radius: 9999px;
+  border: 2px solid #2A1810;
+}
+
+/* Medieval card hover lift */
+.medieval-hover:hover {
+  transform: translateY(-2px) scale(1.01);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+/* Rune divider */
+.rune-divider {
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255, 183, 3, 0.55) 30%,
+    rgba(255, 183, 3, 0.55) 70%,
+    transparent
+  );
+  border-radius: 9999px;
 }

@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { AuthWallpaper } from "@/components/layout/auth-wallpaper";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage, platformLogin } from "@/lib/api/client";
 import { setAccessToken, setTenantSlug } from "@/lib/api/session";
@@ -40,14 +41,15 @@ export default function PlatformAdminLoginPage() {
   };
 
   return (
-    <main className="axiora-brand-page mx-auto flex min-h-screen w-full items-center justify-center px-4 py-8">
-      <div className="axiora-brand-content axiora-glass-card w-full max-w-md rounded-3xl p-6 text-[#FFF4E7]">
-        <h1 className="text-2xl font-black text-[#FFF4E7]">Platform Admin</h1>
-        <p className="mt-1 text-sm font-semibold text-[#E6D8C7]">Acesso administrativo do Axion Studio.</p>
+    <main className="axiora-brand-page relative isolate mx-auto flex min-h-screen w-full items-center justify-center px-4 py-8">
+      <AuthWallpaper />
+      <div className="axiora-brand-content axiora-auth-panel w-full max-w-md rounded-3xl p-6">
+        <h1 className="text-2xl font-black text-[#22352f]">Platform Admin</h1>
+        <p className="axiora-auth-muted mt-1 text-sm font-semibold">Acesso administrativo do Axion Studio.</p>
 
         <form className="mt-5 space-y-3" onSubmit={onSubmit}>
           <input
-            className="w-full rounded-xl border border-[#E5D5C0]/30 bg-[#21433C]/45 px-3 py-2 text-sm text-[#FFF4E7] placeholder:text-[#C8BCA9]"
+            className="axiora-auth-field w-full rounded-xl px-3 py-2 text-sm"
             type="email"
             placeholder="E-mail"
             value={email}
@@ -56,7 +58,7 @@ export default function PlatformAdminLoginPage() {
             required
           />
           <input
-            className="w-full rounded-xl border border-[#E5D5C0]/30 bg-[#21433C]/45 px-3 py-2 text-sm text-[#FFF4E7] placeholder:text-[#C8BCA9]"
+            className="axiora-auth-field w-full rounded-xl px-3 py-2 text-sm"
             type="password"
             placeholder="Senha"
             value={password}
@@ -64,8 +66,8 @@ export default function PlatformAdminLoginPage() {
             autoComplete="current-password"
             required
           />
-          {error ? <p className="text-sm font-semibold text-rose-300">{error}</p> : null}
-          <Button className="w-full" type="submit" disabled={loading}>
+          {error ? <p className="text-sm font-semibold text-rose-700">{error}</p> : null}
+          <Button className="w-full bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] shadow-[inset_0_1px_0_rgba(255,219,190,0.46),0_6px_0_rgba(158,74,30,0.42),0_16px_24px_rgba(93,48,22,0.18)]" type="submit" disabled={loading}>
             {loading ? "Entrando..." : "Entrar"}
           </Button>
         </form>

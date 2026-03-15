@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
+import { AuthWallpaper } from "@/components/layout/auth-wallpaper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -82,20 +83,21 @@ export default function SelectTenantPage() {
   };
 
   return (
-    <div className="axiora-brand-page">
+    <div className="axiora-brand-page relative isolate">
+      <AuthWallpaper />
       <main className="axiora-brand-content safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md items-center overflow-x-clip p-4 md:p-6">
-        <Card className="axiora-glass-card w-full text-[#FFF4E7]">
+        <Card className="axiora-auth-panel w-full">
           <CardHeader>
-            <CardTitle className="text-[#FFF4E7]">Selecionar organização</CardTitle>
-            <CardDescription className="text-[#E6D8C7]">Confirme a organização ativa antes de escolher o perfil infantil.</CardDescription>
+            <CardTitle className="text-[#22352f]">Selecionar organização</CardTitle>
+            <CardDescription className="axiora-auth-muted">Confirme a organização ativa antes de escolher o perfil infantil.</CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-3" onSubmit={onSubmit}>
               {loadingMemberships ? (
-                <p role="status" aria-live="polite" className="text-sm text-[#E6D8C7]">Carregando organizações...</p>
+                <p role="status" aria-live="polite" className="axiora-auth-muted text-sm">Carregando organizações...</p>
               ) : memberships.length > 0 ? (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-[#F0E5D8]" htmlFor="organization-select">
+                  <label className="text-sm font-black uppercase tracking-[0.14em] text-[#816b57]" htmlFor="organization-select">
                     Organização
                   </label>
                   <NativeSelect
@@ -104,6 +106,7 @@ export default function SelectTenantPage() {
                     onChange={(e) => setSlug(e.target.value)}
                     required
                     disabled={loading}
+                    className="axiora-auth-field h-12 rounded-[1.15rem]"
                   >
                     {memberships.map((item) => (
                       <option key={item.tenant_id} value={item.tenant_slug}>
@@ -113,12 +116,12 @@ export default function SelectTenantPage() {
                   </NativeSelect>
                 </div>
               ) : (
-                <p role="status" aria-live="polite" className="text-sm text-[#E6D8C7]">
+                <p role="status" aria-live="polite" className="axiora-auth-muted text-sm">
                   Nenhuma organização disponível para esta conta.
                 </p>
               )}
               {error ? <p id="tenant-error" role="alert" aria-live="polite" className="text-sm text-rose-300">{error}</p> : null}
-              <Button className="w-full" type="submit" disabled={loading || loadingMemberships || memberships.length === 0}>
+              <Button className="w-full bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] shadow-[inset_0_1px_0_rgba(255,219,190,0.46),0_6px_0_rgba(158,74,30,0.42),0_16px_24px_rgba(93,48,22,0.18)]" type="submit" disabled={loading || loadingMemberships || memberships.length === 0}>
                 {loading ? "Continuando..." : "Continuar"}
               </Button>
             </form>

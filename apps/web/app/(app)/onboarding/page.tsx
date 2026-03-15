@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ImagePlus } from "lucide-react";
 
+import { AuthWallpaper } from "@/components/layout/auth-wallpaper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChildAvatar } from "@/components/child-avatar";
@@ -296,20 +297,21 @@ export default function OnboardingPage() {
 
   return (
     <main
-      className={`axiora-brand-page safe-px safe-pb flex min-h-screen w-full max-w-none justify-center overflow-x-clip p-4 md:px-6 md:py-6 lg:px-8 ${
+      className={`axiora-brand-page safe-px safe-pb relative isolate flex min-h-screen w-full max-w-none justify-center overflow-x-clip p-4 md:px-6 md:py-6 lg:px-8 ${
         isFocusStep ? "items-center" : "items-start"
       }`}
     >
+      <AuthWallpaper />
       <div className="axiora-brand-content mx-auto flex w-full max-w-6xl justify-center">
       <Card
-        className={`axiora-glass-card mx-auto w-full text-[#FFF4E7] ${
+        className={`axiora-auth-panel mx-auto w-full ${
           isFocusStep ? "max-w-2xl shadow-[0_12px_32px_rgba(36,67,63,0.16)]" : "max-w-4xl"
         }`}
       >
         <CardHeader>
           <div className="space-y-2">
             <p className="axiora-kicker">Configuração inicial</p>
-            <CardTitle className="break-words text-base leading-tight text-[#FFF4E7] [overflow-wrap:anywhere] md:text-xl">
+            <CardTitle className="break-words text-base leading-tight text-[#22352f] [overflow-wrap:anywhere] md:text-xl">
               Passo {step}/{TOTAL_STEPS}: {STEP_TITLES[step - 1]}
             </CardTitle>
             <div
@@ -318,13 +320,13 @@ export default function OnboardingPage() {
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={progressPercent}
-              className="h-2 w-full overflow-hidden rounded-full bg-[#19322F]/70"
+              className="h-2 w-full overflow-hidden rounded-full bg-[#dbcab6]"
             >
-              <div className="h-full rounded-full bg-gradient-to-r from-[#FFBE85] via-[#FF7A2F] to-[#4F9D8A] transition-[width] duration-300" style={{ width: `${progressPercent}%` }} />
+              <div className="h-full rounded-full bg-gradient-to-r from-[#ffd2a6] via-[#ff9a58] to-[#e06b2c] transition-[width] duration-300" style={{ width: `${progressPercent}%` }} />
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4 text-sm md:space-y-5 md:text-base">
+        <CardContent className="space-y-4 text-sm text-[#203846] md:space-y-5 md:text-base">
           {step === 1 ? (
             <div className="space-y-2">
               <p className="break-words font-semibold leading-snug">Passo 1: Criar perfil infantil</p>
@@ -357,14 +359,14 @@ export default function OnboardingPage() {
                 <Input type="number" aria-label="Percentual para guardar" value={splitSave} onChange={(e) => setSplitSave(Number(e.target.value) || 0)} />
                 <Input type="number" aria-label="Percentual para doar" value={splitDonate} onChange={(e) => setSplitDonate(Number(e.target.value) || 0)} />
               </div>
-              <p className="break-words text-xs text-[#E6D8C7]">GASTAR / GUARDAR / DOAR (total {splitTotal})</p>
+              <p className="break-words text-xs text-[#6f665d]">GASTAR / GUARDAR / DOAR (total {splitTotal})</p>
             </div>
           ) : null}
 
           {step === 3 ? (
             <div className="space-y-2">
               <p className="break-words font-semibold leading-snug">Passo 3: Revisar tarefas padrão</p>
-              {tasksLoading ? <p role="status" aria-live="polite" className="text-xs text-[#E6D8C7]">Carregando tarefas...</p> : null}
+              {tasksLoading ? <p role="status" aria-live="polite" className="text-xs text-[#6f665d]">Carregando tarefas...</p> : null}
               {tasksError ? (
                 <div className="rounded-md border border-[#F4C5C2] bg-[#FFF2F1] p-2 text-xs text-[#B54C47]">
                   <p>{tasksError}</p>
@@ -377,11 +379,11 @@ export default function OnboardingPage() {
                   </button>
                 </div>
               ) : null}
-              {!tasksLoading && !tasksError && tasks.length === 0 ? <p className="text-xs text-[#E6D8C7]">Nenhuma tarefa ativa encontrada para esta organização.</p> : null}
+              {!tasksLoading && !tasksError && tasks.length === 0 ? <p className="text-xs text-[#6f665d]">Nenhuma tarefa ativa encontrada para esta organização.</p> : null}
               {!tasksLoading && tasks.length > 0 ? (
                 <div className="space-y-1">
                   {tasks.map((task) => (
-                    <div key={task.id} className="rounded-md border border-border p-2 text-xs break-words [overflow-wrap:anywhere]">
+                    <div key={task.id} className="axiora-auth-option rounded-md p-2 text-xs break-words [overflow-wrap:anywhere]">
                       {editingTaskId === task.id ? (
                         <div className="space-y-2">
                           <Input value={editingTitle} onChange={(e) => setEditingTitle(e.target.value)} placeholder="Título da tarefa" />
@@ -389,7 +391,7 @@ export default function OnboardingPage() {
                             <select
                               value={editingDifficulty}
                               onChange={(e) => setEditingDifficulty(e.target.value as "EASY" | "MEDIUM" | "HARD" | "LEGENDARY")}
-                              className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+                              className="axiora-auth-field h-9 rounded-md px-2 text-xs"
                             >
                               <option value="EASY">EASY</option>
                               <option value="MEDIUM">MEDIUM</option>
@@ -433,8 +435,8 @@ export default function OnboardingPage() {
           {step === 4 ? (
             <div className="space-y-2">
               <p className="break-words font-semibold leading-snug">Passo 4: Definir mesada mensal</p>
-              <div className="flex items-center gap-2 rounded-xl border border-border bg-white px-3">
-                <span className="text-sm font-bold text-[#34557F]">R$</span>
+              <div className="axiora-auth-field flex items-center gap-2 rounded-xl px-3">
+                <span className="text-sm font-bold text-[#816b57]">R$</span>
                 <Input
                   className="border-0 px-0 shadow-none focus-visible:ring-0"
                   inputMode="decimal"
@@ -443,8 +445,8 @@ export default function OnboardingPage() {
                   placeholder="100,00"
                 />
               </div>
-              <p className="break-words text-xs text-[#E6D8C7]">Digite o valor mensal em reais. Exemplo: 100,00</p>
-              <p className="break-words text-xs font-semibold text-[#FFD8B8]">
+              <p className="break-words text-xs text-[#6f665d]">Digite o valor mensal em reais. Exemplo: 100,00</p>
+              <p className="break-words text-xs font-semibold text-[#9a6b43]">
                 Valor informado: {parseBrlToCents(allowance) !== null ? formatCentsToBrl(parseBrlToCents(allowance) ?? 0) : "—"}
               </p>
             </div>
@@ -452,19 +454,19 @@ export default function OnboardingPage() {
 
           {step === 5 ? (
             <div className="space-y-4">
-              <div className="rounded-xl border border-[#44605C] bg-[rgba(255,255,255,0.06)] p-3">
-                <p className="break-words text-base font-black leading-tight text-[#FFF4E7]">Passo 5: Termos e Privacidade</p>
-                <p className="mt-1 text-sm leading-relaxed text-[#E6D8C7]">
+              <div className="rounded-xl border border-[#e8d8c5] bg-[rgba(255,255,255,0.72)] p-3">
+                <p className="break-words text-base font-black leading-tight text-[#22352f]">Passo 5: Termos e Privacidade</p>
+                <p className="mt-1 text-sm leading-relaxed text-[#6f665d]">
                   Antes de continuar, confirme o aceite dos termos para uso da plataforma no contexto familiar.
                 </p>
               </div>
-              <div className="space-y-2 rounded-lg border border-border bg-[rgba(255,255,255,0.04)] p-3 text-sm leading-relaxed text-[#EDE0D1]">
+              <div className="space-y-2 rounded-lg border border-[#e8d8c5] bg-[rgba(255,255,255,0.72)] p-3 text-sm leading-relaxed text-[#203846]">
                 <p>
                   Ao continuar, você confirma que leu e aceita os Termos de Uso e a Política de Privacidade da organização.
                 </p>
                 <p className="font-semibold">Resumo: uso educacional familiar, tratamento de dados de rotina e retenção conforme política vigente.</p>
               </div>
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#44605C] bg-[rgba(255,255,255,0.05)] p-3 text-sm font-semibold text-[#FFF0E1]">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#e8d8c5] bg-[rgba(255,255,255,0.72)] p-3 text-sm font-semibold text-[#203846]">
                 <input
                   type="checkbox"
                   checked={legalAccepted}
@@ -478,9 +480,9 @@ export default function OnboardingPage() {
 
           {step === 6 ? (
             <div className="space-y-3">
-              <div className="rounded-xl border border-[#44605C] bg-[rgba(255,255,255,0.06)] p-3">
-                <p className="break-words text-base font-black leading-tight text-[#FFF4E7]">Passo 6: Definir PIN dos pais</p>
-                <p className="mt-1 text-sm leading-relaxed text-[#E6D8C7]">Esse PIN protege ações sensíveis no app dos responsáveis.</p>
+              <div className="rounded-xl border border-[#e8d8c5] bg-[rgba(255,255,255,0.72)] p-3">
+                <p className="break-words text-base font-black leading-tight text-[#22352f]">Passo 6: Definir PIN dos pais</p>
+                <p className="mt-1 text-sm leading-relaxed text-[#6f665d]">Esse PIN protege ações sensíveis no app dos responsáveis.</p>
               </div>
               <Input
                 type="password"
@@ -494,11 +496,11 @@ export default function OnboardingPage() {
                   setParentPin(digitsOnly.slice(0, 6));
                 }}
               />
-              <p className="text-xs text-[#E6D8C7]">Padrão esperado: apenas números, com 4 a 6 dígitos.</p>
+              <p className="text-xs text-[#6f665d]">Padrão esperado: apenas números, com 4 a 6 dígitos.</p>
             </div>
           ) : null}
 
-          {error ? <p role="alert" aria-live="polite" className="text-sm text-rose-300">{error}</p> : null}
+          {error ? <p role="alert" aria-live="polite" className="text-sm text-rose-700">{error}</p> : null}
 
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" disabled={step === 1 || loading} onClick={() => setStep((s) => s - 1)}>

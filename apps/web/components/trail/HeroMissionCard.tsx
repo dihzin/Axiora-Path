@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { axioraMotionClasses } from "@/theme/motion";
+import { ParchmentCard } from "@/components/ui/ParchmentCard";
 
 type MedalTier = "none" | "bronze" | "silver" | "gold" | "diamond";
 
@@ -29,8 +30,9 @@ type HeroMissionCardProps = {
   compact?: boolean;
 };
 
-const TEXT_PRIMARY = "rgba(240,249,255,0.92)";
-const TEXT_MUTED = "rgba(226,232,240,0.72)";
+const TEXT_INK   = "#2C1E16";
+const TEXT_SOFT  = "#5C4A3A";
+const TEXT_GOLD  = "#8B5E1A";
 
 export function HeroMissionCard(props: HeroMissionCardProps) {
   const {
@@ -45,24 +47,21 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
     className,
     compact = false,
   } = props;
-  const safeXpPercent = Math.max(0, Math.min(100, Math.round(xpPercent)));
-  const safeLevel = Math.max(1, Math.floor(level));
-  const safeInLevel = Math.max(0, Math.floor(xpInLevel));
-  const safeToNext = Math.max(1, Math.floor(xpToNextLevel));
-  const remainingXp = Math.max(0, safeToNext - safeInLevel);
-  const nextLevel = safeLevel + 1;
+  const safeXpPercent   = Math.max(0, Math.min(100, Math.round(xpPercent)));
+  const safeLevel       = Math.max(1, Math.floor(level));
+  const safeInLevel     = Math.max(0, Math.floor(xpInLevel));
+  const safeToNext      = Math.max(1, Math.floor(xpToNextLevel));
+  const remainingXp     = Math.max(0, safeToNext - safeInLevel);
+  const nextLevel       = safeLevel + 1;
   const missionsToUnlock = Math.max(1, Math.ceil(remainingXp / 30));
-  const [xpPulse, setXpPulse] = useState(false);
+  const [xpPulse, setXpPulse]     = useState(false);
   const [levelGlow, setLevelGlow] = useState(false);
-  const previousXpRef = useRef<string | null>(null);
+  const previousXpRef    = useRef<string | null>(null);
   const previousLevelRef = useRef<number | null>(null);
 
   useEffect(() => {
     const signature = `${safeXpPercent}:${safeInLevel}:${safeToNext}`;
-    if (previousXpRef.current === null) {
-      previousXpRef.current = signature;
-      return;
-    }
+    if (previousXpRef.current === null) { previousXpRef.current = signature; return; }
     if (previousXpRef.current !== signature) {
       setXpPulse(false);
       requestAnimationFrame(() => setXpPulse(true));
@@ -71,10 +70,7 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
   }, [safeInLevel, safeToNext, safeXpPercent]);
 
   useEffect(() => {
-    if (previousLevelRef.current === null) {
-      previousLevelRef.current = safeLevel;
-      return;
-    }
+    if (previousLevelRef.current === null) { previousLevelRef.current = safeLevel; return; }
     if (safeLevel > previousLevelRef.current) {
       setLevelGlow(false);
       requestAnimationFrame(() => setLevelGlow(true));
@@ -83,106 +79,109 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
   }, [safeLevel]);
 
   const missionTitle = currentMission?.title ?? "Missão indisponível";
-  const missionXp = currentMission?.xp ?? 0;
+  const missionXp    = currentMission?.xp ?? 0;
 
   return (
-    <section
+    <ParchmentCard
+      as="section"
+      variant="glass"
+      ariaLabel="Resumo da missão atual"
       className={cn(
-        `relative z-0 mx-auto w-full max-w-[760px] overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(155deg,rgba(24,49,43,0.9)_0%,rgba(28,64,56,0.82)_54%,rgba(20,42,38,0.9)_100%)] shadow-[0_16px_40px_rgba(7,20,17,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-500 will-change-transform hover:-translate-y-[1px] hover:shadow-[0_22px_48px_rgba(7,20,17,0.38)] ${axioraMotionClasses.transition}`,
+        `z-0 mx-auto w-full max-w-[760px] will-change-transform hover:-translate-y-[1px] ${axioraMotionClasses.transition}`,
         compact ? "p-3 md:p-3.5" : "p-4 md:p-5",
         levelGlow ? "hero-level-glow" : "",
         className,
       )}
-      aria-label="Resumo da missão atual"
-      onAnimationEnd={() => {
-        if (levelGlow) setLevelGlow(false);
-      }}
+      style={levelGlow ? undefined : undefined}
     >
-      <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-gradient-to-b from-white/5 via-white/[0.03] to-transparent" />
-      <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-[linear-gradient(180deg,rgba(2,6,23,0)_0%,rgba(2,6,23,0.1)_52%,rgba(2,6,23,0.3)_100%)]" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(70%_90%_at_50%_0%,rgba(255,176,122,0.14),transparent_64%)]" />
-      <div className="pointer-events-none absolute -left-8 top-4 h-28 w-28 rounded-full bg-[#F1C56B]/10 blur-2xl" />
-      <div className="pointer-events-none absolute -right-6 bottom-2 h-24 w-24 rounded-full bg-emerald-300/10 blur-2xl" />
-      <span
+      {/* Extra ambient glows on top of ParchmentCard overlays */}
+      <div
         aria-hidden
-        className="pointer-events-none absolute bottom-5 left-3 top-5 w-px rounded-full bg-[linear-gradient(180deg,rgba(74,106,146,0)_0%,rgba(74,106,146,0.26)_22%,rgba(74,106,146,0.14)_78%,rgba(74,106,146,0)_100%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-20 rounded-t-[22px] bg-[radial-gradient(70%_80%_at_50%_0%,rgba(255,183,3,0.10),transparent_70%)]"
+        onAnimationEnd={() => { if (levelGlow) setLevelGlow(false); }}
       />
-      <div className="relative z-10">
+      <div aria-hidden className="pointer-events-none absolute -left-6 top-4 h-24 w-24 rounded-full bg-[#FFB703]/8 blur-2xl" />
+      <div aria-hidden className="pointer-events-none absolute -right-4 bottom-2 h-20 w-20 rounded-full bg-[#52B788]/8 blur-2xl" />
+
+      <div>
         <div className={cn("flex flex-wrap items-start justify-between", compact ? "mb-3 gap-2.5" : "mb-4 gap-3")}>
           <div className="max-w-full">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-[#F1C56B]/30 bg-[#F1C56B]/12 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#FFF1D8]">
-                Trilha ativa
+              <span className="rounded-full border border-[#A07850]/50 bg-[rgba(160,120,80,0.14)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: TEXT_GOLD }}>
+                ✦ Trilha ativa
               </span>
-              <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-100">
+              <span className="rounded-full border border-[#52B788]/40 bg-[rgba(82,183,136,0.12)] px-2.5 py-1 text-[10px] font-semibold text-[#276245]">
                 Nível {safeLevel}
               </span>
             </div>
             <h2
               className={cn("mt-3 max-w-[94%] font-black leading-[1.02] tracking-tight", compact ? "text-[22px]" : "text-[26px]")}
               style={{
-                background: "linear-gradient(130deg, rgba(255,246,236,0.98) 0%, rgba(241,197,107,0.92) 52%, rgba(255,154,72,0.86) 100%)",
+                background: "linear-gradient(130deg, #2C1E16 0%, #8B5E1A 52%, #C47C20 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
               }}
             >{subjectName}</h2>
             {!compact && (
-              <p className="mt-2 text-[12px] font-medium" style={{ color: TEXT_MUTED }}>
-                Sua próxima descoberta está logo ali. Mais <span style={{ color: "rgba(241,197,107,0.9)", fontWeight: 700 }}>{remainingXp} XP</span> para abrir o próximo marco.
+              <p className="mt-2 text-[12px] font-medium" style={{ color: TEXT_SOFT }}>
+                Sua próxima descoberta está logo ali. Mais{" "}
+                <span style={{ color: "#8B5E1A", fontWeight: 700 }}>{remainingXp} XP</span>{" "}
+                para abrir o próximo marco.
               </p>
             )}
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-[#F1C56B]/18 bg-[#F1C56B]/8 px-3 py-2 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-            <span className="inline-flex h-2.5 w-2.5 rounded-full bg-[#FF9A48] shadow-[0_0_10px_rgba(255,154,72,0.6)]" />
-            <span className="font-semibold text-[#FFF1D8]">{safeXpPercent}% progresso</span>
+          <div className="flex items-center gap-2 rounded-full border border-[#A07850]/40 bg-[rgba(160,120,80,0.10)] px-3 py-2 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
+            <span className="inline-flex h-2.5 w-2.5 rounded-full bg-[#FB8C00] shadow-[0_0_8px_rgba(251,140,0,0.6)]" />
+            <span className="font-semibold" style={{ color: TEXT_GOLD }}>{safeXpPercent}% progresso</span>
           </div>
         </div>
 
         <div
           className={cn("relative z-10", xpPulse ? "xp-pulse" : "")}
-          onAnimationEnd={() => {
-            if (xpPulse) setXpPulse(false);
-          }}
+          onAnimationEnd={() => { if (xpPulse) setXpPulse(false); }}
         >
           <div className={cn("mb-2 flex items-center justify-between gap-2 px-0.5", compact && "mb-1.5")}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "rgba(255,180,100,0.82)" }}>✦ Energia da trilha</p>
-            <span className="text-[11px] font-bold" style={{ color: TEXT_PRIMARY }}>{safeInLevel}/{safeToNext} XP</span>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "#A07850" }}>✦ Energia da trilha</p>
+            <span className="text-[11px] font-bold" style={{ color: TEXT_INK }}>{safeInLevel}/{safeToNext} XP</span>
           </div>
-          <div className="relative h-3 w-full overflow-hidden rounded-full border border-[#E6D8C6]/40 bg-[linear-gradient(180deg,rgba(244,238,229,0.88)_0%,rgba(234,225,214,0.88)_100%)] shadow-[inset_0_1px_4px_rgba(58,67,62,0.16)]">
+          {/* XP progress bar — parchment trough, gold fill */}
+          <div className="relative h-3 w-full overflow-hidden rounded-full border-2 border-[#A07850]/50 bg-[linear-gradient(180deg,rgba(220,200,168,0.9)_0%,rgba(200,175,138,0.9)_100%)] shadow-[inset_0_2px_4px_rgba(44,30,18,0.18)]">
             <div aria-hidden className="pointer-events-none absolute inset-0 z-10">
-              <span className="absolute left-1/4 top-0 h-full w-px bg-[#1F3552]/15" />
-              <span className="absolute left-1/2 top-0 h-full w-px bg-[#1F3552]/15" />
-              <span className="absolute left-3/4 top-0 h-full w-px bg-[#1F3552]/15" />
+              <span className="absolute left-1/4 top-0 h-full w-px bg-[#5C4033]/20" />
+              <span className="absolute left-1/2 top-0 h-full w-px bg-[#5C4033]/20" />
+              <span className="absolute left-3/4 top-0 h-full w-px bg-[#5C4033]/20" />
             </div>
             <div
-              className="relative z-0 h-full rounded-full bg-gradient-to-r from-[#F1C56B] via-[#FF9A48] to-[#D96C2A] shadow-[0_0_18px_rgba(255,154,72,0.62),0_0_6px_rgba(255,154,72,0.38)] transition-all duration-[400ms] ease-out"
+              className="relative z-0 h-full rounded-full bg-gradient-to-r from-[#FFB703] via-[#FB8C00] to-[#D96C2A] shadow-[0_0_14px_rgba(255,183,3,0.55),0_0_5px_rgba(255,183,3,0.35)] transition-all duration-[400ms] ease-out"
               style={{ width: `${safeXpPercent}%` }}
             />
           </div>
 
           <div className={cn("grid", compact ? "mt-3 gap-2.5" : "mt-4 gap-3 md:grid-cols-[1.25fr_auto] md:items-center")}>
             <div className={cn("grid", compact ? "gap-2.5" : "gap-3 md:grid-cols-[1.2fr_0.8fr]")}>
-              <div className={cn("relative overflow-hidden rounded-[22px] border border-[#FF9A48]/20 bg-[linear-gradient(145deg,rgba(30,55,46,0.65),rgba(50,82,66,0.28))] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_18px_rgba(255,122,47,0.06)]", compact ? "px-3.5 py-2.5" : "px-4 py-3")}>
-                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-[3px] rounded-l-[22px] bg-gradient-to-b from-[#F1C56B] to-[#FF9A48]" />
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "rgba(255,180,100,0.82)" }}>✦ Missão brilhando agora</p>
-                <p className={cn("mt-1 font-bold leading-tight", compact ? "text-[14px]" : "text-[15px]")} style={{ color: TEXT_PRIMARY }}>{missionTitle}</p>
+              {/* Current mission sub-card */}
+              <div className={cn("relative overflow-hidden rounded-[18px] border border-[#A07850]/45 bg-[linear-gradient(145deg,rgba(253,245,230,0.72),rgba(240,222,188,0.55))] shadow-[inset_0_1px_0_rgba(255,255,255,0.65),0_0_12px_rgba(255,183,3,0.08)]", compact ? "px-3.5 py-2.5" : "px-4 py-3")}>
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-[3px] rounded-l-[18px] bg-gradient-to-b from-[#FFB703] to-[#FB8C00]" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "#A07850" }}>✦ Missão brilhando agora</p>
+                <p className={cn("mt-1 font-bold leading-tight", compact ? "text-[14px]" : "text-[15px]")} style={{ color: TEXT_INK }}>{missionTitle}</p>
                 <div className={cn("mt-2 flex flex-wrap", compact ? "gap-1.5" : "gap-2")}>
-                  <span className="rounded-full border border-[#F1C56B]/35 bg-[#F1C56B]/15 px-2.5 py-1 text-[11px] font-bold text-[#FFF1D8] shadow-[0_0_10px_rgba(241,197,107,0.18)]">
+                  <span className="rounded-full border border-[#FFB703]/50 bg-[rgba(255,183,3,0.15)] px-2.5 py-1 text-[11px] font-bold shadow-[0_0_8px_rgba(255,183,3,0.18)]" style={{ color: "#7A4F10" }}>
                     +{missionXp} XP
                   </span>
-                  <span className="rounded-full border border-white/14 bg-white/[0.05] px-2.5 py-1 text-[11px] font-medium" style={{ color: TEXT_MUTED }}>
+                  <span className="rounded-full border border-[#A07850]/35 bg-[rgba(160,120,80,0.08)] px-2.5 py-1 text-[11px] font-medium" style={{ color: TEXT_SOFT }}>
                     Missão pronta
                   </span>
                 </div>
               </div>
 
-              <div className={cn("relative overflow-hidden rounded-[22px] border border-emerald-400/18 bg-[linear-gradient(145deg,rgba(52,120,100,0.22),rgba(30,70,55,0.18))] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]", compact ? "px-3.5 py-2.5" : "px-4 py-3")}>
-                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-[3px] rounded-l-[22px] bg-gradient-to-b from-emerald-300 to-emerald-500" />
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "rgba(110,231,183,0.82)" }}>▲ Próximo portal</p>
-                <p className={cn("mt-1 font-bold", compact ? "text-[13px]" : "text-[14px]")} style={{ color: TEXT_PRIMARY }}>Nível {nextLevel}</p>
-                <p className={cn("mt-1 leading-snug", compact ? "text-[11px]" : "text-[12px]")} style={{ color: TEXT_MUTED }}>
-                  Cerca de <span style={{ color: "rgba(110,231,183,0.85)", fontWeight: 600 }}>{missionsToUnlock}</span> missões para desbloquear.
+              {/* Next level sub-card */}
+              <div className={cn("relative overflow-hidden rounded-[18px] border border-[#52B788]/35 bg-[linear-gradient(145deg,rgba(82,183,136,0.12),rgba(39,98,69,0.08))] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]", compact ? "px-3.5 py-2.5" : "px-4 py-3")}>
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-[3px] rounded-l-[18px] bg-gradient-to-b from-[#52B788] to-[#276245]" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "#276245" }}>▲ Próximo portal</p>
+                <p className={cn("mt-1 font-bold", compact ? "text-[13px]" : "text-[14px]")} style={{ color: TEXT_INK }}>Nível {nextLevel}</p>
+                <p className={cn("mt-1 leading-snug", compact ? "text-[11px]" : "text-[12px]")} style={{ color: TEXT_SOFT }}>
+                  Cerca de <span style={{ color: "#276245", fontWeight: 600 }}>{missionsToUnlock}</span> missões para desbloquear.
                 </p>
               </div>
             </div>
@@ -192,17 +191,18 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
                 type="button"
                 onClick={onStartMission}
                 className={cn(
-                  "axiora-chunky-btn inline-flex items-center justify-center font-black text-white",
+                  "medieval-btn inline-flex items-center justify-center font-black",
                   compact ? "min-h-[50px] w-full px-4 py-2.5 text-[13px]" : "min-h-[56px] px-5 py-3 text-[14px] md:min-w-[188px]",
                 )}
               >
-                Iniciar missão
+                ⚔ Iniciar missão
               </button>
               {onContinue ? (
                 <button
                   type="button"
                   onClick={onContinue}
-                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3 py-2 text-[11px] font-semibold text-slate-300 transition-colors hover:border-white/20 hover:bg-white/[0.07] hover:text-slate-100"
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border-2 border-[#A07850]/50 bg-[rgba(160,120,80,0.10)] px-3 py-2 text-[11px] font-semibold transition-colors hover:border-[#A07850]/70 hover:bg-[rgba(160,120,80,0.18)]"
+                  style={{ color: TEXT_GOLD }}
                 >
                   <span aria-hidden className="text-[10px]">↑</span>
                   Ver na trilha
@@ -212,7 +212,6 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
           </div>
         </div>
       </div>
-    </section>
+    </ParchmentCard>
   );
 }
-
