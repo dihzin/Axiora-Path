@@ -339,7 +339,9 @@ export default function ProgressionMap({
   const dustDensityScale = degradedFx ? (desktopHD ? 0.88 : 0.78) : desktopPresetConfig.dust;
   const sparksEnabled = !degradedFx;
 
-  const amplitude = Math.min(160, trackWidth * 0.28);
+  const desktopAmplitude = Math.min(280, Math.max(190, trackWidth * 0.34));
+  const mobileAmplitude = Math.min(160, trackWidth * 0.28);
+  const amplitude = isMobile ? mobileAmplitude : desktopAmplitude;
   const computedPoints = useMemo<PersistedMapData>(() => {
     if (!nodes || nodes.length === 0) return EMPTY_MAP_DATA;
 

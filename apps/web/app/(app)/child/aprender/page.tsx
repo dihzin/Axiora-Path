@@ -18,11 +18,11 @@ export default function LearningPathPage() {
           aria-hidden
           className="pointer-events-none absolute inset-0 z-0"
           style={{
-            backgroundImage: "url('/axiora/trilha/mockup.png')",
+            backgroundImage: "url('/axiora/aprender/trail-bg-clean-4k.png')",
             backgroundPosition: "center top",
             backgroundSize: "cover",
             backgroundRepeat: "no-repeat",
-            opacity: 0.96,
+            opacity: 0.98,
           }}
         />
         <Suspense fallback={null}>
