@@ -180,7 +180,7 @@ class CompleteGameSessionResult:
 def registerGameSession(
     db: Session,
     *,
-    user_id: int,
+    beneficiary_user_id: int,
     game_type: GameType,
     score: int,
     xp: int | None = None,
@@ -202,7 +202,7 @@ def registerGameSession(
     metadata: dict[str, Any] | None = None,
 ) -> RegisterGameSessionResult:
     session_date = target_date or date.today()
-    profile = _get_or_create_profile(db, user_id=user_id)
+    profile = _get_or_create_profile(db, user_id=beneficiary_user_id)
     _reset_daily_xp_if_needed(profile, target_date=session_date)
 
     normalized_game_id = normalize_game_id(game_id or game_type.value.lower(), game_type)
@@ -210,7 +210,7 @@ def registerGameSession(
     if dedupe_session_id is not None:
         existing = db.scalar(
             select(GameSession).where(
-                GameSession.user_id == user_id,
+                GameSession.user_id == beneficiary_user_id,
                 GameSession.game_id == normalized_game_id,
                 GameSession.session_external_id == dedupe_session_id,
             ),
@@ -230,13 +230,13 @@ def registerGameSession(
 
     apply_axion_decisions(
         db,
-        user_id=user_id,
+        user_id=beneficiary_user_id,
         context="before_game",
         tenant_id=tenant_id,
     )
     safe_score = max(0, score)
     base_requested_xp = max(0, xp if xp is not None else calculate_xp_from_score(safe_score))
-    xp_multiplier = _resolve_axion_xp_multiplier(db, user_id=user_id)
+    xp_multiplier = _resolve_axion_xp_multiplier(db, user_id=beneficiary_user_id)
     requested_xp = max(0, int(round(base_requested_xp * xp_multiplier)))
     requested_coins = max(0, coins if coins is not None else calculate_coins_from_score(safe_score))
 
@@ -252,7 +252,7 @@ def registerGameSession(
             economy_award = award_economy_event(
                 db,
                 child_id=child_id,
-                beneficiary_user_id=user_id,
+                beneficiary_user_id=beneficiary_user_id,
                 tenant_id=tenant_id,
                 event_type="GAME_PLAYED",
                 metadata={
@@ -277,7 +277,7 @@ def registerGameSession(
     game_session = GameSession(
         tenant_id=tenant_id,
         child_id=child_id,
-        user_id=user_id,
+        user_id=beneficiary_user_id,
         game_type=game_type,
         game_id=normalized_game_id,
         session_external_id=dedupe_session_id,
@@ -299,12 +299,12 @@ def registerGameSession(
 
     unlocked_achievements = evaluate_achievements_after_game(
         db,
-        user_id=user_id,
+        user_id=beneficiary_user_id,
         profile=profile,
         game_type=game_type,
         score=safe_score,
     )
-    compute_behavior_metrics(db, user_id=user_id)
+    compute_behavior_metrics(db, user_id=beneficiary_user_id)
 
     remaining_after = max(0, effective_max_xp_per_day - profile.daily_xp)
     return RegisterGameSessionResult(
@@ -383,7 +383,7 @@ def complete_game_session(
     db: Session,
     *,
     tenant_id: int,
-    user_id: int,
+    beneficiary_user_id: int,
     child_id: int | None,
     result: GameResultPayload,
     resolved_game_type: GameType | None = None,
@@ -396,7 +396,7 @@ def complete_game_session(
         db,
         tenant_id=tenant_id,
         child_id=child_id,
-        user_id=user_id,
+        beneficiary_user_id=beneficiary_user_id,
         game_type=game_type,
         game_id=result.game_id,
         session_external_id=result.session_id,
@@ -423,7 +423,7 @@ def complete_game_session(
             db,
             tenant_id=tenant_id,
             child_id=child_id,
-            user_id=user_id,
+            user_id=beneficiary_user_id,
             game_id=normalize_game_id(result.game_id, game_type),
             result=result,
         )
@@ -431,7 +431,7 @@ def complete_game_session(
             award_economy_event(
                 db,
                 child_id=child_id,
-                beneficiary_user_id=user_id,
+                beneficiary_user_id=beneficiary_user_id,
                 tenant_id=tenant_id,
                 event_type="PERSONAL_BEST",
                 metadata={

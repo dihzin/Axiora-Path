@@ -444,7 +444,7 @@ def claim_games_metagame_mission(
     db: Session,
     *,
     tenant_id: int,
-    user_id: int,
+    beneficiary_user_id: int,
     child_id: int,
     mission_scope: MissionScope,
     mission_id: str,
@@ -491,7 +491,7 @@ def claim_games_metagame_mission(
     award_economy_event(
         db,
         child_id=child_id,
-        beneficiary_user_id=user_id,
+        beneficiary_user_id=beneficiary_user_id,
         tenant_id=tenant_id,
         event_type=event_type,
         metadata={
@@ -509,7 +509,7 @@ def claim_games_metagame_mission(
         GameMetagameMissionClaim(
             tenant_id=tenant_id,
             child_id=child_id,
-            user_id=user_id,
+            user_id=beneficiary_user_id,
             mission_scope=mission_scope,
             mission_id=mission.id,
             period_start=mission.period_start,

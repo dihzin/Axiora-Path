@@ -364,6 +364,25 @@ def _resolve_child_beneficiary_user_id(child: ChildProfile) -> int:
     return int(child.user_id)
 
 
+def _resolve_child_context_and_beneficiary(
+    db: DBSession,
+    *,
+    tenant_id: int,
+    user: User,
+    membership: Membership,
+    requested_child_id: int | None,
+) -> tuple[ChildProfile, int]:
+    child = _resolve_child_context(
+        db,
+        tenant_id=tenant_id,
+        user=user,
+        membership=membership,
+        requested_child_id=requested_child_id,
+    )
+    beneficiary_user_id = _resolve_child_beneficiary_user_id(child)
+    return child, beneficiary_user_id
+
+
 def _serialize_games_metagame(summary: GameMetagameSummary) -> GameMetagameSummaryResponse:
     metagame = summary
     return GameMetagameSummaryResponse(
@@ -563,7 +582,7 @@ def claim_games_metagame(
     user: Annotated[User, Depends(get_current_user)],
     membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> GameMetagameClaimResponse:
-    child = _resolve_child_context(
+    child, beneficiary_user_id = _resolve_child_context_and_beneficiary(
         db,
         tenant_id=tenant.id,
         user=user,
@@ -574,7 +593,7 @@ def claim_games_metagame(
         claimed = claim_games_metagame_mission(
             db,
             tenant_id=tenant.id,
-            user_id=user.id,
+            beneficiary_user_id=beneficiary_user_id,
             child_id=child.id,
             mission_scope=payload.mission_scope,
             mission_id=payload.mission_id,
@@ -856,7 +875,7 @@ def complete_game_session_route(
     resolved_game_type = resolve_game_type_strict(payload.result.game_id)
     if resolved_game_type is None:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unsupported game_id")
-    child = _resolve_child_context(
+    child, beneficiary_user_id = _resolve_child_context_and_beneficiary(
         db,
         tenant_id=tenant.id,
         user=user,
@@ -873,7 +892,7 @@ def complete_game_session_route(
         complete_result = complete_game_session(
             db,
             tenant_id=tenant.id,
-            user_id=user.id,
+            beneficiary_user_id=beneficiary_user_id,
             child_id=child_id,
             result=payload.result,
             resolved_game_type=resolved_game_type,
@@ -885,7 +904,7 @@ def complete_game_session_route(
         with db.begin_nested():
             track_mission_progress(
                 db,
-                user_id=user.id,
+                user_id=beneficiary_user_id,
                 tenant_id=tenant.id,
                 delta=MissionDelta(
                     xp_gained=complete_result.register_result.granted_xp,
@@ -991,7 +1010,7 @@ def create_game_session(
     user: Annotated[User, Depends(get_current_user)],
     membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> GameSessionRegisterResponse:
-    child = _resolve_child_context(
+    child, beneficiary_user_id = _resolve_child_context_and_beneficiary(
         db,
         tenant_id=tenant.id,
         user=user,
@@ -1007,7 +1026,7 @@ def create_game_session(
 
     result = registerGameSession(
         db,
-        user_id=user.id,
+        beneficiary_user_id=beneficiary_user_id,
         tenant_id=tenant.id,
         child_id=child_id,
         game_type=GameType(payload.game_type),
@@ -1019,7 +1038,7 @@ def create_game_session(
         with db.begin_nested():
             track_mission_progress(
                 db,
-                user_id=user.id,
+                user_id=beneficiary_user_id,
                 tenant_id=tenant.id,
                 delta=MissionDelta(
                     xp_gained=result.granted_xp,
