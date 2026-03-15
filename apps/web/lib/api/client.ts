@@ -58,6 +58,14 @@ function isParentalConsentCode(payload: unknown): boolean {
   return typeof code === "string" && code.trim().toUpperCase() === "PARENTAL_CONSENT_REQUIRED";
 }
 
+function isMissingTenantHeaderCode(payload: unknown): boolean {
+  if (!payload || typeof payload !== "object") return false;
+  const code = (payload as { code?: unknown }).code;
+  const message = (payload as { message?: unknown }).message;
+  if (typeof code !== "string" || code.trim().toUpperCase() !== "BAD_REQUEST") return false;
+  return typeof message === "string" && message.includes("X-Tenant-Slug header is required");
+}
+
 function isConsentExemptPath(path: string): boolean {
   return (
     path === "/legal" ||
@@ -212,6 +220,12 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     const payload = await parseJsonSafe(response);
     if (isParentalConsentCode(payload)) {
       parentalConsentBlocked = true;
+    }
+    if (response.status === 400 && options.includeTenant !== false && isMissingTenantHeaderCode(payload)) {
+      clearTenantSlug();
+      if (typeof window !== "undefined" && window.location.pathname !== "/select-tenant") {
+        window.location.assign("/select-tenant");
+      }
     }
     if (options.requireAuth !== false && response.status === 401) {
       clearTokens();
