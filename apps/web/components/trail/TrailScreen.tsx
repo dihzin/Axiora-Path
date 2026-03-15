@@ -668,7 +668,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   return (
     <div className="relative overflow-hidden min-h-screen bg-transparent lg:h-screen">
       <div className="w-full lg:h-screen lg:overflow-hidden lg:pl-[208px]">
-        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/10 lg:border-t-white/10 lg:bg-[linear-gradient(180deg,rgba(6,18,39,0.58)_0%,rgba(4,13,30,0.52)_100%)] lg:backdrop-blur-md lg:px-3 lg:py-5">
+        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/8 lg:border-t-white/8 lg:bg-[linear-gradient(180deg,rgba(6,18,39,0.46)_0%,rgba(4,13,30,0.42)_100%)] lg:backdrop-blur-md lg:px-3 lg:py-5">
           <div className="mb-0.5 flex justify-center">
             <div className="rounded-2xl bg-[#12213D]/80 p-1.5 shadow-[inset_0_1px_12px_rgba(0,0,0,0.35)]">
               <div className="scale-90">
@@ -684,8 +684,8 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
           <DesktopNavItem href="/child/axion" active={pathname.startsWith("/child/axion")} iconName="axion" label="Axion" />
         </aside>
 
-        <div className="mx-auto w-full lg:h-screen lg:max-w-[1420px] lg:px-8 xl:max-w-[1560px] xl:px-12 2xl:px-16">
-          <div className="mx-auto w-full max-w-sm pb-24 pt-1 md:max-w-4xl md:pb-8 lg:flex lg:h-screen lg:max-w-[1360px] lg:flex-col lg:overflow-hidden lg:pb-0 lg:pt-4 xl:max-w-[1480px]">
+        <div className="mx-auto w-full lg:h-screen lg:max-w-[1680px] lg:px-6 xl:max-w-[1840px] xl:px-8 2xl:max-w-[1960px] 2xl:px-10">
+          <div className="mx-auto w-full max-w-sm pb-24 pt-1 md:max-w-4xl md:pb-8 lg:flex lg:h-screen lg:max-w-[1620px] lg:flex-col lg:overflow-hidden lg:pb-0 lg:pt-4 xl:max-w-[1760px] 2xl:max-w-[1880px]">
             <div className="mx-auto w-full max-w-[760px] px-4 sm:px-6 lg:max-w-none lg:px-2">
               <header ref={headerRef} className="relative z-50 space-y-2 bg-[rgba(15,23,42,0.08)] pb-2 [backdrop-filter:blur(2px)] lg:flex-none lg:space-y-2 lg:bg-transparent lg:pb-2">
                 {initialPathLoading ? (
@@ -720,7 +720,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
               <main className="lg:flex lg:min-h-0 lg:flex-1 lg:overflow-hidden lg:pt-1">
                 {initialPathLoading ? (
                   <section className="relative w-full">
-                    <div className="hidden lg:grid lg:grid-cols-[minmax(0,1fr)_356px] lg:gap-4" style={{ height: `${desktopStageHeight}px` }}>
+                    <div className="hidden lg:grid lg:grid-cols-[minmax(0,1fr)_368px] lg:gap-5" style={{ height: `${desktopStageHeight}px` }}>
                       <div className="overflow-hidden rounded-[34px] border border-white/8 bg-[linear-gradient(180deg,rgba(10,22,48,0.82),rgba(9,20,43,0.74))]">
                         <div className="h-full w-full animate-pulse bg-[radial-gradient(ellipse_at_50%_35%,rgba(96,165,250,0.22),rgba(37,99,235,0.08)_36%,rgba(2,6,23,0)_72%)]" />
                       </div>
@@ -762,7 +762,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
                       </section>
 
                       <section
-                        className="relative hidden w-full lg:grid lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_356px] lg:gap-4 motion-safe:animate-[fade-in-up_340ms_ease-out]"
+                        className="relative hidden w-full lg:grid lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_368px] lg:gap-5 motion-safe:animate-[fade-in-up_340ms_ease-out]"
                         style={{ height: `${desktopStageHeight}px` }}
                       >
                         <div

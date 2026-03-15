@@ -21,7 +21,7 @@ export function WeeklyGoalCard({ completed, target, weekLabel, className, compac
   return (
     <section
       className={cn(
-        "axiora-hover-magic relative overflow-hidden rounded-[26px] border border-amber-200/12 bg-[linear-gradient(145deg,rgba(31,58,52,0.9),rgba(24,49,43,0.84))] p-4 shadow-[0_14px_34px_rgba(7,20,17,0.24),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-500 hover:shadow-[0_18px_40px_rgba(7,20,17,0.32)]",
+        "axiora-hover-magic relative overflow-hidden rounded-[26px] border border-white/12 bg-[linear-gradient(155deg,rgba(24,49,43,0.9)_0%,rgba(28,64,56,0.82)_54%,rgba(20,42,38,0.9)_100%)] p-4 shadow-[0_16px_40px_rgba(7,20,17,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-[2px] transition-all duration-500 hover:shadow-[0_22px_46px_rgba(7,20,17,0.36)]",
         compact && "p-3.5",
         className,
       )}

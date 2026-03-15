@@ -5,7 +5,6 @@ import { ReactNode } from "react";
 
 import { OfflineBanner } from "@/components/offline-banner";
 import { OfflineSyncBootstrap } from "@/components/offline-sync-bootstrap";
-import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 import { PwaRegister } from "@/components/pwa-register";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -57,7 +56,6 @@ export default function RootLayout({ children }: RootLayoutProps) {
             <PwaRegister />
             <OfflineSyncBootstrap />
             <OfflineBanner />
-            <PwaInstallPrompt />
             {children}
           </div>
         </ThemeProvider>
