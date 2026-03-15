@@ -666,15 +666,11 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-transparent lg:h-screen">
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_55%_22%,rgba(58,184,171,0.2),rgba(10,34,62,0.08)_36%,rgba(2,10,24,0)_72%),radial-gradient(circle_at_82%_72%,rgba(25,140,124,0.14),rgba(2,10,24,0)_34%),linear-gradient(180deg,rgba(8,22,43,0.72)_0%,rgba(6,16,33,0.84)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,24,0.3)_0%,rgba(3,9,18,0.55)_100%)]" />
-      </div>
+    <div className="relative overflow-hidden min-h-screen bg-transparent lg:h-screen">
       <div className="w-full lg:h-screen lg:overflow-hidden lg:pl-[208px]">
-        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/12 lg:border-t-white/10 lg:bg-[linear-gradient(180deg,rgba(10,22,44,0.6)_0%,rgba(8,17,34,0.42)_100%)] lg:px-3 lg:py-5 lg:backdrop-blur-xl">
+        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/5 lg:border-t-white/5 lg:bg-[linear-gradient(180deg,#0F172A_0%,#0D1626_100%)] lg:px-3 lg:py-5">
           <div className="mb-0.5 flex justify-center">
-            <div className="rounded-2xl bg-[#12213D]/62 p-1.5 shadow-[inset_0_1px_12px_rgba(0,0,0,0.35)]">
+            <div className="rounded-2xl bg-[#12213D]/80 p-1.5 shadow-[inset_0_1px_12px_rgba(0,0,0,0.35)]">
               <div className="scale-90">
                 <AxionCharacter stage={1} moodState="NEUTRAL" reducedMotion={false} />
               </div>
