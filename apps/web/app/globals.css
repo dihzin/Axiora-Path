@@ -1930,35 +1930,6 @@ h2 {
   --parchment-shadow:   rgba(44, 30, 18, 0.32);
 }
 
-/* Crystal floating animation */
-@keyframes crystal-float {
-  0%, 100% { transform: translateY(0px); }
-  50%       { transform: translateY(-6px); }
-}
-
-/* Rune glow pulse */
-@keyframes rune-pulse {
-  0%, 100% { box-shadow: 0 0 10px var(--rune-glow), 0 0 22px rgba(255,183,3,0.18); }
-  50%       { box-shadow: 0 0 20px var(--rune-glow), 0 0 40px rgba(255,183,3,0.32); }
-}
-
-/* Crystal shimmer */
-@keyframes crystal-shimmer {
-  0%, 100% { opacity: 0.7; transform: scale(1); }
-  50%       { opacity: 1;   transform: scale(1.06); }
-}
-
-/* Enchant border sweep */
-@keyframes enchant-border {
-  0%   { border-color: var(--magic-gold); }
-  33%  { border-color: var(--magic-blue); }
-  66%  { border-color: var(--magic-green); }
-  100% { border-color: var(--magic-gold); }
-}
-
-.crystal-float  { animation: crystal-float  3s ease-in-out infinite; }
-.rune-pulse     { animation: rune-pulse     2.4s ease-in-out infinite; }
-.crystal-shimmer{ animation: crystal-shimmer 2.8s ease-in-out infinite; }
 
 /* Parchment card */
 .medieval-parchment {

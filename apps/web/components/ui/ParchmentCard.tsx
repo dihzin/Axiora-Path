@@ -29,11 +29,11 @@ const BASE =
 
 /** Full parchment — opaque warm paper look */
 const LIGHT_SHELL =
-  "border-[3px] border-[#A07850] bg-[linear-gradient(155deg,#FDF5E6_0%,#F5E4C4_55%,#EDCF9C_100%)] shadow-[0_12px_32px_rgba(44,30,18,0.28),inset_0_1px_0_rgba(255,255,255,0.72)]";
+  "border-[3px] border-[#A07850] bg-[linear-gradient(155deg,#FDF5E6_0%,#F5E4C4_55%,#EDCF9C_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]";
 
 /** Translucent parchment glass — keeps dark/light inner text readable */
 const GLASS_SHELL =
-  "border-2 border-[#A07850]/55 bg-[linear-gradient(155deg,rgba(253,245,230,0.88)_0%,rgba(240,222,188,0.84)_100%)] shadow-[0_12px_32px_rgba(44,30,18,0.28),inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-[14px] [--webkit-backdrop-filter:blur(14px)]";
+  "border-2 border-[#A07850]/55 bg-[linear-gradient(155deg,rgba(253,245,230,0.88)_0%,rgba(240,222,188,0.84)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-[14px] [--webkit-backdrop-filter:blur(14px)]";
 
 export function ParchmentCard({
   children,

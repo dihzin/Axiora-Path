@@ -73,6 +73,8 @@ type PersistedMapData = {
   activeIndex: number;
   curvedPath: string;
   progressPath: string;
+  /** Path covering only the active segment (currentNode → next) — amber dashed */
+  activeSegmentPath: string;
 };
 
 type SampledPathPoint = {
@@ -122,6 +124,7 @@ const EMPTY_MAP_DATA: PersistedMapData = {
   activeIndex: -1,
   curvedPath: "",
   progressPath: "",
+  activeSegmentPath: "",
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -159,6 +162,12 @@ function buildPath(points: { x: number; y: number }[]) {
 function buildProgressPath(points: { x: number; y: number }[], currentIndex: number) {
   if (currentIndex <= 0) return "";
   return buildPath(points.slice(0, currentIndex + 1));
+}
+
+/** Active segment: path from currentNode → next node only (for amber dashed overlay) */
+function buildActiveSegmentPath(points: { x: number; y: number }[], currentIndex: number) {
+  if (currentIndex < 0 || currentIndex >= points.length - 1) return "";
+  return buildPath([points[currentIndex]!, points[currentIndex + 1]!]);
 }
 
 function randomSpawnDelay() {
@@ -260,6 +269,8 @@ export default function ProgressionMap({
   const [enterProgressVisual, setEnterProgressVisual] = useState(0);
   const [unlockVisual, setUnlockVisual] = useState<{ nodeId: string | null; progress: number }>({ nodeId: null, progress: 0 });
   const [degradedFx, setDegradedFx] = useState(false);
+  /** PROMPT 07: mobile bottom card — node tapped on mobile */
+  const [mobileSelectedNode, setMobileSelectedNode] = useState<MapNode | null>(null);
   const pointsRef = useRef<PersistedMapData | null>(null);
 
   useEffect(() => {
@@ -408,8 +419,9 @@ export default function ProgressionMap({
       return byStatus >= 0 ? byStatus : 0;
     })();
 
-    const curvedPath = buildPath(normalizedPoints);
-    const progressPath = buildProgressPath(normalizedPoints, activeIndex);
+    const curvedPath        = buildPath(normalizedPoints);
+    const progressPath      = buildProgressPath(normalizedPoints, activeIndex);
+    const activeSegmentPath = buildActiveSegmentPath(normalizedPoints, activeIndex);
 
     return {
       nodes,
@@ -419,6 +431,7 @@ export default function ProgressionMap({
       activeIndex,
       curvedPath,
       progressPath,
+      activeSegmentPath,
     };
   }, [activeNodeId, amplitude, isMobile, nodeGap, nodes, trackCenter, trackWidth]);
 
@@ -434,8 +447,9 @@ export default function ProgressionMap({
   const worldWidth = mapData?.worldWidth ?? 1;
   const worldHeight = mapData?.worldHeight ?? 1;
   const activeIndex = mapData?.activeIndex ?? -1;
-  const curvedPath = mapData?.curvedPath ?? "";
-  const progressPath = mapData?.progressPath ?? "";
+  const curvedPath        = mapData?.curvedPath        ?? "";
+  const progressPath      = mapData?.progressPath      ?? "";
+  const activeSegmentPath = mapData?.activeSegmentPath ?? "";
 
   const cameraRange = useMemo(() => {
     if (!points.length || view.h <= 0 || worldHeight <= 0) {
@@ -463,7 +477,10 @@ export default function ProgressionMap({
   const worldOffsetX = viewportCenterX - nodesCenterX;
   const opticalOffset = -view.w * 0.01;
   const finalOffsetX = worldOffsetX + opticalOffset;
-  const verticalOpticalOffset = isMobile ? view.h * 0.12 : 36;
+  // Optical offset: shifts the world DOWN in the viewport so top/bottom spacing is balanced.
+  // First node normalizes to worldY=0, so this value IS the top margin in pixels.
+  // (view.h * 0.12 ≈ 93px for a 780px viewport — same formula for mobile and desktop)
+  const verticalOpticalOffset = view.h * 0.12;
 
   useEffect(() => {
     targetCameraRef.current = cameraRange.clampedCamera;
@@ -1038,49 +1055,52 @@ export default function ProgressionMap({
                   </filter>
                 </defs>
 
-                {/* ── UPCOMING PATH — slim + glow (item 3) ── */}
-                {/* Soft shadow for readability against colorful bg */}
-                <path
-                  d={curvedPath}
-                  stroke="rgba(0,0,0,0.38)"
-                  strokeWidth={isMobile ? 10 : 9}
-                  fill="none"
-                  strokeLinecap="round"
-                  vectorEffect="non-scaling-stroke"
-                />
-                {/* Main slim path */}
+                {/* ── FUTURE PATH — slate-400, opacity 0.5 (PROMPT 02) ── */}
                 <path
                   ref={pathRef}
                   d={curvedPath}
-                  stroke="rgba(255,255,255,0.55)"
-                  strokeWidth={isMobile ? 7 : 6}
+                  stroke="rgba(148,163,184,0.50)"
+                  strokeWidth={isMobile ? 4 : 3}
                   fill="none"
                   strokeLinecap="round"
-                  filter="url(#pathGlow)"
                   vectorEffect="non-scaling-stroke"
                 />
 
-                {/* ── PROGRESS PATH — amber slim + warm glow ── */}
+                {/* ── COMPLETED PATH — emerald-400, full opacity (PROMPT 02) ── */}
                 {progressPath ? (
                   <>
                     <path
                       d={progressPath}
-                      stroke="rgba(0,0,0,0.35)"
-                      strokeWidth={isMobile ? 10 : 9}
+                      stroke="rgba(0,0,0,0.28)"
+                      strokeWidth={isMobile ? 6 : 5}
                       fill="none"
                       strokeLinecap="round"
                       vectorEffect="non-scaling-stroke"
                     />
                     <path
                       d={progressPath}
-                      stroke="#FF9A48"
-                      strokeWidth={isMobile ? 7 : 6}
+                      stroke="#34d399"
+                      strokeWidth={isMobile ? 4 : 4}
                       fill="none"
                       strokeLinecap="round"
-                      filter="url(#dotGlowWarm)"
+                      filter="url(#pathGlow)"
                       vectorEffect="non-scaling-stroke"
                     />
                   </>
+                ) : null}
+
+                {/* ── ACTIVE SEGMENT — amber-400, dashed (PROMPT 02) ── */}
+                {activeSegmentPath ? (
+                  <path
+                    d={activeSegmentPath}
+                    stroke="#f59e0b"
+                    strokeWidth={isMobile ? 4 : 4}
+                    strokeDasharray="6 6"
+                    fill="none"
+                    strokeLinecap="round"
+                    filter="url(#dotGlowWarm)"
+                    vectorEffect="non-scaling-stroke"
+                  />
                 ) : null}
               </svg>
             </div>
@@ -1168,12 +1188,17 @@ export default function ProgressionMap({
                         nodeIndex: index,
                         compactMobile,
                         highlightedNodeId: selectedNodeId ?? activeNodeId,
-                        onNodeClick,
+                        // PROMPT 07: on mobile, intercept click to show bottom card
+                        onNodeClick: isMobile
+                          ? (n) => setMobileSelectedNode((prev) => (prev?.id === n.id ? null : n))
+                          : onNodeClick,
                         quality,
                         reducedMotion,
                         enterProgress: enterProgressVisual,
                         unlockBurstProgress: unlockVisual.nodeId === node.id ? unlockVisual.progress : 0,
                         canvasWidth: trackWidth,
+                        // PROMPT 07: hide side badges on mobile — nodes only
+                        hideBadge: isMobile,
                       })}
                     </Fragment>
                   );
@@ -1181,6 +1206,61 @@ export default function ProgressionMap({
               })()}
             </div>
           </div>
+
+          {/* ── PROMPT 07: Mobile bottom card ── */}
+          {isMobile && mobileSelectedNode ? (
+            <div
+              className="pointer-events-auto absolute inset-x-0 bottom-0 z-[50] animate-[slideUp_220ms_ease-out]"
+              style={{ padding: "12px 12px 20px" }}
+            >
+              <div
+                className="relative overflow-hidden rounded-[22px]"
+                style={{
+                  background: "linear-gradient(160deg,rgba(14,38,35,0.97),rgba(8,24,22,0.97))",
+                  border: "1.5px solid rgba(110,231,183,0.22)",
+                  boxShadow: "0 -16px 40px rgba(0,0,0,0.38), 0 0 24px rgba(52,211,153,0.12)",
+                  backdropFilter: "blur(20px)",
+                  padding: "18px 18px 14px",
+                }}
+              >
+                {/* Close handle */}
+                <button
+                  type="button"
+                  onClick={() => setMobileSelectedNode(null)}
+                  className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full"
+                  style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}
+                  aria-label="Fechar"
+                >
+                  ✕
+                </button>
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "rgba(255,180,100,0.82)" }}>✦ Missão</p>
+                <h3 className="mt-1 text-[18px] font-bold leading-tight text-white">{mobileSelectedNode.title}</h3>
+                {mobileSelectedNode.subtitle ? (
+                  <p className="mt-1 text-[13px]" style={{ color: "rgba(255,255,255,0.62)" }}>{mobileSelectedNode.subtitle}</p>
+                ) : null}
+                <div className="mt-3 flex items-center gap-3">
+                  {typeof mobileSelectedNode.xp === "number" ? (
+                    <span className="rounded-full border border-[#F1C56B]/30 bg-[#F1C56B]/10 px-2.5 py-1 text-[12px] font-bold text-[#FFE7D1]">
+                      +{mobileSelectedNode.xp} XP
+                    </span>
+                  ) : null}
+                  <span className="text-[12px]" style={{ color: "rgba(255,255,255,0.42)" }}>
+                    {mobileSelectedNode.status === "locked" ? "🔒 Bloqueada" : mobileSelectedNode.status === "done" ? "✅ Concluída" : "▶ Disponível"}
+                  </span>
+                </div>
+                {mobileSelectedNode.status !== "locked" ? (
+                  <button
+                    type="button"
+                    onClick={() => { onNodeClick?.(mobileSelectedNode); setMobileSelectedNode(null); }}
+                    className="mt-4 w-full rounded-[14px] py-3 text-[14px] font-bold text-white"
+                    style={{ background: "linear-gradient(135deg,#34d399,#059669)" }}
+                  >
+                    {mobileSelectedNode.status === "done" ? "Revisar missão" : "Iniciar missão"}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
 
           {debug ? (
             <div className="legend-chips pointer-events-none absolute right-6 top-6 z-[30] flex gap-2">
@@ -1421,6 +1501,75 @@ export default function ProgressionMap({
           .orbital-ring-3 {
             animation: none !important;
           }
+        }
+
+        /* ── ax-node system (PROMPT 01) ── */
+        .ax-node { position: relative; }
+        .ax-node-lesson    { --ax-node-accent: #38bdf8; }
+        .ax-node-story     { --ax-node-accent: #38bdf8; }
+        .ax-node-challenge { --ax-node-accent: #fbbf24; }
+        .ax-node-checkpoint{ --ax-node-accent: #34d399; }
+        .ax-node-boss      { --ax-node-accent: #a78bfa; }
+        .ax-node-completed { --ax-node-status: completed; }
+        .ax-node-current   { --ax-node-status: current; }
+        .ax-node-locked    { --ax-node-status: locked; }
+        .ax-node-available { --ax-node-status: available; }
+
+        /* ── pulse-soft: gentle scale for done nodes ── */
+        @keyframes pulseSoft {
+          0%, 100% { filter: brightness(1); }
+          50%       { filter: brightness(1.05); }
+        }
+        .pulse-soft { animation: pulseSoft 1.8s ease-in-out infinite; }
+
+        /* ── pulse-current: stronger for active node ── */
+        @keyframes pulseCurrent {
+          0%, 100% { filter: brightness(1) drop-shadow(0 0 6px rgba(6,182,212,0.3)); }
+          50%       { filter: brightness(1.06) drop-shadow(0 0 12px rgba(6,182,212,0.55)); }
+        }
+        .pulse-current { animation: pulseCurrent 2s ease-in-out infinite; }
+
+        /* ── Mobile slide-up for bottom card (PROMPT 07) ── */
+        @keyframes slideUp {
+          from { transform: translateY(100%); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+
+        /* ── PROMPT 04: Ambient cloud drift ── */
+        @keyframes cloudDrift {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(60px); }
+        }
+        .ambient-cloud {
+          animation: cloudDrift 120s ease-in-out infinite alternate;
+          opacity: 0.15;
+          will-change: transform;
+          pointer-events: none;
+        }
+
+        /* ── PROMPT 04: Ambient particle float ── */
+        @keyframes particleFloat {
+          0%, 100% { transform: translateY(0) translateX(0); opacity: 0.12; }
+          33%       { transform: translateY(-8px) translateX(3px); opacity: 0.22; }
+          66%       { transform: translateY(-4px) translateX(-2px); opacity: 0.18; }
+        }
+        .ambient-particle {
+          width: 2px;
+          height: 2px;
+          border-radius: 9999px;
+          background: rgba(148, 163, 184, 0.6);
+          animation: particleFloat var(--drift-duration, 8s) ease-in-out infinite;
+          animation-delay: var(--drift-delay, 0s);
+          pointer-events: none;
+        }
+
+        /* ── PROMPT 04: done node subtle glow pulse ── */
+        @keyframes completedGlow {
+          0%, 100% { transform: translate(-50%, -50%) scale(1);    opacity: 0.92; }
+          50%       { transform: translate(-50%, -50%) scale(1.05); opacity: 1; }
+        }
+        .node-aura-done {
+          animation: completedGlow 1.8s ease-in-out infinite;
         }
       `}</style>
     </div>

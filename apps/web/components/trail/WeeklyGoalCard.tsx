@@ -42,24 +42,11 @@ export function WeeklyGoalCard({ completed, target, weekLabel, className, compac
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "#A07850" }}>✦ Meta da semana</p>
-            <div className="rounded-full border border-[#A07850]/45 bg-[rgba(160,120,80,0.12)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: "#7A4F10" }}>
-              {weekLabel}
-            </div>
-          </div>
-          <p className={cn("mt-1 font-bold leading-tight tracking-[-0.01em]", compact ? "text-[15px]" : "text-[17px]")} style={{ color: "#2C1E16" }}>{statusText}</p>
-          <p className="mt-1 text-[12px] font-medium" style={{ color: "#5C4A3A" }}>
-            {safeCompleted} de {safeTarget} concluídas
-          </p>
+          <p className={cn("font-bold leading-tight tracking-[-0.01em]", compact ? "text-[15px]" : "text-[17px]")} style={{ color: "#2C1E16" }}>{statusText}</p>
         </div>
       </div>
 
       <div className={cn("relative z-10", compact ? "mt-3" : "mt-4")}>
-        <div className="mb-2 flex items-center justify-between text-[12px] font-semibold">
-          <span className="text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: "#A07850" }}>Barra de conquista</span>
-          <span className="rounded-full border border-[#A07850]/45 bg-[rgba(160,120,80,0.12)] px-2 py-0.5 text-[10px] font-bold" style={{ color: "#7A4F10" }}>{percent}%</span>
-        </div>
         {/* Progress bar — parchment trough, gold fill */}
         <div className="h-2.5 overflow-hidden rounded-full border-2 border-[#A07850]/50 bg-[linear-gradient(180deg,rgba(220,200,168,0.9)_0%,rgba(200,175,138,0.9)_100%)] shadow-[inset_0_1px_3px_rgba(44,30,18,0.14)]">
           <div

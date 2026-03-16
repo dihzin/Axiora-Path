@@ -34,53 +34,40 @@ export function DailyMissionsPanel({ missions, missionsLoading, claimingMissionI
       variant="glass"
       className={cn(compact ? "p-3.5" : "p-4", className)}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "rgba(255,180,100,0.82)" }}>✦ Desafios do dia</p>
-          <h3 className={cn("mt-1 font-bold leading-tight text-white", compact ? "text-[15px]" : "text-[18px]")}>{compact ? "Desafio em foco" : "Pequenas conquistas para hoje"}</h3>
-        </div>
-        <span className="rounded-full border border-[#F1C56B]/25 bg-[#F1C56B]/10 px-2.5 py-1 text-[11px] font-bold text-[#FFF1D8] shadow-[0_0_10px_rgba(241,197,107,0.12)]">
-          {dailyMissions.length} ativos
-        </span>
-      </div>
-
-      <div className="relative z-10 mt-4">
+      <div className="relative z-10">
         {dailyMissions.length > 0 ? (
           compact ? (
             <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5">
+              {activeMission ? <MissionTile mission={activeMission} index={activeIndex} compact onClaimMission={onClaimMission} claimingMissionId={claimingMissionId} /> : null}
+              {canNavigate && (
+                <div className="flex items-center justify-center gap-3">
                   <NavButton
                     direction="left"
                     disabled={!canNavigate}
                     onClick={() => setActiveIndex((prev) => (prev - 1 + dailyMissions.length) % dailyMissions.length)}
                   />
+                  <div className="flex items-center gap-1.5">
+                    {dailyMissions.map((mission, index) => (
+                      <button
+                        key={mission.missionId}
+                        type="button"
+                        onClick={() => setActiveIndex(index)}
+                        className={cn(
+                          "h-2.5 rounded-full transition-all duration-200",
+                          index === activeIndex ? "w-5 bg-[#A07850] shadow-[0_0_8px_rgba(160,120,80,0.5)]" : "w-2.5 bg-[#A07850]/30 hover:bg-[#A07850]/50",
+                        )}
+                        aria-label={`Mostrar desafio ${index + 1}`}
+                        aria-pressed={index === activeIndex}
+                      />
+                    ))}
+                  </div>
                   <NavButton
                     direction="right"
                     disabled={!canNavigate}
                     onClick={() => setActiveIndex((prev) => (prev + 1) % dailyMissions.length)}
                   />
                 </div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/58">
-                  {activeIndex + 1} de {dailyMissions.length}
-                </p>
-                <div className="flex items-center gap-1.5">
-                  {dailyMissions.map((mission, index) => (
-                    <button
-                      key={mission.missionId}
-                      type="button"
-                      onClick={() => setActiveIndex(index)}
-                      className={cn(
-                        "h-2.5 rounded-full transition-all duration-200",
-                        index === activeIndex ? "w-5 bg-[#FF9A48] shadow-[0_0_10px_rgba(255,154,72,0.42)]" : "w-2.5 bg-white/20 hover:bg-white/35",
-                      )}
-                      aria-label={`Mostrar desafio ${index + 1}`}
-                      aria-pressed={index === activeIndex}
-                    />
-                  ))}
-                </div>
-              </div>
-              {activeMission ? <MissionTile mission={activeMission} index={activeIndex} compact onClaimMission={onClaimMission} claimingMissionId={claimingMissionId} /> : null}
+              )}
             </div>
           ) : (
             <div className="grid gap-3">
@@ -114,8 +101,8 @@ function NavButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "axiora-chunky-btn axiora-chunky-chip axiora-chunky-btn--compact inline-flex h-8 w-8 items-center justify-center px-0 text-[14px] text-[#17322F]",
-        disabled ? "cursor-default opacity-40" : "axiora-chunky-chip--active text-white",
+        "inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#A07850]/60 bg-[linear-gradient(145deg,#FDF5E6,#E8C98A)] text-[18px] font-black text-[#5C3D1A] shadow-[0_2px_6px_rgba(44,30,18,0.18)] transition-all duration-150",
+        disabled ? "cursor-default opacity-30" : "hover:bg-[#E8C98A] active:scale-95",
       )}
       aria-label={direction === "left" ? "Desafio anterior" : "Próximo desafio"}
     >
@@ -152,38 +139,33 @@ function MissionTile({
   const accentClass = accents[index % accents.length];
 
   return (
-    <div className={cn("rounded-[22px] border bg-[linear-gradient(150deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]", compact ? "px-3 py-2.5" : "px-3.5 py-3", accentClass)}>
+    <div className={cn("rounded-[16px] border border-[#A07850]/35 bg-[rgba(253,245,230,0.55)]", compact ? "px-3 py-2.5" : "px-3.5 py-3")}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className={cn("font-semibold leading-tight text-white", compact ? "text-[13px]" : "text-[14px]")}>{mission.title}</p>
-          <p className="mt-1 text-[11px] text-slate-300">
+          <p className={cn("font-bold leading-tight", compact ? "text-[13px]" : "text-[14px]")} style={{ color: "#2C1E16" }}>{mission.title}</p>
+          <p className="mt-1 text-[11px] font-medium" style={{ color: "#7A5C3A" }}>
             {claimed ? "Recompensa resgatada ✓" : done ? "Conquista pronta para celebrar!" : "Continue para acender esta estrela"}
           </p>
         </div>
-        <p className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${done ? "border-emerald-300/45 bg-emerald-400/15 text-emerald-100" : "border-[#F1C56B]/40 bg-[#FF9A48]/15 text-[#FFE7D1]"}`}>
+        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-bold ${done ? "border-[#52B788]/50 bg-[rgba(82,183,136,0.15)] text-[#276245]" : "border-[#A07850]/45 bg-[rgba(160,120,80,0.12)] text-[#7A4F10]"}`}>
           {safeValue}/{safeTotal}
-        </p>
+        </span>
       </div>
-      <div className={cn("w-full overflow-hidden rounded-full border border-white/12 bg-white/10", compact ? "mt-2.5 h-1.5" : "mt-3 h-2")}>
+      <div className={cn("w-full overflow-hidden rounded-full border border-[#A07850]/30 bg-[rgba(160,120,80,0.12)]", compact ? "mt-2.5 h-2" : "mt-3 h-2.5")}>
         <div
-          className={`h-full rounded-full transition-all duration-300 ${done ? "bg-gradient-to-r from-emerald-300 to-emerald-500" : "bg-gradient-to-r from-[#F1C56B] via-[#FF9A48] to-[#D96C2A]"}`}
+          className={`h-full rounded-full transition-all duration-300 ${done ? "bg-gradient-to-r from-[#52B788] to-[#276245]" : "bg-gradient-to-r from-[#FFB703] via-[#FB8C00] to-[#D96C2A]"} shadow-[0_0_8px_rgba(255,183,3,0.4)]`}
           style={{ width: `${percent}%` }}
         />
       </div>
-      {canClaim ? (
+      {canClaim && (
         <button
           type="button"
           onClick={() => onClaimMission(mission.missionId)}
           disabled={isClaiming}
-          className="mt-2.5 w-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 px-3 py-1.5 text-[11px] font-semibold text-white shadow-[0_0_12px_rgba(52,211,153,0.28)] transition-all hover:shadow-[0_0_20px_rgba(52,211,153,0.44)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-2.5 w-full rounded-full border-2 border-[#276245]/60 bg-gradient-to-r from-[#52B788] to-[#276245] px-3 py-1.5 text-[12px] font-bold text-white shadow-[0_0_12px_rgba(82,183,136,0.3)] transition-all hover:shadow-[0_0_20px_rgba(82,183,136,0.5)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isClaiming ? "Resgatando..." : "✦ Resgatar recompensa"}
         </button>
-      ) : (
-        <div className="mt-2 flex items-center justify-between text-[11px] text-slate-300">
-          <span>{percent}% completo</span>
-          <span>{claimed ? "Resgatado" : done ? "Pronto" : "Em progresso"}</span>
-        </div>
       )}
     </div>
   );
