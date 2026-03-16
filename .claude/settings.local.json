@@ -4,7 +4,10 @@
       "Bash(grep -E \"\\\\.\\(ts|tsx|css\\)$\")",
       "Bash(grep -r '\"\"@types/react\"\"' apps/web/package.json packages/)",
       "Bash(grep '\"\"next\"\"' apps/web/package.json)",
-      "Bash(grep '\"\"react\"\"' apps/web/package.json)"
+      "Bash(grep '\"\"react\"\"' apps/web/package.json)",
+      "Bash(ls -la \"c:/DEV/Axiora Path/apps/web/app/\\(app\\)/child/layout.tsx\")",
+      "Bash(wc -l \"c:/DEV/Axiora Path/apps/web/app/\\(app\\)/onboarding/page.tsx\")",
+      "Bash(npx tsc:*)"
     ]
   }
 }

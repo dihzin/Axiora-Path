@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import {
@@ -154,23 +154,11 @@ export function useTrailData(): TrailData {
 
   // ── State ──────────────────────────────────────────────────────────────────
 
-  const [path, setPath] = useState<LearningPathResponse | null>(() => {
-    if (typeof window === "undefined") return null;
-    const rawSubjectId = new URLSearchParams(window.location.search).get("subjectId");
-    const parsedSubjectId = Number(rawSubjectId);
-    const initialSubjectId = Number.isFinite(parsedSubjectId) && parsedSubjectId > 0 ? parsedSubjectId : null;
-    return readCachedPath(initialSubjectId);
-  });
+  // SSR-safe: always start null/true so server and client first render match.
+  // Cache is restored synchronously in useLayoutEffect below (before browser paint).
+  const [path, setPath] = useState<LearningPathResponse | null>(null);
   const [subjects, setSubjects] = useState<AprenderSubjectOption[]>([]);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(() => {
-    if (typeof window === "undefined") return null;
-    const rawFromQuery = new URLSearchParams(window.location.search).get("subjectId");
-    const parsedFromQuery = Number(rawFromQuery);
-    if (Number.isFinite(parsedFromQuery) && parsedFromQuery > 0) return parsedFromQuery;
-    const raw = window.localStorage.getItem(resolveSubjectStorageKey());
-    const parsed = Number(raw);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-  });
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
   const [selectedArea, setSelectedArea] = useState<SubjectAreaLabel>("Exatas");
   const [coins, setCoins] = useState(0);
   const [xpPercent, setXpPercent] = useState(0);
@@ -179,13 +167,7 @@ export function useTrailData(): TrailData {
   const [xpInLevel, setXpInLevel] = useState(0);
   const [xpToNextLevel, setXpToNextLevel] = useState(100);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(() => {
-    if (typeof window === "undefined") return true;
-    const rawSubjectId = new URLSearchParams(window.location.search).get("subjectId");
-    const parsedSubjectId = Number(rawSubjectId);
-    const initialSubjectId = Number.isFinite(parsedSubjectId) && parsedSubjectId > 0 ? parsedSubjectId : null;
-    return readCachedPath(initialSubjectId) === null;
-  });
+  const [loading, setLoading] = useState(true);
   const [pathRefreshing, setPathRefreshing] = useState(false);
   const [insights, setInsights] = useState<LearningInsightsResponse | null>(null);
   const [missions, setMissions] = useState<MissionsCurrentResponse | null>(null);
@@ -227,6 +209,31 @@ export function useTrailData(): TrailData {
   }, [insights]);
 
   // ── Effects ────────────────────────────────────────────────────────────────
+
+  // Restore from browser storage BEFORE first paint so the user never sees the
+  // loading skeleton when cached data is available. useLayoutEffect runs
+  // synchronously after DOM mutation but before the browser paints.
+  useLayoutEffect(() => {
+    const rawFromQuery = new URLSearchParams(window.location.search).get("subjectId");
+    const parsedFromQuery = Number(rawFromQuery);
+    let resolvedSubjectId: number | null = null;
+    if (Number.isFinite(parsedFromQuery) && parsedFromQuery > 0) {
+      resolvedSubjectId = parsedFromQuery;
+    } else {
+      const raw = window.localStorage.getItem(resolveSubjectStorageKey());
+      const parsed = Number(raw);
+      if (Number.isFinite(parsed) && parsed > 0) resolvedSubjectId = parsed;
+    }
+    if (resolvedSubjectId !== null) setSelectedSubjectId(resolvedSubjectId);
+
+    const cached = readCachedPath(resolvedSubjectId);
+    if (cached) {
+      setPath(cached);
+      setLoading(false);
+      // Mark as loaded so the fetch effect uses setPathRefreshing instead of setLoading(true)
+      hasLoadedPathRef.current = true;
+    }
+  }, []);
 
   useEffect(() => {
     if (path) hasLoadedPathRef.current = true;

@@ -12,10 +12,8 @@ const AxioraCognitiveField = dynamic(() => import("@/components/ui/AxioraCogniti
 export default function LearningPathPage() {
   return (
     <>
-      {/* Override html background so the scrollbar-gutter doesn't show #18312e */}
-      <style>{`html { background-color: #2d5e2a !important; scrollbar-gutter: auto !important; } body { scrollbar-gutter: auto !important; }`}</style>
       <AxioraCognitiveField />
-      <div className="relative z-10 min-h-screen overflow-x-hidden bg-transparent">
+      <div className="relative z-10 min-h-screen overflow-x-hidden bg-transparent lg:flex lg:h-screen lg:min-h-0 lg:min-w-0 lg:flex-col">
         <div
           aria-hidden
           className="pointer-events-none"
@@ -34,7 +32,7 @@ export default function LearningPathPage() {
           }}
         />
         <Suspense fallback={null}>
-          <div className="relative z-10">
+          <div className="relative z-10 lg:flex lg:min-h-0 lg:min-w-0 lg:flex-1 lg:flex-col">
             <TrailScreen />
           </div>
         </Suspense>

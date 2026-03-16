@@ -264,7 +264,7 @@ export default function ProgressionMap({
   });
 
   const [viewportW, setViewportW] = useState(1024);
-  const [viewportHeightPx, setViewportHeightPx] = useState(viewportHeight);
+  const [viewportHeightPx, setViewportHeightPx] = useState(() => Math.max(1, Math.round(viewportHeight)));
   const [reducedMotion, setReducedMotion] = useState(false);
   const [enterProgressVisual, setEnterProgressVisual] = useState(0);
   const [unlockVisual, setUnlockVisual] = useState<{ nodeId: string | null; progress: number }>({ nodeId: null, progress: 0 });
@@ -272,39 +272,59 @@ export default function ProgressionMap({
   /** PROMPT 07: mobile bottom card — node tapped on mobile */
   const [mobileSelectedNode, setMobileSelectedNode] = useState<MapNode | null>(null);
   const pointsRef = useRef<PersistedMapData | null>(null);
+  const prevViewportRef = useRef<{ w: number; h: number } | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const readViewportSize = () => {
-      const measuredW = viewportRef.current?.getBoundingClientRect().width ?? 0;
-      const measuredH = viewportRef.current?.getBoundingClientRect().height ?? 0;
-      const fallbackW = Math.floor(window.innerWidth * 0.92);
-      const fallbackH = viewportHeight;
-      return {
-        width: measuredW > 0 ? measuredW : fallbackW,
-        height: measuredH > 0 ? measuredH : fallbackH,
-      };
+    let resizeFrameId: number | null = null;
+
+    const commitViewport = (rawWidth: number, rawHeight: number) => {
+      const nextW = Math.max(320, Math.round(rawWidth));
+      const nextH = Math.max(1, Math.round(rawHeight));
+      setViewportW((prev) => (prev === nextW ? prev : nextW));
+      setViewportHeightPx((prev) => (prev === nextH ? prev : nextH));
     };
 
-    const updateViewportSize = () => {
-      const { width: nextW, height: nextH } = readViewportSize();
-      setViewportW(Math.max(320, nextW));
-      setViewportHeightPx(Math.max(1, nextH));
+    const readViewportRect = () => {
+      const rect = viewportRef.current?.getBoundingClientRect();
+      if (!rect) {
+        commitViewport(320, viewportHeight);
+        return;
+      }
+      commitViewport(rect.width, rect.height > 0 ? rect.height : viewportHeight);
     };
 
-    updateViewportSize();
+    const scheduleViewportRead = () => {
+      if (resizeFrameId !== null) window.cancelAnimationFrame(resizeFrameId);
+      resizeFrameId = window.requestAnimationFrame(() => {
+        resizeFrameId = null;
+        readViewportRect();
+      });
+    };
 
-    const observer = new ResizeObserver(() => {
-      updateViewportSize();
-    });
-    if (viewportRef.current) {
+    readViewportRect();
+
+    const observer = typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver((entries) => {
+        const entry = entries[0];
+        if (!entry) {
+          scheduleViewportRead();
+          return;
+        }
+        commitViewport(entry.contentRect.width, entry.contentRect.height > 0 ? entry.contentRect.height : viewportHeight);
+      });
+
+    if (observer && viewportRef.current) {
       observer.observe(viewportRef.current);
     }
-    window.addEventListener("resize", updateViewportSize);
+    window.addEventListener("resize", scheduleViewportRead);
+
     return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", updateViewportSize);
+      if (resizeFrameId !== null) window.cancelAnimationFrame(resizeFrameId);
+      observer?.disconnect();
+      window.removeEventListener("resize", scheduleViewportRead);
     };
   }, [viewportHeight]);
 
@@ -332,8 +352,10 @@ export default function ProgressionMap({
   const nodeGap = useMemo(() => {
     if (nodes.length <= 1) return NODE_GAP;
     if (!isMobile) {
-      const verticalAvailable = Math.max(440, view.h - 220);
-      return Math.max(96, Math.min(NODE_GAP, Math.floor(verticalAvailable / (nodes.length - 1))));
+      // Reserve 120px top (badge clearance) + 40px bottom (safety) = 160px total.
+      // The remaining space is split evenly between nodes.
+      const verticalAvailable = Math.max(440, view.h - 160 - 60);
+      return Math.max(72, Math.min(NODE_GAP, Math.floor(verticalAvailable / (nodes.length - 1))));
     }
     return NODE_GAP;
   }, [isMobile, nodes.length, view.h]);
@@ -476,11 +498,23 @@ export default function ProgressionMap({
   const viewportCenterX = view.w / 2;
   const worldOffsetX = viewportCenterX - nodesCenterX;
   const opticalOffset = -view.w * 0.01;
-  const finalOffsetX = worldOffsetX + opticalOffset;
-  // Optical offset: shifts the world DOWN in the viewport so top/bottom spacing is balanced.
-  // First node normalizes to worldY=0, so this value IS the top margin in pixels.
-  // (view.h * 0.12 ≈ 93px for a 780px viewport — same formula for mobile and desktop)
-  const verticalOpticalOffset = view.h * 0.12;
+  // Ensure the left-side badge always has enough room.
+  // Even-index nodes sit on the left half of the track; their badge extends
+  // nodeHalf(40) + connector(52) + badgeWidth(200) = 292px to the left of the
+  // node center. If the centered offset is smaller, clamp up — the right badge
+  // may clip slightly on narrow viewports, but the primary badge stays readable.
+  const BADGE_LEFT_CLEARANCE = 292;
+  const finalOffsetX = Math.max(BADGE_LEFT_CLEARANCE - minNodeX, worldOffsetX + opticalOffset);
+  // Optical offset: shifts the world DOWN — this IS the top margin for the first node.
+  // We center the trail vertically (equal space above first node and below last node)
+  // while guaranteeing at least 120px above (for the top badge) and 40px below.
+  const lastNodeY = points.length > 0 ? (points[points.length - 1]?.y ?? 0) : 0;
+  const BADGE_TOP_MIN   = 120; // px — badge extends ~60px above node center
+  const BOTTOM_SAFETY   = 40;  // px — breathing room after the last node
+  const centeredOffset  = lastNodeY > 0 ? Math.round((view.h - lastNodeY) / 2) : Math.round(view.h * 0.20);
+  const verticalOpticalOffset = isMobile
+    ? view.h * 0.12
+    : Math.max(BADGE_TOP_MIN, Math.min(view.h - lastNodeY - BOTTOM_SAFETY, centeredOffset));
 
   useEffect(() => {
     targetCameraRef.current = cameraRange.clampedCamera;
@@ -498,6 +532,24 @@ export default function ProgressionMap({
       }
     }
   }, [cameraRange.clampedCamera, cameraRange.maxCamera, cameraRange.minCamera, finalOffsetX, verticalOpticalOffset]);
+
+  useEffect(() => {
+    const prev = prevViewportRef.current;
+    const sizeChanged = !prev || prev.w !== view.w || prev.h !== view.h;
+    prevViewportRef.current = { w: view.w, h: view.h };
+    if (!sizeChanged) return;
+
+    // On viewport size changes (resize/DPI/monitor move), snap immediately to the
+    // new clamped camera target to avoid transient broken framing.
+    const snappedCamera = cameraRange.clampedCamera;
+    cameraYRef.current = snappedCamera;
+    targetCameraRef.current = snappedCamera;
+    if (worldRef.current) {
+      const snappedOffsetX = Math.round(finalOffsetX);
+      const snappedOffsetY = Math.round(-snappedCamera + verticalOpticalOffset);
+      worldRef.current.style.transform = `translate3d(${snappedOffsetX}px, ${snappedOffsetY}px, 0)`;
+    }
+  }, [cameraRange.clampedCamera, finalOffsetX, verticalOpticalOffset, view.h, view.w]);
 
   useEffect(() => {
     worldOffsetXRef.current = finalOffsetX;
@@ -914,7 +966,7 @@ export default function ProgressionMap({
     return (
       <div
         style={{
-          height: `${viewportHeight}px`,
+          height: `${viewportHeightPx}px`,
           position: "relative",
         }}
       />
@@ -932,7 +984,7 @@ export default function ProgressionMap({
       style={{
         position: "relative",
         width: "100%",
-        height: `${viewportHeight}px`,
+        height: "100%",
         overflow: "hidden",
       }}
     >
@@ -943,7 +995,7 @@ export default function ProgressionMap({
           style={{
             position: "relative",
             width: "100%",
-            height: `${viewportHeight}px`,
+            height: "100%",
             overflow: "hidden",
           }}
         >

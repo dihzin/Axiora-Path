@@ -13,9 +13,9 @@ import { HeroMissionCard } from "@/components/trail/HeroMissionCard";
 import ProgressionMap, { type MapNode, type MapSection, type NodeStatus } from "@/components/trail/ProgressionMap";
 import { SubjectSelector } from "@/components/trail/SubjectSelector";
 import { WeeklyGoalCard } from "@/components/trail/WeeklyGoalCard";
+import { useMeasuredViewportContainer } from "@/hooks/useMeasuredViewportContainer";
 import { cn } from "@/lib/utils";
 import type { LearningPathResponse } from "@/lib/api/client";
-import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { useTrailData, type SubjectAreaLabel } from "@/hooks/useTrailData";
 
 function getDomainData(path: LearningPathResponse, areaLabel: SubjectAreaLabel): TrailDomainSectionData {
@@ -129,11 +129,11 @@ type TrailScreenProps = {
 };
 
 export function TrailScreen({ progressionSections, progressionActiveNodeId }: TrailScreenProps = {}) {
+  const DESKTOP_LAYOUT_MIN_WIDTH = 1500;
   const router = useRouter();
   const pathname = usePathname();
   const {
     path,
-    loading,
     pathRefreshing,
     error,
     retryPath,
@@ -159,35 +159,16 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   } = useTrailData();
 
   const [selectedNode, setSelectedNode] = useState<MapNode | null>(null);
-  const [desktopStageHeight, setDesktopStageHeight] = useState(760);
-  const headerRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const updateDesktopViewport = () => {
-      const isDesktopVp = window.matchMedia("(min-width: 1024px)").matches;
-      if (!isDesktopVp) {
-        setDesktopStageHeight(760);
-        return;
-      }
-      const headerHeight = headerRef.current?.getBoundingClientRect().height ?? 92;
-      const chromeAllowance = 28;
-      const nextHeight = Math.max(540, Math.round(window.innerHeight - headerHeight - chromeAllowance));
-      setDesktopStageHeight(nextHeight);
-    };
-    const frame = window.requestAnimationFrame(updateDesktopViewport);
-    window.addEventListener("resize", updateDesktopViewport);
-    let observer: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== "undefined" && headerRef.current) {
-      observer = new ResizeObserver(() => updateDesktopViewport());
-      observer.observe(headerRef.current);
-    }
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("resize", updateDesktopViewport);
-      observer?.disconnect();
-    };
-  }, []);
+  const layoutRef = useRef<HTMLDivElement | null>(null);
+  const { width: layoutWidth } = useMeasuredViewportContainer(layoutRef, {
+    initialWidth: 1024,
+    minWidth: 320,
+  });
+  const mapViewportRef = useRef<HTMLDivElement | null>(null);
+  const { height: mapViewportHeight } = useMeasuredViewportContainer(mapViewportRef, {
+    initialHeight: 700,
+    minHeight: 1,
+  });
 
   const domainData = useMemo(() => {
     if (!path) return null;
@@ -214,11 +195,10 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   }, [progressionNodes, resolvedActiveMapNodeId]);
   const nodeForHeroMission = selectedNode ?? currentMapNode;
   const mapHighlightedNodeId = selectedNode?.id ?? resolvedActiveMapNodeId;
-  const isDesktop = useIsDesktop();
+  const isDesktop = layoutWidth >= DESKTOP_LAYOUT_MIN_WIDTH;
   const weeklyRemaining = Math.max(0, weeklyGoal.target - weeklyGoal.completed);
-  const compactDesktop = desktopStageHeight <= 700;
-  const progressionViewportHeight = hasProgressionMap ? desktopStageHeight - 8 : 980;
-  const initialPathLoading = loading && !path;
+  const compactDesktop = isDesktop && mapViewportHeight <= 700;
+
 
   useEffect(() => {
     if (!selectedNode) return;
@@ -264,9 +244,9 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   }, [path?.subjectId, router, selectedSubjectId]);
 
   return (
-    <div className="relative overflow-hidden min-h-screen bg-transparent lg:h-screen">
-      <div className="w-full lg:h-screen lg:overflow-hidden lg:pl-[208px]">
-        <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/8 lg:border-t-white/8 lg:bg-[linear-gradient(180deg,rgba(6,18,39,0.46)_0%,rgba(4,13,30,0.42)_100%)] lg:backdrop-blur-md lg:px-3 lg:py-5">
+    <div ref={layoutRef} className="relative min-h-screen overflow-hidden bg-transparent lg:flex lg:h-screen lg:min-h-0 lg:min-w-0 lg:flex-col">
+      <div className={cn("w-full lg:flex lg:min-h-0 lg:min-w-0 lg:flex-1 lg:overflow-hidden lg:pl-[208px]", !isDesktop && "lg:!pl-0")}>
+        <aside className={cn("hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/8 lg:border-t-white/8 lg:bg-[linear-gradient(180deg,rgba(6,18,39,0.46)_0%,rgba(4,13,30,0.42)_100%)] lg:backdrop-blur-md lg:px-3 lg:py-5", !isDesktop && "lg:!hidden")}>
           <div className="mb-0.5 flex justify-center">
             <div className="rounded-2xl bg-[#12213D]/80 p-1.5 shadow-[inset_0_1px_12px_rgba(0,0,0,0.35)]">
               <div className="scale-90">
@@ -282,67 +262,41 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
           <DesktopNavItem href="/child/axion" active={pathname.startsWith("/child/axion")} iconName="axion" label="Axion" />
         </aside>
 
-        <div className="mx-auto w-full lg:h-screen lg:max-w-[1680px] lg:px-6 xl:max-w-[1840px] xl:px-8 2xl:max-w-[1960px] 2xl:px-10">
-          <div className="mx-auto w-full max-w-sm pb-24 pt-1 md:max-w-4xl md:pb-8 lg:flex lg:h-screen lg:max-w-[1620px] lg:flex-col lg:overflow-hidden lg:pb-0 lg:pt-4 xl:max-w-[1760px] 2xl:max-w-[1880px]">
-            <div className="mx-auto w-full max-w-[760px] px-4 sm:px-6 lg:max-w-none lg:px-2">
-              <header ref={headerRef} className="relative z-50 space-y-2 bg-[rgba(15,23,42,0.08)] pb-2 [backdrop-filter:blur(2px)] lg:flex-none lg:space-y-2 lg:bg-transparent lg:pb-2">
-                {initialPathLoading ? (
-                  <div className="space-y-2">
-                    <div className="h-[38px] w-full animate-pulse rounded-full border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,52,0.82),rgba(10,19,42,0.76))]" />
-                    <div className="h-4 w-48 animate-pulse rounded-full bg-white/10" />
+        <div className="mx-auto w-full lg:flex lg:h-full lg:min-h-0 lg:min-w-0 lg:flex-1 lg:max-w-[1680px] lg:px-6 xl:max-w-[1840px] xl:px-8 2xl:max-w-[1960px] 2xl:px-10">
+          <div className="mx-auto flex w-full max-w-sm flex-col pb-24 pt-1 md:max-w-4xl md:pb-8 lg:h-full lg:max-w-[1620px] lg:min-h-0 lg:min-w-0 lg:flex-1 lg:overflow-hidden lg:pb-0 lg:pt-4 xl:max-w-[1760px] 2xl:max-w-[1880px]">
+            <div className="mx-auto flex w-full max-w-[760px] flex-col px-4 sm:px-6 lg:min-h-0 lg:min-w-0 lg:flex-1 lg:max-w-none lg:px-2">
+              <header className="relative z-50 space-y-2 bg-[rgba(15,23,42,0.08)] pb-2 [backdrop-filter:blur(2px)] lg:flex-none lg:space-y-2 lg:bg-transparent lg:pb-2">
+                <div className="motion-safe:animate-[fade-in-up_280ms_ease-out]">
+                  <SubjectSelector
+                    streak={subjectStreakDays}
+                    gems={coins}
+                    xp={xpPercent}
+                    selectedSubjectName={selectedSubjectName}
+                    subjects={visibleSubjects}
+                    selectedSubjectId={selectedSubjectId}
+                    pathSubjectId={path?.subjectId ?? null}
+                    className="w-full"
+                    onSelectSubject={onSelectSubject}
+                  />
+                </div>
+                {path ? (
+                  <div className="flex items-center gap-4 text-xs font-medium text-slate-300">
+                    <span className="flex items-center gap-1">
+                      <span aria-hidden>🔥</span>
+                      {weeklyRemaining} missões restantes esta semana
+                    </span>
                   </div>
-                ) : (
-                  <>
-                    <div className="motion-safe:animate-[fade-in-up_280ms_ease-out]">
-                      <SubjectSelector
-                        streak={subjectStreakDays}
-                        gems={coins}
-                        xp={xpPercent}
-                        selectedSubjectName={selectedSubjectName}
-                        subjects={visibleSubjects}
-                        selectedSubjectId={selectedSubjectId}
-                        pathSubjectId={path?.subjectId ?? null}
-                        className="w-full"
-                        onSelectSubject={onSelectSubject}
-                      />
-                    </div>
-                    <div className="flex items-center gap-4 text-xs font-medium text-slate-300">
-                      <span className="flex items-center gap-1">
-                        <span aria-hidden>🔥</span>
-                        {weeklyRemaining} missões restantes esta semana
-                      </span>
-                    </div>
-                  </>
-                )}
+                ) : null}
               </header>
 
-              <main className="lg:flex lg:min-h-0 lg:flex-1 lg:overflow-hidden lg:pt-1">
-                {initialPathLoading ? (
-                  <section className="relative w-full">
-                    <div className="hidden lg:grid lg:grid-cols-[minmax(0,1fr)_368px] lg:gap-5" style={{ height: `${desktopStageHeight}px` }}>
-                      <div className="overflow-hidden rounded-[34px] border border-white/8 bg-[linear-gradient(180deg,rgba(10,22,48,0.82),rgba(9,20,43,0.74))]">
-                        <div className="h-full w-full animate-pulse bg-[radial-gradient(ellipse_at_50%_35%,rgba(96,165,250,0.22),rgba(37,99,235,0.08)_36%,rgba(2,6,23,0)_72%)]" />
-                      </div>
-                      <div className="flex min-h-0 flex-col gap-3">
-                        <div className="h-[292px] animate-pulse rounded-[30px] border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,52,0.84),rgba(10,19,42,0.8))]" />
-                        <div className="h-[148px] animate-pulse rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,52,0.82),rgba(10,19,42,0.76))]" />
-                        <div className="flex-1 animate-pulse rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,52,0.8),rgba(10,19,42,0.74))]" />
-                      </div>
-                    </div>
-                    <div className="space-y-4 lg:hidden">
-                      <div className="h-[360px] animate-pulse rounded-[30px] border border-white/8 bg-[linear-gradient(180deg,rgba(10,22,48,0.82),rgba(9,20,43,0.74))]" />
-                      <div className="h-[220px] animate-pulse rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,52,0.84),rgba(10,19,42,0.8))]" />
-                    </div>
-                  </section>
-                ) : (
-                  <div className={cn("flex w-full flex-col gap-5", compactDesktop ? "lg:gap-4" : "lg:gap-5")}>
+              <main className={cn("lg:flex lg:min-h-0 lg:min-w-0 lg:flex-1 lg:overflow-hidden lg:pt-1", !isDesktop && "lg:!overflow-visible")}>
+                {path && <div className={cn("flex w-full min-w-0 flex-col gap-5 lg:flex-1 lg:min-h-0 lg:min-w-0", compactDesktop ? "lg:gap-4" : "lg:gap-5")}>
                     {hasProgressionMap ? (
-                      isDesktop ? (
-                        // Desktop: single two-column layout — one ProgressionMap + one HeroMissionCard
-                        <section
-                          className="relative w-full grid h-full min-h-0 grid-cols-[minmax(0,1fr)_368px] gap-5 motion-safe:animate-[fade-in-up_340ms_ease-out]"
-                          style={{ height: `${desktopStageHeight}px` }}
-                        >
+                      // Single responsive layout: CSS grid on desktop, flex column on mobile.
+                        // ProgressionMap stays mounted across screen changes — no unmount/remount on resize.
+                        // Height is CSS-driven (lg:flex-1) — ResizeObserver on mapViewportRef reads the actual
+                        // rendered height so ProgressionMap always gets the correct viewportHeight.
+                        <section className="relative w-full motion-safe:animate-[fade-in-up_340ms_ease-out] lg:flex-1 lg:min-h-0">
                           <div
                             aria-hidden
                             className="pointer-events-none absolute inset-0 -z-10 rounded-[40px]"
@@ -352,94 +306,24 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
                               filter: "blur(22px)",
                             }}
                           />
-                          <div className="relative z-10 min-w-0 min-h-0">
-                            <ProgressionMap
-                              nodes={progressionNodes}
-                              activeNodeId={resolvedActiveMapNodeId}
-                              selectedNodeId={mapHighlightedNodeId}
-                              onNodeClick={openMapNode}
-                              viewportHeight={progressionViewportHeight}
-                              className="mx-auto w-full max-w-none"
-                            />
-                          </div>
-                          <div className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
-                            <HeroMissionCard
-                              className="max-w-none"
-                              compact
-                              subjectName={selectedSubjectName}
-                              areaLabel={selectedArea}
-                              streakDays={subjectStreakDays}
-                              medalTier={domainCompletion.medal}
-                              completionPercent={domainCompletion.completionPercent}
-                              xpTotal={xpTotal}
-                              level={xpLevel}
-                              xpPercent={xpPercent}
-                              xpInLevel={xpInLevel}
-                              xpToNextLevel={xpToNextLevel}
-                              currentMission={{
-                                title: nodeForHeroMission?.title ?? "Adição no Cotidiano",
-                                xp: nodeForHeroMission?.xp ?? 30,
-                              }}
-                              encouragementText={encouragementText}
-                              onContinue={handleContinueLearning}
-                              onStartMission={handleStartMission}
-                            />
-                            <WeeklyGoalCard
-                              compact
-                              completed={weeklyGoal.completed}
-                              target={weeklyGoal.target}
-                              weekLabel={weeklyGoal.weekLabel}
-                            />
-                            <div className="min-h-0 flex-1 overflow-auto pr-1">
-                              <DailyMissionsPanel
-                                compact
-                                missions={missions}
-                                missionsLoading={missionsLoading}
-                                claimingMissionId={claimingMissionId}
-                                onClaimMission={(missionId) => void onClaimMission(missionId)}
-                              />
-                            </div>
-                          </div>
-                        </section>
-                      ) : (
-                        // Mobile: stacked — one ProgressionMap + one HeroMissionCard
-                        <>
-                          <section className="relative isolate w-full motion-safe:animate-[fade-in-up_340ms_ease-out]">
+                          <div className={cn("relative z-10 flex flex-col gap-5 lg:grid lg:h-full lg:min-h-0 lg:min-w-0 lg:grid-cols-[minmax(0,1fr)_minmax(280px,32vw)] xl:grid-cols-[minmax(0,1fr)_368px]", !isDesktop && "lg:!grid-cols-1")}>
                             <div
-                              aria-hidden
-                              className="pointer-events-none absolute inset-x-0 top-10 z-0 h-[760px]"
-                              style={{
-                                background:
-                                  "radial-gradient(ellipse at 50% 24%, rgba(103,232,249,0.12), rgba(37,99,235,0.07) 34%, rgba(2,6,23,0) 72%)",
-                                filter: "blur(22px)",
-                              }}
-                            />
-                            <div className="relative z-10 w-full">
+                              ref={mapViewportRef}
+                              className={cn("relative h-[700px] min-w-0 overflow-hidden lg:h-full lg:min-h-0 lg:min-w-0", !isDesktop && "lg:!h-[700px]")}
+                            >
                               <ProgressionMap
                                 nodes={progressionNodes}
                                 activeNodeId={resolvedActiveMapNodeId}
                                 selectedNodeId={mapHighlightedNodeId}
                                 onNodeClick={openMapNode}
-                                viewportHeight={980}
-                                className="mx-auto w-full max-w-[1560px]"
+                                viewportHeight={mapViewportHeight}
+                                className="mx-auto w-full max-w-none"
                               />
                             </div>
-                          </section>
-
-                          <section className="relative w-full motion-safe:animate-[fade-in-up_380ms_ease-out]">
-                            <div
-                              aria-hidden
-                              className="pointer-events-none absolute inset-0 -z-10 rounded-[40px] opacity-80"
-                              style={{
-                                background:
-                                  "radial-gradient(ellipse at 18% 14%, rgba(103,232,249,0.1), transparent 28%), radial-gradient(ellipse at 82% 80%, rgba(250,204,21,0.08), transparent 24%)",
-                                filter: "blur(18px)",
-                              }}
-                            />
-                            <div className="grid gap-4">
+                            <div className={cn("flex min-w-0 flex-col gap-4 lg:min-h-0 lg:min-w-0 lg:gap-3 lg:overflow-hidden", !isDesktop && "lg:!overflow-visible")}>
                               <HeroMissionCard
                                 className="max-w-none"
-                                compact={compactDesktop}
+                                compact={isDesktop || compactDesktop}
                                 subjectName={selectedSubjectName}
                                 areaLabel={selectedArea}
                                 streakDays={subjectStreakDays}
@@ -458,24 +342,24 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
                                 onContinue={handleContinueLearning}
                                 onStartMission={handleStartMission}
                               />
-                              <DailyMissionsPanel
-                                className="h-full"
-                                compact={compactDesktop}
-                                missions={missions}
-                                missionsLoading={missionsLoading}
-                                claimingMissionId={claimingMissionId}
-                                onClaimMission={(missionId) => void onClaimMission(missionId)}
-                              />
                               <WeeklyGoalCard
-                                compact={compactDesktop}
+                                compact={isDesktop || compactDesktop}
                                 completed={weeklyGoal.completed}
                                 target={weeklyGoal.target}
                                 weekLabel={weeklyGoal.weekLabel}
                               />
+                              <div className="lg:min-h-0 lg:flex-1 lg:overflow-auto lg:pr-1">
+                                <DailyMissionsPanel
+                                  compact={isDesktop || compactDesktop}
+                                  missions={missions}
+                                  missionsLoading={missionsLoading}
+                                  claimingMissionId={claimingMissionId}
+                                  onClaimMission={(missionId) => void onClaimMission(missionId)}
+                                />
+                              </div>
                             </div>
-                          </section>
-                        </>
-                      )
+                          </div>
+                        </section>
                     ) : (
                       <div className="w-full motion-safe:animate-[fade-in-up_340ms_ease-out]">
                         <HeroMissionCard
@@ -501,8 +385,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
                         />
                       </div>
                     )}
-                  </div>
-                )}
+                  </div>}
                 {/* aria-live region: announces loading/error state changes to screen readers */}
                 <div aria-live="polite" aria-atomic="true" className="sr-only">
                   {pathRefreshing ? "Atualizando trilha de aprendizado..." : ""}
@@ -542,9 +425,8 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
           </div>
         </div>
       </div>
-      <BottomNav />
+      <BottomNav forceMobile={!isDesktop} />
 
     </div>
   );
 }
-
