@@ -99,6 +99,8 @@ function getNodeVisuals(status: RenderNodeStatus, kind: MissionKind) {
   const PARCHMENT_BORDER = "rgba(160,120,80,0.55)";
   const PARCHMENT_TEXT   = "#2C1E16";
   const PARCHMENT_SHADOW = "0 4px 18px rgba(44,30,18,0.22), inset 0 1px 0 rgba(255,255,255,0.70)";
+  const CURRENT_BORDER   = "rgba(251,191,36,0.85)";
+  const CURRENT_SHADOW   = "0 4px 20px rgba(44,30,18,0.22), 0 0 14px rgba(251,191,36,0.35), inset 0 1px 0 rgba(255,255,255,0.75)";
 
   if (status === "done") {
     return {
@@ -115,7 +117,7 @@ function getNodeVisuals(status: RenderNodeStatus, kind: MissionKind) {
       gradient: "linear-gradient(160deg,#FEF9C3 0%,#FDE68A 18%,#FBBF24 42%,#F59E0B 68%,#B45309 100%)",
       border: "2.5px solid rgba(253,224,71,0.92)",
       highlight: "linear-gradient(160deg, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0.06) 60%)",
-      labelBg: PARCHMENT_BG, labelBorder: PARCHMENT_BORDER, labelShadow: PARCHMENT_SHADOW, labelText: PARCHMENT_TEXT,
+      labelBg: PARCHMENT_BG, labelBorder: CURRENT_BORDER, labelShadow: CURRENT_SHADOW, labelText: PARCHMENT_TEXT,
       accentA: "rgba(255,246,236,0.96)", accentB: "rgba(241,197,107,0.86)",
       kindAccent: kindMeta.accent, kindAccentSoft: kindMeta.accentSoft, kindGlow: kindMeta.glow,
     };
@@ -130,11 +132,11 @@ function getNodeVisuals(status: RenderNodeStatus, kind: MissionKind) {
       kindAccent: kindMeta.accent, kindAccentSoft: kindMeta.accentSoft, kindGlow: kindMeta.glow,
     };
   }
-  // locked — solid stone with clear silhouette
+  // locked — solid stone, clearly inaccessible
   return {
-    gradient: "linear-gradient(160deg,#E2E8F0 0%,#94A3B8 30%,#64748B 65%,#334155 100%)",
-    border: "2px dashed rgba(148,163,184,0.65)",
-    highlight: "linear-gradient(160deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.03) 60%)",
+    gradient: "linear-gradient(160deg,#F1F5F9 0%,#CBD5E1 25%,#94A3B8 55%,#475569 85%,#1E293B 100%)",
+    border: "2px dashed rgba(148,163,184,0.80)",
+    highlight: "linear-gradient(160deg, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0.04) 55%)",
     labelBg: "linear-gradient(155deg,rgba(220,210,195,0.92),rgba(200,185,165,0.86))",
     labelBorder: "rgba(160,120,80,0.30)",
     labelShadow: "0 4px 12px rgba(44,30,18,0.14)",
@@ -148,7 +150,7 @@ function getNodeVisuals(status: RenderNodeStatus, kind: MissionKind) {
 
 /** #4 — Node size hierarchy by status */
 function getNodeSize(status: RenderNodeStatus): number {
-  if (status === "current") return 74;
+  if (status === "current") return 80;
   if (status === "locked")  return 58;
   return 68; // done + available
 }
@@ -210,8 +212,9 @@ function getGradientStops(status: RenderNodeStatus) {
     { offset: "100%", color: "#134E4A" },
   ];
   return [
-    { offset: "0%",   color: "#E2E8F0" }, { offset: "30%",  color: "#94A3B8" },
-    { offset: "65%",  color: "#64748B" }, { offset: "100%", color: "#334155" },
+    { offset: "0%",   color: "#F1F5F9" }, { offset: "25%",  color: "#CBD5E1" },
+    { offset: "55%",  color: "#94A3B8" }, { offset: "85%",  color: "#475569" },
+    { offset: "100%", color: "#1E293B" },
   ];
 }
 
@@ -483,7 +486,7 @@ function MapNodeItem({
 
         {/* Icons — always on top */}
         {isDone   ? <Check      className="relative z-10 h-8 w-8"       strokeWidth={2.8} aria-hidden style={{ color:"rgba(255,255,255,0.96)", filter:"drop-shadow(0 1px 4px rgba(0,0,0,0.55))" }} /> : null}
-        {isLocked ? <Lock       className="relative z-10 h-[26px] w-[26px]" strokeWidth={2.1} aria-hidden style={{ color:"rgba(203,213,225,0.88)", filter:"drop-shadow(0 1px 3px rgba(0,0,0,0.50))" }} /> : null}
+        {isLocked ? <Lock       className="relative z-10 h-7 w-7" strokeWidth={2.4} aria-hidden style={{ color:"rgba(241,245,249,0.96)", filter:"drop-shadow(0 1px 6px rgba(0,0,0,0.65)) drop-shadow(0 0 8px rgba(255,255,255,0.20))" }} /> : null}
         {!isDone && !isLocked ? <MissionIcon className="relative z-10 h-7 w-7" strokeWidth={2.3} aria-hidden style={{ color:"rgba(255,255,255,0.96)", filter:"drop-shadow(0 1px 4px rgba(0,0,0,0.50))" }} /> : null}
 
         {/* Checkpoint star badge */}
@@ -494,8 +497,8 @@ function MapNodeItem({
         ) : null}
       </button>
 
-      {/* ── CONNECTOR — PROMPT 03: slate-300, 2px, 0.6 opacity ── */}
-      {!hideBadge ? (
+      {/* ── CONNECTOR ── */}
+      {!hideBadge && !isLocked ? (
         <span
           aria-hidden
           className="pointer-events-none absolute z-10"
@@ -505,14 +508,18 @@ function MapNodeItem({
             width: `${connectorLen}px`,
             height: 0,
             transform: "translateY(-50%)",
-            borderTop: "2px solid rgba(160,120,80,0.55)",
+            borderTop: isCurrent
+              ? "3px solid rgba(251,191,36,0.75)"
+              : isDone
+              ? "3px solid rgba(52,211,153,0.65)"
+              : "2px dashed rgba(160,120,80,0.45)",
             opacity: 1,
           }}
         />
       ) : null}
 
       {/* ── LABEL BADGE ── */}
-      {!hideBadge ? (
+      {!hideBadge && !isLocked ? (
         <div
           aria-hidden
           className={cn(
@@ -525,6 +532,7 @@ function MapNodeItem({
             background: visuals.labelBg,
             border: `1.5px solid ${visuals.labelBorder}`,
             boxShadow: visuals.labelShadow,
+            filter: "drop-shadow(0 5px 14px rgba(44,30,18,0.32))",
             minWidth: compactMobile ? "130px" : "160px",
             maxWidth: `${BADGE_WIDTH_EST}px`,
             transition: "box-shadow 200ms ease",
@@ -610,8 +618,8 @@ export function renderNode({
   const burstBOpacity = (1 - unlockBurstProgress) * 0.7;
 
   const isLocked    = node.status === "locked";
-  const statusScale = isLocked ? 0.86 : node.status === "current" ? 1.04 : 1.0;
-  const statusOpacity = isLocked ? 0.70 : 1.0;
+  const statusScale = isLocked ? 0.88 : node.status === "current" ? 1.05 : 1.0;
+  const statusOpacity = isLocked ? 0.88 : 1.0;
   const glowAlphaA = isLocked ? 0 : 0.16 + nodeAppear * 0.16;
   const glowAlphaB = isLocked ? 0 : 0.05 + nodeAppear * 0.08;
 

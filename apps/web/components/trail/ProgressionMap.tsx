@@ -1037,11 +1037,13 @@ export default function ProgressionMap({
                       <feMergeNode in="SourceGraphic" />
                     </feMerge>
                   </filter>
-                  <filter id="dotGlowWarm" x="-100%" y="-50%" width="300%" height="200%" colorInterpolationFilters="sRGB">
-                    <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
-                    <feColorMatrix in="blur" type="matrix" values="1.1 0.1 0 0 0  0.2 0.8 0 0 0  0 0 0.6 0 0  0 0 0 1 0" result="warmBlur" />
+                  <filter id="dotGlowWarm" x="-120%" y="-80%" width="340%" height="260%" colorInterpolationFilters="sRGB">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+                    <feColorMatrix in="blur" type="matrix" values="1.2 0.2 0 0 0.05  0.3 0.9 0 0 0  0 0 0.5 0 0  0 0 0 1.1 0" result="warmBlur" />
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur2" />
                     <feMerge>
                       <feMergeNode in="warmBlur" />
+                      <feMergeNode in="blur2" />
                       <feMergeNode in="SourceGraphic" />
                     </feMerge>
                   </filter>
@@ -1089,18 +1091,32 @@ export default function ProgressionMap({
                   </>
                 ) : null}
 
-                {/* ── ACTIVE SEGMENT — amber-400, dashed (PROMPT 02) ── */}
+                {/* ── ACTIVE SEGMENT — amber-400, dashed ── */}
                 {activeSegmentPath ? (
-                  <path
-                    d={activeSegmentPath}
-                    stroke="#f59e0b"
-                    strokeWidth={isMobile ? 4 : 4}
-                    strokeDasharray="6 6"
-                    fill="none"
-                    strokeLinecap="round"
-                    filter="url(#dotGlowWarm)"
-                    vectorEffect="non-scaling-stroke"
-                  />
+                  <>
+                    {/* Wide soft glow base */}
+                    <path
+                      d={activeSegmentPath}
+                      stroke="rgba(251,191,36,0.35)"
+                      strokeWidth={isMobile ? 14 : 12}
+                      strokeDasharray="8 5"
+                      fill="none"
+                      strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
+                      style={{ filter: "blur(7px)" }}
+                    />
+                    {/* Main bright dashed line */}
+                    <path
+                      d={activeSegmentPath}
+                      stroke="#fbbf24"
+                      strokeWidth={isMobile ? 5 : 4}
+                      strokeDasharray="8 5"
+                      fill="none"
+                      strokeLinecap="round"
+                      filter="url(#dotGlowWarm)"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </>
                 ) : null}
               </svg>
             </div>

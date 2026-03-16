@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep -E \"\\\\.\\(ts|tsx|css\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|tsx|css\\)$\")",
+      "Bash(grep -r '\"\"@types/react\"\"' apps/web/package.json packages/)",
+      "Bash(grep '\"\"next\"\"' apps/web/package.json)",
+      "Bash(grep '\"\"react\"\"' apps/web/package.json)"
     ]
   }
 }

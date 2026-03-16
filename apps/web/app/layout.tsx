@@ -9,8 +9,8 @@ import { PwaRegister } from "@/components/pwa-register";
 import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
-  title: "axiora-path",
-  description: "Axiora Path MVP",
+  title: { default: "Axiora Path", template: "%s · Axiora Path" },
+  description: "Aprendizagem gamificada para crianças — missões, XP e trilha personalizada.",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: "/icons/favicon-axion.svg",
