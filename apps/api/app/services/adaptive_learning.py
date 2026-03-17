@@ -108,6 +108,7 @@ class FocusSkillPlan:
     skill_id: str
     mastery: float
     priority: float
+    age_group: str = ""  # e.g. "6-8", "9-12", "13-15" — used for difficulty cap
 
 
 @dataclass(slots=True)
@@ -489,6 +490,13 @@ def _pick_focus_skills(
     force_due_reviews: bool = False,
 ) -> list[FocusSkillPlan]:
     mastery_map = _load_mastery_rows(db, user_id=user_id, skill_ids=skill_ids)
+    # Bulk-load age_group for all skills in one query
+    skill_age_groups: dict[str, str] = {}
+    if skill_ids:
+        rows = db.scalars(select(Skill).where(Skill.id.in_(skill_ids))).all()
+        for row in rows:
+            raw = row.age_group
+            skill_age_groups[str(row.id)] = str(raw.value if hasattr(raw, "value") else raw)
     plans: list[FocusSkillPlan] = []
     due_plans: list[FocusSkillPlan] = []
     for skill_id in skill_ids:
@@ -499,6 +507,7 @@ def _pick_focus_skills(
             skill_id=skill_id,
             mastery=mastery_value,
             priority=(1.0 - mastery_value) + (2.0 if due else 0.0),
+            age_group=skill_age_groups.get(skill_id, ""),
         )
         plans.append(plan)
         if due:

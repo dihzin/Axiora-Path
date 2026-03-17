@@ -7,7 +7,22 @@
       "Bash(grep '\"\"react\"\"' apps/web/package.json)",
       "Bash(ls -la \"c:/DEV/Axiora Path/apps/web/app/\\(app\\)/child/layout.tsx\")",
       "Bash(wc -l \"c:/DEV/Axiora Path/apps/web/app/\\(app\\)/onboarding/page.tsx\")",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(find 'c:\\\\DEV\\\\Axiora Path\\\\apps\\\\web' -type f -name *Context* -o -name *Provider*)",
+      "Bash(xargs grep:*)",
+      "Bash(find 'c:/DEV/Axiora Path/apps/web/node_modules/lucide-react' -name Swords* -type f)",
+      "Bash(python -m pytest tests/test_age_policy.py tests/test_completion_idempotency.py tests/test_child_cannot_access_content_outside_age_range.py tests/test_learning_path_subject_remap_by_child_age.py tests/test_subjects_filtered_by_child_age.py -v)",
+      "Bash(python -m pytest --tb=short -q)",
+      "Bash(python -m pytest --ignore=tests/test_adaptive_learning_diversity.py --ignore=tests/test_axion_health_runner.py --tb=short -q)",
+      "Bash(python -m pytest --ignore=tests/test_adaptive_learning_diversity.py --ignore=tests/test_axion_health_runner.py --tb=no -q)",
+      "Bash(python -m pytest tests/test_age_gate_correct_child.py -v)",
+      "Bash(python -m pytest tests/test_age_policy.py tests/test_child_cannot_access_content_outside_age_range.py tests/test_learning_path_subject_remap_by_child_age.py tests/test_subjects_filtered_by_child_age.py tests/test_completion_idempotency.py -v)",
+      "Bash(find 'c:\\\\DEV\\\\Axiora Path\\\\apps\\\\api\\\\alembic\\\\versions' -name 0092*)",
+      "Bash(python -c \"import importlib.util; spec = importlib.util.spec_from_file_location\\(''m'', ''alembic/versions/0109_real_question_seed.py''\\); m = importlib.util.module_from_spec\\(spec\\); spec.loader.exec_module\\(m\\); print\\(''OK, questions:'', sum\\(len\\(v\\) for v in m._Q.values\\(\\)\\)\\)\")",
+      "Bash(python -m pytest tests/test_age_gate_correct_child.py tests/test_age_policy.py tests/test_completion_idempotency.py tests/test_child_cannot_access_content_outside_age_range.py tests/test_learning_path_subject_remap_by_child_age.py tests/test_subjects_filtered_by_child_age.py -q)",
+      "Bash(alembic upgrade:*)",
+      "Bash(python -m alembic upgrade head)",
+      "Bash(grep -rn \"background.*url\\\\|bg-\\\\[url\\\\|wallpaper\\\\|trail.*bg\\\\|landscape\\\\|scene\" 'c:/DEV/Axiora Path/apps/web' --include=*.css --include=*.tsx --include=*.ts -l)"
     ]
   }
 }

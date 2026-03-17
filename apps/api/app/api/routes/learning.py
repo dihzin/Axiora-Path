@@ -7,11 +7,11 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Query
 from fastapi import HTTPException, status
-from sqlalchemy import exists, func, or_, select
+from sqlalchemy import exists, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import DBSession, EventSvc, get_current_tenant, get_current_user, require_role
-from app.models import AxionDecision, ChildProfile, Lesson, Membership, Question, QuestionResult, QuestionTemplate, QuestionType, Skill, Subject, Tenant, Unit, User
+from app.models import AxionDecision, Lesson, Membership, Question, QuestionResult, QuestionTemplate, QuestionType, Skill, Subject, Tenant, Unit, User
 from app.schemas.learning import (
     LearningAnswerRequest,
     LearningAnswerResponse,
@@ -45,13 +45,19 @@ from app.services.adaptive_learning import (
     start_learning_session,
     track_question_answer,
 )
+from app.services.aprender import (
+    LessonLockedError,
+    LessonNotFoundError,
+    complete_lesson as _complete_lesson_progress,
+)
 from app.services.learning_insights import get_learning_insights
 from app.services.lesson_engine import LessonEngine
 from app.services.learning_path_events import build_learning_path, complete_path_event, start_path_event
 from app.services.learning_remediation import maybe_enrich_wrong_answer_explanation
+from app.services.age_policy import enforce_subject_age_gate, remap_subject_for_child_age
 from app.services.axion_child_profile import resolve_child_for_user
 from app.services.axion_subject_mastery import record_content_outcome
-from app.services.child_age import get_child_age
+# get_child_age is now accessed via age_policy module (removed from direct import)
 
 router = APIRouter(prefix="/api/learning", tags=["learning"])
 logger = logging.getLogger("axiora.api.learning")
@@ -140,62 +146,11 @@ def _subject_has_playable_content(db: DBSession, *, subject_id: int) -> bool:
     return row is not None
 
 
-def _remap_subject_id_for_child_age(
-    db: DBSession,
-    *,
-    tenant_id: int,
-    user_id: int,
-    requested_subject_id: int,
-) -> int | None:
-    child_id = resolve_child_for_user(db, user_id=user_id, tenant_id=tenant_id)
-    if child_id is None:
-        return requested_subject_id
-    child = db.get(ChildProfile, int(child_id))
-    requested_subject = db.get(Subject, int(requested_subject_id))
-    if child is None or requested_subject is None:
-        return requested_subject_id
-
-    child_age = get_child_age(child.date_of_birth, today=date.today())
-    if int(requested_subject.age_min) <= int(child_age) <= int(requested_subject.age_max):
-        return requested_subject_id
-
-    matched = db.scalar(
-        select(Subject.id)
-        .where(
-            func.lower(Subject.name) == str(requested_subject.name).lower(),
-            Subject.age_min <= int(child_age),
-            Subject.age_max >= int(child_age),
-        )
-        .order_by(Subject.order.asc(), Subject.id.asc())
-        .limit(1)
-    )
-    if matched is None:
-        return None
-    return int(matched)
-
-
-def _ensure_subject_allowed_for_child_age(
-    db: DBSession,
-    *,
-    tenant_id: int,
-    user_id: int,
-    subject_id: int,
-) -> None:
-    child_id = resolve_child_for_user(db, user_id=user_id, tenant_id=tenant_id)
-    if child_id is None:
-        return
-    child = db.get(ChildProfile, int(child_id))
-    if child is None:
-        return
-    subject = db.get(Subject, int(subject_id))
-    if subject is None:
-        return
-    child_age = get_child_age(child.date_of_birth, today=date.today())
-    if int(child_age) < int(subject.age_min) or int(child_age) > int(subject.age_max):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Este conteúdo não está disponível para a sua faixa etária.",
-        )
+# NOTE: _remap_subject_id_for_child_age and _ensure_subject_allowed_for_child_age
+# were removed in Wave 1 refactor (2026-03-16).
+# Canonical implementations now live in app.services.age_policy:
+#   - remap_subject_for_child_age(...)
+#   - enforce_subject_age_gate(...)
 
 
 @router.get("/path", response_model=LearningPathResponse)
@@ -208,7 +163,7 @@ def get_learning_path(
 ) -> LearningPathResponse:
     effective_subject_id = subject_id
     if effective_subject_id is not None:
-        effective_subject_id = _remap_subject_id_for_child_age(
+        effective_subject_id = remap_subject_for_child_age(
             db,
             tenant_id=_.id,
             user_id=user.id,
@@ -390,7 +345,7 @@ def get_learning_next_questions(
             if unit is not None:
                 effective_subject_id = unit.subject_id
     if effective_subject_id is not None:
-        _ensure_subject_allowed_for_child_age(
+        enforce_subject_age_gate(
             db,
             tenant_id=tenant.id,
             user_id=user.id,
@@ -572,7 +527,7 @@ def start_session(
         subject_id = db.scalar(select(Unit.subject_id).where(Unit.id == unit_id))
     if subject_id is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="subjectId or lessonId is required")
-    _ensure_subject_allowed_for_child_age(
+    enforce_subject_age_gate(
         db,
         tenant_id=tenant.id,
         user_id=user.id,
@@ -651,6 +606,56 @@ def finish_session(
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    # ── Canonical lesson progress update (Wave 2 — eliminates dual completion write) ──
+    # If this session was tied to a specific lesson, mark LessonProgress without
+    # granting economy rewards (adaptive session already handled XP/coins above).
+    # Errors here are non-fatal: progress update is best-effort; session result stands.
+    if result.session.lesson_id is not None:
+        accuracy = (
+            payload.correct_count / payload.total_questions
+            if payload.total_questions and payload.total_questions > 0
+            else 0.0
+        )
+        score = max(0, min(100, round(accuracy * 100)))
+        try:
+            _complete_lesson_progress(
+                db,
+                user_id=user.id,
+                lesson_id=int(result.session.lesson_id),
+                score=score,
+                tenant_id=tenant.id,
+                grant_economy_rewards=False,  # rewards already granted by adaptive session
+            )
+            logger.info(
+                "learning_session_lesson_progress_updated",
+                extra={
+                    "user_id": user.id,
+                    "session_id": payload.session_id,
+                    "lesson_id": result.session.lesson_id,
+                    "score": score,
+                },
+            )
+        except (LessonNotFoundError, LessonLockedError) as exc:
+            logger.warning(
+                "learning_session_lesson_progress_skipped",
+                extra={
+                    "user_id": user.id,
+                    "session_id": payload.session_id,
+                    "lesson_id": result.session.lesson_id,
+                    "reason": str(exc),
+                },
+            )
+        except Exception as exc:
+            logger.error(
+                "learning_session_lesson_progress_error",
+                extra={
+                    "user_id": user.id,
+                    "session_id": payload.session_id,
+                    "lesson_id": result.session.lesson_id,
+                    "error": str(exc),
+                },
+            )
 
     if payload.decision_id:
         decision = db.scalar(

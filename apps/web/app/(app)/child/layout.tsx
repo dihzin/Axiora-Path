@@ -4,7 +4,7 @@ export default function ChildLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <style precedence="high">{`
-        html { background-color: #2d5e2a !important; }
+        html { background-color: #040a18 !important; }
       `}</style>
       {children}
     </>

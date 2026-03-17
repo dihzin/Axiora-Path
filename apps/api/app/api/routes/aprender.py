@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import exists, or_, select
 
 from app.api.deps import DBSession, get_current_tenant, get_current_user, require_role
@@ -43,6 +43,11 @@ from app.schemas.aprender import (
     UnitOut,
     UnitPathItemOut,
 )
+from app.services.age_policy import (
+    enforce_subject_age_gate,
+    is_difficulty_allowed_for_age,
+    subject_age_filter_clauses,
+)
 from app.services.aprender import (
     LessonLockedError,
     LessonNotFoundError,
@@ -50,7 +55,6 @@ from app.services.aprender import (
     build_subject_path,
     complete_lesson,
     get_child_age_group,
-    is_difficulty_allowed_for_age_group,
     list_lesson_contents,
 )
 from app.services.child_age import get_child_age
@@ -316,10 +320,8 @@ def list_subjects(
 
     query = select(Subject).order_by(Subject.order.asc())
     if resolved_child_age is not None:
-        query = query.where(
-            Subject.age_min <= int(resolved_child_age),
-            Subject.age_max >= int(resolved_child_age),
-        )
+        # Canonical age filtering via age_policy (replaces inline age_min/age_max check)
+        query = query.where(*subject_age_filter_clauses(resolved_child_age))
     elif target_age_group is not None:
         query = query.where(Subject.age_group == target_age_group)
     subjects = db.scalars(query).all()
@@ -390,7 +392,7 @@ def create_lesson(
     subject = db.get(Subject, unit.subject_id)
     if subject is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
-    if not is_difficulty_allowed_for_age_group(
+    if not is_difficulty_allowed_for_age(
         difficulty=payload.difficulty,
         age_group=subject.age_group,
     ):
@@ -503,10 +505,12 @@ def get_subject_path(
         path = build_subject_path(db, user_id=user.id, subject_id=subject_id)
     except SubjectNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    # Age gate — uses canonical message from age_policy (replacing English-only message)
     if target_age_group is not None and path.subject.age_group != target_age_group:
+        from app.services.age_policy import AGE_GATE_ERROR_CODE, AGE_GATE_MESSAGE
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Subject not available for this age group",
+            detail={"code": AGE_GATE_ERROR_CODE, "message": AGE_GATE_MESSAGE},
         )
 
     return SubjectPathResponse(
@@ -555,11 +559,18 @@ def get_subject_path(
 def complete_lesson_endpoint(
     lesson_id: int,
     payload: LessonCompleteRequest,
+    response: Response,
     db: DBSession,
     tenant: Annotated[Tenant, Depends(get_current_tenant)],
     user: Annotated[User, Depends(get_current_user)],
     __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> LessonCompleteResponse:
+    # DEPRECATED: Lesson completion is now handled internally by /api/learning/session/finish.
+    # Frontends should call finishLearningSession only. This endpoint will be removed in Wave 3.
+    # See ARCHITECTURE_RISKS.md #3 (dual completion writes).
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "2026-06-01"
+    response.headers["Link"] = '</api/learning/session/finish>; rel="successor-version"'
     try:
         result = complete_lesson(
             db,

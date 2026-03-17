@@ -187,6 +187,19 @@ function renderStars(filled: number, total = 3): string {
 
 const TEXT_MUTED = "#7A5C3A";
 
+type DifficultyStyle = { color: string; bg: string; border: string };
+const DIFFICULTY_STYLES: Record<string, DifficultyStyle> = {
+  easy:   { color: "#276245", bg: "rgba(82,183,136,0.14)",  border: "rgba(82,183,136,0.40)"  },
+  fácil:  { color: "#276245", bg: "rgba(82,183,136,0.14)",  border: "rgba(82,183,136,0.40)"  },
+  medium: { color: "#7A4F10", bg: "rgba(255,183,3,0.13)",   border: "rgba(255,183,3,0.38)"   },
+  médio:  { color: "#7A4F10", bg: "rgba(255,183,3,0.13)",   border: "rgba(255,183,3,0.38)"   },
+  hard:   { color: "#8B1A1A", bg: "rgba(239,68,68,0.11)",   border: "rgba(239,68,68,0.35)"   },
+  difícil:{ color: "#8B1A1A", bg: "rgba(239,68,68,0.11)",   border: "rgba(239,68,68,0.35)"   },
+};
+function getDifficultyStyle(d: string): DifficultyStyle {
+  return DIFFICULTY_STYLES[d.toLowerCase()] ?? { color: TEXT_MUTED, bg: "rgba(160,120,80,0.10)", border: "rgba(160,120,80,0.25)" };
+}
+
 // ─── Item 5: SVG-native shapes for perfect AA ────────────────────────────────
 
 const SVG_POINTS: Record<"hexagon" | "diamond" | "star", string> = {
@@ -574,7 +587,10 @@ function MapNodeItem({
             <div className="mt-1.5 flex items-center justify-between gap-2">
               <span
                 className="rounded-full px-1.5 py-[2px] text-[9px] font-semibold uppercase tracking-[0.06em]"
-                style={{ color: TEXT_MUTED, background: "rgba(160,120,80,0.10)", border: "1px solid rgba(160,120,80,0.25)" }}
+                style={(() => {
+                  const ds = getDifficultyStyle(node.difficulty);
+                  return { color: ds.color, background: ds.bg, border: `1px solid ${ds.border}` };
+                })()}
               >
                 {translateDifficulty(node.difficulty)}
               </span>

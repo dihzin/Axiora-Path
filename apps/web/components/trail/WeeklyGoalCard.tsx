@@ -51,27 +51,31 @@ export function WeeklyGoalCard({ completed, target, weekLabel, className, compac
         <div className="h-2.5 overflow-hidden rounded-full border-2 border-[#A07850]/50 bg-[linear-gradient(180deg,rgba(220,200,168,0.9)_0%,rgba(200,175,138,0.9)_100%)] shadow-[inset_0_1px_3px_rgba(44,30,18,0.14)]">
           <div
             className="h-full rounded-full bg-gradient-to-r from-[#FFB703] via-[#FB8C00] to-[#D96C2A] shadow-[0_0_10px_rgba(255,183,3,0.5)] transition-[width] duration-700 ease-out"
-            style={{ width: `${percent}%` }}
+            style={{ width: `${percent}%`, minWidth: safeCompleted > 0 ? "6px" : undefined }}
           />
         </div>
-        {!compact && (
-          <div className="mt-3 flex items-center gap-2">
-            {Array.from({ length: safeTarget }).map((_, index) => {
-              const filled = index < safeCompleted;
-              return (
-                <span
-                  key={`${weekLabel}-${index}`}
-                  className={cn(
-                    "h-3 w-3 rounded-full border-2 transition-all duration-300",
-                    filled
-                      ? "border-[#A07850]/60 bg-[#FFB703] shadow-[0_0_8px_rgba(255,183,3,0.55)]"
-                      : "border-[#A07850]/30 bg-[rgba(160,120,80,0.12)]",
-                  )}
-                />
-              );
-            })}
+        <div className={cn("flex items-center justify-between", compact ? "mt-2" : "mt-3")}>
+          <div className="flex items-center gap-2">
+          {Array.from({ length: safeTarget }).map((_, index) => {
+            const filled = index < safeCompleted;
+            return (
+              <span
+                key={`${weekLabel}-${index}`}
+                className={cn(
+                  "rounded-full border-2 transition-all duration-300",
+                  compact ? "h-2.5 w-2.5" : "h-3 w-3",
+                  filled
+                    ? "border-[#A07850]/60 bg-[#FFB703] shadow-[0_0_8px_rgba(255,183,3,0.55)]"
+                    : "border-[#A07850]/30 bg-[rgba(160,120,80,0.12)]",
+                )}
+              />
+            );
+          })}
           </div>
-        )}
+          <span className="text-[11px] font-bold tabular-nums" style={{ color: "#8B5E1A" }}>
+            {safeCompleted}/{safeTarget}
+          </span>
+        </div>
       </div>
     </ParchmentCard>
   );

@@ -134,6 +134,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   const pathname = usePathname();
   const {
     path,
+    loading,
     pathRefreshing,
     error,
     retryPath,
@@ -149,6 +150,9 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
     xpInLevel,
     xpToNextLevel,
     subjectStreakDays,
+    energyCurrent,
+    energyMax,
+    notificationCount,
     missions,
     missionsLoading,
     claimingMissionId,
@@ -246,7 +250,7 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
   return (
     <div ref={layoutRef} className="relative min-h-screen overflow-hidden bg-transparent lg:flex lg:h-screen lg:min-h-0 lg:min-w-0 lg:flex-col">
       <div className={cn("w-full lg:flex lg:min-h-0 lg:min-w-0 lg:flex-1 lg:overflow-hidden lg:pl-[208px]", !isDesktop && "lg:!pl-0")}>
-        <aside className={cn("hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-t lg:border-white/8 lg:border-t-white/8 lg:bg-[linear-gradient(180deg,rgba(6,18,39,0.46)_0%,rgba(4,13,30,0.42)_100%)] lg:backdrop-blur-md lg:px-3 lg:py-5", !isDesktop && "lg:!hidden")}>
+        <aside className={cn("hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r lg:border-white/8 lg:bg-[linear-gradient(180deg,rgba(6,18,39,0.46)_0%,rgba(4,13,30,0.42)_100%)] lg:backdrop-blur-md lg:px-3 lg:py-5", !isDesktop && "lg:!hidden")}>
           <div className="mb-0.5 flex justify-center">
             <div className="rounded-2xl bg-[#12213D]/80 p-1.5 shadow-[inset_0_1px_12px_rgba(0,0,0,0.35)]">
               <div className="scale-90">
@@ -265,12 +269,17 @@ export function TrailScreen({ progressionSections, progressionActiveNodeId }: Tr
         <div className="mx-auto w-full lg:flex lg:h-full lg:min-h-0 lg:min-w-0 lg:flex-1 lg:max-w-[1680px] lg:px-6 xl:max-w-[1840px] xl:px-8 2xl:max-w-[1960px] 2xl:px-10">
           <div className="mx-auto flex w-full max-w-sm flex-col pb-24 pt-1 md:max-w-4xl md:pb-8 lg:h-full lg:max-w-[1620px] lg:min-h-0 lg:min-w-0 lg:flex-1 lg:overflow-hidden lg:pb-0 lg:pt-4 xl:max-w-[1760px] 2xl:max-w-[1880px]">
             <div className="mx-auto flex w-full max-w-[760px] flex-col px-4 sm:px-6 lg:min-h-0 lg:min-w-0 lg:flex-1 lg:max-w-none lg:px-2">
-              <header className="relative z-50 space-y-2 bg-[rgba(15,23,42,0.08)] pb-2 [backdrop-filter:blur(2px)] lg:flex-none lg:space-y-2 lg:bg-transparent lg:pb-2">
+              <header className="relative z-50 space-y-2 bg-[rgba(15,23,42,0.08)] pb-2 [backdrop-filter:blur(2px)] lg:flex-none lg:space-y-2 lg:bg-transparent lg:pb-2 lg:[backdrop-filter:none]">
                 <div className="motion-safe:animate-[fade-in-up_280ms_ease-out]">
                   <SubjectSelector
                     streak={subjectStreakDays}
                     gems={coins}
                     xp={xpPercent}
+                    xpTotal={xpTotal}
+                    energyCurrent={energyCurrent}
+                    energyMax={energyMax}
+                    notificationCount={notificationCount}
+                    isLoading={loading}
                     selectedSubjectName={selectedSubjectName}
                     subjects={visibleSubjects}
                     selectedSubjectId={selectedSubjectId}

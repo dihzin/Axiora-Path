@@ -6,6 +6,7 @@ import { ArrowLeft, CheckCircle2, Coins, Flame, Lightbulb, Star, Volume2, Volume
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { ChildDesktopShell } from "@/components/child-desktop-shell";
+import { TopStatsBar } from "@/components/trail/TopStatsBar";
 import { ConfettiBurst } from "@/components/confetti-burst";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
@@ -13,8 +14,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import {
   ApiError,
-  type AprenderLessonCompleteResponse,
-  completeAprenderLesson,
   consumeAprenderWrongAnswerEnergy,
   finishLearningSession,
   getCurrentMissions,
@@ -22,6 +21,7 @@ import {
   getApiErrorMessage,
   getLearningPath,
   getAprenderLearningEnergy,
+  getAprenderLearningProfile,
   getAprenderLearningStreak,
   refillAprenderEnergyWithCoins,
   refillAprenderEnergyWithWait,
@@ -37,6 +37,9 @@ import {
   type LearningSessionStartResponse,
   type MissionsCurrentResponse,
 } from "@/lib/api/client";
+// NOTE: completeAprenderLesson removed — lesson progress is now absorbed by
+// finishLearningSession on the backend (Wave 2, 2026-03-17).
+// See: useLessonSession.ts and apps/api/app/api/routes/learning.py::finish_session
 import { resolveWeeklyGoalProgress } from "@/lib/gamification-derivations";
 import {
   effectiveReducedMotion,
@@ -244,31 +247,37 @@ function LessonDesktopRail({
   const safeMastery = Math.max(0, Math.min(100, Math.round(masteryPercent)));
   return (
     <div className="space-y-2.5 xl:space-y-3">
-      <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(160deg,rgba(15,23,42,0.86)_0%,rgba(12,25,54,0.82)_55%,rgba(10,19,46,0.92)_100%)] p-3.5 shadow-[0_10px_28px_rgba(2,12,35,0.32),inset_0_1px_0_rgba(255,255,255,0.08)] xl:p-4">
-        <p className="text-xs font-black uppercase tracking-[0.08em] text-slate-400">Sessão</p>
-        <p className="mt-1 text-lg font-black text-slate-100">
+      {/* Card de sessão — estilo parchment igual ao rail da trilha */}
+      <div className="relative overflow-hidden rounded-[22px] border border-[#A07850]/40 bg-[linear-gradient(145deg,rgba(253,245,230,0.88),rgba(240,222,188,0.78))] p-3.5 shadow-[0_8px_24px_rgba(44,30,18,0.18),inset_0_1px_0_rgba(255,255,255,0.7)] xl:p-4">
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-12 rounded-t-[22px] bg-[radial-gradient(60%_80%_at_50%_0%,rgba(255,183,3,0.08),transparent)]" />
+        <p className="text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: "#A07850" }}>Sessão</p>
+        <p className="mt-1 text-[18px] font-black leading-tight" style={{ color: "#2C1E16" }}>
           {answered}/{Math.max(1, target)} etapas
         </p>
-        <p className="mt-1 text-sm font-semibold text-slate-300">{waitClock ? `Energia recarrega em ${waitClock}` : `Energia ${energyLabel}`}</p>
+        <p className="mt-1 text-[12px] font-semibold" style={{ color: "#5C4A3A" }}>
+          {waitClock ? `Energia recarrega em ${waitClock}` : `Energia ${energyLabel}`}
+        </p>
       </div>
-      <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(160deg,rgba(15,23,42,0.84)_0%,rgba(12,25,54,0.8)_55%,rgba(10,19,46,0.9)_100%)] p-3.5 shadow-[0_10px_28px_rgba(2,12,35,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] xl:p-4">
-        <div className="space-y-2.5">
+
+      {/* Card de progresso */}
+      <div className="relative overflow-hidden rounded-[22px] border border-[#A07850]/40 bg-[linear-gradient(145deg,rgba(253,245,230,0.88),rgba(240,222,188,0.78))] p-3.5 shadow-[0_8px_24px_rgba(44,30,18,0.18),inset_0_1px_0_rgba(255,255,255,0.7)] xl:p-4">
+        <div className="space-y-3">
           <div>
-            <div className="mb-1 flex items-center justify-between text-xs font-bold text-slate-300">
+            <div className="mb-1.5 flex items-center justify-between text-[11px] font-bold" style={{ color: "#5C4A3A" }}>
               <span>Progresso da sessão</span>
-              <span>{safeSession}%</span>
+              <span style={{ color: "#8B5E1A" }}>{safeSession}%</span>
             </div>
-            <div className="h-2 rounded-full bg-white/10">
-              <div className="h-full rounded-full bg-[linear-gradient(90deg,#4DD9AC_0%,#38BDF8_100%)] transition-transform transition-shadow transition-opacity duration-[180ms]" style={{ width: `${safeSession}%` }} />
+            <div className="h-2.5 overflow-hidden rounded-full border border-[#A07850]/35 bg-[rgba(160,120,80,0.15)] shadow-[inset_0_1px_2px_rgba(44,30,18,0.12)]">
+              <div className="h-full rounded-full bg-gradient-to-r from-[#FFB703] via-[#FB8C00] to-[#D96C2A] shadow-[0_0_8px_rgba(255,183,3,0.4)] transition-[width] duration-300 ease-out" style={{ width: `${safeSession}%` }} />
             </div>
           </div>
           <div>
-            <div className="mb-1 flex items-center justify-between text-xs font-bold text-slate-300">
+            <div className="mb-1.5 flex items-center justify-between text-[11px] font-bold" style={{ color: "#5C4A3A" }}>
               <span>Domínio atual</span>
-              <span>{safeMastery}%</span>
+              <span style={{ color: "#8B5E1A" }}>{safeMastery}%</span>
             </div>
-            <div className="h-2 rounded-full bg-white/10">
-              <div className="h-full rounded-full bg-[linear-gradient(90deg,#38BDF8_0%,#2563EB_100%)] transition-transform transition-shadow transition-opacity duration-[180ms]" style={{ width: `${safeMastery}%` }} />
+            <div className="h-2.5 overflow-hidden rounded-full border border-[#A07850]/35 bg-[rgba(160,120,80,0.15)] shadow-[inset_0_1px_2px_rgba(44,30,18,0.12)]">
+              <div className="h-full rounded-full bg-gradient-to-r from-[#4DD9AC] to-[#38BDF8] shadow-[0_0_8px_rgba(77,217,172,0.35)] transition-[width] duration-300 ease-out" style={{ width: `${safeMastery}%` }} />
             </div>
           </div>
         </div>
@@ -716,21 +725,15 @@ function questionTypeLabel(type: LearningNextItem["type"] | undefined): string {
   return "Questão";
 }
 
-async function persistLessonCompletionOnServer(lessonId: number, accuracy: number): Promise<void> {
-  const score = Math.max(0, Math.min(100, Math.round(accuracy * 100)));
-  await completeAprenderLesson(lessonId, score);
-}
+// REMOVED: persistLessonCompletionOnServer, completeLessonOnServer,
+// buildFinishFallbackFromCompletion (Wave 3 — dual completion elimination).
+// Lesson progress is now updated by the backend in finish_session.
+// Fallback on finish failure uses buildFinishFallbackFromSession (below).
 
-async function completeLessonOnServer(lessonId: number, accuracy: number): Promise<AprenderLessonCompleteResponse> {
-  const score = Math.max(0, Math.min(100, Math.round(accuracy * 100)));
-  return completeAprenderLesson(lessonId, score);
-}
-
-function buildFinishFallbackFromCompletion(params: {
+function buildFinishFallbackFromSession(params: {
   sessionId: string;
   answeredCount: number;
   correctCount: number;
-  completion: AprenderLessonCompleteResponse;
 }): LearningSessionFinishResponse {
   const safeTotal = Math.max(params.answeredCount, 1);
   const accuracy = safeTotal > 0 ? Math.max(0, Math.min(1, params.correctCount / safeTotal)) : 0;
@@ -742,13 +745,14 @@ function buildFinishFallbackFromCompletion(params: {
     accuracy,
     totalQuestions: safeTotal,
     correctCount: params.correctCount,
-    xpEarned: Math.max(0, params.completion.xpGranted ?? 0),
-    coinsEarned: Math.max(0, params.completion.coinsGranted ?? 0),
+    // Conservative: show 0 XP/coins on finish failure; server state is unknown
+    xpEarned: 0,
+    coinsEarned: 0,
     leveledUp: false,
     gamification: {
-      xp: Math.max(0, params.completion.gamification?.xp ?? 0),
-      level: Math.max(1, params.completion.gamification?.level ?? 1),
-      axionCoins: Math.max(0, params.completion.coinsGranted ?? 0),
+      xp: 0,
+      level: 1,
+      axionCoins: 0,
     },
   };
 }
@@ -833,6 +837,9 @@ export default function AdaptiveLessonSessionPage() {
   const [learningStreak, setLearningStreak] = useState<AprenderLearningStreak | null>(null);
   const [energyStatus, setEnergyStatus] = useState<AprenderLearningEnergyStatus | null>(null);
   const [energyLoading, setEnergyLoading] = useState(true);
+  const [topBarGems, setTopBarGems] = useState(0);
+  const [topBarXp, setTopBarXp] = useState(0);
+  const [topBarProfileLoading, setTopBarProfileLoading] = useState(true);
   const [energyActionLoading, setEnergyActionLoading] = useState<"wait" | "coins" | null>(null);
   const [result, setResult] = useState<LearningSessionFinishResponse | null>(null);
   const [pendingCompletionResult, setPendingCompletionResult] = useState<LearningSessionFinishResponse | null>(null);
@@ -1221,6 +1228,24 @@ export default function AdaptiveLessonSessionPage() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    void getAprenderLearningProfile()
+      .then((data) => {
+        if (!cancelled) {
+          setTopBarGems(Math.max(0, Math.round(data.axionCoins ?? 0)));
+          setTopBarXp(Math.max(0, Math.min(100, Math.round(data.xpLevelPercent ?? 0))));
+          setTopBarProfileLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setTopBarProfileLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const timer = window.setInterval(() => {
       void loadEnergy();
     }, 10000);
@@ -1454,16 +1479,8 @@ export default function AdaptiveLessonSessionPage() {
     let finalized: LearningSessionFinishResponse | null = pendingCompletionResult;
     try {
       if (!finalized) {
-        const completion = await completeLessonOnServer(
-          lessonId,
-          answeredCount > 0 ? correctCount / answeredCount : 0,
-        );
-        finalized = buildFinishFallbackFromCompletion({
-          sessionId: session.sessionId,
-          answeredCount,
-          correctCount,
-          completion,
-        });
+        // Wave 3: single finish call — backend absorbs lesson progress update.
+        // NO call to completeAprenderLesson (removed, endpoint deprecated).
         try {
           const settled = await finishLearningSession({
             sessionId: session.sessionId,
@@ -1476,7 +1493,13 @@ export default function AdaptiveLessonSessionPage() {
           }
           finalized = settled;
         } catch {
-          // Keep fallback built from persisted lesson completion.
+          // Build conservative local fallback; XP/coins unknown (server unreachable).
+          // Lesson progress will be retried server-side or on next session start.
+          finalized = buildFinishFallbackFromSession({
+            sessionId: session.sessionId,
+            answeredCount,
+            correctCount,
+          });
         }
       }
       setPendingCompletionResult(null);
@@ -1588,22 +1611,8 @@ export default function AdaptiveLessonSessionPage() {
       return;
     }
     if (pendingCompletionResult) {
-      setBackSaving(true);
-      try {
-        await persistLessonCompletionOnServer(lessonId, pendingCompletionResult.accuracy);
-        pushPathWithResult(pendingCompletionResult);
-      } catch (err: unknown) {
-        const message =
-          err instanceof ApiError
-            ? getApiErrorMessage(err, "Não foi possível salvar esta lição agora.")
-            : "Não foi possível salvar esta lição agora.";
-        setFeedback({
-          tone: "encourage",
-          message: buildBoundedMessage([message, "Tente finalizar novamente antes de voltar ao caminho."], 108),
-        });
-      } finally {
-        setBackSaving(false);
-      }
+      // Wave 3: no separate lesson complete call — backend handled it on session finish.
+      pushPathWithResult(pendingCompletionResult);
       return;
     }
     if (!session || answeredCount === 0) {
@@ -1612,6 +1621,7 @@ export default function AdaptiveLessonSessionPage() {
     }
     setBackSaving(true);
     try {
+      // Single finish call — lesson progress absorbed server-side (Wave 2).
       const response = await finishLearningSession({
         sessionId: session.sessionId,
         totalQuestions: answeredCount,
@@ -1621,7 +1631,6 @@ export default function AdaptiveLessonSessionPage() {
       if (typeof window !== "undefined") {
         window.sessionStorage.removeItem("axion_active_decision_id");
       }
-      await persistLessonCompletionOnServer(lessonId, response.accuracy);
       pushPathWithResult(response);
     } catch (err: unknown) {
       const message =
@@ -1785,18 +1794,65 @@ export default function AdaptiveLessonSessionPage() {
     />
   );
 
+  const topBarStreak = learningStreak?.currentStreak ?? 0;
+  const topBarEnergy = energyStatus?.energy ?? -1;
+  const topBarEnergyMax = energyStatus?.maxEnergy ?? 10;
+  const topBarLoading = topBarProfileLoading || energyLoading;
+
   return (
-    <ChildDesktopShell activeNav="aprender" rightRailAppend={lessonRightRail}>
+    <div
+      className="relative min-h-screen"
+      style={{ isolation: "isolate" }}
+    >
+      {/* Wallpaper — mesmo que /child/aprender, dentro do mesmo stacking context do sidebar */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0"
+        style={{
+          backgroundImage: "url('/axiora/aprender/trail-bg-clean-4k.png')",
+          backgroundPosition: "center top",
+          backgroundSize: "cover",
+          backgroundRepeat: "no-repeat",
+          opacity: 0.98,
+          zIndex: 0,
+        }}
+      />
+    <ChildDesktopShell
+      activeNav="aprender"
+      menuSkin="trail"
+      rightRail={lessonRightRail}
+      topBar={
+        <TopStatsBar
+          variant="global"
+          streak={topBarStreak}
+          gems={topBarGems}
+          xp={topBarXp}
+          energyCurrent={topBarEnergy}
+          energyMax={topBarEnergyMax}
+          isLoading={topBarLoading}
+        />
+      }
+    >
       <PageShell tone="child" width="content">
       <div className="lesson-cosmic">
+      <div className="lg:hidden mb-2">
+        <TopStatsBar
+          streak={topBarStreak}
+          gems={topBarGems}
+          xp={topBarXp}
+          energyCurrent={topBarEnergy}
+          energyMax={topBarEnergyMax}
+          isLoading={topBarLoading}
+        />
+      </div>
       <div className="mb-2 flex flex-wrap items-center gap-1.5 xl:mb-2.5">
         <button
           type="button"
-          className="inline-flex w-full items-center gap-1.5 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,49,46,0.9),rgba(18,36,33,0.88))] px-2.5 py-1.5 text-sm font-semibold text-[#FFF4E7] shadow-[0_10px_22px_rgba(16,31,28,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-[#FFBE85]/22 hover:bg-[linear-gradient(180deg,rgba(36,67,63,0.94),rgba(24,49,46,0.9))]"
+          className="inline-flex w-full items-center gap-1.5 rounded-2xl border border-[#A07850]/50 bg-[linear-gradient(145deg,rgba(253,245,230,0.88),rgba(240,222,188,0.78))] px-2.5 py-1.5 text-sm font-semibold text-[#2C1E16] shadow-[0_4px_12px_rgba(44,30,18,0.14),inset_0_1px_0_rgba(255,255,255,0.65)] transition hover:border-[#A07850]/75 hover:bg-[linear-gradient(145deg,rgba(255,248,235,0.95),rgba(245,228,195,0.9))]"
           onClick={() => void onBackToPath()}
           disabled={backSaving}
         >
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-[rgba(160,120,80,0.15)] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
             <ArrowLeft className="h-4 w-4 stroke-[2.6]" />
           </span>
           {backSaving ? "Salvando..." : "Voltar ao caminho"}
@@ -1854,7 +1910,7 @@ export default function AdaptiveLessonSessionPage() {
 
       <ConfettiBurst trigger={confettiTrigger} />
 
-      <Card className="mb-2.5 overflow-hidden border border-white/10 bg-[radial-gradient(circle_at_86%_12%,rgba(255,163,94,0.12),transparent_44%),linear-gradient(180deg,rgba(26,52,47,0.92)_0%,rgba(18,36,33,0.88)_100%)] shadow-[0_10px_28px_rgba(16,31,28,0.32),inset_0_1px_0_rgba(255,255,255,0.08)] xl:mb-3">
+      <Card className="lesson-card mb-2.5 overflow-hidden border xl:mb-3">
         <CardHeader className="pb-1.5 pt-3.5 xl:pt-4">
           <div className="flex items-center justify-between gap-2">
             <div>
@@ -1891,19 +1947,19 @@ export default function AdaptiveLessonSessionPage() {
       </Card>
 
       {loading ? (
-        <Card className="border border-white/10 bg-[linear-gradient(180deg,rgba(26,52,47,0.86),rgba(18,36,33,0.82))] shadow-[0_10px_28px_rgba(16,31,28,0.28)]">
+        <Card className="lesson-card border">
           <CardContent className="p-6 text-sm text-[#E6D8C7]">Preparando sessão adaptativa...</CardContent>
         </Card>
       ) : null}
 
       {error ? (
-        <Card className="border border-white/10 bg-[linear-gradient(180deg,rgba(26,52,47,0.86),rgba(18,36,33,0.82))] shadow-[0_10px_28px_rgba(16,31,28,0.28)]">
+        <Card className="lesson-card border">
           <CardContent className="p-6 text-sm text-[#E6D8C7]">{error}</CardContent>
         </Card>
       ) : null}
 
       {!loading && !error && current ? (
-        <Card className="mb-4 border border-white/10 bg-[linear-gradient(180deg,rgba(24,49,46,0.92),rgba(18,36,33,0.9))] shadow-[0_12px_30px_rgba(16,31,28,0.34),inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <Card className="lesson-card mb-4 border">
           <CardContent className="space-y-3.5 p-4 md:p-5 xl:space-y-4 xl:p-5">
             {energyBlocked ? (
               <div className="rounded-2xl border border-accent/40 bg-accent/10 p-3">
@@ -1973,7 +2029,7 @@ export default function AdaptiveLessonSessionPage() {
               <h2 className="text-[21px] font-extrabold leading-tight text-foreground md:text-[25px] xl:text-[28px]">{current.prompt}</h2>
               {current.type === "DRAG_DROP" || current.type === "MATCH" ? (
                 <div className="space-y-3">
-                  <div className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(28,58,54,0.94),rgba(20,40,37,0.9))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                  <div className="rounded-2xl border border-[#A07850]/40 bg-[linear-gradient(145deg,rgba(253,245,230,0.85),rgba(240,222,188,0.75))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       {current.type === "MATCH" ? "Cartões" : "Itens"}
                     </p>
@@ -2026,7 +2082,7 @@ export default function AdaptiveLessonSessionPage() {
                 </div>
               ) : current.type === "ORDERING" ? (
                 <div className="space-y-3">
-                  <div className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(16,28,56,0.94),rgba(11,21,43,0.9))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                  <div className="rounded-2xl border border-[#A07850]/40 bg-[linear-gradient(145deg,rgba(253,245,230,0.85),rgba(240,222,188,0.75))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ordem atual</p>
                     <div className="space-y-2">
                       {orderingIds.map((itemId, itemIndex) => {
@@ -2034,7 +2090,7 @@ export default function AdaptiveLessonSessionPage() {
                         if (!item) return null;
                         return (
                           <div key={item.id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] px-2 py-2">
-                            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-[linear-gradient(180deg,rgba(17,28,51,0.92),rgba(11,20,39,0.88))] text-xs font-bold text-slate-200">
+                            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#A07850]/45 bg-[rgba(160,120,80,0.14)] text-xs font-bold text-[#5C4A3A]">
                               {itemIndex + 1}
                             </span>
                             <p className="flex-1 text-sm font-semibold text-foreground">{item.label}</p>
@@ -2096,8 +2152,8 @@ export default function AdaptiveLessonSessionPage() {
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-[#18312E]",
                           "active:scale-[0.985]",
                           selectedOption === option.id
-                            ? "border-[#FFBE85]/70 bg-[linear-gradient(180deg,rgba(53,92,86,0.94),rgba(28,58,54,0.96))] text-[#FFF4E7] shadow-[0_0_0_1px_rgba(255,163,94,0.16),0_10px_20px_rgba(16,31,28,0.18),inset_0_1px_0_rgba(255,255,255,0.08)]"
-                            : "border-white/12 bg-[linear-gradient(180deg,rgba(24,49,46,0.94),rgba(19,38,35,0.9))] text-[#FFF4E7] shadow-[0_8px_20px_rgba(16,31,28,0.14),inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-[#FFBE85]/30 hover:bg-[linear-gradient(180deg,rgba(36,67,63,0.98),rgba(24,49,46,0.92))]",
+                            ? "border-[#FFB703]/65 bg-[linear-gradient(145deg,rgba(255,243,204,0.96),rgba(255,224,140,0.88))] text-[#2C1E16] shadow-[0_0_0_2px_rgba(255,183,3,0.22),0_4px_12px_rgba(44,30,18,0.14),inset_0_1px_0_rgba(255,255,255,0.7)]"
+                            : "border-[#A07850]/45 bg-[linear-gradient(145deg,rgba(253,245,230,0.92),rgba(240,222,188,0.82))] text-[#2C1E16] shadow-[0_4px_12px_rgba(44,30,18,0.12),inset_0_1px_0_rgba(255,255,255,0.65)] hover:border-[#A07850]/70 hover:bg-[linear-gradient(145deg,rgba(255,248,235,0.96),rgba(245,228,195,0.92))]",
                           currentAnswered && correctByStep[index] && selectedOption === option.id ? "answer-correct-pop" : "",
                           currentAnswered && !correctByStep[index] && selectedOption === option.id ? "border-accent/55 bg-accent/10 text-accent-foreground" : "",
                         )}
@@ -2105,7 +2161,7 @@ export default function AdaptiveLessonSessionPage() {
                         onClick={() => void onPickOption(option.id)}
                       >
                         <span className="flex items-center gap-2.5">
-                          <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-[linear-gradient(180deg,rgba(255,246,236,0.14),rgba(255,190,133,0.08))] text-[11px] font-black text-[#FFF4E7] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+                          <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#A07850]/45 bg-[rgba(160,120,80,0.14)] text-[11px] font-black text-[#5C4A3A] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
                             {OPTION_LETTERS[optionIndex] ?? String(optionIndex + 1)}
                           </span>
                           <span className="text-[15px] font-bold leading-5 text-inherit">{option.label}</span>
@@ -2142,7 +2198,7 @@ export default function AdaptiveLessonSessionPage() {
             <div className="flex gap-2">
               <Button
                 variant="secondary"
-                className="w-full border border-white/10 bg-[linear-gradient(180deg,rgba(24,49,46,0.88),rgba(18,36,33,0.84))] text-[#F0E5D8] shadow-[0_8px_18px_rgba(16,31,28,0.12),inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform transition-shadow transition-opacity duration-150 ease-out hover:border-[#FFBE85]/22 hover:bg-[linear-gradient(180deg,rgba(36,67,63,0.92),rgba(24,49,46,0.88))] disabled:opacity-45"
+                className="w-full border border-[#A07850]/45 bg-[linear-gradient(145deg,rgba(253,245,230,0.88),rgba(240,222,188,0.78))] text-[#2C1E16] shadow-[0_4px_12px_rgba(44,30,18,0.12),inset_0_1px_0_rgba(255,255,255,0.65)] transition-transform transition-shadow transition-opacity duration-150 ease-out hover:border-[#A07850]/70 hover:bg-[linear-gradient(145deg,rgba(255,248,235,0.95),rgba(245,228,195,0.9))] disabled:opacity-45"
                 disabled={!canGoPrevious}
                 onClick={() => {
                   setIndex((prev) => Math.max(0, prev - 1));
@@ -2180,7 +2236,7 @@ export default function AdaptiveLessonSessionPage() {
       ) : null}
 
       {!loading && !error && !current ? (
-        <Card className="mb-4 border border-white/10 bg-[linear-gradient(180deg,rgba(24,49,46,0.92),rgba(18,36,33,0.9))] shadow-[0_12px_30px_rgba(16,31,28,0.34)]">
+        <Card className="lesson-card mb-4 border">
           <CardContent className="space-y-3 p-5">
             {contentUnavailableReason ? (
               <p className="text-base font-extrabold text-[#FFF4E7]">{contentUnavailableReason.title}</p>
@@ -2244,17 +2300,17 @@ export default function AdaptiveLessonSessionPage() {
 
       {result ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#18312E]/55 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#2C1E16]/40 p-4"
           onClick={() => pushPathWithResult(result)}
         >
           <div
-            className="w-full max-w-md rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,49,46,0.96),rgba(18,36,33,0.94))] p-5 shadow-[0_24px_60px_rgba(16,31,28,0.48)]"
+            className="w-full max-w-md rounded-3xl border border-[#A07850]/45 bg-[linear-gradient(145deg,rgba(253,245,230,0.97),rgba(240,222,188,0.95))] p-5 shadow-[0_24px_60px_rgba(44,30,18,0.38),inset_0_1px_0_rgba(255,255,255,0.8)]"
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
           >
-            <p className="text-lg font-extrabold text-[#FFF4E7]">Recompensas da sessão</p>
-            <p className="mt-1 text-xs text-[#E6D8C7]">{starMessage(result.stars)}</p>
+            <p className="text-lg font-extrabold text-[#2C1E16]">Recompensas da sessão</p>
+            <p className="mt-1 text-xs text-[#5C4A3A]">{starMessage(result.stars)}</p>
             <div className="mt-3 flex items-center justify-center gap-1">
               {[1, 2, 3].map((slot) => (
                 <Star key={slot} className={cn("h-7 w-7", slot <= result.stars ? "star-pop fill-amber-400 text-amber-400" : "text-slate-300")} />
@@ -2321,41 +2377,55 @@ export default function AdaptiveLessonSessionPage() {
       <ChildBottomNav />
 
       <style jsx global>{`
+        /* ═══ Tema Parchment — tela de lição ═══ */
         .lesson-cosmic {
-          color: rgba(240, 249, 255, 0.92);
+          color: #2C1E16;
         }
 
-        .lesson-cosmic .text-foreground {
-          color: rgba(240, 249, 255, 0.96) !important;
-        }
+        /* Cor base dos textos */
+        .lesson-cosmic .text-foreground    { color: #2C1E16 !important; }
+        .lesson-cosmic .text-muted-foreground { color: #8B5E1A !important; }
+        .lesson-cosmic .text-\[\#FFF4E7\]  { color: #2C1E16 !important; }
+        .lesson-cosmic .text-\[\#E6D8C7\]  { color: #5C4A3A !important; }
+        .lesson-cosmic .text-\[\#CDBAA6\]  { color: #8B5E1A !important; }
+        .lesson-cosmic .text-\[\#F0E5D8\]  { color: #2C1E16 !important; }
+        .lesson-cosmic .text-slate-100,
+        .lesson-cosmic .text-slate-200     { color: #2C1E16 !important; }
+        .lesson-cosmic .text-slate-300,
+        .lesson-cosmic .text-slate-400     { color: #5C4A3A !important; }
 
-        .lesson-cosmic .text-muted-foreground {
-          color: rgba(203, 213, 225, 0.82) !important;
-        }
-
-        .lesson-cosmic .bg-white,
-        .lesson-cosmic .bg-white\\/90,
-        .lesson-cosmic .bg-white\\/92 {
-          background: linear-gradient(180deg, rgba(17, 28, 52, 0.92), rgba(11, 21, 41, 0.88)) !important;
-        }
-
+        /* Bordas internas */
+        .lesson-cosmic .border-white\/10   { border-color: rgba(160,120,80,0.3) !important; }
+        .lesson-cosmic .border-white\/12   { border-color: rgba(160,120,80,0.35) !important; }
         .lesson-cosmic .border-border,
         .lesson-cosmic .border-\[\#DFE8F6\],
         .lesson-cosmic .border-\[\#DDE7F6\],
         .lesson-cosmic .border-\[\#DCE7F6\],
         .lesson-cosmic .border-\[\#DCE6F4\],
         .lesson-cosmic .border-\[\#E4EBF7\] {
-          border-color: rgba(255, 255, 255, 0.1) !important;
+          border-color: rgba(160,120,80,0.3) !important;
         }
 
+        /* Fundos internos */
+        .lesson-cosmic .bg-white\/\[0\.05\],
+        .lesson-cosmic .bg-white\/5        { background: rgba(160,120,80,0.08) !important; }
+        .lesson-cosmic .bg-white\/10       { background: rgba(160,120,80,0.12) !important; }
+        .lesson-cosmic .bg-white,
+        .lesson-cosmic .bg-white\/90,
+        .lesson-cosmic .bg-white\/92 {
+          background: rgba(255,248,232,0.96) !important;
+        }
         .lesson-cosmic .bg-muted\/25,
         .lesson-cosmic .bg-muted\/30,
         .lesson-cosmic .bg-muted\/40 {
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)) !important;
+          background: rgba(160,120,80,0.08) !important;
         }
 
-        .lesson-cosmic .shadow-\[inset_0_1px_0_rgba\(255\,255\,255\,0\.06\)\] {
-          box-shadow: 0 10px 22px rgba(2, 12, 35, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+        /* Cartão principal (lesson-card) */
+        .lesson-card {
+          background: linear-gradient(145deg,rgba(253,245,230,0.88),rgba(240,222,188,0.78)) !important;
+          border-color: rgba(160,120,80,0.4) !important;
+          box-shadow: 0 8px 24px rgba(44,30,18,0.18), inset 0 1px 0 rgba(255,255,255,0.7) !important;
         }
 
         .lesson-cosmic button,
@@ -2475,6 +2545,7 @@ export default function AdaptiveLessonSessionPage() {
       </div>
       </PageShell>
     </ChildDesktopShell>
+    </div>
   );
 }
 

@@ -60,11 +60,11 @@ export function ChildDesktopShell({ children, activeNav, rightRail, rightRailApp
     <div
       className={
         isTrailSkin
-          ? "min-h-screen"
+          ? "relative z-[1] min-h-screen lg:flex lg:h-screen lg:min-h-0 lg:flex-col lg:overflow-hidden"
           : "min-h-screen bg-[radial-gradient(circle_at_46%_16%,rgba(255,163,94,0.16),rgba(24,49,46,0.04)_28%,rgba(2,6,23,0)_56%),radial-gradient(circle_at_72%_24%,rgba(79,157,138,0.12),rgba(2,6,23,0)_24%),linear-gradient(180deg,#112826_0%,#16312E_40%,#17322F_100%)]"
       }
     >
-      <div className="w-full lg:pl-[208px]">
+      <div className={isTrailSkin ? "flex w-full flex-1 min-h-0 flex-col lg:pl-[208px] lg:overflow-hidden" : "w-full lg:pl-[208px]"}>
         <aside
           className={
             menuSkin === "trail"
@@ -101,7 +101,7 @@ export function ChildDesktopShell({ children, activeNav, rightRail, rightRailApp
           <div
             className={
               isTrailSkin
-                ? "relative z-30 mx-auto hidden w-full lg:block lg:px-3 lg:pt-2 xl:px-4 2xl:px-5"
+                ? "sticky top-0 z-30 mx-auto hidden w-full bg-[rgba(15,23,42,0.06)] [backdrop-filter:blur(3px)] lg:block lg:px-3 lg:pt-2 xl:px-4 2xl:px-5"
                 : "relative z-30 mx-auto hidden w-full lg:block lg:max-w-[1320px] lg:px-6 lg:pt-2 xl:max-w-[1420px] xl:px-8 xl:pt-2"
             }
           >
@@ -112,21 +112,21 @@ export function ChildDesktopShell({ children, activeNav, rightRail, rightRailApp
         <div
           className={
             isTrailSkin
-              ? "mx-auto w-full lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4 lg:px-3 xl:grid-cols-[minmax(0,1fr)_356px] xl:px-4 2xl:px-5"
+              ? "mx-auto w-full flex-1 min-h-0 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4 lg:overflow-hidden lg:px-3 xl:grid-cols-[minmax(0,1fr)_356px] xl:px-4 2xl:px-5"
               : "mx-auto w-full lg:grid lg:max-w-[1320px] lg:grid-cols-[minmax(680px,820px)_320px] lg:gap-8 lg:px-6 xl:max-w-[1420px] xl:grid-cols-[minmax(720px,880px)_340px] xl:px-8"
           }
         >
           <div
             className={
               isTrailSkin
-                ? "mx-auto w-full max-w-sm px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:max-w-none lg:px-1 lg:pb-10 lg:pt-3"
+                ? "mx-auto w-full max-w-sm px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:max-w-none lg:overflow-y-auto lg:px-1 lg:pb-10 lg:pt-3"
                 : "mx-auto w-full max-w-sm px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:max-w-[820px] lg:px-0 lg:pb-10 lg:pt-5 xl:max-w-[880px]"
             }
           >
             {children}
           </div>
 
-          <aside className={isTrailSkin ? "hidden lg:block lg:py-3" : "hidden lg:block lg:py-5"}>
+          <aside className={isTrailSkin ? "hidden lg:block lg:overflow-y-auto lg:py-3" : "hidden lg:block lg:py-5"}>
             <div className="sticky top-5 space-y-3.5">
               {rightRail ?? (
                 <>

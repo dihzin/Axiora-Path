@@ -14,6 +14,7 @@ export default function LearningPathPage() {
     <>
       <AxioraCognitiveField />
       <div className="relative z-10 min-h-screen overflow-x-hidden bg-transparent lg:flex lg:h-screen lg:min-h-0 lg:min-w-0 lg:flex-col">
+        {/* Wallpaper — slightly desaturated so UI elements stand out */}
         <div
           aria-hidden
           className="pointer-events-none"
@@ -28,7 +29,20 @@ export default function LearningPathPage() {
             backgroundPosition: "center top",
             backgroundSize: "cover",
             backgroundRepeat: "no-repeat",
-            opacity: 0.98,
+            opacity: 0.62,
+            filter: "saturate(0.65) brightness(0.90)",
+          }}
+        />
+        {/* Scrim — dark veil between wallpaper and content for visual hierarchy */}
+        <div
+          aria-hidden
+          className="pointer-events-none"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1,
+            background:
+              "rgba(4,10,24,0.34)",
           }}
         />
         <Suspense fallback={null}>

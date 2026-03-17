@@ -7,12 +7,14 @@ import {
   ApiError,
   claimMission,
   getApiErrorMessage,
+  getAprenderLearningEnergy,
   getAprenderLearningProfile,
   getAprenderLearningStreak,
   getAprenderSubjects,
   getCurrentMissions,
   getLearningInsights,
   getLearningPath,
+  getRecommendations,
   type AprenderSubjectOption,
   type LearningInsightsResponse,
   type LearningPathResponse,
@@ -124,6 +126,11 @@ export type TrailData = {
   xpInLevel: number;
   xpToNextLevel: number;
   subjectStreakDays: number;
+  // Energy (-1 = não carregado / indisponível)
+  energyCurrent: number;
+  energyMax: number;
+  // Notifications
+  notificationCount: number;
   // Missions & insights
   insights: LearningInsightsResponse | null;
   missions: MissionsCurrentResponse | null;
@@ -175,6 +182,9 @@ export function useTrailData(): TrailData {
   const [missionsLoading, setMissionsLoading] = useState(true);
   const [claimingMissionId, setClaimingMissionId] = useState<string | null>(null);
   const [subjectStreakDays, setSubjectStreakDays] = useState(0);
+  const [energyCurrent, setEnergyCurrent] = useState(-1);
+  const [energyMax, setEnergyMax] = useState(10);
+  const [notificationCount, setNotificationCount] = useState(0);
   const [pathRetryToken, setPathRetryToken] = useState(0);
   const hasLoadedPathRef = useRef(false);
 
@@ -412,6 +422,35 @@ export function useTrailData(): TrailData {
     return () => { active = false; };
   }, [completedLessonSignal, path?.streakDays, selectedSubjectId]);
 
+  // Fetch energy
+  useEffect(() => {
+    let active = true;
+    void getAprenderLearningEnergy()
+      .then((status) => {
+        if (!active) return;
+        setEnergyCurrent(Math.max(0, status.energy));
+        setEnergyMax(Math.max(1, status.maxEnergy));
+      })
+      .catch(() => { /* mantém -1 = indisponível */ });
+    return () => { active = false; };
+  }, [completedLessonSignal]);
+
+  // Fetch notification count (recomendações não descartadas)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const rawChildId = window.localStorage.getItem("axiora_child_id");
+    const childId = rawChildId ? Number(rawChildId) : NaN;
+    if (!Number.isFinite(childId) || childId <= 0) return;
+    let active = true;
+    void getRecommendations(childId)
+      .then((recs) => {
+        if (!active) return;
+        setNotificationCount(recs.filter((r) => r.dismissed_at === null).length);
+      })
+      .catch(() => { /* mantém 0 */ });
+    return () => { active = false; };
+  }, []);
+
   // Fetch insights + missions
   useEffect(() => {
     let active = true;
@@ -488,6 +527,9 @@ export function useTrailData(): TrailData {
     xpInLevel,
     xpToNextLevel,
     subjectStreakDays,
+    energyCurrent,
+    energyMax,
+    notificationCount,
     insights,
     missions,
     insightsLoading,

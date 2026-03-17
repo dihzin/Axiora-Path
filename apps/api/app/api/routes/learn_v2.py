@@ -4,7 +4,7 @@ from dataclasses import asdict
 from datetime import date
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 
@@ -19,7 +19,30 @@ from app.services.lesson_engine import LessonEngine, StudentSkillState
 from app.services.skill_graph import SkillGraph, build_graph
 
 
-router = APIRouter(prefix="/learn", tags=["learn-v2"])
+# ─── DEPRECATED ─────────────────────────────────────────────────────────────
+# learn_v2 (/learn/*) is deprecated as of 2026-03-16 (Wave 1 refactor).
+# Canonical learning runtime is /api/learning/*.
+# This module will be removed by 2026-09-01.
+# All new features must target /api/learning/*.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_DEPRECATION_HEADERS = {
+    "Deprecation": "true",
+    "Sunset": "2026-09-01",
+    "Link": '</api/learning>; rel="successor-version"',
+}
+
+def _deprecation_response(response: Response) -> None:
+    """Dependency: inject deprecation headers on every /learn/* response."""
+    for key, value in _DEPRECATION_HEADERS.items():
+        response.headers[key] = value
+
+
+router = APIRouter(
+    prefix="/learn",
+    tags=["learn-v2 (DEPRECATED)"],
+    dependencies=[Depends(_deprecation_response)],
+)
 
 _XP_BY_DIFFICULTY = {
     "easy": 20,

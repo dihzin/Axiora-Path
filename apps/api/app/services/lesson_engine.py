@@ -181,6 +181,10 @@ class LessonEngine:
                 effective_ceiling=effective_ceiling,
                 force_difficulty=force_difficulty,
             )
+            # Cap difficulty to what is appropriate for this skill's age group.
+            # e.g. AGE_6_8 → EASY only; AGE_9_12 → at most MEDIUM.
+            if skill_plan.age_group:
+                target_difficulty = _cap_for_age_group(target_difficulty, age_group=skill_plan.age_group)
             batch = self._collect_candidates(
                 student_id=student_id,
                 tenant_id=self.tenant_id,
@@ -366,6 +370,10 @@ class LessonEngine:
                 Question.skill_id == skill_id,
                 Question.type != QuestionType.TEMPLATE,
                 Question.difficulty == target_difficulty,
+                # Exclude placeholder seed questions inserted by migration 0092.
+                # These have the form "[Subject] Pergunta essencial (DIFFICULTY)."
+                # and must never be served to students.
+                ~Question.prompt.like("[%] Pergunta essencial (%)"),
             )
             .order_by(Question.created_at.asc())
         )

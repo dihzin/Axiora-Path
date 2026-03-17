@@ -46,19 +46,27 @@ export function DailyMissionsPanel({ missions, missionsLoading, claimingMissionI
                     disabled={!canNavigate}
                     onClick={() => setActiveIndex((prev) => (prev - 1 + dailyMissions.length) % dailyMissions.length)}
                   />
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-0.5" role="tablist" aria-label="Navegar entre desafios">
                     {dailyMissions.map((mission, index) => (
                       <button
                         key={mission.missionId}
                         type="button"
+                        role="tab"
                         onClick={() => setActiveIndex(index)}
-                        className={cn(
-                          "h-2.5 rounded-full transition-all duration-200",
-                          index === activeIndex ? "w-5 bg-[#A07850] shadow-[0_0_8px_rgba(160,120,80,0.5)]" : "w-2.5 bg-[#A07850]/30 hover:bg-[#A07850]/50",
-                        )}
-                        aria-label={`Mostrar desafio ${index + 1}`}
-                        aria-pressed={index === activeIndex}
-                      />
+                        aria-label={`Desafio ${index + 1}`}
+                        aria-selected={index === activeIndex}
+                        className="inline-flex h-8 w-8 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A07850]/50 focus-visible:ring-offset-1"
+                      >
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "block rounded-full transition-all duration-200",
+                            index === activeIndex
+                              ? "h-2.5 w-5 bg-[#A07850] shadow-[0_0_8px_rgba(160,120,80,0.5)]"
+                              : "h-2.5 w-2.5 bg-[#A07850]/30 hover:bg-[#A07850]/55",
+                          )}
+                        />
+                      </button>
                     ))}
                   </div>
                   <NavButton
@@ -101,7 +109,7 @@ function NavButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#A07850]/60 bg-[linear-gradient(145deg,#FDF5E6,#E8C98A)] text-[18px] font-black text-[#5C3D1A] shadow-[0_2px_6px_rgba(44,30,18,0.18)] transition-all duration-150",
+        "inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#A07850]/60 bg-[linear-gradient(145deg,#FDF5E6,#E8C98A)] text-[18px] font-black text-[#5C3D1A] shadow-[0_2px_6px_rgba(44,30,18,0.18)] transition-all duration-150",
         disabled ? "cursor-default opacity-30" : "hover:bg-[#E8C98A] active:scale-95",
       )}
       aria-label={direction === "left" ? "Desafio anterior" : "Próximo desafio"}

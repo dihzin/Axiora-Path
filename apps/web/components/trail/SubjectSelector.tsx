@@ -12,6 +12,10 @@ type SubjectSelectorProps = {
   gems: number;
   xp: number;
   xpTotal?: number;
+  energyCurrent?: number;
+  energyMax?: number;
+  notificationCount?: number;
+  isLoading?: boolean;
   selectedSubjectName: string;
   subjects: AprenderSubjectOption[];
   selectedSubjectId: number | null;
@@ -38,6 +42,10 @@ export function SubjectSelector({
   gems,
   xp,
   xpTotal = 0,
+  energyCurrent = -1,
+  energyMax = 10,
+  notificationCount = 0,
+  isLoading = false,
   selectedSubjectName,
   subjects,
   selectedSubjectId,
@@ -69,10 +77,10 @@ export function SubjectSelector({
   return (
     <div className="relative z-50">
       <div className="lg:hidden">
-        <TopStatsBar streak={streak} gems={gems} xp={xp} className={className} />
+        <TopStatsBar streak={streak} gems={gems} xp={xp} energyCurrent={energyCurrent} energyMax={energyMax} isLoading={isLoading} className={className} />
       </div>
       <div className="hidden lg:block">
-        <TopStatsBar streak={streak} gems={gems} xp={xp} xpTotal={xpTotal} variant="global" className={className} />
+        <TopStatsBar streak={streak} gems={gems} xp={xp} xpTotal={xpTotal} energyCurrent={energyCurrent} energyMax={energyMax} notificationCount={notificationCount} isLoading={isLoading} variant="global" className={className} />
       </div>
       <div className="mt-2.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex min-w-full items-center gap-2.5" role="tablist" aria-label="Selecionar matéria">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Play } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { axioraMotionClasses } from "@/theme/motion";
@@ -38,6 +39,8 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
     subjectName,
     level,
     xpPercent,
+    xpInLevel,
+    xpToNextLevel,
     currentMission,
     onStartMission,
     className,
@@ -102,17 +105,17 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
         >
           {subjectName}
         </h2>
-        <span className="shrink-0 rounded-full border border-[#52B788]/40 bg-[rgba(82,183,136,0.12)] px-2.5 py-1 text-[11px] font-bold text-[#276245]">
+        <span className="shrink-0 rounded-full border border-[#FFB703]/55 bg-[rgba(255,183,3,0.13)] px-2.5 py-1 text-[11px] font-bold shadow-[0_0_8px_rgba(255,183,3,0.14)]" style={{ color: TEXT_GOLD }}>
           Nível {safeLevel}
         </span>
       </div>
 
-      {/* Barra de XP — só o visual, sem labels */}
+      {/* Barra de XP */}
       <div
         className={cn("relative", xpPulse ? "xp-pulse" : "", compact ? "mt-2.5" : "mt-3")}
         onAnimationEnd={() => { if (xpPulse) setXpPulse(false); }}
       >
-        <div className="relative h-3 w-full overflow-hidden rounded-full border-2 border-[#A07850]/50 bg-[linear-gradient(180deg,rgba(220,200,168,0.9)_0%,rgba(200,175,138,0.9)_100%)] shadow-[inset_0_2px_4px_rgba(44,30,18,0.18)]">
+        <div className="relative h-4 w-full overflow-hidden rounded-full border-2 border-[#A07850]/50 bg-[linear-gradient(180deg,rgba(220,200,168,0.9)_0%,rgba(200,175,138,0.9)_100%)] shadow-[inset_0_2px_4px_rgba(44,30,18,0.18)]">
           <div aria-hidden className="pointer-events-none absolute inset-0 z-10">
             <span className="absolute left-1/4 top-0 h-full w-px bg-[#5C4033]/20" />
             <span className="absolute left-1/2 top-0 h-full w-px bg-[#5C4033]/20" />
@@ -120,9 +123,14 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
           </div>
           <div
             className="relative z-0 h-full rounded-full bg-gradient-to-r from-[#FFB703] via-[#FB8C00] to-[#D96C2A] shadow-[0_0_14px_rgba(255,183,3,0.55)] transition-all duration-[400ms] ease-out"
-            style={{ width: `${safeXpPercent}%` }}
+            style={{ width: `${safeXpPercent}%`, minWidth: safeXpPercent > 0 ? "6px" : undefined }}
           />
         </div>
+        {xpToNextLevel > 0 && (
+          <p className="mt-1 text-right text-[10px] font-semibold" style={{ color: TEXT_GOLD }}>
+            {xpInLevel.toLocaleString("pt-BR")} / {xpToNextLevel.toLocaleString("pt-BR")} XP
+          </p>
+        )}
       </div>
 
       {/* Missão atual */}
@@ -155,7 +163,8 @@ export function HeroMissionCard(props: HeroMissionCardProps) {
           compact ? "min-h-[48px] text-[13px]" : "min-h-[54px] text-[15px]",
         )}
       >
-        ⚔ Iniciar missão
+        <Play className="mr-2 h-4 w-4 fill-current" strokeWidth={0} aria-hidden />
+        Iniciar missão
       </button>
     </ParchmentCard>
   );
