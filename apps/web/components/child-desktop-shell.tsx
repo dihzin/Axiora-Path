@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
 import { AxionCharacter } from "@/components/axion-character";
 import { ChildNavIcon, type ChildNavIconKey } from "@/components/child-bottom-nav";
 import { TopStatsBar } from "@/components/trail/TopStatsBar";
 import { getAprenderLearningProfile, getStreak } from "@/lib/api/client";
 import { enforceProfileCompletionRedirect } from "@/lib/profile-completion-middleware";
+import { cn } from "@/lib/utils";
 
 type ChildDesktopShellProps = {
   children: ReactNode;
@@ -17,6 +18,8 @@ type ChildDesktopShellProps = {
   rightRailAppend?: ReactNode;
   menuSkin?: "default" | "trail";
   topBar?: ReactNode;
+  density?: "regular" | "dense";
+  contentScale?: number;
 };
 
 const NAV_ITEMS: Array<{ href: string; label: string; iconName: ChildNavIconKey }> = [
@@ -28,12 +31,23 @@ const NAV_ITEMS: Array<{ href: string; label: string; iconName: ChildNavIconKey 
   { href: "/child/axion", label: "Axion", iconName: "axion" },
 ];
 
-export function ChildDesktopShell({ children, activeNav, rightRail, rightRailAppend, menuSkin = "default", topBar }: ChildDesktopShellProps) {
+export function ChildDesktopShell({
+  children,
+  activeNav,
+  rightRail,
+  rightRailAppend,
+  menuSkin = "default",
+  topBar,
+  density = "regular",
+  contentScale = 1,
+}: ChildDesktopShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const resolvedActive = activeNav ?? resolveActive(pathname);
   const [profileGuardReady, setProfileGuardReady] = useState(false);
   const isTrailSkin = menuSkin === "trail";
+  const dense = density === "dense";
+  const scaledStyle = contentScale < 0.999 ? ({ zoom: contentScale } as CSSProperties) : undefined;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -64,11 +78,14 @@ export function ChildDesktopShell({ children, activeNav, rightRail, rightRailApp
           : "min-h-screen bg-[radial-gradient(circle_at_46%_16%,rgba(255,163,94,0.16),rgba(24,49,46,0.04)_28%,rgba(2,6,23,0)_56%),radial-gradient(circle_at_72%_24%,rgba(79,157,138,0.12),rgba(2,6,23,0)_24%),linear-gradient(180deg,#112826_0%,#16312E_40%,#17322F_100%)]"
       }
     >
-      <div className={isTrailSkin ? "flex w-full flex-1 min-h-0 flex-col lg:pl-[208px] lg:overflow-hidden" : "w-full lg:pl-[208px]"}>
+      <div className={isTrailSkin ? cn("flex w-full flex-1 min-h-0 flex-col lg:overflow-hidden", dense ? "lg:pl-[184px]" : "lg:pl-[208px]") : "w-full lg:pl-[208px]"}>
         <aside
           className={
             menuSkin === "trail"
-              ? "hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r-[3px] lg:border-r-[#6D4C41]/70 lg:border-t lg:border-t-[#FFB703]/12 lg:bg-[linear-gradient(180deg,rgba(42,24,16,0.78)_0%,rgba(30,14,8,0.72)_100%)] lg:px-3 lg:py-5 lg:shadow-[inset_-1px_0_0_rgba(255,183,3,0.06)] lg:backdrop-blur-xl"
+              ? cn(
+                  "hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:flex-col lg:gap-1 lg:border-r-[3px] lg:border-r-[#6D4C41]/70 lg:border-t lg:border-t-[#FFB703]/12 lg:bg-[linear-gradient(180deg,rgba(42,24,16,0.78)_0%,rgba(30,14,8,0.72)_100%)] lg:shadow-[inset_-1px_0_0_rgba(255,183,3,0.06)] lg:backdrop-blur-xl",
+                  dense ? "lg:w-[184px] lg:px-2.5 lg:py-4" : "lg:w-[208px] lg:px-3 lg:py-5",
+                )
               : "hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r-[3px] lg:border-r-[#5C4033] lg:bg-[linear-gradient(180deg,#3E2723_0%,#2A1810_100%)] lg:px-3 lg:py-5 lg:shadow-[4px_0_24px_rgba(0,0,0,0.4),inset_-1px_0_0_rgba(255,183,3,0.08)]"
           }
         >
@@ -76,11 +93,11 @@ export function ChildDesktopShell({ children, activeNav, rightRail, rightRailApp
               <div
                 className={
                   menuSkin === "trail"
-                    ? "rounded-2xl border border-[#FFB703]/20 bg-[rgba(42,24,16,0.72)] p-1.5 shadow-[0_0_18px_rgba(255,183,3,0.12),inset_0_1px_0_rgba(255,255,255,0.06)]"
+                    ? cn("rounded-2xl border border-[#FFB703]/20 bg-[rgba(42,24,16,0.72)] shadow-[0_0_18px_rgba(255,183,3,0.12),inset_0_1px_0_rgba(255,255,255,0.06)]", dense ? "p-1" : "p-1.5")
                     : "rounded-2xl border border-[#6D4C41]/60 bg-[linear-gradient(180deg,#4A2E22,#321A10)] p-1.5 shadow-[0_10px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,183,3,0.10)]"
                 }
               >
-              <div className="scale-90">
+              <div className={dense ? "scale-[0.8]" : "scale-90"}>
                 <AxionCharacter stage={1} moodState="NEUTRAL" reducedMotion={false} />
               </div>
             </div>
@@ -93,6 +110,7 @@ export function ChildDesktopShell({ children, activeNav, rightRail, rightRailApp
               label={item.label}
               active={resolvedActive === item.iconName}
               skin={menuSkin}
+              compact={dense}
             />
           ))}
         </aside>
@@ -101,33 +119,35 @@ export function ChildDesktopShell({ children, activeNav, rightRail, rightRailApp
           <div
             className={
               isTrailSkin
-                ? "sticky top-0 z-30 mx-auto hidden w-full bg-[rgba(15,23,42,0.06)] [backdrop-filter:blur(3px)] lg:block lg:px-3 lg:pt-2 xl:px-4 2xl:px-5"
+                ? cn("sticky top-0 z-30 mx-auto hidden w-full bg-[rgba(15,23,42,0.06)] [backdrop-filter:blur(3px)] lg:block", dense ? "lg:px-2.5 lg:pt-1.5 xl:px-3.5 2xl:px-4" : "lg:px-3 lg:pt-2 xl:px-4 2xl:px-5")
                 : "relative z-30 mx-auto hidden w-full lg:block lg:max-w-[1320px] lg:px-6 lg:pt-2 xl:max-w-[1420px] xl:px-8 xl:pt-2"
             }
+            style={isTrailSkin ? scaledStyle : undefined}
           >
             {topBar}
           </div>
         ) : null}
 
         <div
-          className={
-            isTrailSkin
-              ? "mx-auto w-full flex-1 min-h-0 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4 lg:overflow-hidden lg:px-3 xl:grid-cols-[minmax(0,1fr)_356px] xl:px-4 2xl:px-5"
-              : "mx-auto w-full lg:grid lg:max-w-[1320px] lg:grid-cols-[minmax(680px,820px)_320px] lg:gap-8 lg:px-6 xl:max-w-[1420px] xl:grid-cols-[minmax(720px,880px)_340px] xl:px-8"
-          }
+            className={
+              isTrailSkin
+                ? cn("mx-auto w-full flex-1 min-h-0 lg:grid lg:overflow-hidden", dense ? "lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-3 lg:px-2.5 xl:grid-cols-[minmax(0,1fr)_320px] xl:px-3.5 2xl:px-4" : "lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4 lg:px-3 xl:grid-cols-[minmax(0,1fr)_356px] xl:px-4 2xl:px-5")
+                : "mx-auto w-full lg:grid lg:max-w-[1320px] lg:grid-cols-[minmax(680px,820px)_320px] lg:gap-8 lg:px-6 xl:max-w-[1420px] xl:grid-cols-[minmax(720px,880px)_340px] xl:px-8"
+            }
+          style={isTrailSkin ? scaledStyle : undefined}
         >
           <div
             className={
               isTrailSkin
-                ? "mx-auto w-full max-w-sm px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:max-w-none lg:overflow-y-auto lg:px-1 lg:pb-10 lg:pt-3"
+                ? cn("mx-auto w-full max-w-sm px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:max-w-none lg:overflow-y-auto lg:pb-10", dense ? "lg:px-0.5 lg:pt-2" : "lg:px-1 lg:pt-3")
                 : "mx-auto w-full max-w-sm px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:max-w-[820px] lg:px-0 lg:pb-10 lg:pt-5 xl:max-w-[880px]"
             }
           >
             {children}
           </div>
 
-          <aside className={isTrailSkin ? "hidden lg:block lg:overflow-y-auto lg:py-3" : "hidden lg:block lg:py-5"}>
-            <div className="sticky top-5 space-y-3.5">
+          <aside className={isTrailSkin ? cn("hidden lg:block lg:overflow-y-auto", dense ? "lg:py-2" : "lg:py-3") : "hidden lg:block lg:py-5"}>
+            <div className={cn("sticky space-y-3.5", dense ? "top-3 space-y-3" : "top-5")}>
               {rightRail ?? (
                 <>
                   <DefaultRightRail />
@@ -157,24 +177,26 @@ function DesktopNavItem({
   label,
   active,
   skin,
+  compact = false,
 }: {
   href: string;
   iconName: ChildNavIconKey;
   label: string;
   active: boolean;
   skin: "default" | "trail";
+  compact?: boolean;
 }) {
   return (
     <Link
       href={href}
       className={
         skin === "trail"
-          ? `mx-1.5 inline-flex items-center gap-2.5 rounded-2xl px-4 py-[7px] text-[15px] font-bold uppercase tracking-[0.04em] transition-all duration-200 ${
+          ? `mx-1.5 inline-flex items-center rounded-2xl font-bold uppercase tracking-[0.04em] transition-all duration-200 ${compact ? "gap-2 px-3 py-1.5 text-[13px]" : "gap-2.5 px-4 py-[7px] text-[15px]"} ${
               active
                 ? "border-l-[3px] border-l-[#FFB703] bg-[rgba(255,183,3,0.12)] text-[#FFF3CC] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
                 : "text-[#FAEBD7]/80 hover:bg-[rgba(255,183,3,0.07)] hover:text-[#FFF3CC]"
             }`
-          : `mx-1.5 inline-flex items-center gap-2.5 rounded-2xl px-4 py-[7px] text-[15px] font-black uppercase tracking-[0.04em] transition-all duration-200 ${
+          : `mx-1.5 inline-flex items-center rounded-2xl font-black uppercase tracking-[0.04em] transition-all duration-200 ${compact ? "gap-2 px-3 py-1.5 text-[13px]" : "gap-2.5 px-4 py-[7px] text-[15px]"} ${
               active
                 ? "border border-[#FFB703]/40 bg-[linear-gradient(135deg,rgba(255,183,3,0.18),rgba(255,140,0,0.12))] text-[#FFF3CC] shadow-[0_0_12px_rgba(255,183,3,0.18),inset_0_1px_0_rgba(255,255,255,0.08)]"
                 : "text-[#C8A882] hover:bg-[rgba(255,183,3,0.08)] hover:text-[#F5DEB3]"
@@ -182,7 +204,7 @@ function DesktopNavItem({
       }
     >
       <span className={skin === "trail" ? "opacity-90" : `${active ? "opacity-100" : "opacity-75"}`}>
-        <ChildNavIcon name={iconName} active={active} size={42} />
+        <ChildNavIcon name={iconName} active={active} size={compact ? 34 : 42} />
       </span>
       {label}
     </Link>

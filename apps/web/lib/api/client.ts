@@ -2564,6 +2564,7 @@ export async function getAprenderLearningProfile(params?: { cacheBuster?: string
 }
 
 export async function startLearningSession(payload: {
+  childId?: number;
   subjectId?: number;
   unitId?: number;
   lessonId?: number;
@@ -2577,6 +2578,7 @@ export async function startLearningSession(payload: {
 }
 
 export async function finishLearningSession(payload: {
+  childId?: number;
   sessionId: string;
   totalQuestions: number;
   correctCount: number;
@@ -2591,6 +2593,7 @@ export async function finishLearningSession(payload: {
 }
 
 export async function getAdaptiveLearningNext(payload: {
+  childId?: number;
   subjectId?: number;
   lessonId?: number;
   focusSkillId?: string;
@@ -2606,6 +2609,7 @@ export async function getAdaptiveLearningNext(payload: {
 }
 
 export async function submitAdaptiveLearningAnswer(payload: {
+  childId?: number;
   questionId?: string | null;
   templateId?: string | null;
   generatedVariantId?: string | null;
@@ -2622,9 +2626,16 @@ export async function submitAdaptiveLearningAnswer(payload: {
   });
 }
 
-export async function getLearningPath(subjectId?: number): Promise<LearningPathResponse> {
-  const query = subjectId ? `?subjectId=${subjectId}` : "";
-  return apiRequest<LearningPathResponse>(`/api/learning/path${query}`, {
+export async function getLearningPath(subjectId?: number, childId?: number): Promise<LearningPathResponse> {
+  const query = new URLSearchParams();
+  if (typeof subjectId === "number" && Number.isFinite(subjectId) && subjectId > 0) {
+    query.set("subjectId", String(subjectId));
+  }
+  if (typeof childId === "number" && Number.isFinite(childId) && childId > 0) {
+    query.set("childId", String(childId));
+  }
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiRequest<LearningPathResponse>(`/api/learning/path${suffix}`, {
     method: "GET",
     requireAuth: true,
     includeTenant: true,

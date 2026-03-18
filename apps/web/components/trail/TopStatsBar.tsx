@@ -37,6 +37,7 @@ type TopStatsBarProps = {
   notificationCount?: number;
   isLoading?: boolean;
   variant?: "compact" | "global";
+  density?: "regular" | "dense";
   className?: string;
   action?: ReactNode;
 };
@@ -53,6 +54,7 @@ export function TopStatsBar({
   notificationCount = 0,
   isLoading = false,
   variant = "compact",
+  density = "regular",
   className,
   action,
 }: TopStatsBarProps) {
@@ -63,25 +65,28 @@ export function TopStatsBar({
   const safeStreak = Math.max(0, Math.floor(streak));
   const hasEnergy = energyCurrent >= 0;
   const formatInt = (n: number) => new Intl.NumberFormat("pt-BR").format(n);
+  const denseGlobal = variant === "global" && density === "dense";
 
   // ── Skeleton state ─────────────────────────────────────────────────────────
   if (isLoading && variant === "global") {
     return (
       <div
         className={cn(
-          "relative z-30 mx-auto flex h-[52px] w-full items-center justify-between gap-3 rounded-[14px] border-2 border-[#6D4C41]/70 bg-[linear-gradient(180deg,rgba(42,24,16,0.92),rgba(30,14,8,0.90))] px-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.18),0_0_0_1px_rgba(255,183,3,0.06),inset_0_1px_0_rgba(255,183,3,0.10)]",
+          denseGlobal
+            ? "relative z-30 mx-auto flex h-[46px] w-full items-center justify-between gap-2 rounded-[13px] border-2 border-[#6D4C41]/70 bg-[linear-gradient(180deg,rgba(42,24,16,0.92),rgba(30,14,8,0.90))] px-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.18),0_0_0_1px_rgba(255,183,3,0.06),inset_0_1px_0_rgba(255,183,3,0.10)]"
+            : "relative z-30 mx-auto flex h-[52px] w-full items-center justify-between gap-3 rounded-[14px] border-2 border-[#6D4C41]/70 bg-[linear-gradient(180deg,rgba(42,24,16,0.92),rgba(30,14,8,0.90))] px-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.18),0_0_0_1px_rgba(255,183,3,0.06),inset_0_1px_0_rgba(255,183,3,0.10)]",
           className,
         )}
         aria-busy="true"
         aria-label="Carregando estatísticas..."
       >
-        <div className="flex items-center gap-2">
-          <SkeletonPill width={96} />
-          <SkeletonPill width={82} />
+        <div className={cn("flex items-center", denseGlobal ? "gap-1.5" : "gap-2")}>
+          <SkeletonPill width={denseGlobal ? 82 : 96} />
+          <SkeletonPill width={denseGlobal ? 74 : 82} />
         </div>
-        <div className="flex items-center gap-1.5">
-          <SkeletonPill width={88} />
-          <SkeletonPill width={102} />
+        <div className={cn("flex items-center", denseGlobal ? "gap-1" : "gap-1.5")}>
+          <SkeletonPill width={denseGlobal ? 76 : 88} />
+          <SkeletonPill width={denseGlobal ? 80 : 102} />
           <SkeletonCircle />
           <SkeletonCircle />
           <SkeletonCircle />
@@ -106,12 +111,14 @@ export function TopStatsBar({
     return (
       <div
         className={cn(
-          "relative z-30 mx-auto flex h-[52px] w-full items-center justify-between gap-3 rounded-[14px] border-2 border-[#6D4C41]/70 bg-[linear-gradient(180deg,rgba(42,24,16,0.92),rgba(30,14,8,0.90))] px-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.18),0_0_0_1px_rgba(255,183,3,0.06),inset_0_1px_0_rgba(255,183,3,0.10)]",
+          denseGlobal
+            ? "relative z-30 mx-auto flex h-[46px] w-full items-center justify-between gap-2 rounded-[13px] border-2 border-[#6D4C41]/70 bg-[linear-gradient(180deg,rgba(42,24,16,0.92),rgba(30,14,8,0.90))] px-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.18),0_0_0_1px_rgba(255,183,3,0.06),inset_0_1px_0_rgba(255,183,3,0.10)]"
+            : "relative z-30 mx-auto flex h-[52px] w-full items-center justify-between gap-3 rounded-[14px] border-2 border-[#6D4C41]/70 bg-[linear-gradient(180deg,rgba(42,24,16,0.92),rgba(30,14,8,0.90))] px-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.18),0_0_0_1px_rgba(255,183,3,0.06),inset_0_1px_0_rgba(255,183,3,0.10)]",
           className,
         )}
       >
         {/* Left: activity stats */}
-        <div className="flex min-w-0 items-center gap-2">
+        <div className={cn("flex min-w-0 items-center", denseGlobal ? "gap-1.5" : "gap-2")}>
           <HudPill
             icon={<FlameIcon className="h-4 w-4 text-orange-400" />}
             value={`${safeStreak}`}
@@ -122,7 +129,7 @@ export function TopStatsBar({
                 ? `Você está em uma sequência de ${safeStreak} dia${safeStreak !== 1 ? "s" : ""}`
                 : "Nenhuma sequência ativa — estude hoje!"
             }
-            className="min-w-[96px] justify-center"
+            className={cn("justify-center", denseGlobal ? "min-w-[82px]" : "min-w-[96px]")}
           />
           <HudPill
             icon={<Zap className="h-4 w-4 text-amber-300" strokeWidth={2.2} />}
@@ -130,21 +137,21 @@ export function TopStatsBar({
             label="nível"
             watchValue={safeXp}
             tooltip={`${safeXp}% do nível atual completo`}
-            className="min-w-[82px] justify-center"
+            className={cn("justify-center", denseGlobal ? "min-w-[74px]" : "min-w-[82px]")}
           />
         </div>
 
         {/* Divider */}
-        <span aria-hidden className="h-5 w-px shrink-0 bg-[#8B6642]/30" />
+        <span aria-hidden className={cn("w-px shrink-0 bg-[#8B6642]/30", denseGlobal ? "h-4" : "h-5")} />
 
         {/* Right: economy + actions */}
-        <div className="flex min-w-0 items-center gap-1.5">
+        <div className={cn("flex min-w-0 items-center", denseGlobal ? "gap-1" : "gap-1.5")}>
           <HudPill
             icon={<GemIcon className="h-4 w-4 text-fuchsia-300" />}
             value={formatInt(safeGems)}
             watchValue={safeGems}
             tooltip="Saldo disponível de moedas Axion"
-            className="min-w-[88px] justify-center"
+            className={cn("justify-center", denseGlobal ? "min-w-[76px]" : "min-w-[88px]")}
           />
           {hasEnergy ? (
             <HudPill
@@ -153,7 +160,7 @@ export function TopStatsBar({
               label={`/${energyMax}`}
               watchValue={energyCurrent}
               tooltip={`Energia atual: ${energyCurrent} / ${energyMax}`}
-              className="min-w-[88px] justify-center"
+              className={cn("justify-center", denseGlobal ? "min-w-[76px]" : "min-w-[88px]")}
             />
           ) : null}
           <HudPill
@@ -162,7 +169,7 @@ export function TopStatsBar({
             label="xp"
             watchValue={safeXpTotal}
             tooltip="XP total acumulado"
-            className="min-w-[102px] justify-center"
+            className={cn("justify-center", denseGlobal ? "min-w-[88px]" : "min-w-[102px]")}
           />
 
           <ActionPill

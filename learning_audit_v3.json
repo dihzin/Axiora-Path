@@ -1,0 +1,162 @@
+{
+  "generated_at": "2026-03-18T20:00:16.075888+00:00",
+  "status": "PASS",
+  "summary": {
+    "total_checks": 8,
+    "passed": 8,
+    "failed": 0
+  },
+  "checks": [
+    {
+      "rule_id": "canonical_curriculum_exists",
+      "title": "Canonical curriculum exists",
+      "status": "PASS",
+      "details": "Canonical curriculum directory and expected subject YAML files are present.",
+      "evidence": [
+        "D:\\Desenvolvimento de Apps\\Axiora-Path\\apps\\api\\app\\curriculum\\subjects",
+        "english.yaml",
+        "finance.yaml",
+        "geography.yaml",
+        "history.yaml",
+        "logic.yaml",
+        "math.yaml",
+        "portuguese.yaml",
+        "science.yaml"
+      ],
+      "metrics": {
+        "expected_subject_files": 8,
+        "found_subject_files": 8,
+        "missing_subject_files": []
+      }
+    },
+    {
+      "rule_id": "subject_must_have_skills",
+      "title": "Subject must have skills",
+      "status": "PASS",
+      "details": "Every curriculum subject defines at least one skill.",
+      "evidence": [
+        "english",
+        "finance",
+        "geography",
+        "history",
+        "logic",
+        "math",
+        "portuguese",
+        "science"
+      ],
+      "metrics": {
+        "subjects_total": 8,
+        "subjects_without_skills": []
+      }
+    },
+    {
+      "rule_id": "skill_must_have_lessons",
+      "title": "Skill must have lessons",
+      "status": "PASS",
+      "details": "Every curriculum skill defines at least one lesson.",
+      "evidence": [
+        "english::vocabulary",
+        "english::reading_in_english",
+        "english::conversation_basics",
+        "finance::money_basics",
+        "finance::saving_and_planning",
+        "finance::conscious_consumption",
+        "geography::maps_and_location",
+        "geography::landscapes",
+        "geography::human_geography",
+        "history::chronology",
+        "history::local_and_national_history",
+        "history::cultural_heritage",
+        "logic::pattern_recognition",
+        "logic::deductive_reasoning",
+        "logic::problem_solving",
+        "math::addition",
+        "math::subtraction",
+        "math::multiplication",
+        "portuguese::reading_comprehension",
+        "portuguese::grammar_basics",
+        "portuguese::writing_fluency",
+        "science::living_things",
+        "science::matter_and_materials",
+        "science::earth_and_space"
+      ],
+      "metrics": {
+        "skills_total": 24,
+        "skills_without_lessons": []
+      }
+    },
+    {
+      "rule_id": "lesson_must_have_generator",
+      "title": "Lesson must have generator",
+      "status": "PASS",
+      "details": "Curriculum lessons route through the centralized LessonEngine generator.",
+      "evidence": [
+        "apps/api/app/services/lesson_engine.py",
+        "apps/api/app/api/routes/learn_v2.py",
+        "lessons_checked=72"
+      ],
+      "metrics": {
+        "lessons_total": 72,
+        "generator_connected": true
+      }
+    },
+    {
+      "rule_id": "lesson_must_have_age_rule",
+      "title": "Lesson must have age rule",
+      "status": "PASS",
+      "details": "Lessons inherit subject age groups and the LessonEngine caps difficulty by age group.",
+      "evidence": [
+        "apps/api/app/curriculum/subjects/*.yaml",
+        "apps/api/app/services/lesson_engine.py::_cap_for_age_group"
+      ],
+      "metrics": {
+        "lessons_total": 72,
+        "lessons_without_age_groups": 0,
+        "engine_age_rule_connected": true
+      }
+    },
+    {
+      "rule_id": "progress_must_be_persisted",
+      "title": "Progress must be persisted",
+      "status": "PASS",
+      "details": "Student mastery, lesson progress, and subject state are persisted and updated by the Learn API.",
+      "evidence": [
+        "apps/api/app/models_learning.py",
+        "apps/api/app/services/learning_repository.py",
+        "apps/api/app/api/routes/learn_v2.py"
+      ],
+      "metrics": {
+        "models_present": true
+      }
+    },
+    {
+      "rule_id": "api_routes_connected_to_lesson_engine",
+      "title": "API routes connected to lesson engine",
+      "status": "PASS",
+      "details": "Learn V2 routes are wired to the curriculum, skill graph, lesson engine, and Axion learning engine.",
+      "evidence": [
+        "apps/api/app/api/routes/learn_v2.py"
+      ],
+      "metrics": {
+        "required_tokens_checked": 11,
+        "connected": true
+      }
+    },
+    {
+      "rule_id": "frontend_nodes_connected_to_api",
+      "title": "Frontend nodes connected to API",
+      "status": "PASS",
+      "details": "Progression map nodes are built from the current learning path API through useTrailData with explicit child context.",
+      "evidence": [
+        "apps/web/lib/api/client.ts",
+        "apps/web/hooks/useTrailData.ts",
+        "apps/web/components/trail/TrailScreen.tsx",
+        "apps/web/components/trail/ProgressionMap.tsx",
+        "apps/api/app/api/routes/learning.py"
+      ],
+      "metrics": {
+        "connected": true
+      }
+    }
+  ]
+}

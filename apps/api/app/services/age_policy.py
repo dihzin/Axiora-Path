@@ -47,7 +47,13 @@ AGE_GROUP_BOUNDS: dict[SubjectAgeGroup, tuple[int, int]] = {
 # ─── Core age resolution ──────────────────────────────────────────────────────
 
 
-def resolve_child_age(db: "DBSession", *, user_id: int, tenant_id: int) -> int | None:
+def resolve_child_age(
+    db: "DBSession",
+    *,
+    user_id: int,
+    tenant_id: int,
+    child_id: int | None = None,
+) -> int | None:
     """Return child age in years, or None if no child profile is linked to this user.
 
     Queries ChildProfile directly by user_id — NOT by tenant_id — so that in
@@ -55,18 +61,30 @@ def resolve_child_age(db: "DBSession", *, user_id: int, tenant_id: int) -> int |
 
     Returns None for parent/teacher actors (no ChildProfile.user_id == user_id).
     """
-    child = db.scalar(
-        select(ChildProfile)
-        .where(
-            ChildProfile.user_id == user_id,
-            ChildProfile.deleted_at.is_(None),
+    if child_id is not None:
+        child = db.scalar(
+            select(ChildProfile)
+            .where(
+                ChildProfile.id == int(child_id),
+                ChildProfile.tenant_id == int(tenant_id),
+                ChildProfile.deleted_at.is_(None),
+            )
+            .limit(1)
         )
-        .limit(1)
-    )
+    else:
+        child = db.scalar(
+            select(ChildProfile)
+            .where(
+                ChildProfile.user_id == user_id,
+                ChildProfile.tenant_id == int(tenant_id),
+                ChildProfile.deleted_at.is_(None),
+            )
+            .limit(1)
+        )
     if child is None or child.date_of_birth is None:
         logger.debug(
             "age_policy.resolve_child_age.no_profile",
-            extra={"user_id": user_id, "tenant_id": tenant_id},
+            extra={"user_id": user_id, "tenant_id": tenant_id, "child_id": child_id},
         )
         return None
     age = get_child_age(child.date_of_birth, today=date.today())
@@ -103,6 +121,7 @@ def enforce_subject_age_gate(
     tenant_id: int,
     user_id: int,
     subject_id: int,
+    child_id: int | None = None,
 ) -> None:
     """
     Raise HTTP 403 with canonical message if the child is outside the subject's
@@ -112,7 +131,7 @@ def enforce_subject_age_gate(
       - learning.py::_ensure_subject_allowed_for_child_age  (Portuguese 403)
       - aprender.py inline age_group check                  (English 403 - now unified)
     """
-    child_age = resolve_child_age(db, user_id=user_id, tenant_id=tenant_id)
+    child_age = resolve_child_age(db, user_id=user_id, tenant_id=tenant_id, child_id=child_id)
     if child_age is None:
         logger.debug(
             "age_policy.enforce.skipped_non_child",
@@ -133,6 +152,7 @@ def enforce_subject_age_gate(
         "age_policy.enforce.result",
         extra={
             "user_id": user_id,
+            "child_id": child_id,
             "subject_id": subject_id,
             "child_age": child_age,
             "age_min": subject.age_min,
@@ -157,6 +177,7 @@ def remap_subject_for_child_age(
     tenant_id: int,
     user_id: int,
     requested_subject_id: int,
+    child_id: int | None = None,
 ) -> int | None:
     """
     If the requested subject does not match the child's age range, attempt to
@@ -167,7 +188,7 @@ def remap_subject_for_child_age(
 
     Replaces: learning.py::_remap_subject_id_for_child_age
     """
-    child_age = resolve_child_age(db, user_id=user_id, tenant_id=tenant_id)
+    child_age = resolve_child_age(db, user_id=user_id, tenant_id=tenant_id, child_id=child_id)
     if child_age is None:
         return requested_subject_id
 

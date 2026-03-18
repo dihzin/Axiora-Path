@@ -28,7 +28,7 @@ def _pick(items: list[str], seed: int) -> str:
 
 def _difficulty_for(age_group: str, template_index: int) -> str:
     if age_group == "6-8":
-        return "EASY" if template_index <= 3 else "MEDIUM"
+        return "EASY"
     if age_group == "9-12":
         sequence = ("EASY", "MEDIUM", "MEDIUM", "HARD", "MEDIUM", "HARD")
         return sequence[template_index % len(sequence)]
@@ -41,7 +41,7 @@ def _math_contexts(age_group: str) -> list[str]:
         return ["figurinhas", "blocos coloridos", "adesivos", "bolinhas de gude", "frutas"]
     if age_group == "9-12":
         return ["camisas do time", "ingressos", "kits escolares", "livros", "cartas colecionáveis"]
-    return ["planilhas de estudo", "custos de projeto", "simulado", "pontos em campeonato", "tempo de treino"]
+    return ["moedas", "questões", "pontos", "cartões", "fichas"]
 
 
 def _names(age_group: str) -> list[str]:
@@ -72,12 +72,20 @@ def _pt_texts(age_group: str) -> list[dict[str, Any]]:
 def _math_variant(template_index: int, age_group: str, seed: int) -> dict[str, Any]:
     name = _pick(_names(age_group), seed)
     context = _pick(_math_contexts(age_group), seed + 1)
-    base = 4 + (seed % 11)
-    inc = 2 + (seed % 7)
+    if age_group == "6-8":
+        base = 1 + (seed % 4)
+        inc = 1 + ((seed // 2) % 3)
+    else:
+        base = 4 + (seed % 11)
+        inc = 2 + (seed % 7)
 
     if template_index == 0:
-        a = base + 3
-        b = inc + 2
+        if age_group == "6-8":
+            a = base + (seed % 2)
+            b = inc
+        else:
+            a = base + 3
+            b = inc + 2
         answer = a + b
         options = [answer, answer - 2, answer + 3]
         return {
@@ -93,8 +101,12 @@ def _math_variant(template_index: int, age_group: str, seed: int) -> dict[str, A
         }
 
     if template_index == 1:
-        total = (base + 2) * 3
-        divisor = 3
+        if age_group == "6-8":
+            divisor = 2
+            total = (base + 2) * divisor
+        else:
+            total = (base + 2) * 3
+            divisor = 3
         answer = total // divisor
         return {
             "prompt": f"{name} dividiu {total} {context} em {divisor} grupos iguais. Quantos em cada grupo?",
@@ -105,8 +117,12 @@ def _math_variant(template_index: int, age_group: str, seed: int) -> dict[str, A
         }
 
     if template_index == 2:
-        start = base
-        step = 2 + (seed % 3)
+        if age_group == "6-8":
+            start = 1 + (seed % 3)
+            step = 1 + (seed % 2)
+        else:
+            start = base
+            step = 2 + (seed % 3)
         missing = start + (step * 3)
         return {
             "prompt": f"Complete a sequência: {start}, {start + step}, {start + step * 2}, __, {start + step * 4}",
@@ -121,8 +137,12 @@ def _math_variant(template_index: int, age_group: str, seed: int) -> dict[str, A
         }
 
     if template_index == 3:
-        left = base + 9
-        right = base + 4
+        if age_group == "6-8":
+            left = base + 2
+            right = left + 1 + (seed % 2)
+        else:
+            left = base + 9
+            right = base + 4
         statement = f"{left} é menor que {right}."
         return {
             "prompt": f"Verdadeiro ou falso: {statement}",
@@ -131,22 +151,32 @@ def _math_variant(template_index: int, age_group: str, seed: int) -> dict[str, A
                     {"id": "true", "label": "Verdadeiro"},
                     {"id": "false", "label": "Falso"},
                 ],
-                "correctOptionId": "false",
+                "correctOptionId": "true" if left < right else "false",
             },
         }
 
     if template_index == 4:
-        pairs = [
-            {"itemId": "i1", "itemLabel": f"{base}+{inc}", "targetId": "t1", "targetLabel": str(base + inc)},
-            {"itemId": "i2", "itemLabel": f"{base + 6}-{inc}", "targetId": "t2", "targetLabel": str(base + 6 - inc)},
-            {"itemId": "i3", "itemLabel": f"{(base // 2) + 2}x2", "targetId": "t3", "targetLabel": str(((base // 2) + 2) * 2)},
-        ]
+        if age_group == "6-8":
+            pairs = [
+                {"itemId": "i1", "itemLabel": f"{base}+{inc}", "targetId": "t1", "targetLabel": str(base + inc)},
+                {"itemId": "i2", "itemLabel": f"{base + 2}+1", "targetId": "t2", "targetLabel": str(base + 3)},
+                {"itemId": "i3", "itemLabel": f"{base + 5}-{inc}", "targetId": "t3", "targetLabel": str(base + 5 - inc)},
+            ]
+        else:
+            pairs = [
+                {"itemId": "i1", "itemLabel": f"{base}+{inc}", "targetId": "t1", "targetLabel": str(base + inc)},
+                {"itemId": "i2", "itemLabel": f"{base + 6}-{inc}", "targetId": "t2", "targetLabel": str(base + 6 - inc)},
+                {"itemId": "i3", "itemLabel": f"{(base // 2) + 2}x2", "targetId": "t3", "targetLabel": str(((base // 2) + 2) * 2)},
+            ]
         return {
             "prompt": "Relacione cada expressão ao resultado correto.",
             "metadata": {"pairs": pairs, "variant": "DRAG_DROP"},
         }
 
-    numbers = [base + 7, base + 1, base + 4, base + 9]
+    if age_group == "6-8":
+        numbers = [base + 1, base + 4, base + 2, base + 5]
+    else:
+        numbers = [base + 7, base + 1, base + 4, base + 9]
     sorted_numbers = sorted(numbers)
     return {
         "prompt": f"Organize em ordem crescente: {', '.join(str(n) for n in numbers)}",

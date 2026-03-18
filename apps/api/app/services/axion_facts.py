@@ -99,7 +99,7 @@ class AxionFacts:
             else None
         )
         return {
-            "lastActiveAt": data["last_active_at"],
+            "lastActiveAt": data["last_active_at"].isoformat() if data["last_active_at"] is not None else None,
             "streakDays": data["streak_days"],
             "weeklyCompletionRate": data["weekly_completion_rate"],
             "recentApprovals": data["recent_approvals"],

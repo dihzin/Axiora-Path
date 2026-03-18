@@ -12,6 +12,8 @@ def test_subjects_filtered_by_child_age() -> None:
     aprender_route = _read(repo_root / "apps" / "api" / "app" / "api" / "routes" / "aprender.py")
     aprender_schema = _read(repo_root / "apps" / "api" / "app" / "schemas" / "aprender.py")
     age_policy = _read(repo_root / "apps" / "api" / "app" / "services" / "age_policy.py")
+    learning_schema = _read(repo_root / "apps" / "api" / "app" / "schemas" / "learning.py")
+    learning_route = _read(repo_root / "apps" / "api" / "app" / "api" / "routes" / "learning.py")
     use_trail_data = _read(repo_root / "apps" / "web" / "hooks" / "useTrailData.ts")
     api_client = _read(repo_root / "apps" / "web" / "lib" / "api" / "client.ts")
 
@@ -32,5 +34,12 @@ def test_subjects_filtered_by_child_age() -> None:
     assert 'age_max: int = Field(alias="ageMax")' in aprender_schema
 
     # Frontend hook wires child age correctly into getAprenderSubjects
-    assert "getAprenderSubjects(childId ? { childId } : undefined)" in use_trail_data
+    assert 'setError("Selecione uma crianca antes de abrir o Aprender.")' in use_trail_data
+    assert "getAprenderSubjects({ childId })" in use_trail_data
     assert "childId?: number" in api_client
+
+    # Learning runtime also requires and propagates explicit child context.
+    assert 'child_id: int | None = Field(default=None, alias="childId")' in learning_schema
+    assert 'Query(alias="childId")' in learning_route
+    assert "requested_child_id=child_id" in learning_route or "requested_child_id=payload.child_id" in learning_route
+    assert "getLearningPath(selectedSubjectId ?? undefined, childId)" in use_trail_data

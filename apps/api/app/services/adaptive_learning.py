@@ -315,17 +315,22 @@ def _default_settings() -> EffectiveLearningSettings:
     )
 
 
-def resolve_effective_learning_settings(db: Session, *, tenant_id: int | None) -> EffectiveLearningSettings:
+def resolve_effective_learning_settings(
+    db: Session,
+    *,
+    tenant_id: int | None,
+    child_id: int | None = None,
+) -> EffectiveLearningSettings:
     if tenant_id is None:
         return _default_settings()
-    child_id = _resolve_tenant_single_child_id(db, tenant_id=tenant_id)
-    if child_id is None:
+    resolved_child_id = int(child_id) if child_id is not None else _resolve_tenant_single_child_id(db, tenant_id=tenant_id)
+    if resolved_child_id is None:
         return _default_settings()
 
     row = db.scalar(
         select(LearningSettings).where(
             LearningSettings.tenant_id == tenant_id,
-            LearningSettings.child_id == child_id,
+            LearningSettings.child_id == resolved_child_id,
         )
     )
     if row is None:
@@ -518,6 +523,43 @@ def _pick_focus_skills(
 
     plans.sort(key=lambda item: item.priority, reverse=True)
     return plans[: min(5, max(3, len(plans)))]
+
+
+def _skill_has_candidate_content(
+    db: Session,
+    *,
+    skill_id: str,
+    lesson_id: int | None,
+    subject_id: int | None,
+) -> bool:
+    template_query = select(QuestionTemplate.id).where(QuestionTemplate.skill_id == skill_id)
+    if lesson_id is not None:
+        template_query = template_query.where(or_(QuestionTemplate.lesson_id == lesson_id, QuestionTemplate.lesson_id.is_(None)))
+    else:
+        template_query = template_query.where(QuestionTemplate.lesson_id.is_(None))
+    if db.scalar(template_query.limit(1)) is not None:
+        return True
+
+    question_query = (
+        select(Question.id)
+        .where(
+            Question.skill_id == skill_id,
+            Question.type != QuestionType.TEMPLATE,
+            ~Question.prompt.contains("Pergunta essencial"),
+        )
+    )
+    if lesson_id is not None:
+        question_query = question_query.where(or_(Question.lesson_id == lesson_id, Question.lesson_id.is_(None)))
+    elif subject_id is not None:
+        question_query = question_query.where(
+            or_(
+                Question.lesson_id.is_(None),
+                Question.lesson_id.in_(
+                    select(Lesson.id).join(Unit, Unit.id == Lesson.unit_id).where(Unit.subject_id == subject_id)
+                ),
+            )
+        )
+    return db.scalar(question_query.limit(1)) is not None
 
 
 def _render_template_str(value: str | None, variables: dict[str, Any]) -> str | None:
@@ -856,9 +898,10 @@ def generate_variant(
     template: QuestionTemplate,
     user_id: int,
     day_bucket: str,
+    request_seed: str,
     attempt_index: int,
 ) -> GeneratedVariant:
-    seed = sha256(f"{user_id}:{template.id}:{day_bucket}:{attempt_index}".encode("utf-8")).hexdigest()[:32]
+    seed = sha256(f"{user_id}:{template.id}:{day_bucket}:{request_seed}:{attempt_index}".encode("utf-8")).hexdigest()[:32]
     rng = SeededRng(seed)
     variables = _generate_variables(spec=template.generator_spec or {}, rng=rng)
     if isinstance(variables.get("context"), str):
@@ -952,7 +995,50 @@ def _recent_question_and_variant_ids(
     return q_ids, v_ids
 
 
-def _build_question_item(*, question: Question, variant: QuestionVariant | None) -> NextQuestionItem:
+def _coerce_subject_age_group(value: SubjectAgeGroup | str | None) -> SubjectAgeGroup | None:
+    if value is None:
+        return None
+    if isinstance(value, SubjectAgeGroup):
+        return value
+    normalized = str(value).strip().lower()
+    if normalized in {"6-8", "6_8", "age_6_8"}:
+        return SubjectAgeGroup.AGE_6_8
+    if normalized in {"9-12", "9_12", "9-11", "9_11", "age_9_12", "age_9_11"}:
+        return SubjectAgeGroup.AGE_9_12
+    if normalized in {"13-15", "13_15", "age_13_15"}:
+        return SubjectAgeGroup.AGE_13_15
+    return None
+
+
+def _cap_difficulty_for_age_group(
+    difficulty: QuestionDifficulty,
+    *,
+    age_group: SubjectAgeGroup | str | None,
+) -> QuestionDifficulty:
+    resolved = _coerce_subject_age_group(age_group)
+    if resolved == SubjectAgeGroup.AGE_6_8:
+        return QuestionDifficulty.EASY
+    if resolved == SubjectAgeGroup.AGE_9_12 and difficulty == QuestionDifficulty.HARD:
+        return QuestionDifficulty.MEDIUM
+    return difficulty
+
+
+def _effective_question_difficulty(
+    *,
+    base_difficulty: QuestionDifficulty,
+    variant: QuestionVariant | None,
+    age_group: SubjectAgeGroup | str | None,
+) -> QuestionDifficulty:
+    difficulty = variant.difficulty_override if variant is not None and variant.difficulty_override is not None else base_difficulty
+    return _cap_difficulty_for_age_group(difficulty, age_group=age_group)
+
+
+def _build_question_item(
+    *,
+    question: Question,
+    variant: QuestionVariant | None,
+    skill_age_group: SubjectAgeGroup | str | None = None,
+) -> NextQuestionItem:
     prompt = question.prompt
     explanation = question.explanation
     metadata = dict(question.metadata_json or {})
@@ -961,15 +1047,21 @@ def _build_question_item(*, question: Question, variant: QuestionVariant | None)
         payload = variant.variant_data or {}
         prompt = str(payload.get("prompt", prompt))
         explanation = payload.get("explanation", explanation)
-        metadata = dict(payload.get("metadata", metadata))
-        if variant.difficulty_override is not None:
-            difficulty = variant.difficulty_override
+        variant_metadata = payload.get("metadata")
+        if isinstance(variant_metadata, dict):
+            metadata = {**metadata, **variant_metadata}
+    difficulty = _effective_question_difficulty(
+        base_difficulty=question.difficulty,
+        variant=variant,
+        age_group=skill_age_group,
+    )
+    inferred_type = _infer_item_type_from_metadata(metadata, question.type)
     return NextQuestionItem(
         question_id=str(question.id),
         template_id=None,
         generated_variant_id=None,
         variant_id=str(variant.id) if variant is not None else None,
-        type=question.type,
+        type=inferred_type,
         prompt=prompt,
         explanation=explanation if isinstance(explanation, str) else None,
         skill_id=str(question.skill_id),
@@ -1022,6 +1114,23 @@ def _syllable_count_pt(word: str) -> int:
     return max(1, count)
 
 
+EN_VOCAB_FALLBACK_CHOICES = (
+    "maçã",
+    "livro",
+    "escola",
+    "amigo",
+    "água",
+)
+
+PT_SENTENCE_ORDER_PHRASES: dict[str, list[str]] = {
+    "amizade": ["A amizade", "cresce com", "cuidado e respeito"],
+    "escola": ["Na escola", "aprendemos juntos", "todos os dias"],
+    "leitura": ["A leitura", "abre portas", "para novas ideias"],
+    "natureza": ["A natureza", "precisa de", "cuidado diário"],
+    "respeito": ["O respeito", "fortalece", "a convivência"],
+}
+
+
 def _build_template_item(*, template: QuestionTemplate, generated_variant: GeneratedVariant) -> NextQuestionItem:
     payload = generated_variant.variant_data or {}
     metadata = dict(payload.get("metadata", {}))
@@ -1045,7 +1154,69 @@ def _build_template_item(*, template: QuestionTemplate, generated_variant: Gener
         word = str(variables.get("word", "")).strip() if isinstance(variables, dict) else ""
         if word:
             prompt = prompt.strip() or f"Quantas sílabas tem a palavra '{word}'?"
-            metadata["answer"] = int(metadata.get("answer", _syllable_count_pt(word)))
+            answer = int(metadata.get("answer", _syllable_count_pt(word)))
+            distractors: list[int] = []
+            for delta in (1, -1, 2, -2):
+                candidate = max(1, answer + delta)
+                if candidate != answer and candidate not in distractors:
+                    distractors.append(candidate)
+                if len(distractors) >= 2:
+                    break
+            choices = [answer, *distractors[:2]]
+            metadata = {
+                **metadata,
+                "answer": str(answer),
+                "options": [
+                    {"id": chr(ord("a") + idx), "label": str(choice)}
+                    for idx, choice in enumerate(choices)
+                ],
+                "correctOptionId": next(
+                    chr(ord("a") + idx)
+                    for idx, choice in enumerate(choices)
+                    if int(choice) == answer
+                ),
+            }
+    elif template.template_type == QuestionTemplateType.PT_SENTENCE_ORDER:
+        theme = str(variables.get("tema", "")).strip().lower()
+        parts = PT_SENTENCE_ORDER_PHRASES.get(theme) or ["O texto", "fica melhor", "com organização"]
+        shuffled = [parts[1], parts[2], parts[0]]
+        prompt = prompt.strip() or "Organize as partes para formar uma frase correta."
+        metadata = {
+            **metadata,
+            "items": shuffled,
+            "correctOrder": parts,
+        }
+    elif template.template_type == QuestionTemplateType.EN_VOCAB:
+        answer = str(
+            variables.get("answer")
+            or variables.get("word_pt")
+            or metadata.get("answer")
+            or ""
+        ).strip()
+        word_en = str(variables.get("word_en", "")).strip()
+        if word_en:
+            prompt = prompt.strip() or f"Escolha a tradução correta de '{word_en}'."
+        if answer and not isinstance(metadata.get("options"), list):
+            distractors = [item for item in EN_VOCAB_FALLBACK_CHOICES if item != answer][:2]
+            choices = [answer, *distractors]
+            seed_source = str(metadata.get("signature") or prompt or answer)
+            seed_int = int(sha256(seed_source.encode("utf-8")).hexdigest()[:8], 16)
+            if len(choices) > 1:
+                offset = seed_int % len(choices)
+                choices = choices[offset:] + choices[:offset]
+            options = []
+            correct_option_id = "a"
+            for idx, choice in enumerate(choices):
+                option_id = chr(ord("a") + idx)
+                if choice == answer:
+                    correct_option_id = option_id
+                options.append({"id": option_id, "label": choice})
+            metadata = {
+                **metadata,
+                "options": options,
+                "correctOptionId": correct_option_id,
+                "answer": answer,
+            }
 
     inferred_type = _infer_item_type_from_metadata(metadata, QuestionType.MCQ)
 
@@ -1154,6 +1325,37 @@ def build_next_questions(
         now=now,
         force_due_reviews=trigger_review,
     )
+    playable_focus_skills = [
+        skill
+        for skill in focus_skills
+        if _skill_has_candidate_content(
+            db,
+            skill_id=skill.skill_id,
+            lesson_id=lesson_id,
+            subject_id=subject_id,
+        )
+    ]
+    if playable_focus_skills:
+        focus_skills = playable_focus_skills
+    else:
+        playable_skill_ids = [
+            skill_id
+            for skill_id in skill_ids
+            if _skill_has_candidate_content(
+                db,
+                skill_id=skill_id,
+                lesson_id=lesson_id,
+                subject_id=subject_id,
+            )
+        ]
+        if playable_skill_ids:
+            focus_skills = _pick_focus_skills(
+                db,
+                user_id=user_id,
+                skill_ids=playable_skill_ids,
+                now=now,
+                force_due_reviews=trigger_review,
+            )
     if not focus_skills:
         return NextQuestionsPlan(items=[], focus_skills=[], difficulty_mix=DifficultyMix(1.0, 0.0, 0.0))
 
@@ -1166,7 +1368,8 @@ def build_next_questions(
     since = now - timedelta(days=ANTI_REPEAT_DAYS)
     recent_qids, recent_vids = _recent_question_and_variant_ids(db, user_id=user_id, since=since)
     day_bucket = now.strftime("%Y-%m-%d")
-    rng = SeededRng(f"{user_id}:{subject_id}:{lesson_id}:{day_bucket}:{safe_count}")
+    request_seed = now.isoformat(timespec="microseconds")
+    rng = SeededRng(f"{user_id}:{subject_id}:{lesson_id}:{day_bucket}:{request_seed}:{safe_count}")
     out: list[NextQuestionItem] = []
 
     for idx in range(safe_count):
@@ -1198,6 +1401,10 @@ def build_next_questions(
         else:
             templates_query = templates_query.where(QuestionTemplate.lesson_id.is_(None))
         templates = db.scalars(templates_query).all()
+        templates = sorted(
+            templates,
+            key=lambda item: sha256(f"{request_seed}:template:{item.id}".encode("utf-8")).hexdigest(),
+        )
         template_candidates: list[NextQuestionItem] = []
         for template in templates:
             try:
@@ -1214,6 +1421,7 @@ def build_next_questions(
                         template=template,
                         user_id=user_id,
                         day_bucket=day_bucket,
+                        request_seed=request_seed,
                         attempt_index=(idx * 10) + attempt,
                     )
                     signature = str((candidate.variant_data or {}).get("signature", ""))
@@ -1256,6 +1464,10 @@ def build_next_questions(
                 Question.skill_id == skill_plan.skill_id,
                 Question.type != QuestionType.TEMPLATE,
                 Question.difficulty == target_difficulty,
+                # Exclude placeholder seed questions inserted by migration 0092.
+                # These rows are allowed to exist historically, but must never be
+                # served when real question content is available.
+                ~Question.prompt.contains("Pergunta essencial"),
             )
             .order_by(Question.created_at.asc())
         )
@@ -1275,13 +1487,30 @@ def build_next_questions(
         questions = db.scalars(q_query).all()
         question_candidates: list[NextQuestionItem] = []
         if questions:
-            sorted_questions = sorted(questions, key=lambda item: 1 if str(item.id) in recent_qids else 0)
+            sorted_questions = sorted(
+                questions,
+                key=lambda item: (
+                    1 if str(item.id) in recent_qids else 0,
+                    sha256(f"{request_seed}:question:{item.id}".encode("utf-8")).hexdigest(),
+                ),
+            )
             for question in sorted_questions[:4]:
                 try:
                     variants = db.scalars(select(QuestionVariant).where(QuestionVariant.question_id == question.id)).all()
-                    preferred_variant = next((item for item in variants if str(item.id) not in recent_vids), None)
+                    sorted_variants = sorted(
+                        variants,
+                        key=lambda item: (
+                            1 if str(item.id) in recent_vids else 0,
+                            sha256(f"{request_seed}:variant:{item.id}".encode("utf-8")).hexdigest(),
+                        ),
+                    )
+                    preferred_variant = sorted_variants[0] if sorted_variants else None
                     fallback_variant = variants[0] if variants else None
-                    candidate_item = _build_question_item(question=question, variant=preferred_variant or fallback_variant)
+                    candidate_item = _build_question_item(
+                        question=question,
+                        variant=preferred_variant or fallback_variant,
+                        skill_age_group=skill_plan.age_group,
+                    )
                     question_candidates.append(candidate_item)
                 except Exception:
                     logger.exception(
@@ -1300,12 +1529,14 @@ def build_next_questions(
         if not all_candidates:
             continue
 
-        def _score(item: NextQuestionItem) -> tuple[int, int]:
+        def _score(item: NextQuestionItem) -> tuple[int, int, int, int]:
+            prompt_penalty = 1 if any(existing_item.prompt.strip().lower() == item.prompt.strip().lower() for existing_item in out) else 0
+            variant_penalty = 1 if item.variant_id and any(existing_item.variant_id == item.variant_id for existing_item in out) else 0
             # Prefer candidates that avoid long streaks of the same interaction.
             streak_penalty = 1 if _creates_type_streak(out, item.type) else 0
             # Prefer native question bank when possible to broaden interaction variety.
             template_penalty = 1 if item.template_id is not None else 0
-            return (streak_penalty, template_penalty)
+            return (prompt_penalty, variant_penalty, streak_penalty, template_penalty)
 
         ranked = sorted(all_candidates, key=_score)
         picked = ranked[0]
@@ -1315,6 +1546,10 @@ def build_next_questions(
                 picked = alternatives[0]
 
         out.append(picked)
+        if picked.question_id:
+            recent_qids.add(str(picked.question_id))
+        if picked.variant_id:
+            recent_vids.add(str(picked.variant_id))
 
     return NextQuestionsPlan(items=out, focus_skills=focus_skills, difficulty_mix=mix)
 
@@ -1331,13 +1566,20 @@ def _resolve_answer_target(
         question = db.get(Question, question_id)
         if question is None:
             raise ValueError("Question not found")
+        skill = db.get(Skill, str(question.skill_id))
+        skill_age_group = skill.age_group if skill is not None else None
         difficulty = question.difficulty
         if variant_id is not None:
             variant = db.get(QuestionVariant, variant_id)
             if variant is None or str(variant.question_id) != str(question.id):
                 raise ValueError("Variant not found for question")
-            if variant.difficulty_override is not None:
-                difficulty = variant.difficulty_override
+            difficulty = _effective_question_difficulty(
+                base_difficulty=question.difficulty,
+                variant=variant,
+                age_group=skill_age_group,
+            )
+        else:
+            difficulty = _cap_difficulty_for_age_group(difficulty, age_group=skill_age_group)
         return str(question.skill_id), difficulty
     if template_id is None or generated_variant_id is None:
         raise ValueError("questionId or (templateId + generatedVariantId) is required")

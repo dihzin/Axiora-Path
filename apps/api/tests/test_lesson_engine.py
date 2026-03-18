@@ -63,3 +63,23 @@ def test_learning_route_uses_lesson_engine() -> None:
     assert "from app.services.lesson_engine import LessonEngine" in source
     assert "LessonEngine(db, tenant_id=tenant.id).generate_lesson_contents(" in source
     assert "build_next_questions(" not in source
+
+
+def test_lesson_engine_avoids_duplicate_prompt_pick_when_possible() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    source = (repo_root / "apps" / "api" / "app" / "services" / "lesson_engine.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "def _prompt_key(" in source
+    assert "if self._prompt_key(picked.prompt) in {self._prompt_key(existing.prompt) for existing in items}:" in source
+
+
+def test_lesson_page_uses_session_target_for_right_rail_and_requires_server_finish() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    source = (
+        repo_root / "apps" / "web" / "app" / "(app)" / "child" / "aprender" / "lesson" / "[id]" / "page.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert "const stepTotal = Math.max(1, sessionTargetQuestions);" in source
+    assert "buildFinishFallbackFromSession" not in source

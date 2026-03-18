@@ -50,12 +50,16 @@ from app.services.aprender import (
     LessonNotFoundError,
     complete_lesson as _complete_lesson_progress,
 )
+from app.services.child_context import resolve_child_context
 from app.services.learning_insights import get_learning_insights
 from app.services.lesson_engine import LessonEngine
 from app.services.learning_path_events import build_learning_path, complete_path_event, start_path_event
 from app.services.learning_remediation import maybe_enrich_wrong_answer_explanation
-from app.services.age_policy import enforce_subject_age_gate, remap_subject_for_child_age
-from app.services.axion_child_profile import resolve_child_for_user
+from app.services.age_policy import (
+    enforce_subject_age_gate,
+    remap_subject_for_child_age,
+    resolve_child_age_by_child_id,
+)
 from app.services.axion_subject_mastery import record_content_outcome
 # get_child_age is now accessed via age_policy module (removed from direct import)
 
@@ -146,6 +150,24 @@ def _subject_has_playable_content(db: DBSession, *, subject_id: int) -> bool:
     return row is not None
 
 
+def _has_playable_content_for_child_age(db: DBSession, *, child_age: int) -> bool:
+    subject_ids = db.scalars(
+        select(Subject.id).where(
+            Subject.age_min <= int(child_age),
+            Subject.age_max >= int(child_age),
+        )
+    ).all()
+    return any(_subject_has_playable_content(db, subject_id=int(subject_id)) for subject_id in subject_ids)
+
+
+def _learning_unavailable_detail_for_child_age(child_age: int | None) -> str:
+    if child_age is None:
+        return "Trilha de aprendizado ainda não configurada. Execute os seeds de currículo e eventos."
+    if child_age < 6:
+        return "Ainda não há missões disponíveis para esta criança. O currículo atual começa aos 6 anos."
+    return "Ainda não há missões disponíveis para a idade desta criança."
+
+
 # NOTE: _remap_subject_id_for_child_age and _ensure_subject_allowed_for_child_age
 # were removed in Wave 1 refactor (2026-03-16).
 # Canonical implementations now live in app.services.age_policy:
@@ -156,18 +178,28 @@ def _subject_has_playable_content(db: DBSession, *, subject_id: int) -> bool:
 @router.get("/path", response_model=LearningPathResponse)
 def get_learning_path(
     db: DBSession,
-    _: Annotated[Tenant, Depends(get_current_tenant)],
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
     user: Annotated[User, Depends(get_current_user)],
-    __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
     subject_id: Annotated[int | None, Query(alias="subjectId")] = None,
+    child_id: Annotated[int | None, Query(alias="childId")] = None,
 ) -> LearningPathResponse:
+    active_child = resolve_child_context(
+        db,
+        tenant_id=tenant.id,
+        user=user,
+        membership=membership,
+        requested_child_id=child_id,
+    )
+    active_child_age = resolve_child_age_by_child_id(db, child_id=active_child.id)
     effective_subject_id = subject_id
     if effective_subject_id is not None:
         effective_subject_id = remap_subject_for_child_age(
             db,
-            tenant_id=_.id,
+            tenant_id=tenant.id,
             user_id=user.id,
             requested_subject_id=int(effective_subject_id),
+            child_id=active_child.id,
         )
     if effective_subject_id is not None and not _subject_has_playable_content(db, subject_id=effective_subject_id):
         effective_subject_id = None
@@ -176,6 +208,7 @@ def get_learning_path(
             db,
             user_id=user.id,
             subject_id=effective_subject_id,
+            child_age=active_child_age,
         )
     except ValueError as exc:
         message = str(exc).strip().lower()
@@ -186,10 +219,16 @@ def get_learning_path(
                     db,
                     user_id=user.id,
                     subject_id=None,
+                    child_age=active_child_age,
                 )
             except ValueError as fallback_exc:
                 fallback_message = str(fallback_exc).strip().lower()
                 if "no subject available" in fallback_message:
+                    if active_child_age is not None and not _has_playable_content_for_child_age(db, child_age=active_child_age):
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail=_learning_unavailable_detail_for_child_age(active_child_age),
+                        ) from fallback_exc
                     raise HTTPException(
                         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                         detail="Trilha de aprendizado ainda não configurada. Execute os seeds de currículo e eventos.",
@@ -335,8 +374,15 @@ def get_learning_next_questions(
     db: DBSession,
     tenant: Annotated[Tenant, Depends(get_current_tenant)],
     user: Annotated[User, Depends(get_current_user)],
-    __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> LearningNextResponse:
+    active_child = resolve_child_context(
+        db,
+        tenant_id=tenant.id,
+        user=user,
+        membership=membership,
+        requested_child_id=payload.child_id,
+    )
     effective_subject_id = payload.subject_id
     if effective_subject_id is None and payload.lesson_id is not None:
         lesson = db.get(Lesson, payload.lesson_id)
@@ -350,6 +396,7 @@ def get_learning_next_questions(
             tenant_id=tenant.id,
             user_id=user.id,
             subject_id=int(effective_subject_id),
+            child_id=active_child.id,
         )
 
     try:
@@ -441,10 +488,17 @@ def submit_learning_answer(
     db: DBSession,
     tenant: Annotated[Tenant, Depends(get_current_tenant)],
     user: Annotated[User, Depends(get_current_user)],
-    __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> LearningAnswerResponse:
     remediation_text: str | None = None
     correlation_id = _normalize_learning_correlation_id(payload.correlation_id)
+    active_child = resolve_child_context(
+        db,
+        tenant_id=tenant.id,
+        user=user,
+        membership=membership,
+        requested_child_id=payload.child_id,
+    )
     try:
         result = track_question_answer(
             db,
@@ -457,19 +511,17 @@ def submit_learning_answer(
             time_ms=payload.time_ms,
             tenant_id=tenant.id,
         )
-        child_id = resolve_child_for_user(db, user_id=user.id, tenant_id=tenant.id)
-        if child_id is not None:
-            subject_name = _resolve_subject_name_for_skill(db, skill_id=result.skill_id)
-            if subject_name:
-                _apply_subject_mastery_once_per_decision(
-                    db,
-                    tenant_id=tenant.id,
-                    user_id=user.id,
-                    child_id=int(child_id),
-                    subject=subject_name,
-                    outcome=_to_mastery_outcome(payload.result),
-                    correlation_id=correlation_id,
-                )
+        subject_name = _resolve_subject_name_for_skill(db, skill_id=result.skill_id)
+        if subject_name:
+            _apply_subject_mastery_once_per_decision(
+                db,
+                tenant_id=tenant.id,
+                user_id=user.id,
+                child_id=int(active_child.id),
+                subject=subject_name,
+                outcome=_to_mastery_outcome(payload.result),
+                correlation_id=correlation_id,
+            )
         if payload.result == QuestionResult.WRONG:
             remediation_text = maybe_enrich_wrong_answer_explanation(
                 db,
@@ -507,8 +559,15 @@ def start_session(
     db: DBSession,
     tenant: Annotated[Tenant, Depends(get_current_tenant)],
     user: Annotated[User, Depends(get_current_user)],
-    __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> LearningSessionStartResponse:
+    active_child = resolve_child_context(
+        db,
+        tenant_id=tenant.id,
+        user=user,
+        membership=membership,
+        requested_child_id=payload.child_id,
+    )
     subject_id = payload.subject_id
     unit_id = payload.unit_id
     lesson_id = payload.lesson_id
@@ -532,9 +591,10 @@ def start_session(
         tenant_id=tenant.id,
         user_id=user.id,
         subject_id=int(subject_id),
+        child_id=active_child.id,
     )
 
-    effective = resolve_effective_learning_settings(db, tenant_id=tenant.id)
+    effective = resolve_effective_learning_settings(db, tenant_id=tenant.id, child_id=active_child.id)
     if lesson_id is not None:
         completed_today = daily_completed_learning_lessons(db, user_id=user.id)
         if completed_today >= effective.max_lessons_per_day:
@@ -593,8 +653,15 @@ def finish_session(
     events: EventSvc,
     tenant: Annotated[Tenant, Depends(get_current_tenant)],
     user: Annotated[User, Depends(get_current_user)],
-    __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    membership: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
 ) -> LearningSessionFinishResponse:
+    active_child = resolve_child_context(
+        db,
+        tenant_id=tenant.id,
+        user=user,
+        membership=membership,
+        requested_child_id=payload.child_id,
+    )
     try:
         result = finish_adaptive_learning_session(
             db,
@@ -666,6 +733,8 @@ def finish_session(
         )
         if decision is not None and decision.tenant_id is not None and int(decision.tenant_id) == int(tenant.id):
             child_id = int(decision.child_id) if decision.child_id is not None else None
+            if child_id is None:
+                child_id = int(active_child.id)
             completed_at = datetime.now(UTC)
             events.emit(
                 type="axion_session_completed",

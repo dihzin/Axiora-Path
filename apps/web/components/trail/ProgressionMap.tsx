@@ -348,17 +348,24 @@ export default function ProgressionMap({
   const trackCenter = trackWidth / 2;
   const isMobile = trackWidth < 768;
   const compactMobile = trackWidth < 480;
+  const denseDesktop = !isMobile && (trackWidth <= 1180 || viewportHeightPx <= 760);
   const quality: "low" | "high" = isMobile ? "low" : "high";
+  const desktopStartY = denseDesktop ? 182 : START_Y;
+  const desktopSafeTop = denseDesktop ? 78 : SAFE_TOP;
+  const desktopSafeBottom = denseDesktop ? 118 : SAFE_BOTTOM;
+  const desktopSafeMargin = denseDesktop ? 90 : SAFE_MARGIN;
+  const desktopSafePad = denseDesktop ? { top: 92, right: 104, bottom: 126, left: 104 } : SAFE_PAD;
+  const maxNodeRadius = denseDesktop ? 38 : NODE_RADIUS;
   const nodeGap = useMemo(() => {
-    if (nodes.length <= 1) return NODE_GAP;
+    const maxDesktopGap = denseDesktop ? 132 : NODE_GAP;
+    if (nodes.length <= 1) return maxDesktopGap;
     if (!isMobile) {
-      // Reserve 120px top (badge clearance) + 40px bottom (safety) = 160px total.
-      // The remaining space is split evenly between nodes.
-      const verticalAvailable = Math.max(440, view.h - 160 - 60);
-      return Math.max(72, Math.min(NODE_GAP, Math.floor(verticalAvailable / (nodes.length - 1))));
+      const reservedSpace = denseDesktop ? 178 : 220;
+      const verticalAvailable = Math.max(denseDesktop ? 360 : 440, view.h - reservedSpace);
+      return Math.max(denseDesktop ? 64 : 72, Math.min(maxDesktopGap, Math.floor(verticalAvailable / (nodes.length - 1))));
     }
     return NODE_GAP;
-  }, [isMobile, nodes.length, view.h]);
+  }, [denseDesktop, isMobile, nodes.length, view.h]);
   const desktopHD = quality === "high";
   const desktopPresetConfig = desktopHD
     ? DESKTOP_GRAPHICS_PRESET === "ultra"
@@ -378,15 +385,15 @@ export default function ProgressionMap({
   const computedPoints = useMemo<PersistedMapData>(() => {
     if (!nodes || nodes.length === 0) return EMPTY_MAP_DATA;
 
-    const estimatedWorldHeight = Math.max(START_Y + Math.max(nodes.length - 1, 0) * nodeGap + SAFE_BOTTOM + NODE_RADIUS, 780);
+    const estimatedWorldHeight = Math.max(desktopStartY + Math.max(nodes.length - 1, 0) * nodeGap + desktopSafeBottom + maxNodeRadius, denseDesktop ? 660 : 780);
     const rawPoints = nodes.map((_, gi) => {
       let x = trackCenter + PATH_PATTERN[gi % PATH_PATTERN.length] * amplitude;
-      x = Math.max(SAFE_MARGIN, x);
-      x = Math.min(trackWidth - SAFE_MARGIN, x);
+      x = Math.max(desktopSafeMargin, x);
+      x = Math.min(trackWidth - desktopSafeMargin, x);
 
-      let y = START_Y + gi * nodeGap;
-      y = Math.max(SAFE_TOP, y);
-      y = Math.min(estimatedWorldHeight - SAFE_BOTTOM, y);
+      let y = desktopStartY + gi * nodeGap;
+      y = Math.max(desktopSafeTop, y);
+      y = Math.min(estimatedWorldHeight - desktopSafeBottom, y);
 
       return { x, y };
     });
@@ -408,11 +415,11 @@ export default function ProgressionMap({
       maxY = Math.max(maxY, point.y + radius);
     });
 
-    minX -= SAFE_PAD.left;
-    maxX += SAFE_PAD.right;
+    minX -= desktopSafePad.left;
+    maxX += desktopSafePad.right;
     const desktopTopInset = isMobile ? 0 : 56;
-    minY -= SAFE_PAD.top + BADGE_ALLOW + desktopTopInset;
-    maxY += SAFE_PAD.bottom + 18;
+    minY -= desktopSafePad.top + BADGE_ALLOW + desktopTopInset;
+    maxY += desktopSafePad.bottom + 18;
 
     const offsetX = -minX;
     const offsetY = -minY;
@@ -428,7 +435,7 @@ export default function ProgressionMap({
       x: point.x - minPointX,
       y: point.y - minPointY,
     }));
-    const worldEndPadding = isMobile ? WORLD_END_PADDING : 120;
+    const worldEndPadding = isMobile ? WORLD_END_PADDING : denseDesktop ? 92 : 120;
     const worldHeight = Math.max(1, maxY - minY + worldEndPadding);
 
     const activeIndex = (() => {
@@ -455,7 +462,7 @@ export default function ProgressionMap({
       progressPath,
       activeSegmentPath,
     };
-  }, [activeNodeId, amplitude, isMobile, nodeGap, nodes, trackCenter, trackWidth]);
+  }, [activeNodeId, amplitude, denseDesktop, desktopSafeBottom, desktopSafeMargin, desktopSafePad, desktopSafeTop, desktopStartY, isMobile, maxNodeRadius, nodeGap, nodes, trackCenter, trackWidth]);
 
   useEffect(() => {
     if (computedPoints.points.length > 0) {
@@ -503,7 +510,7 @@ export default function ProgressionMap({
   // nodeHalf(40) + connector(52) + badgeWidth(200) = 292px to the left of the
   // node center. If the centered offset is smaller, clamp up — the right badge
   // may clip slightly on narrow viewports, but the primary badge stays readable.
-  const BADGE_LEFT_CLEARANCE = 292;
+  const BADGE_LEFT_CLEARANCE = denseDesktop ? 244 : 292;
   const finalOffsetX = Math.max(BADGE_LEFT_CLEARANCE - minNodeX, worldOffsetX + opticalOffset);
   // Optical offset: shifts the world DOWN — this IS the top margin for the first node.
   // We center the trail vertically (equal space above first node and below last node)
@@ -1255,6 +1262,7 @@ export default function ProgressionMap({
                         nextPoint: points[index + 1],
                         nodeIndex: index,
                         compactMobile,
+                        denseDesktop,
                         highlightedNodeId: selectedNodeId ?? activeNodeId,
                         // PROMPT 07: on mobile, intercept click to show bottom card
                         onNodeClick: isMobile

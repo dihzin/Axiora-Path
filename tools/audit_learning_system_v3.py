@@ -158,9 +158,10 @@ def _load_sources() -> dict[str, str]:
         "models_learning": root / "apps" / "api" / "app" / "models_learning.py",
         "learning_repository": root / "apps" / "api" / "app" / "services" / "learning_repository.py",
         "client": root / "apps" / "web" / "lib" / "api" / "client.ts",
-        "use_learning_state": root / "apps" / "web" / "hooks" / "useLearningState.ts",
+        "use_trail_data": root / "apps" / "web" / "hooks" / "useTrailData.ts",
         "trail_screen": root / "apps" / "web" / "components" / "trail" / "TrailScreen.tsx",
         "progression_map": root / "apps" / "web" / "components" / "trail" / "ProgressionMap.tsx",
+        "learning_route": root / "apps" / "api" / "app" / "api" / "routes" / "learning.py",
     }
     return {name: _read_text(path) for name, path in files.items()}
 
@@ -341,32 +342,42 @@ def _check_api_routes_connected_to_lesson_engine(sources: dict[str, str]) -> Aud
 
 def _check_frontend_nodes_connected_to_api(sources: dict[str, str]) -> AuditCheck:
     client_source = sources["client"]
-    hook_source = sources["use_learning_state"]
+    hook_source = sources["use_trail_data"]
     trail_source = sources["trail_screen"]
     map_source = sources["progression_map"]
+    learning_route_source = sources["learning_route"]
     connected = all(
         token in client_source
-        for token in ("getLearnSkills", "skillGraph", "prerequisiteMasteryThreshold", "lessonId")
+        for token in ("getLearningPath", "getAprenderSubjects", "childId", "subjectId")
     ) and all(
         token in hook_source
-        for token in ("useLearningState", "getLearnSkills", "setSkillGraph(response.skillGraph)", "lessonSkillMap[lesson.lessonId]")
+        for token in (
+            "useTrailData",
+            "getAprenderSubjects({ childId })",
+            "getLearningPath(selectedSubjectId ?? undefined, childId)",
+            'setError("Selecione uma crianca antes de abrir o Aprender.")',
+        )
     ) and all(
         token in trail_source
-        for token in ("ProgressionMap", "useLearningState", "lessonId: lesson.id", "difficulty: lesson.difficulty", "stars: lesson.starsEarned")
+        for token in ("ProgressionMap", "useTrailData", "lessonId: lesson.id", "stars: lesson.starsEarned")
     ) and all(
         token in map_source
         for token in ("lessonId: number", "difficulty: string", "stars: number", 'NodeStatus = "done" | "current" | "available" | "locked"')
+    ) and all(
+        token in learning_route_source
+        for token in ("Query(alias=\"childId\")", "resolve_child_context(", "requested_child_id=child_id")
     )
     return AuditCheck(
         rule_id="frontend_nodes_connected_to_api",
         title="Frontend nodes connected to API",
         status="PASS" if connected else "FAIL",
-        details="Progression map nodes are built from Learn API data through useLearningState." if connected else "Frontend progression nodes are not fully wired to Learn API data.",
+        details="Progression map nodes are built from the current learning path API through useTrailData with explicit child context." if connected else "Frontend progression nodes are not fully wired to the current learning path API and child context.",
         evidence=[
             "apps/web/lib/api/client.ts",
-            "apps/web/hooks/useLearningState.ts",
+            "apps/web/hooks/useTrailData.ts",
             "apps/web/components/trail/TrailScreen.tsx",
             "apps/web/components/trail/ProgressionMap.tsx",
+            "apps/api/app/api/routes/learning.py",
         ],
         metrics={
             "connected": connected,

@@ -27,6 +27,7 @@ type RenderNodeOptions = {
   nextPoint?: { x: number; y: number };
   nodeIndex: number;
   compactMobile: boolean;
+  denseDesktop?: boolean;
   highlightedNodeId?: string;
   onNodeClick?: (node: RenderableMapNode) => void;
   quality: "low" | "high";
@@ -149,14 +150,22 @@ function getNodeVisuals(status: RenderNodeStatus, kind: MissionKind) {
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
 /** #4 — Node size hierarchy by status */
-function getNodeSize(status: RenderNodeStatus): number {
+function getNodeSize(status: RenderNodeStatus, denseDesktop = false): number {
+  if (denseDesktop) {
+    if (status === "current") return 70;
+    if (status === "locked") return 52;
+    return 60;
+  }
   if (status === "current") return 80;
   if (status === "locked")  return 58;
   return 68; // done + available
 }
 
-const CONNECTOR_GAP_PX = 52; // fixed gap between node edge and badge
-const BADGE_WIDTH_EST  = 200;
+function getConnectorGapPx(denseDesktop = false) {
+  return denseDesktop ? 40 : 52;
+}
+
+const BADGE_WIDTH_EST = 200;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -301,6 +310,7 @@ function MapNodeItem({
   isActive,
   canvasWidth,
   compactMobile,
+  denseDesktop = false,
   point,
   prevPoint,
   nextPoint,
@@ -314,6 +324,7 @@ function MapNodeItem({
   isActive: boolean;
   canvasWidth: number;
   compactMobile: boolean;
+  denseDesktop?: boolean;
   point: { x: number; y: number };
   prevPoint?: { x: number; y: number };
   nextPoint?: { x: number; y: number };
@@ -337,10 +348,11 @@ function MapNodeItem({
   const haloColor   = getHaloColor(node.status, missionKind);
 
   // #4 — Dynamic size by status
-  const nodeSize = getNodeSize(node.status);
+  const nodeSize = getNodeSize(node.status, denseDesktop);
   const nodeHalf = nodeSize / 2;
-  const badgeOffset   = nodeHalf + CONNECTOR_GAP_PX;
-  const connectorLen  = CONNECTOR_GAP_PX;
+  const connectorGapPx = getConnectorGapPx(denseDesktop);
+  const badgeOffset   = nodeHalf + connectorGapPx;
+  const connectorLen  = connectorGapPx;
 
   // CSS classes
   const statusClass = isDone ? "ax-node-completed" : isCurrent ? "ax-node-current" : isLocked ? "ax-node-locked" : "ax-node-available";
@@ -546,7 +558,7 @@ function MapNodeItem({
             border: `1.5px solid ${visuals.labelBorder}`,
             boxShadow: visuals.labelShadow,
             filter: "drop-shadow(0 5px 14px rgba(44,30,18,0.32))",
-            minWidth: compactMobile ? "130px" : "160px",
+            minWidth: compactMobile ? "130px" : denseDesktop ? "144px" : "160px",
             maxWidth: `${BADGE_WIDTH_EST}px`,
             transition: "box-shadow 200ms ease",
             textRendering: "geometricPrecision",
@@ -560,7 +572,7 @@ function MapNodeItem({
             style={{ background: `linear-gradient(180deg, ${missionMeta.accent}, ${missionMeta.accent}44)` }}
           />
 
-          <div className={cn("pl-3.5 pr-3", compactMobile ? "py-1.5" : "py-2.5")}>
+          <div className={cn(denseDesktop ? "pl-3 pr-2.5" : "pl-3.5 pr-3", compactMobile ? "py-1.5" : denseDesktop ? "py-2" : "py-2.5")}>
             {/* Header: icon pill + type label */}
             <div className="mb-1.5 flex items-center gap-1.5">
               <span
@@ -570,14 +582,14 @@ function MapNodeItem({
               >
                 <MissionIcon className="h-[10px] w-[10px]" strokeWidth={2.6} style={{ color: missionMeta.accent }} aria-hidden />
               </span>
-              <span className="text-[9px] font-black uppercase tracking-[0.14em]" style={{ color: missionMeta.accent }}>
+              <span className={cn("font-black uppercase tracking-[0.14em]", denseDesktop ? "text-[8px]" : "text-[9px]")} style={{ color: missionMeta.accent }}>
                 {missionMeta.label}
               </span>
             </div>
 
             {/* Title */}
             <p
-              className={cn("font-bold leading-[1.22] tracking-[-0.015em]", compactMobile ? "text-[11px]" : "text-[13px]")}
+              className={cn("font-bold leading-[1.22] tracking-[-0.015em]", compactMobile ? "text-[11px]" : denseDesktop ? "text-[12px]" : "text-[13px]")}
               style={{ color: visuals.labelText }}
             >
               {node.title}
@@ -586,7 +598,7 @@ function MapNodeItem({
             {/* Footer: difficulty + stars */}
             <div className="mt-1.5 flex items-center justify-between gap-2">
               <span
-                className="rounded-full px-1.5 py-[2px] text-[9px] font-semibold uppercase tracking-[0.06em]"
+                className={cn("rounded-full px-1.5 py-[2px] font-semibold uppercase tracking-[0.06em]", denseDesktop ? "text-[8px]" : "text-[9px]")}
                 style={(() => {
                   const ds = getDifficultyStyle(node.difficulty);
                   return { color: ds.color, background: ds.bg, border: `1px solid ${ds.border}` };
@@ -594,7 +606,7 @@ function MapNodeItem({
               >
                 {translateDifficulty(node.difficulty)}
               </span>
-              <span className="shrink-0 text-[10px] leading-none" style={{ color: missionMeta.accent, opacity: 0.82, letterSpacing: "0.04em" }}>
+              <span className={cn("shrink-0 leading-none", denseDesktop ? "text-[9px]" : "text-[10px]")} style={{ color: missionMeta.accent, opacity: 0.82, letterSpacing: "0.04em" }}>
                 {renderStars(node.stars)}
               </span>
             </div>
@@ -614,6 +626,7 @@ export function renderNode({
   nextPoint,
   nodeIndex,
   compactMobile,
+  denseDesktop = false,
   highlightedNodeId,
   onNodeClick,
   quality,
@@ -676,6 +689,7 @@ export function renderNode({
           isActive={isActive}
           canvasWidth={canvasWidth}
           compactMobile={compactMobile}
+          denseDesktop={denseDesktop}
           point={point}
           prevPoint={prevPoint}
           nextPoint={nextPoint}

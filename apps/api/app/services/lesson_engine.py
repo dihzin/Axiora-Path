@@ -141,6 +141,37 @@ class LessonEngine:
             now=now,
             force_due_reviews=trigger_review,
         )
+        playable_focus_skills = [
+            skill
+            for skill in focus_skills
+            if adaptive._skill_has_candidate_content(
+                self.db,
+                skill_id=skill.skill_id,
+                lesson_id=lesson_id,
+                subject_id=subject_id,
+            )
+        ]
+        if playable_focus_skills:
+            focus_skills = playable_focus_skills
+        else:
+            playable_skill_ids = [
+                skill_id
+                for skill_id in skill_ids
+                if adaptive._skill_has_candidate_content(
+                    self.db,
+                    skill_id=skill_id,
+                    lesson_id=lesson_id,
+                    subject_id=subject_id,
+                )
+            ]
+            if playable_skill_ids:
+                focus_skills = adaptive._pick_focus_skills(
+                    self.db,
+                    user_id=student_id,
+                    skill_ids=playable_skill_ids,
+                    now=now,
+                    force_due_reviews=trigger_review,
+                )
         if not focus_skills:
             return adaptive.NextQuestionsPlan(
                 items=[],
@@ -167,7 +198,8 @@ class LessonEngine:
             since=since,
         )
         day_bucket = now.strftime("%Y-%m-%d")
-        rng = adaptive.SeededRng(f"{student_id}:{subject_id}:{lesson_id}:{day_bucket}:{safe_count}")
+        request_seed = now.isoformat(timespec="microseconds")
+        rng = adaptive.SeededRng(f"{student_id}:{subject_id}:{lesson_id}:{day_bucket}:{request_seed}:{safe_count}")
         items: list[adaptive.NextQuestionItem] = []
         candidates_raw = 0
         candidates_filtered = 0
@@ -192,8 +224,10 @@ class LessonEngine:
                 lesson_id=lesson_id,
                 subject_id=subject_id,
                 target_difficulty=target_difficulty,
+                skill_age_group=skill_plan.age_group,
                 since=since,
                 day_bucket=day_bucket,
+                request_seed=request_seed,
                 recent_qids=recent_qids,
                 recent_vids=recent_vids,
                 attempt_offset=idx * 10,
@@ -205,12 +239,38 @@ class LessonEngine:
                 continue
 
             ranked = sorted(batch["items"], key=lambda item: self._candidate_score(existing=items, item=item))
-            picked = ranked[0]
-            if adaptive._creates_type_streak(items, picked.type):
-                alternatives = [item for item in ranked if not adaptive._creates_type_streak(items, item.type)]
-                if alternatives:
-                    picked = alternatives[0]
+            picked = next(
+                (
+                    item
+                    for item in ranked
+                    if not self._prompt_key(item.prompt) in {self._prompt_key(existing.prompt) for existing in items}
+                    and not adaptive._creates_type_streak(items, item.type)
+                ),
+                None,
+            )
+            if picked is None:
+                picked = next(
+                    (
+                        item
+                        for item in ranked
+                        if not self._prompt_key(item.prompt) in {self._prompt_key(existing.prompt) for existing in items}
+                    ),
+                    None,
+                )
+            if picked is None:
+                picked = next(
+                    (item for item in ranked if not adaptive._creates_type_streak(items, item.type)),
+                    None,
+                )
+            if picked is None:
+                continue
+            if self._prompt_key(picked.prompt) in {self._prompt_key(existing.prompt) for existing in items}:
+                continue
             items.append(picked)
+            if picked.question_id:
+                recent_qids.add(str(picked.question_id))
+            if picked.variant_id:
+                recent_vids.add(str(picked.variant_id))
 
         adaptive.logger.info(
             "learning_next_candidates_diagnostics",
@@ -285,8 +345,10 @@ class LessonEngine:
         lesson_id: int | None,
         subject_id: int | None,
         target_difficulty: QuestionDifficulty,
+        skill_age_group: str | None,
         since: datetime,
         day_bucket: str,
+        request_seed: str,
         recent_qids: set[str],
         recent_vids: set[str],
         attempt_offset: int,
@@ -310,6 +372,10 @@ class LessonEngine:
         else:
             templates_query = templates_query.where(QuestionTemplate.lesson_id.is_(None))
         templates = self.db.scalars(templates_query).all()
+        templates = sorted(
+            templates,
+            key=lambda item: sha256(f"{request_seed}:template:{item.id}".encode("utf-8")).hexdigest(),
+        )
 
         for template in templates:
             try:
@@ -326,6 +392,7 @@ class LessonEngine:
                         template=template,
                         user_id=student_id,
                         day_bucket=day_bucket,
+                        request_seed=request_seed,
                         attempt_index=attempt_offset + attempt,
                     )
                     signature = str((candidate.variant_data or {}).get("signature", ""))
@@ -373,7 +440,7 @@ class LessonEngine:
                 # Exclude placeholder seed questions inserted by migration 0092.
                 # These have the form "[Subject] Pergunta essencial (DIFFICULTY)."
                 # and must never be served to students.
-                ~Question.prompt.like("[%] Pergunta essencial (%)"),
+                ~Question.prompt.contains("Pergunta essencial"),
             )
             .order_by(Question.created_at.asc())
         )
@@ -390,16 +457,42 @@ class LessonEngine:
             )
         questions = self.db.scalars(q_query).all()
         if questions:
-            sorted_questions = sorted(questions, key=lambda item: 1 if str(item.id) in recent_qids else 0)
+            sorted_questions = sorted(
+                questions,
+                key=lambda item: (
+                    1 if str(item.id) in recent_qids else 0,
+                    sha256(f"{request_seed}:question:{item.id}".encode("utf-8")).hexdigest(),
+                ),
+            )
             for question in sorted_questions[:4]:
                 try:
                     variants = self.db.scalars(
                         select(QuestionVariant).where(QuestionVariant.question_id == question.id)
                     ).all()
-                    preferred_variant = next((item for item in variants if str(item.id) not in recent_vids), None)
-                    fallback_variant = variants[0] if variants else None
+                    sorted_variants = sorted(
+                        variants,
+                        key=lambda item: (
+                            1 if str(item.id) in recent_vids else 0,
+                            sha256(f"{request_seed}:variant:{item.id}".encode("utf-8")).hexdigest(),
+                        ),
+                    )
+                    compatible_variants = [
+                        item
+                        for item in sorted_variants
+                        if adaptive._effective_question_difficulty(
+                            base_difficulty=question.difficulty,
+                            variant=item,
+                            age_group=skill_age_group,
+                        )
+                        == target_difficulty
+                    ]
+                    preferred_variant = compatible_variants[0] if compatible_variants else None
                     question_candidates.append(
-                        adaptive._build_question_item(question=question, variant=preferred_variant or fallback_variant)
+                        adaptive._build_question_item(
+                            question=question,
+                            variant=preferred_variant,
+                            skill_age_group=skill_age_group,
+                        )
                     )
                 except Exception:
                     adaptive.logger.exception(
@@ -423,14 +516,20 @@ class LessonEngine:
         }
 
     @staticmethod
+    def _prompt_key(prompt: str) -> str:
+        return str(prompt or "").strip().lower()
+
+    @staticmethod
     def _candidate_score(
         *,
         existing: list[adaptive.NextQuestionItem],
         item: adaptive.NextQuestionItem,
-    ) -> tuple[int, int]:
+    ) -> tuple[int, int, int, int]:
+        prompt_penalty = 1 if any(LessonEngine._prompt_key(existing_item.prompt) == LessonEngine._prompt_key(item.prompt) for existing_item in existing) else 0
+        variant_penalty = 1 if item.variant_id and any(existing_item.variant_id == item.variant_id for existing_item in existing) else 0
         streak_penalty = 1 if adaptive._creates_type_streak(existing, item.type) else 0
         template_penalty = 1 if item.template_id is not None else 0
-        return (streak_penalty, template_penalty)
+        return (prompt_penalty, variant_penalty, streak_penalty, template_penalty)
 
 
 def create_lesson(db: Session, *, student_id: int, skill: str, tenant_id: int | None = None) -> GeneratedLesson:
@@ -487,9 +586,10 @@ def generate_variant(
     template: QuestionTemplate,
     user_id: int,
     day_bucket: str,
+    request_seed: str,
     attempt_index: int,
 ) -> GeneratedVariant:
-    seed = sha256(f"{user_id}:{template.id}:{day_bucket}:{attempt_index}".encode("utf-8")).hexdigest()[:32]
+    seed = sha256(f"{user_id}:{template.id}:{day_bucket}:{request_seed}:{attempt_index}".encode("utf-8")).hexdigest()[:32]
     rng = adaptive.SeededRng(seed)
     variables = adaptive._generate_variables(spec=template.generator_spec or {}, rng=rng)
     if isinstance(variables.get("context"), str):

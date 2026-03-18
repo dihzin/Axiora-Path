@@ -1,0 +1,42 @@
+Axiora Learning Audit V3
+Generated at: 2026-03-18T20:00:16.075888+00:00
+Overall status: PASS
+
+Summary
+- Total checks: 8
+- Passed: 8
+- Failed: 0
+
+Checks
+- [PASS] canonical_curriculum_exists: Canonical curriculum exists
+  Details: Canonical curriculum directory and expected subject YAML files are present.
+  Evidence: D:\Desenvolvimento de Apps\Axiora-Path\apps\api\app\curriculum\subjects, english.yaml, finance.yaml, geography.yaml, history.yaml, logic.yaml, math.yaml, portuguese.yaml, science.yaml
+  Metrics: expected_subject_files=8, found_subject_files=8, missing_subject_files=[]
+- [PASS] subject_must_have_skills: Subject must have skills
+  Details: Every curriculum subject defines at least one skill.
+  Evidence: english, finance, geography, history, logic, math, portuguese, science
+  Metrics: subjects_total=8, subjects_without_skills=[]
+- [PASS] skill_must_have_lessons: Skill must have lessons
+  Details: Every curriculum skill defines at least one lesson.
+  Evidence: english::vocabulary, english::reading_in_english, english::conversation_basics, finance::money_basics, finance::saving_and_planning, finance::conscious_consumption, geography::maps_and_location, geography::landscapes, geography::human_geography, history::chronology, history::local_and_national_history, history::cultural_heritage, logic::pattern_recognition, logic::deductive_reasoning, logic::problem_solving, math::addition, math::subtraction, math::multiplication, portuguese::reading_comprehension, portuguese::grammar_basics, portuguese::writing_fluency, science::living_things, science::matter_and_materials, science::earth_and_space
+  Metrics: skills_total=24, skills_without_lessons=[]
+- [PASS] lesson_must_have_generator: Lesson must have generator
+  Details: Curriculum lessons route through the centralized LessonEngine generator.
+  Evidence: apps/api/app/services/lesson_engine.py, apps/api/app/api/routes/learn_v2.py, lessons_checked=72
+  Metrics: lessons_total=72, generator_connected=True
+- [PASS] lesson_must_have_age_rule: Lesson must have age rule
+  Details: Lessons inherit subject age groups and the LessonEngine caps difficulty by age group.
+  Evidence: apps/api/app/curriculum/subjects/*.yaml, apps/api/app/services/lesson_engine.py::_cap_for_age_group
+  Metrics: lessons_total=72, lessons_without_age_groups=0, engine_age_rule_connected=True
+- [PASS] progress_must_be_persisted: Progress must be persisted
+  Details: Student mastery, lesson progress, and subject state are persisted and updated by the Learn API.
+  Evidence: apps/api/app/models_learning.py, apps/api/app/services/learning_repository.py, apps/api/app/api/routes/learn_v2.py
+  Metrics: models_present=True
+- [PASS] api_routes_connected_to_lesson_engine: API routes connected to lesson engine
+  Details: Learn V2 routes are wired to the curriculum, skill graph, lesson engine, and Axion learning engine.
+  Evidence: apps/api/app/api/routes/learn_v2.py
+  Metrics: required_tokens_checked=11, connected=True
+- [PASS] frontend_nodes_connected_to_api: Frontend nodes connected to API
+  Details: Progression map nodes are built from the current learning path API through useTrailData with explicit child context.
+  Evidence: apps/web/lib/api/client.ts, apps/web/hooks/useTrailData.ts, apps/web/components/trail/TrailScreen.tsx, apps/web/components/trail/ProgressionMap.tsx, apps/api/app/api/routes/learning.py
+  Metrics: connected=True

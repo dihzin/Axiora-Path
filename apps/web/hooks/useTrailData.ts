@@ -34,8 +34,15 @@ function resolveSubjectStorageKey(): string {
   return `axiora_learning_selected_subject:${scope}`;
 }
 
-function resolvePathCacheKey(subjectId: number | null): string {
-  return `axiora_learning_path_cache:${subjectId ?? "default"}`;
+function readActiveChildId(): number | null {
+  if (typeof window === "undefined") return null;
+  const rawChildId = window.localStorage.getItem("axiora_child_id");
+  const childId = rawChildId ? Number(rawChildId) : NaN;
+  return Number.isFinite(childId) && childId > 0 ? childId : null;
+}
+
+function resolvePathCacheKey(subjectId: number | null, childId: number | null = readActiveChildId()): string {
+  return `axiora_learning_path_cache:${childId ?? "anonymous"}:${subjectId ?? "default"}`;
 }
 
 function readCachedPath(subjectId: number | null): LearningPathResponse | null {
@@ -152,7 +159,15 @@ export function useTrailData(): TrailData {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const completedLessonSignal = searchParams.get("completedLessonId") ?? "";
+  const completedLessonSignal = useMemo(() => {
+    const completedLessonId = searchParams.get("completedLessonId") ?? "";
+    const completedAt = searchParams.get("completedAt") ?? "";
+    const xp = searchParams.get("xp") ?? "";
+    const coins = searchParams.get("coins") ?? "";
+    const profileXp = searchParams.get("profileXp") ?? "";
+    const profileCoins = searchParams.get("profileCoins") ?? "";
+    return [completedLessonId, completedAt, xp, coins, profileXp, profileCoins].join(":");
+  }, [searchParams]);
   const subjectIdFromQueryRaw = searchParams.get("subjectId");
   const subjectIdFromQuery = useMemo(() => {
     const parsed = Number(subjectIdFromQueryRaw);
@@ -165,6 +180,7 @@ export function useTrailData(): TrailData {
   // Cache is restored synchronously in useLayoutEffect below (before browser paint).
   const [path, setPath] = useState<LearningPathResponse | null>(null);
   const [subjects, setSubjects] = useState<AprenderSubjectOption[]>([]);
+  const [subjectsLoaded, setSubjectsLoaded] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
   const [selectedArea, setSelectedArea] = useState<SubjectAreaLabel>("Exatas");
   const [coins, setCoins] = useState(0);
@@ -264,7 +280,7 @@ export function useTrailData(): TrailData {
       return;
     }
     window.localStorage.setItem(key, String(selectedSubjectId));
-  }, [selectedSubjectId]);
+  }, [selectedSubjectId, completedLessonSignal]);
 
   // Derive selected area from subjects
   useEffect(() => {
@@ -305,20 +321,28 @@ export function useTrailData(): TrailData {
     let active = true;
     void (async () => {
       try {
-        const rawChildId = typeof window !== "undefined" ? window.localStorage.getItem("axiora_child_id") : null;
-        const parsedChildId = rawChildId ? Number(rawChildId) : NaN;
-        const childId = Number.isFinite(parsedChildId) && parsedChildId > 0 ? parsedChildId : undefined;
-        let list: AprenderSubjectOption[] = [];
-        try {
-          list = await getAprenderSubjects(childId ? { childId } : undefined);
-        } catch {
-          // Fallback when a stale/invalid child id breaks filtered subject loading.
-          list = await getAprenderSubjects();
+        const childId = readActiveChildId();
+        if (childId === null) {
+          if (active) {
+            setSubjects([]);
+            setSubjectsLoaded(true);
+            setError("Selecione uma crianca antes de abrir o Aprender.");
+          }
+          return;
         }
+        const list = await getAprenderSubjects({ childId });
         if (!active) return;
         setSubjects([...list].sort((a, b) => a.order - b.order || normalizeSubjectName(a.name).localeCompare(normalizeSubjectName(b.name))));
+        setSubjectsLoaded(true);
+        if (list.length === 0) {
+          setPath(null);
+          setError("Ainda não há missões disponíveis para a idade desta criança.");
+        }
       } catch {
-        if (active) setSubjects([]);
+        if (active) {
+          setSubjects([]);
+          setSubjectsLoaded(true);
+        }
       }
     })();
     return () => { active = false; };
@@ -331,13 +355,22 @@ export function useTrailData(): TrailData {
       try {
         if (hasLoadedPathRef.current) setPathRefreshing(true);
         else setLoading(true);
+        const childId = readActiveChildId();
+        if (childId === null) {
+          throw new Error("Selecione uma crianca antes de abrir o Aprender.");
+        }
+        if (subjectsLoaded && subjects.length === 0) {
+          setPath(null);
+          hasLoadedPathRef.current = false;
+          return;
+        }
         let data: LearningPathResponse;
         try {
-          data = await getLearningPath(selectedSubjectId ?? undefined);
+          data = await getLearningPath(selectedSubjectId ?? undefined, childId);
         } catch (primaryErr) {
           if (selectedSubjectId === null) throw primaryErr;
           // Fallback when stored subjectId is no longer valid for the child.
-          data = await getLearningPath();
+          data = await getLearningPath(undefined, childId);
           if (!active) return;
           setSelectedSubjectId(data.subjectId);
           router.replace(`/child/aprender?subjectId=${data.subjectId}`);
@@ -381,7 +414,27 @@ export function useTrailData(): TrailData {
       }
     })();
     return () => { active = false; };
-  }, [router, selectedSubjectId, completedLessonSignal, pathRetryToken]);
+  }, [router, selectedSubjectId, completedLessonSignal, pathRetryToken, subjectsLoaded, subjects.length]);
+
+  // Fetch profile (XP, coins)
+  useEffect(() => {
+    const profileXpFromQuery = Number(searchParams.get("profileXp"));
+    const profileXpPercentFromQuery = Number(searchParams.get("profileXpPercent"));
+    const profileCoinsFromQuery = Number(searchParams.get("profileCoins"));
+    if (Number.isFinite(profileCoinsFromQuery) && profileCoinsFromQuery >= 0) {
+      setCoins(Math.max(0, Math.floor(profileCoinsFromQuery)));
+    }
+    if (Number.isFinite(profileXpFromQuery) && profileXpFromQuery >= 0) {
+      const safeXp = Math.max(0, Math.floor(profileXpFromQuery));
+      setXpTotal(safeXp);
+      setXpLevel(Math.max(1, Math.floor(safeXp / 100) + 1));
+      setXpInLevel(Math.max(0, safeXp % 100));
+      setXpToNextLevel(Math.max(1, 100 - (safeXp % 100)));
+    }
+    if (Number.isFinite(profileXpPercentFromQuery) && profileXpPercentFromQuery >= 0) {
+      setXpPercent(Math.max(0, Math.min(100, Math.round(profileXpPercentFromQuery))));
+    }
+  }, [searchParams]);
 
   // Fetch profile (XP, coins)
   useEffect(() => {

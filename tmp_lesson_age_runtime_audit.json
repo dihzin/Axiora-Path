@@ -1,0 +1,1035 @@
+{
+  "generated_at": "2026-03-18T14:14:13.049224+00:00",
+  "children_available": [
+    {
+      "id": 2,
+      "tenant_id": 1,
+      "name": "Benjamin",
+      "age": 6
+    },
+    {
+      "id": 3,
+      "tenant_id": 3,
+      "name": "Child 1",
+      "age": 8
+    },
+    {
+      "id": 5,
+      "tenant_id": 4,
+      "name": "Filho 1",
+      "age": 6
+    }
+  ],
+  "subjects": [
+    {
+      "subject_id": 1,
+      "subject_name": "Matemática",
+      "age_min": 6,
+      "age_max": 8,
+      "items": 10,
+      "unique_prompts": 10,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 5,
+        "MATCH": 1,
+        "FILL_BLANK": 2,
+        "TRUE_FALSE": 1,
+        "ORDERING": 1
+      },
+      "difficulties": {
+        "EASY": 10
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Lia tinha 1 blocos coloridos e ganhou mais 2. Com quantas ficou?",
+        "Téo tinha 3 frutas e ganhou mais 3. Com quantas ficou?",
+        "Relacione cada expressão ao resultado correto."
+      ]
+    },
+    {
+      "subject_id": 2,
+      "subject_name": "Português",
+      "age_min": 6,
+      "age_max": 8,
+      "items": 10,
+      "unique_prompts": 10,
+      "duplicate_prompts": 0,
+      "types": {
+        "ORDERING": 2,
+        "FILL_BLANK": 1,
+        "MCQ": 4,
+        "MATCH": 1,
+        "TRUE_FALSE": 2
+      },
+      "difficulties": {
+        "EASY": 10
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Organize os trechos para formar uma frase correta.",
+        "Complete com a pontuação adequada: Que legal __",
+        "Lia levou uma bola e brincou com os amigos no parque. Onde Lia brincou?"
+      ]
+    },
+    {
+      "subject_id": 3,
+      "subject_name": "Inglês",
+      "age_min": 6,
+      "age_max": 8,
+      "items": 4,
+      "unique_prompts": 4,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 4
+      },
+      "difficulties": {
+        "EASY": 4
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "How do you say 'cachorro' in English?",
+        "What color is a banana?",
+        "Which word means 'ola' in English?"
+      ]
+    },
+    {
+      "subject_id": 4,
+      "subject_name": "História",
+      "age_min": 6,
+      "age_max": 8,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "EASY": 3
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Para que servem os museus?",
+        "Quem viveu antes de nos: os avos ou os netos?",
+        "Quem descobriu o Brasil?"
+      ]
+    },
+    {
+      "subject_id": 5,
+      "subject_name": "Geografia",
+      "age_min": 6,
+      "age_max": 8,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "EASY": 3
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Qual é o maior país da América do Sul?",
+        "Qual lugar costuma aparecer em um mapa da escola?",
+        "Para que serve um globo terrestre?"
+      ]
+    },
+    {
+      "subject_id": 6,
+      "subject_name": "Ciências",
+      "age_min": 6,
+      "age_max": 8,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "EASY": 3
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Para que servem os ossos no corpo?",
+        "O que precisamos fazer antes de comer?",
+        "Qual animal produz mel?"
+      ]
+    },
+    {
+      "subject_id": 7,
+      "subject_name": "Física",
+      "age_min": 6,
+      "age_max": 8,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "EASY": 3
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que faz um objeto com rodas se mover mais facil?",
+        "Quando empurramos uma caixa, estamos usando...",
+        "O que é energia?"
+      ]
+    },
+    {
+      "subject_id": 8,
+      "subject_name": "Química",
+      "age_min": 6,
+      "age_max": 8,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "EASY": 3
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Quando misturamos agua e achocolatado, estamos fazendo...",
+        "O que acontece com o chocolate em po ao mexer no leite?",
+        "O que é uma mistura?"
+      ]
+    },
+    {
+      "subject_id": 9,
+      "subject_name": "Filosofia",
+      "age_min": 6,
+      "age_max": 8,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "EASY": 3
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que é amizade?",
+        "Quando pensamos antes de agir, estamos...",
+        "O que significa ouvir o colega com respeito?"
+      ]
+    },
+    {
+      "subject_id": 10,
+      "subject_name": "Artes",
+      "age_min": 6,
+      "age_max": 8,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "EASY": 3
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que podemos misturar para criar novas cores?",
+        "Qual material pode ser usado para desenhar?",
+        "Quais são as cores primárias da pintura?"
+      ]
+    },
+    {
+      "subject_id": 11,
+      "subject_name": "Educação Financeira",
+      "age_min": 6,
+      "age_max": 8,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "EASY": 3
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Para que serve o dinheiro?",
+        "Quando pensamos antes de comprar um brinquedo, estamos...",
+        "O que significa guardar moedas para depois?"
+      ]
+    },
+    {
+      "subject_id": 12,
+      "subject_name": "Lógica",
+      "age_min": 6,
+      "age_max": 8,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "EASY": 3
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Qual número vem a seguir na sequência: 2, 4, 6, ___?",
+        "Se hoje e dia de aula, amanha e mais provavel ser...",
+        "Qual figura vem depois de triangulo, quadrado, triangulo, quadrado...?"
+      ]
+    },
+    {
+      "subject_id": 13,
+      "subject_name": "Programação básica",
+      "age_min": 6,
+      "age_max": 8,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "EASY": 3
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que um robo precisa para saber o que fazer?",
+        "Quando seguimos passos para montar algo, estamos usando...",
+        "O que um computador precisa para funcionar?"
+      ]
+    },
+    {
+      "subject_id": 14,
+      "subject_name": "Redação",
+      "age_min": 6,
+      "age_max": 8,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "EASY": 3
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que uma frase precisa para fazer sentido?",
+        "Por que colocamos espacos entre as palavras?",
+        "O que é uma frase?"
+      ]
+    },
+    {
+      "subject_id": 15,
+      "subject_name": "Matemática",
+      "age_min": 9,
+      "age_max": 12,
+      "items": 10,
+      "unique_prompts": 10,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 6,
+        "ORDERING": 1,
+        "MATCH": 2,
+        "FILL_BLANK": 1
+      },
+      "difficulties": {
+        "EASY": 8,
+        "MEDIUM": 2
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Sofia tinha 17 cartas colecionáveis e ganhou mais 8. Com quantas ficou?",
+        "Sofia tinha 7 cartas colecionáveis e ganhou mais 10. Com quantas ficou?",
+        "Organize os valores do menor para o maior."
+      ]
+    },
+    {
+      "subject_id": 16,
+      "subject_name": "Português",
+      "age_min": 9,
+      "age_max": 12,
+      "items": 8,
+      "unique_prompts": 8,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3,
+        "ORDERING": 2,
+        "FILL_BLANK": 1,
+        "TRUE_FALSE": 2
+      },
+      "difficulties": {
+        "EASY": 4,
+        "MEDIUM": 4
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Qual dessas palavras é um substantivo?",
+        "Quantas sílabas tem a palavra 'colaborar'?",
+        "Organize as partes para formar uma frase correta sobre respeito."
+      ]
+    },
+    {
+      "subject_id": 17,
+      "subject_name": "Inglês",
+      "age_min": 9,
+      "age_max": 12,
+      "items": 5,
+      "unique_prompts": 5,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 5
+      },
+      "difficulties": {
+        "EASY": 4,
+        "MEDIUM": 1
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Which verb is in the past simple tense?",
+        "Which sentence is correct?",
+        "Escolha a tradução correta de 'school'."
+      ]
+    },
+    {
+      "subject_id": 18,
+      "subject_name": "História",
+      "age_min": 9,
+      "age_max": 12,
+      "items": 4,
+      "unique_prompts": 4,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 4
+      },
+      "difficulties": {
+        "MEDIUM": 2,
+        "EASY": 2
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Em que data o Brasil proclamou sua independência?",
+        "Qual fato marcou a Proclamacao da Republica no Brasil?",
+        "Qual foi o principal produto econômico do Brasil no século XVIII?"
+      ]
+    },
+    {
+      "subject_id": 19,
+      "subject_name": "Geografia",
+      "age_min": 9,
+      "age_max": 12,
+      "items": 4,
+      "unique_prompts": 4,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 4
+      },
+      "difficulties": {
+        "EASY": 2,
+        "MEDIUM": 2
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que e clima?",
+        "O que e relevo?",
+        "Qual é o maior rio do mundo em volume de água?"
+      ]
+    },
+    {
+      "subject_id": 20,
+      "subject_name": "Ciências",
+      "age_min": 9,
+      "age_max": 12,
+      "items": 5,
+      "unique_prompts": 5,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 5
+      },
+      "difficulties": {
+        "EASY": 3,
+        "MEDIUM": 2
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Qual orgao bombeia sangue para o corpo?",
+        "O que acontece na evaporacao?",
+        "Por que a alimentacao equilibrada e importante?"
+      ]
+    },
+    {
+      "subject_id": 21,
+      "subject_name": "Física",
+      "age_min": 9,
+      "age_max": 12,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "MEDIUM": 1,
+        "EASY": 2
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que é velocidade média?",
+        "Quando a velocidade de um objeto aumenta, dizemos que ele...",
+        "Qual é a unidade de medida da força no Sistema Internacional?"
+      ]
+    },
+    {
+      "subject_id": 22,
+      "subject_name": "Química",
+      "age_min": 9,
+      "age_max": 12,
+      "items": 4,
+      "unique_prompts": 4,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 4
+      },
+      "difficulties": {
+        "EASY": 3,
+        "MEDIUM": 1
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que e materia?",
+        "Qual exemplo representa uma substancia pura?",
+        "Para que serve a tabela periodica?"
+      ]
+    },
+    {
+      "subject_id": 23,
+      "subject_name": "Filosofia",
+      "age_min": 9,
+      "age_max": 12,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "EASY": 3
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Quem foi Sócrates?",
+        "O que e argumentar?",
+        "Por que o dialogo e importante?"
+      ]
+    },
+    {
+      "subject_id": 24,
+      "subject_name": "Artes",
+      "age_min": 9,
+      "age_max": 12,
+      "items": 5,
+      "unique_prompts": 5,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 5
+      },
+      "difficulties": {
+        "MEDIUM": 3,
+        "EASY": 2
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Qual período artístico é caracterizado por distorção emocional e subjetividade?",
+        "Para que servem os ensaios em uma apresentacao?",
+        "O que uma trilha sonora faz em um filme?"
+      ]
+    },
+    {
+      "subject_id": 25,
+      "subject_name": "Educação Financeira",
+      "age_min": 9,
+      "age_max": 12,
+      "items": 5,
+      "unique_prompts": 5,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 5
+      },
+      "difficulties": {
+        "EASY": 3,
+        "MEDIUM": 2
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que é uma despesa?",
+        "Por que anotar entradas e saidas de dinheiro ajuda?",
+        "O que e um orçamento?"
+      ]
+    },
+    {
+      "subject_id": 26,
+      "subject_name": "Lógica",
+      "age_min": 9,
+      "age_max": 12,
+      "items": 5,
+      "unique_prompts": 5,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 5
+      },
+      "difficulties": {
+        "MEDIUM": 3,
+        "EASY": 2
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Qual é a próxima letra na sequência: A, C, E, G, ___?",
+        "Qual numero completa a sequencia 5, 10, 15, ...?",
+        "Se Ana e mais alta que Bia e Bia e mais alta que Caio, Ana e..."
+      ]
+    },
+    {
+      "subject_id": 27,
+      "subject_name": "Programação básica",
+      "age_min": 9,
+      "age_max": 12,
+      "items": 4,
+      "unique_prompts": 4,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 4
+      },
+      "difficulties": {
+        "EASY": 2,
+        "MEDIUM": 2
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que significa 'bug' em programação?",
+        "O que e uma variavel em programacao?",
+        "Por que comentarios no codigo podem ajudar?"
+      ]
+    },
+    {
+      "subject_id": 28,
+      "subject_name": "Redação",
+      "age_min": 9,
+      "age_max": 12,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "EASY": 2,
+        "MEDIUM": 1
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que e paragrafar um texto?",
+        "Por que revisar a pontuacao e importante?",
+        "Qual é a estrutura básica de uma redação dissertativa?"
+      ]
+    },
+    {
+      "subject_id": 29,
+      "subject_name": "Matemática",
+      "age_min": 13,
+      "age_max": 15,
+      "items": 1,
+      "unique_prompts": 1,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 1
+      },
+      "difficulties": {
+        "EASY": 1
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Quanto é 2³?"
+      ]
+    },
+    {
+      "subject_id": 30,
+      "subject_name": "Português",
+      "age_min": 13,
+      "age_max": 15,
+      "items": 5,
+      "unique_prompts": 5,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 1,
+        "MATCH": 1,
+        "TRUE_FALSE": 2,
+        "FILL_BLANK": 1
+      },
+      "difficulties": {
+        "EASY": 1,
+        "HARD": 1,
+        "MEDIUM": 3
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Qual é a função do pronome relativo?",
+        "Relacione cada elemento da linguagem à sua característica.",
+        "Verdadeiro ou falso: 'Heitor revisou a frase antes de entregar.' indica cuidado com a escrita."
+      ]
+    },
+    {
+      "subject_id": 31,
+      "subject_name": "Inglês",
+      "age_min": 13,
+      "age_max": 15,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "EASY": 2,
+        "HARD": 1
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Which sentence is in the passive voice?",
+        "Choose the correct indirect question.",
+        "Which sentence uses the Present Perfect correctly?"
+      ]
+    },
+    {
+      "subject_id": 32,
+      "subject_name": "História",
+      "age_min": 13,
+      "age_max": 15,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "EASY": 2,
+        "MEDIUM": 1
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Qual foi a causa imediata da Primeira Guerra Mundial?",
+        "O que foi o Iluminismo?",
+        "Por que o imperialismo do seculo XIX gerou conflitos?"
+      ]
+    },
+    {
+      "subject_id": 33,
+      "subject_name": "Geografia",
+      "age_min": 13,
+      "age_max": 15,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "MEDIUM": 1,
+        "EASY": 2
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que caracteriza um país desenvolvido?",
+        "O que mede o IDH?",
+        "O que é o PIB?"
+      ]
+    },
+    {
+      "subject_id": 34,
+      "subject_name": "Ciências",
+      "age_min": 13,
+      "age_max": 15,
+      "items": 4,
+      "unique_prompts": 4,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 4
+      },
+      "difficulties": {
+        "EASY": 3,
+        "MEDIUM": 1
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que e selecao natural?",
+        "Qual é a velocidade aproximada da luz no vácuo?",
+        "Qual a funcao dos ribossomos?"
+      ]
+    },
+    {
+      "subject_id": 35,
+      "subject_name": "Física",
+      "age_min": 13,
+      "age_max": 15,
+      "items": 4,
+      "unique_prompts": 4,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 4
+      },
+      "difficulties": {
+        "EASY": 3,
+        "MEDIUM": 1
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Qual é a fórmula da Energia Cinética?",
+        "O que representa a aceleracao?",
+        "O que e trabalho mecanico na Fisica?"
+      ]
+    },
+    {
+      "subject_id": 36,
+      "subject_name": "Química",
+      "age_min": 13,
+      "age_max": 15,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "HARD": 1,
+        "EASY": 1,
+        "MEDIUM": 1
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que é entalpia (H) em termodinâmica?",
+        "O que significa pH menor que 7?",
+        "O que são isômeros?"
+      ]
+    },
+    {
+      "subject_id": 37,
+      "subject_name": "Filosofia",
+      "age_min": 13,
+      "age_max": 15,
+      "items": 5,
+      "unique_prompts": 5,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 5
+      },
+      "difficulties": {
+        "MEDIUM": 2,
+        "EASY": 2,
+        "HARD": 1
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que é o existencialismo?",
+        "Qual pergunta e tipica da etica?",
+        "O que significa dizer que uma ideia e um argumento valido?"
+      ]
+    },
+    {
+      "subject_id": 38,
+      "subject_name": "Artes",
+      "age_min": 13,
+      "age_max": 15,
+      "items": 4,
+      "unique_prompts": 4,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 4
+      },
+      "difficulties": {
+        "EASY": 3,
+        "MEDIUM": 1
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que é perspectiva em artes visuais?",
+        "Por que a arte contemporanea pode usar materiais incomuns?",
+        "O que e linguagem artistica?"
+      ]
+    },
+    {
+      "subject_id": 39,
+      "subject_name": "Educação Financeira",
+      "age_min": 13,
+      "age_max": 15,
+      "items": 5,
+      "unique_prompts": 5,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 5
+      },
+      "difficulties": {
+        "HARD": 1,
+        "MEDIUM": 2,
+        "EASY": 2
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que é diversificação de investimentos?",
+        "Como a inflacao afeta o poder de compra?",
+        "O que e juros?"
+      ]
+    },
+    {
+      "subject_id": 40,
+      "subject_name": "Lógica",
+      "age_min": 13,
+      "age_max": 15,
+      "items": 3,
+      "unique_prompts": 3,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 3
+      },
+      "difficulties": {
+        "EASY": 3
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Qual é o valor de verdade de 'V ∧ F' (V E F)?",
+        "O que e uma premissa em um argumento?",
+        "Se p e verdadeiro e q e falso, qual o valor de p e q (p e q)?"
+      ]
+    },
+    {
+      "subject_id": 41,
+      "subject_name": "Programação básica",
+      "age_min": 13,
+      "age_max": 15,
+      "items": 2,
+      "unique_prompts": 2,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 2
+      },
+      "difficulties": {
+        "MEDIUM": 1,
+        "EASY": 1
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "Qual é a diferença entre compilação e interpretação?",
+        "O que significa tipo de dado?"
+      ]
+    },
+    {
+      "subject_id": 42,
+      "subject_name": "Redação",
+      "age_min": 13,
+      "age_max": 15,
+      "items": 5,
+      "unique_prompts": 5,
+      "duplicate_prompts": 0,
+      "types": {
+        "MCQ": 5
+      },
+      "difficulties": {
+        "EASY": 3,
+        "MEDIUM": 1,
+        "HARD": 1
+      },
+      "issues": [],
+      "answer_issue": null,
+      "remediation_issue": null,
+      "sample_prompts": [
+        "O que é tese em um texto argumentativo?",
+        "Por que um argumento precisa de sustentacao?",
+        "Por que contra-argumentos podem fortalecer a escrita?"
+      ]
+    }
+  ]
+}

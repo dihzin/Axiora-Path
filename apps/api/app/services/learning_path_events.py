@@ -87,8 +87,14 @@ def _subject_has_curriculum(db: Session, *, subject_id: int) -> bool:
     return count > 0
 
 
-def _pick_default_subject(db: Session) -> Subject | None:
-    subjects = db.scalars(select(Subject).order_by(Subject.age_group.asc(), Subject.order.asc(), Subject.id.asc())).all()
+def _pick_default_subject(db: Session, *, child_age: int | None = None) -> Subject | None:
+    stmt = select(Subject)
+    if child_age is not None:
+        stmt = stmt.where(
+            Subject.age_min <= int(child_age),
+            Subject.age_max >= int(child_age),
+        )
+    subjects = db.scalars(stmt.order_by(Subject.age_group.asc(), Subject.order.asc(), Subject.id.asc())).all()
     if not subjects:
         return None
 
@@ -359,7 +365,7 @@ def _bootstrap_minimum_learning_path(db: Session) -> None:
         db.flush()
 
 
-def _resolve_subject(db: Session, *, subject_id: int | None) -> Subject:
+def _resolve_subject(db: Session, *, subject_id: int | None, child_age: int | None = None) -> Subject:
     try:
         _bootstrap_minimum_learning_path(db)
     except SQLAlchemyError:
@@ -371,17 +377,17 @@ def _resolve_subject(db: Session, *, subject_id: int | None) -> Subject:
             raise ValueError("Subject not found")
         normalized = _normalize_subject_name(subject.name)
         if normalized in _GENERIC_SUBJECT_NAMES:
-            preferred = _pick_default_subject(db)
+            preferred = _pick_default_subject(db, child_age=child_age)
             if preferred is not None and int(preferred.id) != int(subject.id):
                 return preferred
             if not _subject_has_curriculum(db, subject_id=subject.id):
                 raise ValueError("Subject not found")
         return subject
-    subject = _pick_default_subject(db)
+    subject = _pick_default_subject(db, child_age=child_age)
     if subject is None:
         try:
             _bootstrap_minimum_learning_path(db)
-            subject = _pick_default_subject(db)
+            subject = _pick_default_subject(db, child_age=child_age)
         except SQLAlchemyError:
             db.rollback()
             subject = None
@@ -523,8 +529,9 @@ def build_learning_path(
     *,
     user_id: int,
     subject_id: int | None,
+    child_age: int | None = None,
 ) -> LearningPathSnapshot:
-    subject = _resolve_subject(db, subject_id=subject_id)
+    subject = _resolve_subject(db, subject_id=subject_id, child_age=child_age)
     units = db.scalars(select(Unit).where(Unit.subject_id == subject.id).order_by(Unit.order.asc())).all()
     lessons = db.scalars(
         select(Lesson).join(Unit, Unit.id == Lesson.unit_id).where(Unit.subject_id == subject.id).order_by(Unit.order.asc(), Lesson.order.asc())
@@ -590,16 +597,20 @@ def build_learning_path(
         events_by_unit.setdefault(event.unit_id, []).append(event)
 
     out_units: list[PathUnitBlock] = []
+    previous_unit_completed = True
     for unit in units:
         unit_lessons = lessons_by_unit.get(unit.id, [])
         unit_completion = _unit_completion_rate(unit_lessons, progress_by_lesson, completed_session_lessons)
         nodes: list[PathNode] = []
+        unit_unlocked = previous_unit_completed
+        previous_lesson_completed = False
         for lesson in unit_lessons:
             row = progress_by_lesson.get(lesson.id)
             fallback_score = latest_score_by_lesson.get(lesson.id)
             effective_score = row.score if row else fallback_score
             row_historical_completed = bool(row and ((row.completed_at is not None) or int(row.xp_granted or 0) > 0))
             effective_completed = bool((row and row.completed) or row_historical_completed or (lesson.id in completed_session_lessons))
+            lesson_unlocked = unit_unlocked and (lesson.order == 1 or previous_lesson_completed or effective_completed)
             nodes.append(
                 PathNode(
                     kind="LESSON",
@@ -609,7 +620,7 @@ def build_learning_path(
                         title=lesson.title,
                         order=lesson.order,
                         xp_reward=lesson.xp_reward,
-                        unlocked=True,
+                        unlocked=lesson_unlocked,
                         completed=effective_completed,
                         score=effective_score,
                         stars_earned=_compute_lesson_stars(effective_score),
@@ -617,6 +628,7 @@ def build_learning_path(
                     event=None,
                 )
             )
+            previous_lesson_completed = effective_completed
         for event in events_by_unit.get(unit.id, []):
             user_row = user_events_by_event_id.get(str(event.id))
             status = _resolve_event_status(
@@ -689,6 +701,7 @@ def build_learning_path(
                 nodes=nodes,
             )
         )
+        previous_unit_completed = unit_completion >= 0.8 if unit_lessons else previous_unit_completed
 
     return LearningPathSnapshot(
         subject_id=subject.id,

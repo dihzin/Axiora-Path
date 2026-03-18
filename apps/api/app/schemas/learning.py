@@ -14,6 +14,7 @@ from app.models import PathEventType, UserPathEventStatus
 class LearningNextRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
+    child_id: int | None = Field(default=None, alias="childId")
     subject_id: int | None = Field(default=None, alias="subjectId")
     lesson_id: int | None = Field(default=None, alias="lessonId")
     focus_skill_id: str | None = Field(default=None, alias="focusSkillId")
@@ -68,6 +69,7 @@ class LearningNextResponse(BaseModel):
 class LearningAnswerRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
+    child_id: int | None = Field(default=None, alias="childId")
     question_id: str | None = Field(default=None, alias="questionId")
     template_id: str | None = Field(default=None, alias="templateId")
     generated_variant_id: str | None = Field(default=None, alias="generatedVariantId")
@@ -97,6 +99,7 @@ class LearningAnswerResponse(BaseModel):
 class LearningSessionStartRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
+    child_id: int | None = Field(default=None, alias="childId")
     subject_id: int | None = Field(default=None, alias="subjectId")
     unit_id: int | None = Field(default=None, alias="unitId")
     lesson_id: int | None = Field(default=None, alias="lessonId")
@@ -115,6 +118,7 @@ class LearningSessionStartResponse(BaseModel):
 class LearningSessionFinishRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
+    child_id: int | None = Field(default=None, alias="childId")
     session_id: str = Field(alias="sessionId")
     total_questions: int = Field(alias="totalQuestions", ge=0)
     correct_count: int = Field(alias="correctCount", ge=0)

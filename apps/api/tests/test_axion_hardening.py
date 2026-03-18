@@ -1581,6 +1581,26 @@ def _stub_facts(now: datetime) -> AxionFacts:
     )
 
 
+def test_axion_facts_to_dict_serializes_last_active_at_isoformat() -> None:
+    now = datetime(2026, 3, 18, 14, 30, tzinfo=UTC)
+    facts = AxionFacts(
+        last_active_at=now,
+        streak_days=3,
+        weekly_completion_rate=0.6,
+        recent_approvals=RecentApprovalsFacts(approved=2, rejected=0),
+        due_reviews_count=1,
+        weakest_skills=[],
+        strongest_skills=[],
+        last_lesson=None,
+        wallet=WalletFacts(total=0, spend=0, save=0, donate=0),
+        energy=EnergyFacts(current=5, regen_eta=0),
+    )
+
+    payload = facts.to_dict()
+
+    assert payload["lastActiveAt"] == now.isoformat()
+
+
 @pytest.mark.parametrize(
     ("mode", "expected_action"),
     [
