@@ -1,4 +1,4 @@
-Ôªø"use client";
+"use client";
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -23,15 +23,15 @@ type ChildProfile = {
 };
 
 const THEME_LABELS: Record<ThemeName, string> = {
-  default: "Padr√£o",
-  space: "Espa√ßo",
+  default: "Padr„o",
+  space: "EspaÁo",
   jungle: "Selva",
   ocean: "Oceano",
   soccer: "Futebol",
   capybara: "Capivara",
   dinos: "Dinossauros",
   princess: "Princesa",
-  heroes: "Her√≥is",
+  heroes: "HerÛis",
 };
 
 export default function SelectChildPage() {
@@ -44,19 +44,19 @@ export default function SelectChildPage() {
   useEffect(() => {
     getMe()
       .then((data) => setChildren(data.child_profiles))
-      .catch(() => setError("N√£o foi poss√≠vel carregar perfis. Fa√ßa login novamente."));
+      .catch(() => setError("N„o foi possÌvel carregar perfis. FaÁa login novamente."));
   }, []);
 
   const chooseChild = (child: ChildProfile) => {
     if (selectingChildId !== null) return;
     const allowed = children.some((item) => item.id === child.id);
     if (!allowed) {
-      setError("Perfil inv√°lido para este usu√°rio.");
+      setError("Perfil inv·lido para este usu·rio.");
       return;
     }
     setSelectingChildId(child.id);
-    sessionStorage.setItem(.axiora_child_id", String(child.id));
-    sessionStorage.setItem(.axiora_child_name", child.display_name);
+    sessionStorage.setItem("axiora_child_id", String(child.id));
+    sessionStorage.setItem("axiora_child_name", child.display_name);
     setTheme(child.theme);
     router.push("/child");
   };
@@ -74,7 +74,7 @@ export default function SelectChildPage() {
             {error ? <p role="alert" aria-live="polite" className="text-sm text-rose-700">{error}</p> : null}
             {children.length === 0 ? (
               <div className="axiora-auth-option rounded-2xl px-4 py-4 text-sm">
-                Nenhum perfil infantil dispon√≠vel nesta organiza√ß√£o. Complete o onboarding dos pais para criar o primeiro perfil.
+                Nenhum perfil infantil disponÌvel nesta organizaÁ„o. Complete o onboarding dos pais para criar o primeiro perfil.
               </div>
             ) : null}
             {children.map((child) => (
@@ -104,7 +104,7 @@ export default function SelectChildPage() {
               </button>
             ))}
             <Button className="w-full bg-[linear-gradient(180deg,#ffb170_0%,#ff8a45_100%)] text-[#fff9f2] shadow-[inset_0_1px_0_rgba(255,231,205,0.56),0_6px_0_rgba(158,74,30,0.42),0_16px_24px_rgba(93,48,22,0.18)]" variant="secondary" onClick={() => router.push("/parent-pin")} disabled={selectingChildId !== null}>
-              Ir para √°rea dos pais
+              Ir para ·rea dos pais
             </Button>
           </CardContent>
         </Card>

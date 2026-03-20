@@ -1,4 +1,4 @@
-Ôªø"use client";
+"use client";
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -62,22 +62,22 @@ const THEME_OPTIONS: ThemeName[] = ["default", "space", "jungle", "ocean", "socc
 const DIFFICULTY_OPTIONS: TaskOut["difficulty"][] = ["EASY", "MEDIUM", "HARD", "LEGENDARY"];
 
 const THEME_LABELS: Record<ThemeName, string> = {
-  default: "Padr√£o",
-  space: "Espa√ßo",
+  default: "Padr„o",
+  space: "EspaÁo",
   jungle: "Selva",
   ocean: "Oceano",
   soccer: "Futebol",
   capybara: "Capivara",
   dinos: "Dinossauros",
   princess: "Princesa",
-  heroes: "Her√≥is",
+  heroes: "HerÛis",
 };
 
 const DIFFICULTY_LABELS: Record<TaskOut["difficulty"], string> = {
-  EASY: "F√°cil",
-  MEDIUM: "M√©dio",
-  HARD: "Dif√≠cil",
-  LEGENDARY: "Lend√°ria",
+  EASY: "F·cil",
+  MEDIUM: "MÈdio",
+  HARD: "DifÌcil",
+  LEGENDARY: "Lend·ria",
 };
 
 function formatBRL(valueCents: number): string {
@@ -88,8 +88,8 @@ function formatBRL(valueCents: number): string {
 }
 
 function formatDateBr(isoDate: string | null | undefined): string {
-  if (!isoDate) return "N√£o informado";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return "N√£o informado";
+  if (!isoDate) return "N„o informado";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return "N„o informado";
   const [year, month, day] = isoDate.split("-");
   return `${day}/${month}/${year}`;
 }
@@ -212,8 +212,8 @@ export default function ParentPage() {
     if (!options?.keepOrganization) {
       clearTenantSlug();
     }
-    sessionStorage.removeItem(.axiora_child_id");
-    sessionStorage.removeItem(.axiora_child_name");
+    sessionStorage.removeItem("axiora_child_id");
+    sessionStorage.removeItem("axiora_child_name");
     sessionStorage.removeItem("axiora_parent_pin_ok");
   };
 
@@ -233,7 +233,7 @@ export default function ParentPage() {
       setPendingLogs([]);
       setWallet(null);
       setTrend(null);
-      setDashboardError("N√£o foi poss√≠vel carregar os dados da crian√ßa selecionada.");
+      setDashboardError("N„o foi possÌvel carregar os dados da crianÁa selecionada.");
     }
   }, []);
 
@@ -246,18 +246,18 @@ export default function ParentPage() {
       setPendingLogs([]);
       setWallet(null);
       setTrend(null);
-      sessionStorage.removeItem(.axiora_child_id");
-      sessionStorage.removeItem(.axiora_child_name");
+      sessionStorage.removeItem("axiora_child_id");
+      sessionStorage.removeItem("axiora_child_name");
       return;
     }
 
-    const rawChildId = sessionStorage.getItem(.axiora_child_id");
+    const rawChildId = sessionStorage.getItem("axiora_child_id");
     const parsed = Number(rawChildId);
     const validId = Number.isFinite(parsed) && profiles.some((item) => item.id === parsed) ? parsed : profiles[0].id;
     const child = profiles.find((item) => item.id === validId) ?? profiles[0];
     setSelectedChildId(child.id);
-    sessionStorage.setItem(.axiora_child_id", String(child.id));
-    sessionStorage.setItem(.axiora_child_name", child.display_name);
+    sessionStorage.setItem("axiora_child_id", String(child.id));
+    sessionStorage.setItem("axiora_child_name", child.display_name);
     setSoundEnabled(getChildSoundEnabled(child.id));
     await loadChildDashboard(child.id);
   }, [loadChildDashboard]);
@@ -268,7 +268,7 @@ export default function ParentPage() {
       setTaskActionError(null);
     } catch (err) {
       setTasks([]);
-      setTaskActionError(getApiErrorMessage(err, "N√£o foi poss√≠vel carregar tarefas."));
+      setTaskActionError(getApiErrorMessage(err, "N„o foi possÌvel carregar tarefas."));
     }
   }, []);
 
@@ -280,7 +280,7 @@ export default function ParentPage() {
       setParentInsightsError(null);
     } catch (err) {
       setParentInsights(null);
-      setParentInsightsError(getApiErrorMessage(err, "N√£o foi poss√≠vel carregar os insights Axion."));
+      setParentInsightsError(getApiErrorMessage(err, "N„o foi possÌvel carregar os insights Axion."));
     } finally {
       setParentInsightsLoading(false);
     }
@@ -338,16 +338,16 @@ export default function ParentPage() {
       router.push("/select-child");
       return;
     }
-    sessionStorage.setItem(.axiora_child_id", String(selected.id));
-    sessionStorage.setItem(.axiora_child_name", selected.display_name);
+    sessionStorage.setItem("axiora_child_id", String(selected.id));
+    sessionStorage.setItem("axiora_child_name", selected.display_name);
     router.push("/child");
   };
 
   const onSwitchOrganization = () => {
     setProfileMenuOpen(false);
     sessionStorage.removeItem("axiora_parent_pin_ok");
-    sessionStorage.removeItem(.axiora_child_id");
-    sessionStorage.removeItem(.axiora_child_name");
+    sessionStorage.removeItem("axiora_child_id");
+    sessionStorage.removeItem("axiora_child_name");
     router.push("/select-tenant");
   };
 
@@ -367,8 +367,8 @@ export default function ParentPage() {
 
   const onSelectChild = async (child: ChildProfileSummary) => {
     setSelectedChildId(child.id);
-    sessionStorage.setItem(.axiora_child_id", String(child.id));
-    sessionStorage.setItem(.axiora_child_name", child.display_name);
+    sessionStorage.setItem("axiora_child_id", String(child.id));
+    sessionStorage.setItem("axiora_child_name", child.display_name);
     setSoundEnabled(getChildSoundEnabled(child.id));
     await Promise.all([loadChildDashboard(child.id), loadParentInsights()]);
   };
@@ -418,18 +418,18 @@ export default function ParentPage() {
   const onAvatarFileChange = (file: File | null, target: "new" | "edit") => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setChildActionError("Selecione um arquivo de imagem v√°lido.");
+      setChildActionError("Selecione um arquivo de imagem v·lido.");
       return;
     }
     if (file.size > 1_000_000) {
-      setChildActionError("A foto deve ter at√© 1MB.");
+      setChildActionError("A foto deve ter atÈ 1MB.");
       return;
     }
     const reader = new FileReader();
     reader.onload = () => {
       const result = typeof reader.result === "string" ? reader.result : null;
       if (!result || !result.startsWith("data:image/")) {
-        setChildActionError("N√£o foi poss√≠vel processar a foto.");
+        setChildActionError("N„o foi possÌvel processar a foto.");
         return;
       }
       if (target === "new") setNewChildAvatarKey(result);
@@ -443,12 +443,12 @@ export default function ParentPage() {
   const onCreateChild = async () => {
     setChildActionError(null);
     if (!newChildName.trim()) {
-      setChildActionError("Informe o nome da crian√ßa.");
+      setChildActionError("Informe o nome da crianÁa.");
       return;
     }
     const isoDateOfBirth = normalizeIsoDateOnly(newChildDateOfBirth);
     if (!isoDateOfBirth) {
-      setChildActionError("Informe a data de nascimento da crian√ßa.");
+      setChildActionError("Informe a data de nascimento da crianÁa.");
       return;
     }
     setCreatingChild(true);
@@ -466,7 +466,7 @@ export default function ParentPage() {
       setShowCreateChildForm(false);
       await loadChildrenAndContext();
     } catch (err) {
-      setChildActionError(getApiErrorMessage(err, "N√£o foi poss√≠vel criar perfil infantil."));
+      setChildActionError(getApiErrorMessage(err, "N„o foi possÌvel criar perfil infantil."));
     } finally {
       setCreatingChild(false);
     }
@@ -486,12 +486,12 @@ export default function ParentPage() {
     if (editingChildId === null) return;
     setChildActionError(null);
     if (!editingChildName.trim()) {
-      setChildActionError("Informe o nome da crian√ßa.");
+      setChildActionError("Informe o nome da crianÁa.");
       return;
     }
     const isoDateOfBirth = normalizeIsoDateOnly(editingChildDateOfBirth);
     if (!isoDateOfBirth) {
-      setChildActionError("Informe a data de nascimento da crian√ßa.");
+      setChildActionError("Informe a data de nascimento da crianÁa.");
       return;
     }
     setSavingChild(true);
@@ -504,11 +504,11 @@ export default function ParentPage() {
       });
       setChildren((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       if (selectedChildId === updated.id) {
-        sessionStorage.setItem(.axiora_child_name", updated.display_name);
+        sessionStorage.setItem("axiora_child_name", updated.display_name);
       }
       setEditingChildId(null);
     } catch (err) {
-      setChildActionError(getApiErrorMessage(err, "N√£o foi poss√≠vel salvar altera√ß√µes da crian√ßa."));
+      setChildActionError(getApiErrorMessage(err, "N„o foi possÌvel salvar alteraÁıes da crianÁa."));
     } finally {
       setSavingChild(false);
     }
@@ -518,7 +518,7 @@ export default function ParentPage() {
     if (!childToDelete) return;
     setChildActionError(null);
     if (!/^\d{4,6}$/.test(deleteChildPin)) {
-      setChildActionError("Informe o PIN dos pais com 4 a 6 n√∫meros para confirmar.");
+      setChildActionError("Informe o PIN dos pais com 4 a 6 n˙meros para confirmar.");
       return;
     }
     setDeletingChild(true);
@@ -528,7 +528,7 @@ export default function ParentPage() {
       setDeleteChildPin("");
       await loadChildrenAndContext();
     } catch (err) {
-      setChildActionError(getApiErrorMessage(err, "N√£o foi poss√≠vel excluir a crian√ßa."));
+      setChildActionError(getApiErrorMessage(err, "N„o foi possÌvel excluir a crianÁa."));
     } finally {
       setDeletingChild(false);
     }
@@ -542,7 +542,7 @@ export default function ParentPage() {
   const onCreateTask = async () => {
     setTaskActionError(null);
     if (!newTaskTitle.trim()) {
-      setTaskActionError("Informe o t√≠tulo da tarefa.");
+      setTaskActionError("Informe o tÌtulo da tarefa.");
       return;
     }
     setCreatingTask(true);
@@ -558,7 +558,7 @@ export default function ParentPage() {
       setNewTaskWeight("10");
       setShowCreateTaskForm(false);
     } catch (err) {
-      setTaskActionError(getApiErrorMessage(err, "N√£o foi poss√≠vel criar tarefa."));
+      setTaskActionError(getApiErrorMessage(err, "N„o foi possÌvel criar tarefa."));
     } finally {
       setCreatingTask(false);
     }
@@ -578,7 +578,7 @@ export default function ParentPage() {
     if (editingTaskId === null) return;
     setTaskActionError(null);
     if (!editingTaskTitle.trim()) {
-      setTaskActionError("Informe o t√≠tulo da tarefa.");
+      setTaskActionError("Informe o tÌtulo da tarefa.");
       return;
     }
     setSavingTask(true);
@@ -592,7 +592,7 @@ export default function ParentPage() {
       setTasks((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setEditingTaskId(null);
     } catch (err) {
-      setTaskActionError(getApiErrorMessage(err, "N√£o foi poss√≠vel salvar tarefa."));
+      setTaskActionError(getApiErrorMessage(err, "N„o foi possÌvel salvar tarefa."));
     } finally {
       setSavingTask(false);
     }
@@ -607,7 +607,7 @@ export default function ParentPage() {
         setEditingTaskId(null);
       }
     } catch (err) {
-      setTaskActionError(getApiErrorMessage(err, "N√£o foi poss√≠vel excluir tarefa."));
+      setTaskActionError(getApiErrorMessage(err, "N„o foi possÌvel excluir tarefa."));
     }
   };
 
@@ -615,7 +615,7 @@ export default function ParentPage() {
     return (
       <PageShell tone="parent" width="full" className="axiora-brand-page relative">
         <div className="axiora-brand-content mx-auto mt-16 w-full max-w-2xl rounded-3xl border border-[#E5D5C0]/20 bg-[#21433C]/40 p-6 text-slate-100 shadow-[0_20px_60px_rgba(7,20,17,0.34)]">
-          <p className="axiora-kicker">√Årea dos pais</p>
+          <p className="axiora-kicker">¡rea dos pais</p>
           <p className="mt-2 text-lg font-semibold">Preparando seu painel familiar...</p>
           <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[#17322F]/65">
             <div className="h-full w-1/3 animate-pulse rounded-full bg-[#F1C56B]/75" />
@@ -628,28 +628,28 @@ export default function ParentPage() {
   const selectedChild = children.find((child) => child.id === selectedChildId) ?? null;
   const heroMomentumLabel =
     trend && trend.completion_delta_percent > 0
-      ? "Ritmo em acelera√ß√£o"
+      ? "Ritmo em aceleraÁ„o"
       : trend && trend.completion_delta_percent < 0
-        ? "Semana pede refor√ßo"
+        ? "Semana pede reforÁo"
         : "Ritmo em retomada";
   const heroFamilyStatus =
     pendingLogs.length === 0
-      ? "Fam√≠lia em equil√≠brio hoje"
-      : `${pendingLogs.length} pend√™ncia(s) pedem sua aten√ß√£o`;
+      ? "FamÌlia em equilÌbrio hoje"
+      : `${pendingLogs.length} pendÍncia(s) pedem sua atenÁ„o`;
   const activeTasksCount = tasks.filter((task) => task.is_active).length;
   const selectedThemeLabel = selectedChild ? THEME_LABELS[selectedChild.theme] : "Sem tema definido";
   const rhythmSummary =
     parentInsights?.learningRhythm.summary ??
-    "Pequenos ajustes de rotina e const√¢ncia nas tarefas ajudam a manter a semana em um ritmo positivo.";
+    "Pequenos ajustes de rotina e const‚ncia nas tarefas ajudam a manter a semana em um ritmo positivo.";
   const familyActions = [
     {
-      label: pendingLogs.length > 0 ? "Resolver pend√™ncias" : "Abrir modo crian√ßa",
-      description: pendingLogs.length > 0 ? `${pendingLogs.length} item(ns) aguardando aprova√ß√£o.` : "Entrar na experi√™ncia infantil com o perfil em foco.",
+      label: pendingLogs.length > 0 ? "Resolver pendÍncias" : "Abrir modo crianÁa",
+      description: pendingLogs.length > 0 ? `${pendingLogs.length} item(ns) aguardando aprovaÁ„o.` : "Entrar na experiÍncia infantil com o perfil em foco.",
       onClick: pendingLogs.length > 0 ? () => toggleSection("insights") : onGoChildMode,
     },
     {
-      label: showCreateChildForm ? "Fechar cria√ß√£o" : "Adicionar perfil",
-      description: "Cadastre uma nova crian√ßa quando a fam√≠lia precisar ampliar o acompanhamento.",
+      label: showCreateChildForm ? "Fechar criaÁ„o" : "Adicionar perfil",
+      description: "Cadastre uma nova crianÁa quando a famÌlia precisar ampliar o acompanhamento.",
       onClick: () => {
         setManagementTab("children");
         setEditingChildId(null);
@@ -659,7 +659,7 @@ export default function ParentPage() {
     },
     {
       label: "Organizar tarefas",
-      description: `${activeTasksCount} tarefa(s) ativa(s) moldam a rotina atual da fam√≠lia.`,
+      description: `${activeTasksCount} tarefa(s) ativa(s) moldam a rotina atual da famÌlia.`,
       onClick: () => {
         setManagementTab("tasks");
         setShowCreateChildForm(false);
@@ -685,7 +685,7 @@ export default function ParentPage() {
           </div>
           <h1 className="mt-1 break-words text-[30px] font-semibold leading-[1.08] text-slate-100">Centro familiar</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-            Um painel mais calmo para acompanhar a rotina, ajustar a fam√≠lia e agir r√°pido quando houver pend√™ncias.
+            Um painel mais calmo para acompanhar a rotina, ajustar a famÌlia e agir r·pido quando houver pendÍncias.
           </p>
         </div>
         <div className="order-1 ml-auto flex shrink-0 items-center gap-2 sm:order-2 sm:ml-0">
@@ -697,7 +697,7 @@ export default function ParentPage() {
             onClick={onGoChildMode}
           >
             <Baby className="mr-1 h-4 w-4" />
-            Ver modo crian√ßa
+            Ver modo crianÁa
           </Button>
           <div className="relative" ref={profileMenuRef}>
             <Button
@@ -720,7 +720,7 @@ export default function ParentPage() {
                   onClick={onSwitchOrganization}
                 >
                   <Building2 className="h-4 w-4" />
-                  Trocar organiza√ß√£o
+                  Trocar organizaÁ„o
                 </button>
                 <button
                   type="button"
@@ -744,14 +744,14 @@ export default function ParentPage() {
             <div className="flex flex-wrap items-center gap-2">
               <span className="parent-chip rounded-full px-3 py-1 text-[11px] font-semibold tracking-[0.06em] text-slate-300">Perfil em foco</span>
               <span className="parent-chip rounded-full px-3 py-1 text-[11px] font-semibold text-slate-400">
-                {selectedChild ? `Tema ${THEME_LABELS[selectedChild.theme]}` : "Sem crian√ßa ativa"}
+                {selectedChild ? `Tema ${THEME_LABELS[selectedChild.theme]}` : "Sem crianÁa ativa"}
               </span>
             </div>
             <div className="mt-4 flex flex-wrap items-start gap-4 lg:flex-nowrap">
               <div className="parent-avatar-stage flex items-center gap-3 rounded-[28px] px-4 py-4">
-                <ChildAvatar name={selectedChild?.display_name ?? "Crian√ßa"} avatarKey={selectedChild?.avatar_key ?? null} size={74} />
+                <ChildAvatar name={selectedChild?.display_name ?? "CrianÁa"} avatarKey={selectedChild?.avatar_key ?? null} size={74} />
                 <div className="min-w-0">
-                  <p className="text-[30px] font-semibold leading-tight text-slate-50">{selectedChild?.display_name ?? "Nenhuma crian√ßa ativa"}</p>
+                  <p className="text-[30px] font-semibold leading-tight text-slate-50">{selectedChild?.display_name ?? "Nenhuma crianÁa ativa"}</p>
                   <p className="mt-1 text-sm text-slate-300">
                     {selectedChild ? `Nascimento ${formatDateBr(selectedChild.date_of_birth)}` : "Selecione ou crie um perfil infantil"}
                   </p>
@@ -761,7 +761,7 @@ export default function ParentPage() {
                       Rotina orientada por aprendizado
                     </span>
                     <span className="parent-chip rounded-full px-2.5 py-1 text-[10px] font-semibold text-slate-300">
-                      {parentInsights?.learningRhythm.title ?? "Ritmo em observa√ß√£o"}
+                      {parentInsights?.learningRhythm.title ?? "Ritmo em observaÁ„o"}
                     </span>
                   </div>
                 </div>
@@ -769,11 +769,11 @@ export default function ParentPage() {
               <div className="parent-spotlight min-w-[240px] flex-1 rounded-[28px] px-4 py-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#F7DEC0]/80">Leitura Axion</p>
                 <p className="mt-2 text-lg font-semibold text-white">
-                  {parentInsights?.learningRhythm.title ?? "Semana pronta para pequenas vit√≥rias"}
+                  {parentInsights?.learningRhythm.title ?? "Semana pronta para pequenas vitÛrias"}
                 </p>
                 <p className="mt-2 max-w-xl text-sm leading-6 text-slate-200/78">
                   {parentInsights?.learningRhythm.summary ??
-                    "Use este painel para acompanhar pend√™ncias, revisar tarefas e atualizar perfis sem navegar por blocos separados."}
+                    "Use este painel para acompanhar pendÍncias, revisar tarefas e atualizar perfis sem navegar por blocos separados."}
                 </p>
               </div>
             </div>
@@ -794,12 +794,12 @@ export default function ParentPage() {
                       ))}
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Fam√≠lia ativa</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">FamÌlia ativa</p>
                       <p className="text-sm font-semibold text-slate-100">{children.length} perfil(is) acompanhados</p>
                     </div>
                   </div>
                   <div className="parent-focus-pill rounded-full px-3 py-2 text-sm font-semibold text-slate-100">
-                    {parentInsights?.dropoutRisk.title ?? "Acompanhamento est√°vel"}
+                    {parentInsights?.dropoutRisk.title ?? "Acompanhamento est·vel"}
                   </div>
                 </div>
               </div>
@@ -812,23 +812,23 @@ export default function ParentPage() {
                 <Sparkles className="h-4 w-4 text-[#F1C56B]" />
               </div>
               <p className="mt-3 text-2xl font-semibold text-slate-100">{pendingLogs.length}</p>
-              <p className="mt-1 text-[11px] text-slate-400">itens aguardando a√ß√£o</p>
+              <p className="mt-1 text-[11px] text-slate-400">itens aguardando aÁ„o</p>
             </div>
             <div className="parent-stat-card rounded-[24px] px-4 py-4">
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-semibold tracking-[0.08em] text-slate-400">Carteira</p>
                 <Wallet className="h-4 w-4 text-emerald-300" />
               </div>
-              <p className="mt-3 text-xl font-semibold text-slate-100">{wallet ? formatBRL(wallet.total_balance_cents) : "‚Äî"}</p>
-              <p className="mt-1 text-[11px] text-slate-400">saldo total da crian√ßa</p>
+              <p className="mt-3 text-xl font-semibold text-slate-100">{wallet ? formatBRL(wallet.total_balance_cents) : "ó"}</p>
+              <p className="mt-1 text-[11px] text-slate-400">saldo total da crianÁa</p>
             </div>
             <div className="parent-stat-card rounded-[24px] px-4 py-4">
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-semibold tracking-[0.08em] text-slate-400">Conclusao</p>
                 <TrendingUp className="h-4 w-4 text-violet-300" />
               </div>
-              <p className="mt-3 text-xl font-semibold text-slate-100">{trend ? `${trend.completion_delta_percent >= 0 ? "+" : ""}${trend.completion_delta_percent.toFixed(1)}%` : "‚Äî"}</p>
-              <p className="mt-1 text-[11px] text-slate-400">varia√ß√£o da semana</p>
+              <p className="mt-3 text-xl font-semibold text-slate-100">{trend ? `${trend.completion_delta_percent >= 0 ? "+" : ""}${trend.completion_delta_percent.toFixed(1)}%` : "ó"}</p>
+              <p className="mt-1 text-[11px] text-slate-400">variaÁ„o da semana</p>
             </div>
             <div className="parent-stat-card rounded-[24px] px-4 py-4">
               <div className="flex items-center justify-between">
@@ -836,7 +836,7 @@ export default function ParentPage() {
                 <Users className="h-4 w-4 text-amber-300" />
               </div>
               <p className="mt-3 text-2xl font-semibold text-slate-100">{children.length}</p>
-              <p className="mt-1 text-[11px] text-slate-400">perfis na fam√≠lia</p>
+              <p className="mt-1 text-[11px] text-slate-400">perfis na famÌlia</p>
             </div>
           </div>
         </CardContent>
@@ -844,8 +844,8 @@ export default function ParentPage() {
 
       <section className="axiora-brand-content grid items-start gap-4 lg:grid-cols-12">
         <CollapsibleCard
-          title="Gest√£o da fam√≠lia"
-          summary={`${children.length} crian√ßa(s) cadastrada(s) ‚Ä¢ ${tasks.length} tarefa(s) registradas`}
+          title="Gest„o da famÌlia"
+          summary={`${children.length} crianÁa(s) cadastrada(s) ï ${tasks.length} tarefa(s) registradas`}
           collapsed={collapsedSections.children}
           onToggle={() => toggleSection("children")}
           className="self-start lg:col-span-8 apple-panel"
@@ -853,7 +853,7 @@ export default function ParentPage() {
           <div className="parent-management-shell rounded-[28px] p-4 md:p-5">
             <div className="flex flex-col gap-3 border-b border-white/8 pb-4 md:flex-row md:items-center md:justify-between">
               <div className="space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Workspace da fam√≠lia</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Workspace da famÌlia</p>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="parent-chip rounded-full px-3 py-1 text-[11px] font-semibold text-slate-200">
                     Ativa: {selectedChild?.display_name ?? "nenhuma"}
@@ -904,10 +904,10 @@ export default function ParentPage() {
                 >
                   {managementTab === "children"
                     ? showCreateChildForm
-                      ? "Fechar cria√ß√£o"
-                      : "Nova crian√ßa"
+                      ? "Fechar criaÁ„o"
+                      : "Nova crianÁa"
                     : showCreateTaskForm
-                      ? "Fechar cria√ß√£o"
+                      ? "Fechar criaÁ„o"
                       : "Nova tarefa"}
                 </Button>
               </div>
@@ -915,15 +915,15 @@ export default function ParentPage() {
             <div className="pt-4">
             {managementTab === "children" ? (
               <>
-            {children.length === 0 ? <StatusNotice tone="warning">Nenhuma crian√ßa cadastrada ainda.</StatusNotice> : null}
+            {children.length === 0 ? <StatusNotice tone="warning">Nenhuma crianÁa cadastrada ainda.</StatusNotice> : null}
             {showCreateChildForm ? (
             <div className="parent-editor-panel mb-4 rounded-[24px] p-4">
               <p className="mb-1 text-sm font-semibold text-slate-100">Novo perfil infantil</p>
-              <p className="mb-4 text-xs text-slate-400">Cadastre um novo perfil apenas quando a fam√≠lia realmente precisar.</p>
+              <p className="mb-4 text-xs text-slate-400">Cadastre um novo perfil apenas quando a famÌlia realmente precisar.</p>
               <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)]">
                 <div className="parent-editor-aside rounded-[22px] p-4">
                   <div className="flex flex-col items-center gap-3 text-center">
-                    <ChildAvatar name={newChildName || "Crian√ßa"} avatarKey={newChildAvatarKey} size={68} />
+                    <ChildAvatar name={newChildName || "CrianÁa"} avatarKey={newChildAvatarKey} size={68} />
                     <div className="space-y-1">
                       <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-[#F7DEC0]">
                         <ImagePlus className="h-3.5 w-3.5" />
@@ -944,14 +944,14 @@ export default function ParentPage() {
                           Remover foto
                         </button>
                       ) : (
-                        <p className="text-[11px] font-medium leading-5 text-slate-400">Sem foto, usamos um avatar amig√°vel.</p>
+                        <p className="text-[11px] font-medium leading-5 text-slate-400">Sem foto, usamos um avatar amig·vel.</p>
                       )}
                     </div>
                   </div>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="md:col-span-2">
-                    <Input className={appleFieldClassName} placeholder="Nome da crian√ßa" value={newChildName} onChange={(e) => setNewChildName(e.target.value)} />
+                    <Input className={appleFieldClassName} placeholder="Nome da crianÁa" value={newChildName} onChange={(e) => setNewChildName(e.target.value)} />
                   </div>
                   <Input className={appleFieldClassName} type="date" required value={newChildDateOfBirth} onChange={(e) => setNewChildDateOfBirth(e.target.value)} />
                   <NativeSelect className={appleSelectClassName} value={newChildTheme} onChange={(e) => setNewChildTheme(e.target.value as ThemeName)}>
@@ -964,9 +964,9 @@ export default function ParentPage() {
                   <div className="md:col-span-2 flex flex-wrap items-center gap-2">
                     <Button size="sm" className="apple-btn-primary" onClick={() => void onCreateChild()} disabled={creatingChild}>
                       <Plus className="mr-1 h-3.5 w-3.5" />
-                      {creatingChild ? "Criando..." : "Criar perfil da crian√ßa"}
+                      {creatingChild ? "Criando..." : "Criar perfil da crianÁa"}
                     </Button>
-                    <p className="text-[11px] font-medium text-slate-400">A data de nascimento √© obrigat√≥ria.</p>
+                    <p className="text-[11px] font-medium text-slate-400">A data de nascimento È obrigatÛria.</p>
                   </div>
                 </div>
               </div>
@@ -1036,14 +1036,14 @@ export default function ParentPage() {
                       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#F7DEC0]/78">Perfil em destaque</p>
                       <div className="mt-3 flex items-start gap-3">
                         <ChildAvatar
-                          name={selectedChild?.display_name ?? "Crian√ßa"}
+                          name={selectedChild?.display_name ?? "CrianÁa"}
                           avatarKey={selectedChild?.avatar_key ?? null}
                           size={58}
                         />
                         <div className="min-w-0">
-                          <p className="text-2xl font-semibold text-slate-50">{selectedChild?.display_name ?? "Selecione uma crian√ßa"}</p>
+                          <p className="text-2xl font-semibold text-slate-50">{selectedChild?.display_name ?? "Selecione uma crianÁa"}</p>
                           <p className="mt-1 text-sm text-slate-300/80">
-                            {selectedChild ? `Nascimento ${formatDateBr(selectedChild.date_of_birth)} ‚Ä¢ Tema ${selectedThemeLabel}` : "Sem contexto infantil ativo no momento."}
+                            {selectedChild ? `Nascimento ${formatDateBr(selectedChild.date_of_birth)} ï Tema ${selectedThemeLabel}` : "Sem contexto infantil ativo no momento."}
                           </p>
                         </div>
                       </div>
@@ -1055,11 +1055,11 @@ export default function ParentPage() {
                   <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
                     <div className="parent-soft-block rounded-[24px] p-4">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Leitura da semana</p>
-                      <p className="mt-2 text-lg font-semibold text-white">{parentInsights?.learningRhythm.title ?? "Semana em observa√ß√£o"}</p>
+                      <p className="mt-2 text-lg font-semibold text-white">{parentInsights?.learningRhythm.title ?? "Semana em observaÁ„o"}</p>
                       <p className="mt-2 text-sm leading-6 text-slate-300/82">{rhythmSummary}</p>
                       <div className="mt-4 flex flex-wrap gap-2">
                         <span className="parent-focus-pill rounded-full px-3 py-1.5 text-xs font-semibold text-slate-100">
-                          {pendingLogs.length > 0 ? `${pendingLogs.length} aprova√ß√£o(√µes) pendentes` : "Sem aprova√ß√µes pendentes"}
+                          {pendingLogs.length > 0 ? `${pendingLogs.length} aprovaÁ„o(ıes) pendentes` : "Sem aprovaÁıes pendentes"}
                         </span>
                         <span className="parent-chip rounded-full px-3 py-1.5 text-xs font-semibold text-slate-300">
                           {activeTasksCount} tarefa(s) ativa(s)
@@ -1067,7 +1067,7 @@ export default function ParentPage() {
                       </div>
                     </div>
                     <div className="parent-quickrail rounded-[24px] p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">A√ß√µes r√°pidas</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">AÁıes r·pidas</p>
                       <div className="mt-3 space-y-2.5">
                         {familyActions.map((item) => (
                           <button
@@ -1088,17 +1088,17 @@ export default function ParentPage() {
                   </div>
                 </div>
                 <div className="parent-story-panel rounded-[28px] p-5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#F7DEC0]/78">Vis√£o da fam√≠lia</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#F7DEC0]/78">Vis„o da famÌlia</p>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <div className="parent-soft-block rounded-[22px] p-4">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Perfis acompanhados</p>
                       <p className="mt-2 text-2xl font-semibold text-slate-50">{children.length}</p>
-                      <p className="mt-2 text-sm leading-6 text-slate-300/78">Cada perfil mant√©m tema, hist√≥rico e sele√ß√£o r√°pida sem sair do painel.</p>
+                      <p className="mt-2 text-sm leading-6 text-slate-300/78">Cada perfil mantÈm tema, histÛrico e seleÁ„o r·pida sem sair do painel.</p>
                     </div>
                     <div className="parent-soft-block rounded-[22px] p-4">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Carteira em foco</p>
-                      <p className="mt-2 text-2xl font-semibold text-slate-50">{wallet ? formatBRL(wallet.total_balance_cents) : "‚Äî"}</p>
-                      <p className="mt-2 text-sm leading-6 text-slate-300/78">Saldo consolidado da crian√ßa ativa para recompensas e combinados da rotina.</p>
+                      <p className="mt-2 text-2xl font-semibold text-slate-50">{wallet ? formatBRL(wallet.total_balance_cents) : "ó"}</p>
+                      <p className="mt-2 text-sm leading-6 text-slate-300/78">Saldo consolidado da crianÁa ativa para recompensas e combinados da rotina.</p>
                     </div>
                   </div>
                 </div>
@@ -1107,10 +1107,10 @@ export default function ParentPage() {
 
             {editingChildId ? (
               <div className="parent-soft-block-strong rounded-2xl p-4">
-                <p className="mb-2 text-xs font-semibold text-slate-300">Editar crian√ßa</p>
+                <p className="mb-2 text-xs font-semibold text-slate-300">Editar crianÁa</p>
                 <div className="grid grid-cols-1 gap-3">
                   <div className="parent-soft-block flex items-center gap-3 rounded-xl p-3">
-                    <ChildAvatar name={editingChildName || "Crian√ßa"} avatarKey={editingChildAvatarKey} size={54} />
+                    <ChildAvatar name={editingChildName || "CrianÁa"} avatarKey={editingChildAvatarKey} size={54} />
                     <div className="space-y-1">
                       <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-[#F7DEC0]">
                         <ImagePlus className="h-3.5 w-3.5" />
@@ -1132,14 +1132,14 @@ export default function ParentPage() {
                         </button>
                     ) : (
                       <p className="max-w-[17rem] break-words text-[11px] font-semibold leading-snug text-slate-400 [overflow-wrap:anywhere]">
-                        Sem foto, usamos um avatar amig√°vel.
+                        Sem foto, usamos um avatar amig·vel.
                       </p>
                     )}
                   </div>
                 </div>
-                  <Input className={appleFieldClassName} placeholder="Nome da crian√ßa" value={editingChildName} onChange={(e) => setEditingChildName(e.target.value)} />
+                  <Input className={appleFieldClassName} placeholder="Nome da crianÁa" value={editingChildName} onChange={(e) => setEditingChildName(e.target.value)} />
                   <Input className={appleFieldClassName} type="date" required value={editingChildDateOfBirth} onChange={(e) => setEditingChildDateOfBirth(e.target.value)} />
-                  <p className="text-[11px] font-medium text-slate-400">Data de nascimento obrigat√≥ria.</p>
+                  <p className="text-[11px] font-medium text-slate-400">Data de nascimento obrigatÛria.</p>
                   <NativeSelect className={appleSelectClassName} value={editingChildTheme} onChange={(e) => setEditingChildTheme(e.target.value as ThemeName)}>
                     {THEME_OPTIONS.map((theme) => (
                       <option key={theme} value={theme}>
@@ -1150,7 +1150,7 @@ export default function ParentPage() {
                   <div className="flex items-center gap-2">
                     <Button size="sm" className="apple-btn-primary" onClick={() => void onSaveChild()} disabled={savingChild}>
                       <Save className="mr-1 h-3.5 w-3.5" />
-                      {savingChild ? "Salvando..." : "Salvar crian√ßa"}
+                      {savingChild ? "Salvando..." : "Salvar crianÁa"}
                     </Button>
                     <Button size="sm" variant="outline" className="apple-btn-subtle" onClick={() => setEditingChildId(null)}>
                       Cancelar
@@ -1170,7 +1170,7 @@ export default function ParentPage() {
               <p className="mb-1 text-sm font-semibold text-slate-100">Criar tarefa</p>
               <p className="mb-4 text-xs text-slate-400">Use poucas tarefas bem definidas para manter a rotina clara.</p>
               <div className="grid gap-3 md:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,0.7fr)_auto]">
-                <Input className={appleFieldClassName} placeholder="T√≠tulo da tarefa" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} />
+                <Input className={appleFieldClassName} placeholder="TÌtulo da tarefa" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} />
                 <NativeSelect className={appleSelectClassName} value={newTaskDifficulty} onChange={(e) => setNewTaskDifficulty(e.target.value as TaskOut["difficulty"])}>
                   {DIFFICULTY_OPTIONS.map((item) => (
                     <option key={item} value={item}>
@@ -1252,7 +1252,7 @@ export default function ParentPage() {
         <div className="space-y-4 self-start lg:sticky lg:top-6 lg:col-span-4">
         <CollapsibleCard
           title="Pulse Axion"
-          summary={selectedChild ? `Leitura e opera√ß√£o de ${selectedChild.display_name}` : "Leitura e opera√ß√£o da fam√≠lia"}
+          summary={selectedChild ? `Leitura e operaÁ„o de ${selectedChild.display_name}` : "Leitura e operaÁ„o da famÌlia"}
           collapsed={collapsedSections.insights}
           onToggle={() => toggleSection("insights")}
           className="apple-panel"
@@ -1264,7 +1264,7 @@ export default function ParentPage() {
                 <div className="parent-spotlight rounded-[26px] px-4 py-4">
                   <div className="flex items-center gap-2">
                     <Brain className="h-4 w-4 text-[#F1C56B]" />
-                    <p className="text-[11px] font-semibold tracking-[0.08em] text-[#F7DEC0]/82">Risco de queda de consist√™ncia</p>
+                    <p className="text-[11px] font-semibold tracking-[0.08em] text-[#F7DEC0]/82">Risco de queda de consistÍncia</p>
                   </div>
                   <p className="mt-2 text-sm font-semibold text-slate-100">{parentInsights.dropoutRisk.title}</p>
                   <p className="mt-1 text-xs leading-5 text-slate-200/78">{parentInsights.dropoutRisk.summary}</p>
@@ -1280,7 +1280,7 @@ export default function ParentPage() {
                 <div className="parent-soft-block rounded-2xl px-3 py-3">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-amber-300" />
-                    <p className="text-[11px] font-semibold tracking-[0.06em] text-slate-400">A√ß√µes recomendadas</p>
+                    <p className="text-[11px] font-semibold tracking-[0.06em] text-slate-400">AÁıes recomendadas</p>
                   </div>
                   <div className="mt-3 space-y-2">
                     {parentInsights.suggestedParentalActions.slice(0, 3).map((action) => (
@@ -1299,15 +1299,15 @@ export default function ParentPage() {
               </div>
             ) : null}
             {!parentInsightsLoading && !parentInsightsError && !parentInsights ? (
-              <StatusNotice tone="info">Sem insights dispon√≠veis para este perfil no momento.</StatusNotice>
+              <StatusNotice tone="info">Sem insights disponÌveis para este perfil no momento.</StatusNotice>
             ) : null}
             <div className="h-px bg-gradient-to-r from-transparent via-[#E5D5C0]/20 to-transparent" />
             <div className="parent-operations-panel rounded-[24px] p-4">
               <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-slate-100">Aprova√ß√µes pendentes</p>
+                <p className="text-sm font-semibold text-slate-100">AprovaÁıes pendentes</p>
                 <p className="mt-1 text-xs text-slate-400">
-                  {pendingLogs.length > 0 ? `${pendingLogs.length} item(ns) aguardando sua decis√£o.` : "Sem pend√™ncias para a crian√ßa ativa."}
+                  {pendingLogs.length > 0 ? `${pendingLogs.length} item(ns) aguardando sua decis„o.` : "Sem pendÍncias para a crianÁa ativa."}
                 </p>
               </div>
               <button
@@ -1322,7 +1322,7 @@ export default function ParentPage() {
             <div className="mt-3 grid grid-cols-2 gap-2">
               <div className="parent-stat-card rounded-2xl px-3 py-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-semibold tracking-[0.08em] text-slate-400">Pend√™ncias</p>
+                  <p className="text-[10px] font-semibold tracking-[0.08em] text-slate-400">PendÍncias</p>
                   <Sparkles className="h-4 w-4 text-[#F1C56B]" />
                 </div>
                 <p className="mt-1 text-base font-semibold text-slate-100">{pendingLogs.length}</p>
@@ -1333,7 +1333,7 @@ export default function ParentPage() {
                   <TrendingUp className="h-4 w-4 text-emerald-300" />
                 </div>
                 <p className="mt-1 text-base font-semibold text-slate-100">
-                  {trend ? `${trend.earnings_delta_percent >= 0 ? "+" : ""}${trend.earnings_delta_percent.toFixed(1)}%` : "‚Äî"}
+                  {trend ? `${trend.earnings_delta_percent >= 0 ? "+" : ""}${trend.earnings_delta_percent.toFixed(1)}%` : "ó"}
                 </p>
               </div>
             </div>
@@ -1341,7 +1341,7 @@ export default function ParentPage() {
             {pendingLogs.slice(0, 6).map((log) => (
               <div key={log.id} className="parent-soft-block flex items-center justify-between gap-3 rounded-2xl px-3 py-3 text-xs">
                 <span className="text-slate-300">
-                  Tarefa #{log.task_id} ‚Ä¢ {log.date}
+                  Tarefa #{log.task_id} ï {log.date}
                 </span>
                 <Button size="sm" className="apple-btn-subtle" onClick={() => void onApproveWithRollback(log.id)} disabled={approvingLogId === log.id}>
                   {approvingLogId === log.id ? "..." : "Aprovar"}
@@ -1351,7 +1351,7 @@ export default function ParentPage() {
             </div>
             {pendingLogs.length === 0 && !dashboardError ? (
               <div className="mt-3">
-                <StatusNotice tone="info">Sem pend√™ncias de aprova√ß√£o para a crian√ßa ativa.</StatusNotice>
+                <StatusNotice tone="info">Sem pendÍncias de aprovaÁ„o para a crianÁa ativa.</StatusNotice>
               </div>
             ) : null}
             {dashboardError ? <div role="alert" aria-live="polite" className="mt-3"><StatusNotice tone="error">{dashboardError}</StatusNotice></div> : null}
@@ -1363,9 +1363,9 @@ export default function ParentPage() {
       {childToDelete ? (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#0A1930]/45 px-4">
           <div className="w-full max-w-sm rounded-3xl border border-[#BFD3EE] bg-white p-5 shadow-[0_14px_40px_rgba(16,48,90,0.2)]">
-            <h3 className="text-lg font-black text-[#17345E]">Excluir crian√ßa</h3>
+            <h3 className="text-lg font-black text-[#17345E]">Excluir crianÁa</h3>
             <p className="mt-1 text-sm font-semibold text-[#5A7AA4]">
-              Voc√™ est√° prestes a excluir <strong>{childToDelete.display_name}</strong>. Esta a√ß√£o exige confirma√ß√£o com PIN.
+              VocÍ est· prestes a excluir <strong>{childToDelete.display_name}</strong>. Esta aÁ„o exige confirmaÁ„o com PIN.
             </p>
             <div className="mt-3 space-y-2">
               <Input
@@ -1373,11 +1373,11 @@ export default function ParentPage() {
                 type="password"
                 inputMode="numeric"
                 maxLength={6}
-                placeholder="PIN dos pais (4 a 6 n√∫meros)"
+                placeholder="PIN dos pais (4 a 6 n˙meros)"
                 value={deleteChildPin}
                 onChange={(e) => setDeleteChildPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
               />
-              <p className="text-xs text-muted-foreground">Apenas n√∫meros. Exemplo: 1234</p>
+              <p className="text-xs text-muted-foreground">Apenas n˙meros. Exemplo: 1234</p>
             </div>
             <div className="mt-4 flex justify-end gap-2">
               <Button
@@ -1393,7 +1393,7 @@ export default function ParentPage() {
                 Cancelar
               </Button>
               <Button type="button" className="apple-btn-primary !bg-[#ef4444] !text-white hover:!bg-[#dc2626]" onClick={() => void onDeleteChild()} disabled={deletingChild}>
-                {deletingChild ? "Excluindo..." : "Confirmar exclus√£o"}
+                {deletingChild ? "Excluindo..." : "Confirmar exclus„o"}
               </Button>
             </div>
           </div>

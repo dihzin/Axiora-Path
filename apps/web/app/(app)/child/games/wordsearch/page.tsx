@@ -1,4 +1,4 @@
-ï»¿"use client";
+"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -26,9 +26,9 @@ const WORD_XP = 15;
 const COMPLETE_BONUS_XP = 40;
 
 const THEME_LABELS: Record<ThemeId, string> = {
-  FINANCAS: "FinanÃ§as",
-  EMOCOES: "EmoÃ§Ãµes",
-  HABITOS: "HÃ¡bitos",
+  FINANCAS: "Finanças",
+  EMOCOES: "Emoções",
+  HABITOS: "Hábitos",
   VALORES: "Valores",
 };
 
@@ -189,7 +189,7 @@ function RewardModal({
         <CardContent className="space-y-2 text-sm">
           <p>Palavras encontradas: {wordsFound}</p>
           <p>XP por palavras: {baseXp}</p>
-          <p>BÃ´nus conclusÃ£o: +{bonusXp}</p>
+          <p>Bônus conclusão: +{bonusXp}</p>
           <GameResultPanel
             title="Tabuleiro completo"
             score={wordsFound * WORD_XP + COMPLETE_BONUS_XP}
@@ -235,7 +235,7 @@ export default function WordSearchPage() {
   const [confettiTrigger, setConfettiTrigger] = useState(0);
 
   useEffect(() => {
-    const raw = sessionStorage.getItem(.axiora_child_id");
+    const raw = sessionStorage.getItem("axiora_child_id");
     const parsed = Number(raw);
     if (raw && Number.isFinite(parsed)) {
       setChildId(parsed);
@@ -358,7 +358,7 @@ export default function WordSearchPage() {
   };
 
   const onCellClick = (pos: Pos) => {
-    // Fallback para ambientes onde drag no modo responsivo do navegador Ã© inconsistente.
+    // Fallback para ambientes onde drag no modo responsivo do navegador é inconsistente.
     if (tapStart === null) {
       setTapStart(pos);
       setSelectedPath([pos]);
@@ -418,7 +418,7 @@ export default function WordSearchPage() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Search className="h-5 w-5 text-secondary" />
-              CaÃ§a-palavras
+              Caça-palavras
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -512,7 +512,7 @@ export default function WordSearchPage() {
               })}
             </div>
             <div className="rounded-xl border border-border bg-white px-3 py-2 text-xs text-muted-foreground">
-              Cada palavra: +{WORD_XP} XP â€¢ Tabuleiro completo: +{COMPLETE_BONUS_XP} XP
+              Cada palavra: +{WORD_XP} XP • Tabuleiro completo: +{COMPLETE_BONUS_XP} XP
             </div>
             <Button className="w-full" variant="outline" onClick={() => createBoard(theme)}>
               Novo tabuleiro

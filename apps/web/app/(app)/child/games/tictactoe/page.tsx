@@ -1,4 +1,4 @@
-ï»¿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -139,7 +139,7 @@ function chooseAiMove(board: Board, difficulty: Difficulty): number {
   const winning = findImmediateMove(board, "O");
   if (winning !== null) return winning;
 
-  // Regra obrigatÃ³ria: bloquear vitÃ³rias Ã³bvias.
+  // Regra obrigatória: bloquear vitórias óbvias.
   const block = findImmediateMove(board, "X");
   if (block !== null) return block;
 
@@ -169,7 +169,7 @@ function RewardModal({ open, result, baseXp, bonusXp, apiResult, durationSeconds
   const requestedXp = baseXp + bonusXp;
   const grantedXp = apiResult?.dailyLimit.grantedXp ?? requestedXp;
   const coins = apiResult?.session.coinsEarned ?? 0;
-  const title = result === "WIN" ? "VocÃª venceu!" : result === "DRAW" ? "Empate!" : "NÃ£o foi dessa vez";
+  const title = result === "WIN" ? "Você venceu!" : result === "DRAW" ? "Empate!" : "Não foi dessa vez";
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-foreground/50 p-4">
@@ -182,7 +182,7 @@ function RewardModal({ open, result, baseXp, bonusXp, apiResult, durationSeconds
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p>XP base: {baseXp}</p>
-          {bonusXp > 0 ? <p>BÃ´nus sequÃªncia: +{bonusXp}</p> : null}
+          {bonusXp > 0 ? <p>Bônus sequência: +{bonusXp}</p> : null}
           <GameResultPanel
             title={title}
             score={(baseXp + bonusXp) * 10}
@@ -198,7 +198,7 @@ function RewardModal({ open, result, baseXp, bonusXp, apiResult, durationSeconds
             onReplay={onReplay}
             onBack={onBack}
           />
-          {apiResult && apiResult.dailyLimit.grantedXp < apiResult.dailyLimit.requestedXp ? <p className="text-xs text-accent-foreground">Limite diÃ¡rio aplicado neste jogo.</p> : null}
+          {apiResult && apiResult.dailyLimit.grantedXp < apiResult.dailyLimit.requestedXp ? <p className="text-xs text-accent-foreground">Limite diário aplicado neste jogo.</p> : null}
           <Button className="mt-2 w-full" onClick={onClose}>Continuar</Button>
         </CardContent>
       </Card>
@@ -242,7 +242,7 @@ export default function TicTacToePage() {
   });
 
   useEffect(() => {
-    const raw = sessionStorage.getItem(.axiora_child_id");
+    const raw = sessionStorage.getItem("axiora_child_id");
     const parsed = Number(raw);
     if (raw && Number.isFinite(parsed)) {
       setChildId(parsed);
@@ -299,13 +299,13 @@ export default function TicTacToePage() {
       if (multiplayerState.status === "WAITING") return "Aguardando segundo jogador...";
       if (multiplayerState.status === "CANCELLED") return "Partida encerrada";
       if (multiplayerState.winner === "DRAW") return "Empate";
-      if (multiplayerState.winner === "X" || multiplayerState.winner === "O") return `VitÃ³ria de ${multiplayerState.winner}`;
+      if (multiplayerState.winner === "X" || multiplayerState.winner === "O") return `Vitória de ${multiplayerState.winner}`;
       return multiplayerState.canPlay ? "Sua vez" : "Vez do oponente";
     }
-    if (matchResult === "WIN") return "VitÃ³ria";
+    if (matchResult === "WIN") return "Vitória";
     if (matchResult === "DRAW") return "Empate";
     if (matchResult === "LOSS") return "Derrota";
-    if (aiThinking) return "Axion estÃ¡ pensando...";
+    if (aiThinking) return "Axion está pensando...";
     return playerTurn ? "Sua vez" : "Vez do Axion";
   }, [aiThinking, matchResult, multiplayerState, playMode, playerTurn]);
 
@@ -324,7 +324,7 @@ export default function TicTacToePage() {
         setFlowError(null);
       } catch {
         if (cancelled) return;
-        setFlowError("Convite invÃ¡lido ou expirado.");
+        setFlowError("Convite inválido ou expirado.");
       }
     })();
     return () => {
@@ -383,14 +383,14 @@ export default function TicTacToePage() {
       setActiveSessionId(created.sessionId);
       setFlowStep("HOST");
     } catch {
-      setFlowError("NÃ£o foi possÃ­vel criar a partida multiplayer.");
+      setFlowError("Não foi possível criar a partida multiplayer.");
     }
   };
 
   const joinMultiplayerByCode = async () => {
     const code = joinCodeInput.trim().toUpperCase();
     if (!code) {
-      setFlowError("Informe um cÃ³digo para entrar.");
+      setFlowError("Informe um código para entrar.");
       return;
     }
     setFlowError(null);
@@ -400,7 +400,7 @@ export default function TicTacToePage() {
       setActiveSessionId(state.sessionId);
       setFlowStep("PLAY");
     } catch {
-      setFlowError("CÃ³digo invÃ¡lido ou partida indisponÃ­vel.");
+      setFlowError("Código inválido ou partida indisponível.");
     }
   };
 
@@ -489,7 +489,7 @@ export default function TicTacToePage() {
         try {
           await postMultiplayerMove(multiplayerState.sessionId, idx);
         } catch (error) {
-          const message = getApiErrorMessage(error, "NÃ£o foi possÃ­vel registrar a jogada. Tente novamente.");
+          const message = getApiErrorMessage(error, "Não foi possível registrar a jogada. Tente novamente.");
           let friendly = message;
           if (error instanceof ApiError && error.status === 409) {
             const payload = error.payload as { detail?: unknown } | null;
@@ -629,7 +629,7 @@ export default function TicTacToePage() {
           <CardContent className="space-y-3">
             {flowStep === "HOST" ? (
               <div className="space-y-2 rounded-2xl border border-border bg-card p-3">
-                <p className="text-sm font-semibold text-foreground">Partida privada por QR/cÃ³digo</p>
+                <p className="text-sm font-semibold text-foreground">Partida privada por QR/código</p>
                 {!multiplayerCreate ? (
                   <Button type="button" onClick={startMultiplayerHost}>
                     Gerar convite
@@ -656,7 +656,7 @@ export default function TicTacToePage() {
 
             {flowStep === "JOIN" ? (
               <div className="space-y-2 rounded-2xl border border-border bg-card p-3">
-                <p className="text-sm font-semibold text-foreground">Entrar com cÃ³digo</p>
+                <p className="text-sm font-semibold text-foreground">Entrar com código</p>
                 <input
                   className="h-10 w-full rounded-xl border border-border bg-white px-3 text-sm font-semibold uppercase tracking-[0.2em]"
                   maxLength={6}
@@ -688,19 +688,19 @@ export default function TicTacToePage() {
                     onClick={() => setDifficulty(mode)}
                     disabled={aiThinking}
                   >
-                    {mode === "EASY" ? "FÃ¡cil" : mode === "MEDIUM" ? "MÃ©dio" : "DifÃ­cil"}
+                    {mode === "EASY" ? "Fácil" : mode === "MEDIUM" ? "Médio" : "Difícil"}
                   </button>
                 ))}
               </div>
             ) : (
               <div className="inline-flex rounded-2xl border border-border bg-secondary/10 px-3 py-1.5 text-sm font-semibold text-secondary-foreground">
-                2 jogadores â€¢ {statusLabel} â€¢ {isRealtimeConnected ? "ao vivo" : "sincronizando"}
+                2 jogadores • {statusLabel} • {isRealtimeConnected ? "ao vivo" : "sincronizando"}
               </div>
             )}
             {flowError ? <p className="text-xs font-semibold text-destructive">{flowError}</p> : null}
             <div className="flex items-center justify-between text-sm">
               <p className="font-semibold text-foreground">{statusText}</p>
-              <p className="text-muted-foreground">SequÃªncia: {winStreak}</p>
+              <p className="text-muted-foreground">Sequência: {winStreak}</p>
             </div>
           </CardContent>
         </Card>

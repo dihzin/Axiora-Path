@@ -1,4 +1,4 @@
-ï»¿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -42,9 +42,9 @@ const LEVEL_STORAGE_PREFIX = "axiora_game_level_";
 
 function eventTitle(key: EventKey): string {
   if (key === "EXPENSE") return "Despesa inesperada";
-  if (key === "BONUS") return "BÃ´nus extra";
+  if (key === "BONUS") return "Bônus extra";
   if (key === "INVESTMENT_GROWTH") return "Crescimento do investimento";
-  return "CenÃ¡rio de emergÃªncia";
+  return "Cenário de emergência";
 }
 
 function randomEvent(): EventKey {
@@ -99,13 +99,13 @@ export default function FinanceSimPage() {
     control: 0,
   });
   const [uxSettings, setUxSettings] = useState(UX_SETTINGS_FALLBACK);
-  const [feedback, setFeedback] = useState("Monte sua estratÃ©gia para esta rodada.");
+  const [feedback, setFeedback] = useState("Monte sua estratégia para esta rodada.");
   const [confettiTrigger, setConfettiTrigger] = useState(0);
 
   const donatePercent = useMemo(() => Math.max(0, 100 - spendPercent - savePercent - investPercent), [investPercent, savePercent, spendPercent]);
 
   useEffect(() => {
-    const rawChildId = sessionStorage.getItem(.axiora_child_id");
+    const rawChildId = sessionStorage.getItem("axiora_child_id");
     const parsedChildId = Number(rawChildId);
     if (rawChildId && Number.isFinite(parsedChildId)) {
       setChildId(parsedChildId);
@@ -190,10 +190,10 @@ export default function FinanceSimPage() {
     let roundXp = 0;
     let eventDelta = 0;
 
-    if (saveAmount >= 20) roundXp += 6; // reserva de emergÃªncia por rodada
+    if (saveAmount >= 20) roundXp += 6; // reserva de emergência por rodada
     if (investPercent >= 20) roundXp += 5; // disciplina de investimento
-    if (spendPercent < 100) roundXp += 4; // nÃ£o gastou tudo
-    if (donateAmount > 0) roundXp += 2; // incentivo de doaÃ§Ã£o
+    if (spendPercent < 100) roundXp += 4; // não gastou tudo
+    if (donateAmount > 0) roundXp += 2; // incentivo de doação
 
     const eventKey = randomEvent();
     if (eventKey === "EXPENSE") {
@@ -201,20 +201,20 @@ export default function FinanceSimPage() {
       setFeedback("Despesa inesperada! Sua reserva ajudou?");
     } else if (eventKey === "BONUS") {
       eventDelta = 15;
-      setFeedback("BÃ´nus recebido! Ã“tima oportunidade para investir.");
+      setFeedback("Bônus recebido! Ótima oportunidade para investir.");
     } else if (eventKey === "INVESTMENT_GROWTH") {
       eventDelta = Math.round(investAmount * 0.1);
       roundXp += 8;
       setFeedback("Seu investimento rendeu nesta rodada.");
     } else {
-      // EmergÃªncia: com reserva, o impacto Ã© menor.
+      // Emergência: com reserva, o impacto é menor.
       if (saveAmount >= 20) {
         eventDelta = -8;
         roundXp += 8;
-        setFeedback("EmergÃªncia controlada pela reserva. Excelente gestÃ£o.");
+        setFeedback("Emergência controlada pela reserva. Excelente gestão.");
       } else {
         eventDelta = -25;
-        setFeedback("EmergÃªncia sem reserva impactou seu saldo.");
+        setFeedback("Emergência sem reserva impactou seu saldo.");
       }
     }
 
@@ -316,7 +316,7 @@ export default function FinanceSimPage() {
           <CardContent className="space-y-2 text-sm">
             <div className="rounded-xl border border-border bg-white/85 p-2">
               <div className="mb-1 flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Progresso da sessÃ£o</span>
+                <span className="text-muted-foreground">Progresso da sessão</span>
                 <span className="font-semibold text-foreground">{roundProgress}%</span>
               </div>
               <ProgressBar value={roundProgress} tone="secondary" />
@@ -415,7 +415,7 @@ export default function FinanceSimPage() {
               </div>
               <div className="rounded-xl border border-secondary/25 bg-secondary/10 p-3 text-xs text-secondary">
                 <p className="font-semibold">Dica Axion</p>
-                <p className="mt-1">Reserve parte do saldo para emergÃªncias e mantenha investimento acima de 20%.</p>
+                <p className="mt-1">Reserve parte do saldo para emergências e mantenha investimento acima de 20%.</p>
               </div>
               <Button className="w-full" onClick={() => void playRound()}>
                 Confirmar rodada
@@ -426,7 +426,7 @@ export default function FinanceSimPage() {
 
         <Card className="mb-3">
           <CardHeader>
-            <CardTitle>HistÃ³rico de rodadas</CardTitle>
+            <CardTitle>Histórico de rodadas</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             {logs.length === 0 ? <p className="text-muted-foreground">Nenhuma rodada jogada ainda.</p> : null}
@@ -439,10 +439,10 @@ export default function FinanceSimPage() {
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {entry.eventLabel} â€¢ Gastar {entry.spendPercent}% â€¢ Guardar {entry.savePercent}% â€¢ Investir {entry.investPercent}% â€¢ Doar {entry.donatePercent}%
+                  {entry.eventLabel} • Gastar {entry.spendPercent}% • Guardar {entry.savePercent}% • Investir {entry.investPercent}% • Doar {entry.donatePercent}%
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {formatCoins(entry.startBalance)} â†’ {formatCoins(entry.endBalance)}
+                  {formatCoins(entry.startBalance)} ? {formatCoins(entry.endBalance)}
                 </p>
                 <p className="mt-1 text-xs font-semibold text-secondary">XP da rodada: +{entry.xpDelta}</p>
               </div>
@@ -461,25 +461,25 @@ export default function FinanceSimPage() {
             <CardContent className="space-y-2 text-sm">
               <p>Saldo final: <strong>{formatCoins(balance)}</strong></p>
               <p>
-                AvaliaÃ§Ã£o: <strong className={ratingTone(rating)}>{rating}</strong>
+                Avaliação: <strong className={ratingTone(rating)}>{rating}</strong>
               </p>
               <div className="rounded-xl border border-border bg-muted/40 p-3">
-                <p className="font-semibold text-foreground">BÃ´nus educacionais</p>
+                <p className="font-semibold text-foreground">Bônus educacionais</p>
                 <div className="mt-2 space-y-1 text-xs">
                   <p className={cn(bonusBreakdown.reserve > 0 ? "text-secondary" : "text-muted-foreground")}>
                     <Shield className="mr-1 inline h-3.5 w-3.5" />
-                    Reserva de emergÃªncia: +{bonusBreakdown.reserve} XP
+                    Reserva de emergência: +{bonusBreakdown.reserve} XP
                   </p>
                   <p className={cn(bonusBreakdown.invest > 0 ? "text-secondary" : "text-muted-foreground")}>
-                    Investimento mÃ©dio {"\u2265"} 20%: +{bonusBreakdown.invest} XP
+                    Investimento médio {"\u2265"} 20%: +{bonusBreakdown.invest} XP
                   </p>
                   <p className={cn(bonusBreakdown.control > 0 ? "text-secondary" : "text-muted-foreground")}>
-                    NÃ£o gastou tudo: +{bonusBreakdown.control} XP
+                    Não gastou tudo: +{bonusBreakdown.control} XP
                   </p>
                 </div>
               </div>
-              <p>Score da sessÃ£o: {finalScore}</p>
-              {registering ? <p className="text-muted-foreground">Registrando sessÃ£o...</p> : null}
+              <p>Score da sessão: {finalScore}</p>
+              {registering ? <p className="text-muted-foreground">Registrando sessão...</p> : null}
               {sessionResult ? (
                 <GameResultPanel
                   title="Resultado final"

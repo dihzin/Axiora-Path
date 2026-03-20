@@ -1,4 +1,4 @@
-Ôªø"use client";
+"use client";
 
 import { ArrowLeft, Lock, Sparkles, Trophy } from "lucide-react";
 import Link from "next/link";
@@ -49,7 +49,7 @@ export default function StickerGalleryPage() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    const rawChildId = sessionStorage.getItem(.axiora_child_id");
+    const rawChildId = sessionStorage.getItem("axiora_child_id");
     if (!rawChildId) {
       setLoading(false);
       return;
@@ -76,7 +76,7 @@ export default function StickerGalleryPage() {
       .catch((err: unknown) => {
         setItems([]);
         if (err instanceof ApiError && err.status === 403) {
-          setError(getApiErrorMessage(err, "Acesso bloqueado no momento. Pe√ßa para um respons√°vel concluir o consentimento."));
+          setError(getApiErrorMessage(err, "Acesso bloqueado no momento. PeÁa para um respons·vel concluir o consentimento."));
           return;
         }
         setError(getApiErrorMessage(err, "Nao foi possivel carregar as figurinhas agora."));
@@ -182,7 +182,7 @@ export default function StickerGalleryPage() {
       </header>
 
       <section className="mt-4">
-        {childId === null ? <p className="text-sm font-semibold text-[#6F809A]">Selecione uma crian√ßa primeiro.</p> : null}
+        {childId === null ? <p className="text-sm font-semibold text-[#6F809A]">Selecione uma crianÁa primeiro.</p> : null}
         {loading ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (

@@ -1,4 +1,4 @@
-ï»¿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -23,7 +23,7 @@ type ChildDesktopShellProps = {
 };
 
 const NAV_ITEMS: Array<{ href: string; label: string; iconName: ChildNavIconKey }> = [
-  { href: "/child", label: "InÃ­cio", iconName: "inicio" },
+  { href: "/child", label: "Início", iconName: "inicio" },
   { href: "/child/aprender", label: "Aprender", iconName: "aprender" },
   { href: "/child/stickers", label: "Figurinhas", iconName: "figurinhas" },
   { href: "/child/games", label: "Jogos", iconName: "jogos" },
@@ -51,7 +51,7 @@ export function ChildDesktopShell({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const rawChildId = window.sessionStorage.getItem(.axiora_child_id");
+    const rawChildId = window.sessionStorage.getItem("axiora_child_id");
     const parsedChildId = rawChildId ? Number(rawChildId) : NaN;
     const childId = Number.isFinite(parsedChildId) && parsedChildId > 0 ? parsedChildId : null;
     let active = true;
@@ -218,7 +218,7 @@ function DefaultRightRail() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const rawChildId = window.sessionStorage.getItem(.axiora_child_id");
+    const rawChildId = window.sessionStorage.getItem("axiora_child_id");
     const childId = rawChildId ? Number(rawChildId) : NaN;
     if (!Number.isFinite(childId) || childId <= 0) {
       setStreak(0);
@@ -267,8 +267,8 @@ function DefaultRightRail() {
       <TopStatsBar streak={streak} gems={gems} xp={xp} className="max-w-none" />
       <div className="medieval-parchment-glass p-4">
         <div className="rune-divider mb-3" />
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#A07850]">âœ¦ Progresso</p>
-        <p className="mt-1 text-lg font-black text-[#2C1E16]">VocÃª estÃ¡ indo bem!</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#A07850]">? Progresso</p>
+        <p className="mt-1 text-lg font-black text-[#2C1E16]">Você está indo bem!</p>
         <p className="mt-1 text-sm font-semibold text-[#5C4A3A]">Continue explorando para evoluir no Axiora.</p>
         <div className="rune-divider mt-3" />
       </div>
