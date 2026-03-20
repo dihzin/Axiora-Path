@@ -747,10 +747,55 @@ function applyPreset(key: string, setBlocks: (b: Block[]) => void, idRef: { curr
     config: { ...BLOCK_META[type].defaults, ...extra },
   });
   switch (key) {
-    case "2ano": setBlocks([mk("aritmetica", { operacao: "adicao", digitos1: 2, digitos2: 2, quantidade: 8 }), mk("aritmetica", { operacao: "subtracao", digitos1: 2, digitos2: 2, quantidade: 8 })]); break;
-    case "3ano": setBlocks([mk("aritmetica", { operacao: "multiplicacao", digitos1: 2, digitos2: 1, quantidade: 8 }), mk("aritmetica", { operacao: "divisao", formato: "armada", quantidade: 6 })]); break;
-    case "4ano": setBlocks([mk("aritmetica", { operacao: "multiplicacao", digitos1: 3, digitos2: 2, quantidade: 6 }), mk("fracoes", { operacao: "soma", denomMax: 8, quantidade: 6 }), mk("fracoes", { operacao: "subtracao", denomMax: 8, quantidade: 4 })]); break;
-    case "6ano": setBlocks([mk("equacoes", { tipo: "misto", coefMax: 9, respMax: 20, quantidade: 6 }), mk("expressoes", { complexidade: "media", termos: 4, operacoes: ["adicao", "subtracao", "multiplicacao"], quantidade: 6 })]); break;
+    // ── Anos Iniciais ──────────────────────────────────────────────────────
+    case "1ano-contagem":
+      setBlocks([mk("aritmetica", { operacao: "adicao", digitos1: 1, digitos2: 1, formato: "linear", quantidade: 10 }), mk("aritmetica", { operacao: "subtracao", digitos1: 1, digitos2: 1, formato: "linear", quantidade: 8 })]); break;
+    case "2ano":
+      setBlocks([mk("aritmetica", { operacao: "adicao", digitos1: 2, digitos2: 2, quantidade: 8 }), mk("aritmetica", { operacao: "subtracao", digitos1: 2, digitos2: 2, quantidade: 8 })]); break;
+    case "2ano-avancado":
+      setBlocks([mk("aritmetica", { operacao: "adicao", digitos1: 3, digitos2: 2, quantidade: 8 }), mk("aritmetica", { operacao: "subtracao", digitos1: 3, digitos2: 2, quantidade: 8 }), mk("aritmetica", { operacao: "multiplicacao", digitos1: 1, digitos2: 1, formato: "linear", quantidade: 6 })]); break;
+    case "3ano":
+      setBlocks([mk("aritmetica", { operacao: "multiplicacao", digitos1: 2, digitos2: 1, quantidade: 8 }), mk("aritmetica", { operacao: "divisao", formato: "armada", quantidade: 6 })]); break;
+    case "3ano-tabuada":
+      setBlocks([mk("aritmetica", { operacao: "multiplicacao", digitos1: 1, digitos2: 1, formato: "linear", quantidade: 12 }), mk("aritmetica", { operacao: "divisao", digitos1: 2, digitos2: 1, formato: "linear", quantidade: 10 })]); break;
+    case "4ano":
+      setBlocks([mk("aritmetica", { operacao: "multiplicacao", digitos1: 3, digitos2: 2, quantidade: 6 }), mk("fracoes", { operacao: "soma", denomMax: 8, quantidade: 6 }), mk("fracoes", { operacao: "subtracao", denomMax: 8, quantidade: 4 })]); break;
+    case "4ano-divisao":
+      setBlocks([mk("aritmetica", { operacao: "divisao", digitos1: 3, digitos2: 2, formato: "armada", permitirResto: true, quantidade: 8 }), mk("aritmetica", { operacao: "multiplicacao", digitos1: 3, digitos2: 2, quantidade: 6 })]); break;
+    case "5ano-fracoes":
+      setBlocks([mk("fracoes", { operacao: "soma", denomMax: 12, denominadorComum: true, quantidade: 6 }), mk("fracoes", { operacao: "subtracao", denomMax: 12, denominadorComum: true, quantidade: 6 }), mk("fracoes", { operacao: "misto", denomMax: 10, quantidade: 4 })]); break;
+    case "5ano-completo":
+      setBlocks([mk("aritmetica", { operacao: "multiplicacao", digitos1: 3, digitos2: 2, quantidade: 4 }), mk("aritmetica", { operacao: "divisao", digitos1: 4, digitos2: 2, formato: "armada", quantidade: 4 }), mk("fracoes", { operacao: "soma", denomMax: 10, quantidade: 4 }), mk("fracoes", { operacao: "subtracao", denomMax: 10, quantidade: 4 })]); break;
+    // ── Anos Finais ────────────────────────────────────────────────────────
+    case "6ano":
+      setBlocks([mk("equacoes", { tipo: "misto", coefMax: 9, respMax: 20, quantidade: 6 }), mk("expressoes", { complexidade: "media", termos: 4, operacoes: ["adicao", "subtracao", "multiplicacao"], quantidade: 6 })]); break;
+    case "6ano-expressoes":
+      setBlocks([mk("expressoes", { complexidade: "simples", termos: 3, operacoes: ["adicao", "subtracao"], quantidade: 6 }), mk("expressoes", { complexidade: "media", termos: 4, operacoes: ["adicao", "subtracao", "multiplicacao"], usarParenteses: true, quantidade: 6 })]); break;
+    case "6ano-fracoes-avancado":
+      setBlocks([mk("fracoes", { operacao: "misto", denomMax: 15, numerosMistos: true, quantidade: 6 }), mk("fracoes", { operacao: "soma", denomMax: 12, simplificar: true, quantidade: 6 }), mk("equacoes", { tipo: "misto", coefMax: 5, quantidade: 4 })]); break;
+    case "7ano-equacoes":
+      setBlocks([mk("equacoes", { tipo: "misto", coefMax: 15, respMax: 30, respNegativa: true, quantidade: 8 }), mk("expressoes", { complexidade: "media", termos: 4, operacoes: ["adicao", "subtracao", "multiplicacao", "divisao"], usarParenteses: true, quantidade: 6 })]); break;
+    case "7ano-potencias":
+      setBlocks([mk("potenciacao", { tipo: "potencia", baseMax: 10, expMax: 3, quantidade: 8 }), mk("potenciacao", { tipo: "raiz", baseMax: 144, expMax: 2, somentePerfeitasRaiz: true, quantidade: 8 })]); break;
+    case "8ano-completo":
+      setBlocks([mk("equacoes", { tipo: "misto", coefMax: 20, respMax: 50, respNegativa: true, quantidade: 6 }), mk("potenciacao", { tipo: "misto", baseMax: 15, expMax: 4, quantidade: 6 }), mk("expressoes", { complexidade: "avancada", termos: 5, operacoes: ["adicao", "subtracao", "multiplicacao", "divisao"], usarParenteses: true, nivelAgrupamento: 2, quantidade: 4 })]); break;
+    case "9ano-revisao":
+      setBlocks([mk("equacoes", { tipo: "misto", coefMax: 25, respMax: 100, respNegativa: true, quantidade: 6 }), mk("potenciacao", { tipo: "misto", baseMax: 20, expMax: 4, quantidade: 6 }), mk("expressoes", { complexidade: "avancada", termos: 6, operacoes: ["adicao", "subtracao", "multiplicacao", "divisao"], usarParenteses: true, nivelAgrupamento: 3, quantidade: 4 })]); break;
+    // ── Temáticos ─────────────────────────────────────────────────────────
+    case "so-adicao":
+      setBlocks([mk("aritmetica", { operacao: "adicao", digitos1: 2, digitos2: 2, quantidade: 8 }), mk("aritmetica", { operacao: "adicao", digitos1: 3, digitos2: 2, quantidade: 6 }), mk("aritmetica", { operacao: "adicao", digitos1: 3, digitos2: 3, quantidade: 4 })]); break;
+    case "so-multiplicacao":
+      setBlocks([mk("aritmetica", { operacao: "multiplicacao", digitos1: 1, digitos2: 1, formato: "linear", quantidade: 10 }), mk("aritmetica", { operacao: "multiplicacao", digitos1: 2, digitos2: 1, quantidade: 8 }), mk("aritmetica", { operacao: "multiplicacao", digitos1: 3, digitos2: 2, quantidade: 6 })]); break;
+    case "so-divisao":
+      setBlocks([mk("aritmetica", { operacao: "divisao", digitos1: 2, digitos2: 1, formato: "armada", quantidade: 8 }), mk("aritmetica", { operacao: "divisao", digitos1: 3, digitos2: 2, formato: "armada", quantidade: 6 }), mk("aritmetica", { operacao: "divisao", digitos1: 4, digitos2: 2, formato: "armada", permitirResto: true, quantidade: 4 })]); break;
+    case "so-fracoes":
+      setBlocks([mk("fracoes", { operacao: "soma", denomMax: 8, quantidade: 6 }), mk("fracoes", { operacao: "subtracao", denomMax: 8, quantidade: 6 }), mk("fracoes", { operacao: "misto", denomMax: 12, quantidade: 6 })]); break;
+    case "so-potencias":
+      setBlocks([mk("potenciacao", { tipo: "potencia", baseMax: 12, expMax: 3, quantidade: 8 }), mk("potenciacao", { tipo: "raiz", baseMax: 196, expMax: 2, somentePerfeitasRaiz: true, quantidade: 6 }), mk("potenciacao", { tipo: "misto", baseMax: 10, expMax: 4, quantidade: 6 })]); break;
+    case "revisao-geral":
+      setBlocks([mk("aritmetica", { operacao: "multiplicacao", digitos1: 3, digitos2: 2, quantidade: 4 }), mk("aritmetica", { operacao: "divisao", digitos1: 3, digitos2: 2, formato: "armada", quantidade: 4 }), mk("fracoes", { operacao: "misto", denomMax: 10, quantidade: 4 }), mk("equacoes", { tipo: "misto", coefMax: 9, quantidade: 4 }), mk("potenciacao", { tipo: "misto", baseMax: 10, expMax: 3, quantidade: 4 })]); break;
+    case "avaliacao-trimestral":
+      setBlocks([mk("aritmetica", { operacao: "misto", digitos1: 3, digitos2: 2, quantidade: 6 }), mk("fracoes", { operacao: "misto", denomMax: 12, quantidade: 4 }), mk("equacoes", { tipo: "misto", coefMax: 12, respMax: 30, respNegativa: true, quantidade: 4 }), mk("expressoes", { complexidade: "media", termos: 4, operacoes: ["adicao", "subtracao", "multiplicacao"], usarParenteses: true, quantidade: 4 })]); break;
     case "limpar": setBlocks([]); break;
   }
 }
@@ -809,6 +854,9 @@ export function SheetGeneratorTool() {
   const [mobileTab, setMobileTab] = useState<"config" | "blocks" | "detail">("blocks");
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(["cabecalho"]));
   const toggleSection = useCallback((id: string) => setOpenSections(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }), []);
+  const [presetModalOpen, setPresetModalOpen] = useState(false);
+  const [layoutModalOpen, setLayoutModalOpen] = useState(false);
+  const [opcoesModalOpen, setOpcoesModalOpen] = useState(false);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -889,7 +937,7 @@ export function SheetGeneratorTool() {
     `flex-1 rounded-lg py-1.5 text-xs font-semibold transition ${active ? "bg-[#ee8748] text-white shadow-[0_2px_0_rgba(158,74,30,0.35)]" : "border border-[#d1d5db] bg-white text-[#64748b] hover:bg-[#f8fafc] hover:text-[#0f172a]"}`;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-52px)] min-h-[500px] overflow-hidden md:flex-row md:h-[calc(100vh-62px)] md:min-h-[600px]" style={{ background: "#ffffff" }}>
+    <div className="flex flex-col h-full min-h-[500px] overflow-hidden md:flex-row md:min-h-[600px]" style={{ background: "#ffffff" }}>
 
       {/* ── MOBILE TAB BAR ──────────────────────────────────────────── */}
       <div className="flex shrink-0 border-b border-[#e2e8f0] md:hidden" style={{ background: "#ffffff" }}>
@@ -908,12 +956,10 @@ export function SheetGeneratorTool() {
       {/* ── LEFT PANEL ──────────────────────────────────────────────── */}
       <aside className={`${mobileTab === "config" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:w-[272px] md:shrink-0`} style={{ background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)", borderRight: "1px solid #e2e8f0" }}>
         {/* Panel header */}
-        <div className="relative overflow-hidden px-5 py-4" style={{ borderBottom: "1px solid #e2e8f0", background: "linear-gradient(180deg, rgba(238,135,72,0.05) 0%, transparent 100%)" }}>
+        <div className="relative overflow-hidden px-5 py-3.5" style={{ borderBottom: "1px solid #e2e8f0", background: "linear-gradient(180deg, rgba(238,135,72,0.05) 0%, transparent 100%)" }}>
           <div className="absolute inset-x-0 top-0 h-[2px] bg-[linear-gradient(90deg,#ee8748,rgba(238,135,72,0.2),transparent)]" />
-          <div className="flex items-center gap-2">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ee8748" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-            <span className="text-[11px] font-bold uppercase tracking-[1.8px] text-[#475569]">Configurações</span>
-          </div>
+          <div className="text-[13px] font-bold text-[#0f172a]">Configurações</div>
+          <div className="mt-0.5 text-[11px] text-[#94a3b8]">Personalize sua folha</div>
         </div>
 
         <div className="flex-1 overflow-y-auto pb-20">
@@ -953,109 +999,35 @@ export function SheetGeneratorTool() {
 
           {/* PRESET */}
           <div className="border-b border-[#f1f5f9] px-4">
-            <button type="button" onClick={() => toggleSection("preset")} className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70">
+            <button type="button" onClick={() => setPresetModalOpen(true)} className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70">
               <div className="flex items-center gap-2">
                 <span className="h-3 w-[3px] rounded-full bg-[#ee8748]" />
                 <span className="text-[10px] font-bold uppercase tracking-[1.8px] text-[#64748b]">Preset Pedagógico</span>
               </div>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" className={`transition-transform duration-200 ${openSections.has("preset") ? "rotate-180" : ""}`}><path d="M2 4l4 4 4-4"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
             </button>
-            <div className={`overflow-hidden transition-all duration-200 ${openSections.has("preset") ? "max-h-[200px] opacity-100 pb-4" : "max-h-0 opacity-0"}`}>
-              <select className={inputCls} style={{ cursor: "pointer" }} onChange={(e) => { if (e.target.value) { applyPreset(e.target.value, setBlocks, nextId); setSelectedBlockId(null); invalidate(); e.target.value = ""; } }}>
-                <option value="">— Selecionar preset —</option>
-                <option value="2ano">2º Ano — Adição e Subtração</option>
-                <option value="3ano">3º Ano — Multiplicação e Divisão</option>
-                <option value="4ano">4º/5º Ano — Frações básicas</option>
-                <option value="6ano">6º Ano — Equações e Expressões</option>
-                <option value="limpar">↺ Limpar todos os blocos</option>
-              </select>
-            </div>
           </div>
 
           {/* LAYOUT */}
           <div className="border-b border-[#f1f5f9] px-4">
-            <button type="button" onClick={() => toggleSection("layout")} className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70">
+            <button type="button" onClick={() => setLayoutModalOpen(true)} className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70">
               <div className="flex items-center gap-2">
                 <span className="h-3 w-[3px] rounded-full bg-[#ee8748]" />
                 <span className="text-[10px] font-bold uppercase tracking-[1.8px] text-[#64748b]">Layout Global</span>
               </div>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" className={`transition-transform duration-200 ${openSections.has("layout") ? "rotate-180" : ""}`}><path d="M2 4l4 4 4-4"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
             </button>
-            <div className={`overflow-hidden transition-all duration-200 ${openSections.has("layout") ? "max-h-[500px] opacity-100 pb-4" : "max-h-0 opacity-0"}`}>
-              <div className="space-y-4">
-                <div>
-                  <div className="mb-1.5 text-[11px] font-medium text-[#475569]">Colunas</div>
-                  <div className="flex gap-1.5">
-                    {[1, 2, 3, 4].map((n) => (
-                      <button key={n} onClick={() => updateCfg("cols", n)} className={segBtnCls(cfg.cols === n)}>{n}</button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-1.5 text-[11px] font-medium text-[#475569]">Tamanho da fonte</div>
-                  <div className="flex gap-1.5">
-                    {(["P", "M", "G"] as FontSize[]).map((s) => (
-                      <button key={s} onClick={() => updateCfg("fontSize", s)} className={segBtnCls(cfg.fontSize === s)}>{s === "P" ? "Pequena" : s === "M" ? "Média" : "Grande"}</button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-[#475569]">
-                    <span>Espaçamento</span>
-                    <span className="rounded-md bg-[rgba(238,135,72,0.12)] px-2 py-0.5 text-[11px] font-bold text-[#ee8748]">{cfg.spacing}px</span>
-                  </div>
-                  <input type="range" min={0} max={40} value={cfg.spacing} onChange={(e) => updateCfg("spacing", Number(e.target.value))} className="w-full accent-[#ee8748]" style={{ height: "4px" }} />
-                  <div className="mt-1 flex justify-between text-[10px] text-[#94a3b8]">
-                    <span>Compacto</span><span>Normal</span><span>Amplo</span>
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-1.5 text-[11px] font-medium text-[#475569]">Gabarito</div>
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex gap-1.5">
-                      <button onClick={() => updateCfg("gabarito", "sem")} className={segBtnCls(cfg.gabarito === "sem")}>Sem gabarito</button>
-                      <button onClick={() => updateCfg("gabarito", "mesma")} className={segBtnCls(cfg.gabarito === "mesma")}>Mesma página</button>
-                    </div>
-                    <button onClick={() => updateCfg("gabarito", "proxima")} className={segBtnCls(cfg.gabarito === "proxima")}>Próxima página</button>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* OPÇÕES */}
           <div className="px-4">
-            <button type="button" onClick={() => toggleSection("opcoes")} className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70">
+            <button type="button" onClick={() => setOpcoesModalOpen(true)} className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70">
               <div className="flex items-center gap-2">
                 <span className="h-3 w-[3px] rounded-full bg-[#ee8748]" />
                 <span className="text-[10px] font-bold uppercase tracking-[1.8px] text-[#64748b]">Opções</span>
               </div>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" className={`transition-transform duration-200 ${openSections.has("opcoes") ? "rotate-180" : ""}`}><path d="M2 4l4 4 4-4"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
             </button>
-            <div className={`overflow-hidden transition-all duration-200 ${openSections.has("opcoes") ? "max-h-[400px] opacity-100 pb-4" : "max-h-0 opacity-0"}`}>
-              <div className="space-y-2.5">
-                {([
-                  ["embaralhar", "Embaralhar exercícios"],
-                  ["showNome", "Campo Nome / Data"],
-                  ["numerar", "Numerar exercícios"],
-                  ["repeatHeader", "Repetir cabeçalho"],
-                ] as [keyof GlobalConfig, string][]).map(([key, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    role="switch"
-                    aria-checked={!!cfg[key]}
-                    onClick={() => updateCfg(key, !cfg[key] as never)}
-                    className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 text-left transition hover:border-[#d1d5db] hover:bg-[#f8fafc]"
-                  >
-                    <span className="text-[13px] text-[#334155]">{label}</span>
-                    <div className="relative ml-3 h-5 w-9 shrink-0 rounded-full transition-all duration-200" style={{ background: cfg[key] ? "#ee8748" : "#cbd5e1", boxShadow: cfg[key] ? "0 0 8px rgba(238,135,72,0.35)" : "none" }}>
-                      <div className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-md transition-all duration-200" style={{ left: cfg[key] ? "20px" : "2px" }} />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
 
         </div>
@@ -1064,7 +1036,7 @@ export function SheetGeneratorTool() {
       {/* ── CENTER PANEL ────────────────────────────────────────────── */}
       <main className={`${mobileTab === "blocks" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:flex-1`} style={{ background: "#ffffff", borderLeft: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0" }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: "1px solid #e2e8f0", background: "#fafafa" }}>
+        <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: "1px solid #e2e8f0", background: "#ffffff" }}>
           <div className="flex items-center gap-3">
             <div>
               <div className="text-[13px] font-bold text-[#0f172a]">Blocos de Exercícios</div>
@@ -1228,26 +1200,87 @@ export function SheetGeneratorTool() {
       </main>
 
       {/* ── RIGHT PANEL ─────────────────────────────────────────────── */}
-      <aside className={`${mobileTab === "detail" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:shrink-0 transition-[width] duration-300 ${selectedBlock ? "md:w-[296px]" : "md:w-0"}`} style={{ background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)", borderLeft: selectedBlock ? "1px solid #e2e8f0" : "none" }}>
+      <aside className={`${mobileTab === "detail" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:w-[280px] md:shrink-0`} style={{ background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)", borderLeft: "1px solid #e2e8f0" }}>
         {!selectedBlock ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-6 p-8 text-center">
-            {/* Empty state illustration */}
-            <div className="relative flex h-20 w-20 items-center justify-center">
-              <div className="absolute inset-0 rounded-2xl" style={{ background: "rgba(238,135,72,0.06)", border: "1px solid rgba(238,135,72,0.15)" }} />
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(238,135,72,0.5)" strokeWidth="1.5" strokeLinecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <div className="flex flex-1 flex-col gap-0 overflow-y-auto">
+            {/* Header */}
+            <div className="px-5 py-3.5" style={{ borderBottom: "1px solid #e2e8f0" }}>
+              <div className="text-[13px] font-bold text-[#0f172a]">Resumo da Folha</div>
+              <div className="mt-0.5 text-[11px] text-[#94a3b8]">Visão geral da configuração atual</div>
             </div>
-            <div>
-              <p className="text-[14px] font-semibold text-[#94a3b8]">Nenhum bloco selecionado</p>
-              <p className="mt-1.5 text-[12px] leading-relaxed text-[#cbd5e1]">Clique em qualquer bloco na lista central para configurar seus parâmetros detalhados.</p>
-            </div>
-            {/* Block type pills */}
-            <div className="flex flex-wrap justify-center gap-2">
-              {(Object.entries(BLOCK_META) as [BlockType, typeof BLOCK_META[BlockType]][]).map(([type, meta]) => (
-                <div key={type} className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: meta.color, color: meta.accent, border: `1px solid ${meta.accent}33` }}>
-                  <meta.Icon size={11} strokeWidth={2} />
-                  <span>{meta.name.split(" ")[0]}</span>
+
+            {/* Cabeçalho preview */}
+            <div className="px-5 py-4" style={{ borderBottom: "1px solid #f1f5f9" }}>
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Cabeçalho</div>
+              <div className="space-y-1.5">
+                <div className="truncate text-[13px] font-bold text-[#0f172a]">{cfg.title || <span className="italic text-[#cbd5e1]">Sem título</span>}</div>
+                {cfg.subtitle && <div className="truncate text-[11px] text-[#64748b]">{cfg.subtitle}</div>}
+                <div className="flex gap-3 text-[11px] text-[#94a3b8]">
+                  {cfg.turma && <span>Turma: <span className="font-medium text-[#475569]">{cfg.turma}</span></span>}
+                  {cfg.tempo && <span>Tempo: <span className="font-medium text-[#475569]">{cfg.tempo}</span></span>}
                 </div>
-              ))}
+              </div>
+            </div>
+
+            {/* Layout preview */}
+            <div className="px-5 py-4" style={{ borderBottom: "1px solid #f1f5f9" }}>
+              <div className="mb-3 text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Layout</div>
+              {/* Column diagram */}
+              <div className="mb-3 flex gap-1">
+                {Array.from({ length: cfg.cols }).map((_, i) => (
+                  <div key={i} className="flex-1 rounded" style={{ background: "rgba(238,135,72,0.15)", border: "1px solid rgba(238,135,72,0.3)", height: "40px" }} />
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                {([
+                  ["Colunas", String(cfg.cols)],
+                  ["Fonte", cfg.fontSize === "P" ? "Pequena" : cfg.fontSize === "M" ? "Média" : "Grande"],
+                  ["Espaçamento", `${cfg.spacing}px`],
+                  ["Gabarito", cfg.gabarito === "sem" ? "Sem gabarito" : cfg.gabarito === "mesma" ? "Mesma página" : "Próxima página"],
+                ] as [string, string][]).map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between">
+                    <span className="text-[11px] text-[#94a3b8]">{label}</span>
+                    <span className="text-[11px] font-semibold text-[#334155]">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Opções ativas */}
+            <div className="px-5 py-4" style={{ borderBottom: "1px solid #f1f5f9" }}>
+              <div className="mb-3 text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Opções ativas</div>
+              <div className="flex flex-wrap gap-1.5">
+                {([
+                  [cfg.showNome, "Nome/Data"],
+                  [cfg.numerar, "Numeração"],
+                  [cfg.embaralhar, "Embaralhado"],
+                  [cfg.repeatHeader, "Repete cabeçalho"],
+                ] as [boolean, string][]).map(([on, label]) => (
+                  <span key={label} className="rounded-full px-2.5 py-0.5 text-[11px] font-medium" style={{ background: on ? "rgba(238,135,72,0.12)" : "#f1f5f9", color: on ? "#ee8748" : "#94a3b8", border: `1px solid ${on ? "rgba(238,135,72,0.25)" : "#e2e8f0"}` }}>
+                    {on ? "✓ " : ""}{label}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Blocos summary */}
+            <div className="px-5 py-4">
+              <div className="mb-3 text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Blocos ({blocks.length})</div>
+              <div className="space-y-1.5">
+                {blocks.map((b, i) => {
+                  const meta = BLOCK_META[b.type];
+                  return (
+                    <div key={b.id} onClick={() => { setSelectedBlockId(b.id); setMobileTab("detail"); }} className={`flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 transition hover:bg-white ${!b.active ? "opacity-40" : ""}`} style={{ border: "1px solid #e2e8f0" }}>
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md" style={{ background: meta.color }}>
+                        <meta.Icon size={12} strokeWidth={2} style={{ color: meta.accent }} />
+                      </div>
+                      <span className="flex-1 truncate text-[11px] font-medium text-[#334155]">{meta.name}</span>
+                      <span className="text-[10px] font-bold" style={{ color: meta.accent }}>#{i + 1}</span>
+                    </div>
+                  );
+                })}
+                {blocks.length === 0 && <p className="text-[11px] italic text-[#cbd5e1]">Nenhum bloco adicionado</p>}
+              </div>
             </div>
           </div>
         ) : (
@@ -1255,7 +1288,227 @@ export function SheetGeneratorTool() {
         )}
       </aside>
 
+      {/* ── LAYOUT MODAL ─────────────────────────────────────────── */}
+      {layoutModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center" style={{ backdropFilter: "blur(6px)", background: "rgba(15,23,42,0.45)" }} onClick={() => setLayoutModalOpen(false)}>
+          <div className="relative mx-4 w-full max-w-[420px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#f1f5f9] px-5 py-4">
+              <div>
+                <div className="text-[15px] font-bold text-[#0f172a]">Layout Global</div>
+                <div className="text-[12px] text-[#94a3b8]">Configurações visuais da folha</div>
+              </div>
+              <button onClick={() => setLayoutModalOpen(false)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#94a3b8] transition hover:bg-[#f1f5f9] hover:text-[#475569]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            {/* Content */}
+            <div className="space-y-5 px-5 py-5">
+              <div>
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-[1.5px] text-[#94a3b8]">Colunas</div>
+                <div className="flex gap-1.5">
+                  {[1, 2, 3, 4].map((n) => (
+                    <button key={n} onClick={() => updateCfg("cols", n)} className={segBtnCls(cfg.cols === n)}>{n}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-[1.5px] text-[#94a3b8]">Tamanho da fonte</div>
+                <div className="flex gap-1.5">
+                  {(["P", "M", "G"] as FontSize[]).map((s) => (
+                    <button key={s} onClick={() => updateCfg("fontSize", s)} className={segBtnCls(cfg.fontSize === s)}>{s === "P" ? "Pequena" : s === "M" ? "Média" : "Grande"}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[1.5px] text-[#94a3b8]">
+                  <span>Espaçamento</span>
+                  <span className="rounded-md bg-[rgba(238,135,72,0.12)] px-2 py-0.5 text-[11px] font-bold normal-case tracking-normal text-[#ee8748]">{cfg.spacing}px</span>
+                </div>
+                <input type="range" min={0} max={40} value={cfg.spacing} onChange={(e) => updateCfg("spacing", Number(e.target.value))} className="w-full accent-[#ee8748]" style={{ height: "4px" }} />
+                <div className="mt-1.5 flex justify-between text-[10px] text-[#94a3b8]">
+                  <span>Compacto</span><span>Normal</span><span>Amplo</span>
+                </div>
+              </div>
+              <div>
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-[1.5px] text-[#94a3b8]">Gabarito</div>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex gap-1.5">
+                    <button onClick={() => updateCfg("gabarito", "sem")} className={segBtnCls(cfg.gabarito === "sem")}>Sem gabarito</button>
+                    <button onClick={() => updateCfg("gabarito", "mesma")} className={segBtnCls(cfg.gabarito === "mesma")}>Mesma página</button>
+                  </div>
+                  <button onClick={() => updateCfg("gabarito", "proxima")} className={segBtnCls(cfg.gabarito === "proxima")}>Próxima página</button>
+                </div>
+              </div>
+            </div>
+            {/* Footer */}
+            <div className="border-t border-[#f1f5f9] px-5 py-3">
+              <button onClick={() => setLayoutModalOpen(false)} className="w-full cursor-pointer rounded-lg bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] py-2.5 text-[13px] font-semibold text-white transition hover:brightness-110">
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── OPÇÕES MODAL ─────────────────────────────────────────── */}
+      {opcoesModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center" style={{ backdropFilter: "blur(6px)", background: "rgba(15,23,42,0.45)" }} onClick={() => setOpcoesModalOpen(false)}>
+          <div className="relative mx-4 w-full max-w-[420px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#f1f5f9] px-5 py-4">
+              <div>
+                <div className="text-[15px] font-bold text-[#0f172a]">Opções</div>
+                <div className="text-[12px] text-[#94a3b8]">Personalização da folha</div>
+              </div>
+              <button onClick={() => setOpcoesModalOpen(false)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#94a3b8] transition hover:bg-[#f1f5f9] hover:text-[#475569]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            {/* Toggles */}
+            <div className="space-y-2 px-5 py-4">
+              {([
+                ["embaralhar", "Embaralhar exercícios", "Ordena aleatoriamente os exercícios no PDF"],
+                ["showNome", "Campo Nome / Data", "Adiciona linha para o aluno preencher"],
+                ["numerar", "Numerar exercícios", "Exibe 1., 2., 3. antes de cada exercício"],
+                ["repeatHeader", "Repetir cabeçalho", "Repete o título em cada página do PDF"],
+              ] as [keyof GlobalConfig, string, string][]).map(([key, label, desc]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="switch"
+                  aria-checked={!!cfg[key]}
+                  onClick={() => updateCfg(key, !cfg[key] as never)}
+                  className="flex w-full cursor-pointer items-center gap-4 rounded-xl border border-[#e2e8f0] bg-white px-4 py-3 text-left transition hover:border-[#d1d5db] hover:bg-[#f8fafc]"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13px] font-semibold text-[#334155]">{label}</div>
+                    <div className="text-[11px] text-[#94a3b8]">{desc}</div>
+                  </div>
+                  <div className="relative h-5 w-9 shrink-0 rounded-full transition-all duration-200" style={{ background: cfg[key] ? "#ee8748" : "#cbd5e1", boxShadow: cfg[key] ? "0 0 8px rgba(238,135,72,0.35)" : "none" }}>
+                    <div className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-md transition-all duration-200" style={{ left: cfg[key] ? "20px" : "2px" }} />
+                  </div>
+                </button>
+              ))}
+            </div>
+            {/* Footer */}
+            <div className="border-t border-[#f1f5f9] px-5 py-3">
+              <button onClick={() => setOpcoesModalOpen(false)} className="w-full cursor-pointer rounded-lg bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] py-2.5 text-[13px] font-semibold text-white transition hover:brightness-110">
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── TOAST ───────────────────────────────────────────────────── */}
+      {/* ── PRESET MODAL ──────────────────────────────────────────── */}
+      {presetModalOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center"
+          style={{ backdropFilter: "blur(6px)", background: "rgba(15,23,42,0.45)" }}
+          onClick={() => setPresetModalOpen(false)}
+        >
+          <div
+            className="relative mx-4 flex max-h-[80vh] w-full max-w-[520px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#f1f5f9] px-5 py-4">
+              <div>
+                <div className="text-[15px] font-bold text-[#0f172a]">Preset Pedagógico</div>
+                <div className="text-[12px] text-[#94a3b8]">Selecione um modelo para começar</div>
+              </div>
+              <button onClick={() => setPresetModalOpen(false)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#94a3b8] transition hover:bg-[#f1f5f9] hover:text-[#475569]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            {/* Preset list */}
+            <div className="overflow-y-auto">
+              {([
+                {
+                  group: "Anos Iniciais",
+                  color: "#3b82f6",
+                  items: [
+                    { key: "1ano-contagem", label: "1º Ano", desc: "Iniciação — Adição e Subtração simples" },
+                    { key: "2ano", label: "2º Ano", desc: "Adição e Subtração com 2 dígitos" },
+                    { key: "2ano-avancado", label: "2º Ano Avançado", desc: "Operações com 3 dígitos + tabuada" },
+                    { key: "3ano-tabuada", label: "3º Ano — Tabuada", desc: "Tabuada completa de × e ÷" },
+                    { key: "3ano", label: "3º Ano", desc: "Multiplicação e Divisão" },
+                    { key: "4ano-divisao", label: "4º Ano — Divisão", desc: "Divisão com resto (3÷2 dígitos)" },
+                    { key: "4ano", label: "4º/5º Ano", desc: "Frações básicas + Multiplicação" },
+                    { key: "5ano-fracoes", label: "5º Ano — Frações", desc: "Frações avançadas com denominador comum" },
+                    { key: "5ano-completo", label: "5º Ano Completo", desc: "Revisão: ×, ÷, frações soma e sub" },
+                  ],
+                },
+                {
+                  group: "Anos Finais",
+                  color: "#ee8748",
+                  items: [
+                    { key: "6ano-expressoes", label: "6º Ano — Expressões", desc: "Expressões numéricas simples e com parênteses" },
+                    { key: "6ano", label: "6º Ano", desc: "Equações 1º grau + Expressões médias" },
+                    { key: "6ano-fracoes-avancado", label: "6º Ano — Frações + Eq.", desc: "Frações mistas, simplificação e equações" },
+                    { key: "7ano-equacoes", label: "7º Ano — Equações", desc: "Equações com coeficientes negativos" },
+                    { key: "7ano-potencias", label: "7º Ano — Potências", desc: "Potenciação e raízes quadradas perfeitas" },
+                    { key: "8ano-completo", label: "8º Ano Completo", desc: "Equações, potências e expressões avançadas" },
+                    { key: "9ano-revisao", label: "9º Ano — Revisão", desc: "Preparação ENEM/Vestibular completa" },
+                  ],
+                },
+                {
+                  group: "Por Tema",
+                  color: "#14b8a6",
+                  items: [
+                    { key: "so-adicao", label: "Só Adição", desc: "3 níveis progressivos de dificuldade" },
+                    { key: "so-multiplicacao", label: "Só Multiplicação", desc: "3 níveis: 1×1, 2×1, 3×2 dígitos" },
+                    { key: "so-divisao", label: "Só Divisão", desc: "3 níveis com e sem resto" },
+                    { key: "so-fracoes", label: "Só Frações", desc: "Soma, subtração e misto" },
+                    { key: "so-potencias", label: "Só Potências e Raízes", desc: "Potenciação, raiz e misto" },
+                    { key: "revisao-geral", label: "Revisão Geral", desc: "5 blocos — uma operação de cada tipo" },
+                    { key: "avaliacao-trimestral", label: "Avaliação Trimestral", desc: "Balanceado para prova completa" },
+                  ],
+                },
+              ] as { group: string; color: string; items: { key: string; label: string; desc: string }[] }[]).map(({ group, color, items }) => (
+                <div key={group}>
+                  <div className="sticky top-0 bg-[#f8fafc] px-5 py-2" style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <span className="text-[10px] font-bold uppercase tracking-[1.8px]" style={{ color }}>{group}</span>
+                  </div>
+                  {items.map(({ key, label, desc }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => { applyPreset(key, setBlocks, nextId); setSelectedBlockId(null); invalidate(); setPresetModalOpen(false); showToast(`Preset "${label}" aplicado`); }}
+                      className="flex w-full cursor-pointer items-center gap-4 px-5 py-3 text-left transition-colors hover:bg-[#f8fafc]"
+                      style={{ borderBottom: "1px solid #f8fafc" }}
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-black text-white" style={{ background: color }}>
+                        {label.match(/\d/)?.[0] ?? label[0]}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13px] font-semibold text-[#0f172a]">{label}</div>
+                        <div className="text-[11px] text-[#94a3b8]">{desc}</div>
+                      </div>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-[#f1f5f9] px-5 py-3">
+              <button
+                type="button"
+                onClick={() => { applyPreset("limpar", setBlocks, nextId); setSelectedBlockId(null); invalidate(); setPresetModalOpen(false); showToast("Blocos removidos"); }}
+                className="w-full cursor-pointer rounded-lg py-2 text-[12px] font-semibold text-[#94a3b8] transition hover:bg-red-50 hover:text-red-400"
+              >
+                ↺ Limpar todos os blocos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {toast && (
         <div className="fixed bottom-8 left-1/2 z-[999] -translate-x-1/2 rounded-xl px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]" style={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(12px)" }}>
           {toast}
@@ -1305,16 +1558,9 @@ function BlockDetailPanel({ block, onUpdate, onChangeType }: {
 
   return (
     <>
-      <div className="sticky top-0 border-b border-[#e2e8f0] bg-white px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: meta.color, boxShadow: `0 0 0 1px ${meta.accent}33` }}>
-            <meta.Icon size={18} strokeWidth={1.75} style={{ color: meta.accent }} />
-          </div>
-          <div>
-            <div className="text-[15px] font-bold text-[#0f172a]">{meta.name}</div>
-            <div className="text-[11px] text-[#94a3b8]">#{block.id} · {block.active ? <span className="text-emerald-500">Ativo</span> : <span className="text-[#94a3b8]">Inativo</span>}</div>
-          </div>
-        </div>
+      <div className="sticky top-0 border-b border-[#e2e8f0] bg-white px-5 py-3.5">
+        <div className="text-[13px] font-bold text-[#0f172a]">{meta.name}</div>
+        <div className="mt-0.5 text-[11px] text-[#94a3b8]">#{block.id} · {block.active ? <span className="text-emerald-500">Ativo</span> : <span className="text-[#94a3b8]">Inativo</span>}</div>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4 pb-20 ">
 

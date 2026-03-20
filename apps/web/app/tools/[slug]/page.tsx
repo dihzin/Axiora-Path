@@ -33,7 +33,7 @@ export default async function ToolsDetailPage({ params, searchParams }: ToolsDet
   const description = TOOL_DESCRIPTIONS[slug] ?? "Ferramenta educacional Axiora.";
 
   return (
-    <div className="relative isolate">
+    <div className={`relative isolate${isExerciseGenerator ? " h-screen overflow-hidden flex flex-col" : ""}`}>
       {/* ── Background: wallpaper + overlays (igual ao /tools) ─────────────── */}
       <div
         className="pointer-events-none fixed inset-0 z-0 bg-cover bg-[58%_center] bg-no-repeat"
@@ -72,7 +72,7 @@ export default async function ToolsDetailPage({ params, searchParams }: ToolsDet
         </Link>
       </nav>
 
-      <main className={`relative z-10 flex w-full flex-col text-white ${isExerciseGenerator ? "p-2 sm:p-3" : "mx-auto max-w-5xl gap-6 px-4 py-8 sm:px-6 sm:py-12"}`}>
+      <main className={`relative z-10 flex w-full flex-col text-white ${isExerciseGenerator ? "flex-1 overflow-hidden" : "mx-auto max-w-5xl gap-6 px-4 py-8 sm:px-6 sm:py-12"}`}>
         {isExerciseGenerator ? (
           <>
             {shouldAutoCheckout ? <ToolsCheckoutRedirect planCode="credits_30" /> : null}
