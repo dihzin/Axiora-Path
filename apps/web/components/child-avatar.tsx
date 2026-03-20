@@ -29,7 +29,7 @@ export function ChildAvatar({ name, avatarKey, size = 44, className = "" }: Chil
     >
       {hasPhoto ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img alt={`Foto de ${name}`} className="h-full w-full object-cover" src={avatarKey ?? undefined} />
+        <img alt={`Foto de ${name}`} width={size} height={size} className="h-full w-full object-cover" src={avatarKey ?? undefined} />
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center bg-[radial-gradient(circle_at_20%_20%,#8EF1E2,#3ECBB8_55%,#2A8F95)] text-white">
           <span className="text-[11px] font-black tracking-wide" style={{ lineHeight: 1 }}>{initials}</span>

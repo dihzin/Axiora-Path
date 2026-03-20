@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 /* eslint-disable react-hooks/exhaustive-deps */
 
 import { useRouter } from "next/navigation";
@@ -210,7 +210,7 @@ export default function ChildPage() {
   const todayIso = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
-    const rawChildId = localStorage.getItem("axiora_child_id");
+    const rawChildId = sessionStorage.getItem(.axiora_child_id");
     const parsedChildId = rawChildId ? Number(rawChildId) : NaN;
     const childId = Number.isFinite(parsedChildId) && parsedChildId > 0 ? parsedChildId : null;
     void enforceProfileCompletionRedirect({
@@ -221,7 +221,7 @@ export default function ChildPage() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const rawChildId = localStorage.getItem("axiora_child_id");
+    const rawChildId = sessionStorage.getItem(.axiora_child_id");
     if (!rawChildId) {
       router.push("/select-child");
       return;
@@ -231,7 +231,7 @@ export default function ChildPage() {
       router.push("/select-child");
       return;
     }
-    const rawChildName = localStorage.getItem("axiora_child_name");
+    const rawChildName = sessionStorage.getItem(.axiora_child_name");
     if (rawChildName) {
       setChildName(rawChildName);
     }
@@ -271,8 +271,8 @@ export default function ChildPage() {
             return;
           }
           const fallbackChild = data.child_profiles[0];
-          localStorage.setItem("axiora_child_id", String(fallbackChild.id));
-          localStorage.setItem("axiora_child_name", fallbackChild.display_name);
+          sessionStorage.setItem(.axiora_child_id", String(fallbackChild.id));
+          sessionStorage.setItem(.axiora_child_name", fallbackChild.display_name);
           setChildId(fallbackChild.id);
           setChildName(fallbackChild.display_name);
           setTheme(fallbackChild.theme);
@@ -281,7 +281,7 @@ export default function ChildPage() {
           return;
         }
         if (child) {
-          localStorage.setItem("axiora_child_name", child.display_name);
+          sessionStorage.setItem(.axiora_child_name", child.display_name);
           setChildName(child.display_name);
           setTheme(child.theme);
           setAvatarStage(child.avatar_stage);

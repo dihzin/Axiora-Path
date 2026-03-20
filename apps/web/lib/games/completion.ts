@@ -1,4 +1,4 @@
-import {
+﻿import {
   completeGameSession,
   getGamePersonalBest,
   type GamePersonalBestResponse,
@@ -21,7 +21,7 @@ function currentWeekStartIso(): string {
 
 function readChildIdFromStorage(): number | null {
   try {
-    const raw = localStorage.getItem("axiora_child_id");
+    const raw = sessionStorage.getItem(.axiora_child_id");
     const parsed = Number(raw);
     if (!raw || !Number.isFinite(parsed)) return null;
     return parsed;

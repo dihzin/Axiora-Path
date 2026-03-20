@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -105,7 +105,7 @@ export default function FinanceSimPage() {
   const donatePercent = useMemo(() => Math.max(0, 100 - spendPercent - savePercent - investPercent), [investPercent, savePercent, spendPercent]);
 
   useEffect(() => {
-    const rawChildId = localStorage.getItem("axiora_child_id");
+    const rawChildId = sessionStorage.getItem(.axiora_child_id");
     const parsedChildId = Number(rawChildId);
     if (rawChildId && Number.isFinite(parsedChildId)) {
       setChildId(parsedChildId);

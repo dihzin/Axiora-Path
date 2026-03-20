@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { ArrowLeft, Lock, Sparkles, Trophy } from "lucide-react";
 import Link from "next/link";
@@ -49,7 +49,7 @@ export default function StickerGalleryPage() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    const rawChildId = localStorage.getItem("axiora_child_id");
+    const rawChildId = sessionStorage.getItem(.axiora_child_id");
     if (!rawChildId) {
       setLoading(false);
       return;

@@ -190,7 +190,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   const makeRequest = async (): Promise<Response> => {
     try {
-      if (path === "/auth/logout" && csrfToken) {
+      if (csrfToken && ["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
         headers["X-CSRF-Token"] = csrfToken;
       }
       return await fetch(`${apiUrl}${path}`, {

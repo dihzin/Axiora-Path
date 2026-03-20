@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -101,7 +101,7 @@ export default function ChildAxionPage() {
     if (typeof window === "undefined") return;
     const debugFlag = new URLSearchParams(window.location.search).get("axionDebug");
     setDebugRequested(debugFlag === "true");
-    const rawChildId = window.localStorage.getItem("axiora_child_id");
+    const rawChildId = window.sessionStorage.getItem(.axiora_child_id");
     const parsed = Number(rawChildId);
     if (Number.isFinite(parsed)) {
       setActiveChildId(parsed);

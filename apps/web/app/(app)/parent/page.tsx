@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -212,8 +212,8 @@ export default function ParentPage() {
     if (!options?.keepOrganization) {
       clearTenantSlug();
     }
-    localStorage.removeItem("axiora_child_id");
-    localStorage.removeItem("axiora_child_name");
+    sessionStorage.removeItem(.axiora_child_id");
+    sessionStorage.removeItem(.axiora_child_name");
     sessionStorage.removeItem("axiora_parent_pin_ok");
   };
 
@@ -246,18 +246,18 @@ export default function ParentPage() {
       setPendingLogs([]);
       setWallet(null);
       setTrend(null);
-      localStorage.removeItem("axiora_child_id");
-      localStorage.removeItem("axiora_child_name");
+      sessionStorage.removeItem(.axiora_child_id");
+      sessionStorage.removeItem(.axiora_child_name");
       return;
     }
 
-    const rawChildId = localStorage.getItem("axiora_child_id");
+    const rawChildId = sessionStorage.getItem(.axiora_child_id");
     const parsed = Number(rawChildId);
     const validId = Number.isFinite(parsed) && profiles.some((item) => item.id === parsed) ? parsed : profiles[0].id;
     const child = profiles.find((item) => item.id === validId) ?? profiles[0];
     setSelectedChildId(child.id);
-    localStorage.setItem("axiora_child_id", String(child.id));
-    localStorage.setItem("axiora_child_name", child.display_name);
+    sessionStorage.setItem(.axiora_child_id", String(child.id));
+    sessionStorage.setItem(.axiora_child_name", child.display_name);
     setSoundEnabled(getChildSoundEnabled(child.id));
     await loadChildDashboard(child.id);
   }, [loadChildDashboard]);
@@ -338,16 +338,16 @@ export default function ParentPage() {
       router.push("/select-child");
       return;
     }
-    localStorage.setItem("axiora_child_id", String(selected.id));
-    localStorage.setItem("axiora_child_name", selected.display_name);
+    sessionStorage.setItem(.axiora_child_id", String(selected.id));
+    sessionStorage.setItem(.axiora_child_name", selected.display_name);
     router.push("/child");
   };
 
   const onSwitchOrganization = () => {
     setProfileMenuOpen(false);
     sessionStorage.removeItem("axiora_parent_pin_ok");
-    localStorage.removeItem("axiora_child_id");
-    localStorage.removeItem("axiora_child_name");
+    sessionStorage.removeItem(.axiora_child_id");
+    sessionStorage.removeItem(.axiora_child_name");
     router.push("/select-tenant");
   };
 
@@ -367,8 +367,8 @@ export default function ParentPage() {
 
   const onSelectChild = async (child: ChildProfileSummary) => {
     setSelectedChildId(child.id);
-    localStorage.setItem("axiora_child_id", String(child.id));
-    localStorage.setItem("axiora_child_name", child.display_name);
+    sessionStorage.setItem(.axiora_child_id", String(child.id));
+    sessionStorage.setItem(.axiora_child_name", child.display_name);
     setSoundEnabled(getChildSoundEnabled(child.id));
     await Promise.all([loadChildDashboard(child.id), loadParentInsights()]);
   };
@@ -504,7 +504,7 @@ export default function ParentPage() {
       });
       setChildren((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       if (selectedChildId === updated.id) {
-        localStorage.setItem("axiora_child_name", updated.display_name);
+        sessionStorage.setItem(.axiora_child_name", updated.display_name);
       }
       setEditingChildId(null);
     } catch (err) {

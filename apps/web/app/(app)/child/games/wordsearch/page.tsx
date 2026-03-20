@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -235,7 +235,7 @@ export default function WordSearchPage() {
   const [confettiTrigger, setConfettiTrigger] = useState(0);
 
   useEffect(() => {
-    const raw = localStorage.getItem("axiora_child_id");
+    const raw = sessionStorage.getItem(.axiora_child_id");
     const parsed = Number(raw);
     if (raw && Number.isFinite(parsed)) {
       setChildId(parsed);

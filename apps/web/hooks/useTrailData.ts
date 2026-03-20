@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -28,7 +28,7 @@ import type { MapSection } from "@/components/trail/ProgressionMap";
 
 function resolveSubjectStorageKey(): string {
   if (typeof window === "undefined") return "axiora_learning_selected_subject:anonymous";
-  const rawChildId = window.localStorage.getItem("axiora_child_id");
+  const rawChildId = window.sessionStorage.getItem(.axiora_child_id");
   const childId = rawChildId ? Number(rawChildId) : NaN;
   const scope = Number.isFinite(childId) && childId > 0 ? String(childId) : "anonymous";
   return `axiora_learning_selected_subject:${scope}`;
@@ -36,7 +36,7 @@ function resolveSubjectStorageKey(): string {
 
 function readActiveChildId(): number | null {
   if (typeof window === "undefined") return null;
-  const rawChildId = window.localStorage.getItem("axiora_child_id");
+  const rawChildId = window.sessionStorage.getItem(.axiora_child_id");
   const childId = rawChildId ? Number(rawChildId) : NaN;
   return Number.isFinite(childId) && childId > 0 ? childId : null;
 }
@@ -439,7 +439,7 @@ export function useTrailData(): TrailData {
   // Fetch profile (XP, coins)
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const rawChildId = window.localStorage.getItem("axiora_child_id");
+    const rawChildId = window.sessionStorage.getItem(.axiora_child_id");
     const childId = rawChildId ? Number(rawChildId) : NaN;
     if (!Number.isFinite(childId) || childId <= 0) return;
 
@@ -491,7 +491,7 @@ export function useTrailData(): TrailData {
   // Fetch notification count (recomendações não descartadas)
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const rawChildId = window.localStorage.getItem("axiora_child_id");
+    const rawChildId = window.sessionStorage.getItem(.axiora_child_id");
     const childId = rawChildId ? Number(rawChildId) : NaN;
     if (!Number.isFinite(childId) || childId <= 0) return;
     let active = true;

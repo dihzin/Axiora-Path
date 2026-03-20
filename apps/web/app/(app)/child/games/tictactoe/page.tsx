@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -242,7 +242,7 @@ export default function TicTacToePage() {
   });
 
   useEffect(() => {
-    const raw = localStorage.getItem("axiora_child_id");
+    const raw = sessionStorage.getItem(.axiora_child_id");
     const parsed = Number(raw);
     if (raw && Number.isFinite(parsed)) {
       setChildId(parsed);

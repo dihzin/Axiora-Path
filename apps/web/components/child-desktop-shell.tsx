@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -51,7 +51,7 @@ export function ChildDesktopShell({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const rawChildId = window.localStorage.getItem("axiora_child_id");
+    const rawChildId = window.sessionStorage.getItem(.axiora_child_id");
     const parsedChildId = rawChildId ? Number(rawChildId) : NaN;
     const childId = Number.isFinite(parsedChildId) && parsedChildId > 0 ? parsedChildId : null;
     let active = true;
@@ -218,7 +218,7 @@ function DefaultRightRail() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const rawChildId = window.localStorage.getItem("axiora_child_id");
+    const rawChildId = window.sessionStorage.getItem(.axiora_child_id");
     const childId = rawChildId ? Number(rawChildId) : NaN;
     if (!Number.isFinite(childId) || childId <= 0) {
       setStreak(0);

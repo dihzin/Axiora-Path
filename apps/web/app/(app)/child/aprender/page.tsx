@@ -45,7 +45,11 @@ export default function LearningPathPage() {
               "rgba(4,10,24,0.34)",
           }}
         />
-        <Suspense fallback={null}>
+        <Suspense fallback={
+          <div className="relative z-10 flex flex-1 items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-white/20 border-t-white/80" aria-label="Carregando trilha..." />
+          </div>
+        }>
           <div className="relative z-10 lg:flex lg:min-h-0 lg:min-w-0 lg:flex-1 lg:flex-col">
             <TrailScreen />
           </div>

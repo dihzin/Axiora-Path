@@ -127,7 +127,7 @@ function toStringSafe(value: unknown, fallback = ""): string {
 
 function readActiveChildId(): number | null {
   if (typeof window === "undefined") return null;
-  const rawChildId = window.localStorage.getItem("axiora_child_id");
+  const rawChildId = window.sessionStorage.getItem("axiora_child_id");
   const childId = rawChildId ? Number(rawChildId) : NaN;
   return Number.isFinite(childId) && childId > 0 ? childId : null;
 }

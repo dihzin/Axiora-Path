@@ -242,7 +242,7 @@ export default function ChildStorePage() {
                 <div className={`grid place-items-center rounded-2xl border py-3 ${locked ? "border-[#D6DEEA] bg-[#EEF2F8]" : "border-[#BFE8E0] bg-white"}`}>
                   {item.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.imageUrl} alt={item.name} className={`h-12 w-12 object-contain ${locked ? "grayscale" : ""}`} />
+                    <img src={item.imageUrl} alt={item.name} width={48} height={48} loading="lazy" className={`h-12 w-12 object-contain ${locked ? "grayscale" : ""}`} />
                   ) : (
                     <Sparkles className={`h-5 w-5 ${locked ? "text-[#95A4BB]" : "text-[#1DB8A6]"}`} aria-hidden />
                   )}

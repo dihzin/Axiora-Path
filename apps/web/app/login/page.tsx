@@ -7,7 +7,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 
 import Image from "next/image";
 
-import { Eye, EyeOff, GraduationCap, Loader2, Lock, Mail, Star, Trophy, Users, Zap } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, GraduationCap, Loader2, Lock, Mail, Star, Trophy, Users, Zap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -223,11 +223,11 @@ export default function LoginPage() {
       />
 
       <main className="axiora-brand-content axiora-login-fullscreen relative z-10 flex min-h-[100svh] w-full items-center overflow-hidden">
-        <section className={`axiora-login-grid relative z-10 mx-auto grid w-full max-w-[1480px] items-center px-4 py-4 sm:px-6 lg:max-h-[100svh] lg:overflow-hidden lg:grid-cols-[1.1fr_0.9fr] ${compactDesktop ? "gap-5 lg:px-8 lg:py-3" : "gap-6 lg:px-10 lg:py-6"}`}>
-          <div className={`axiora-login-hero flex flex-col justify-center rounded-[2rem] border border-white/8 bg-[rgba(8,18,28,0.16)] backdrop-blur-[1px] sm:p-8 lg:h-full lg:border-transparent lg:bg-transparent lg:items-start lg:justify-center lg:backdrop-blur-0 ${compactDesktop ? "gap-3 p-4 lg:p-5" : "gap-3 p-5 lg:p-8"}`}>
-            <div className={`max-w-[36rem] text-white ${compactDesktop ? "space-y-2.5" : "space-y-3"}`}>
-              {/* Mascot com aura radial */}
-              <div className="relative w-fit">
+        <section className={`axiora-login-grid relative z-10 mx-auto grid w-full max-w-[1480px] items-center overflow-x-clip px-4 py-4 sm:px-6 lg:max-h-[100svh] lg:overflow-hidden lg:grid-cols-[1.1fr_0.9fr] ${compactDesktop ? "gap-2 lg:gap-5 lg:px-8 lg:py-3" : "gap-2 lg:gap-6 lg:px-10 lg:py-6"}`}>
+          <div className={`axiora-login-hero min-w-0 flex flex-col justify-center border-transparent bg-transparent lg:h-full lg:items-start lg:justify-center ${compactDesktop ? "gap-3 px-2 py-1 lg:p-5" : "gap-3 px-2 py-1 lg:p-8"}`}>
+            <div className={`max-w-[36rem] text-white space-y-2 ${compactDesktop ? "lg:space-y-2.5" : "lg:space-y-3"}`}>
+              {/* Mascot com aura radial — apenas desktop */}
+              <div className="relative hidden w-fit lg:block">
                 <div
                   aria-hidden="true"
                   className={`pointer-events-none absolute left-1/2 top-1/2 -z-10 -translate-x-1/2 -translate-y-1/2 rounded-full ${shortDesktop ? "h-[128px] w-[128px]" : compactDesktop ? "h-[144px] w-[144px]" : "h-[160px] w-[160px]"}`}
@@ -239,11 +239,12 @@ export default function LoginPage() {
                   width={shortDesktop ? 94 : compactDesktop ? 108 : 120}
                   height={shortDesktop ? 94 : compactDesktop ? 108 : 120}
                   priority
+                  style={{ filter: "drop-shadow(0 8px 28px rgba(251,191,36,0.48)) drop-shadow(0 2px 10px rgba(238,135,72,0.32))" }}
                 />
               </div>
 
               {/* Achievement notification — demonstra o produto */}
-              <div className={`inline-flex items-center rounded-2xl border border-[rgba(52,211,153,0.28)] bg-[rgba(6,24,18,0.68)] shadow-[0_8px_28px_rgba(0,0,0,0.28)] backdrop-blur-sm ${shortDesktop ? "gap-2 px-3 py-1.5" : compactDesktop ? "gap-2.5 px-3.5 py-2" : "gap-2.5 px-3.5 py-2"}`}>
+              <div className={`inline-flex items-center rounded-2xl border border-[rgba(52,211,153,0.36)] bg-[rgba(6,24,18,0.72)] shadow-[0_8px_28px_rgba(0,0,0,0.28),0_0_18px_rgba(52,211,153,0.18)] backdrop-blur-sm ${shortDesktop ? "gap-2 px-3 py-1.5" : compactDesktop ? "gap-2.5 px-3.5 py-2" : "gap-2.5 px-3.5 py-2"}`}>
                 <div className={`flex shrink-0 items-center justify-center rounded-full bg-[rgba(52,211,153,0.18)] ${shortDesktop ? "h-6 w-6" : "h-7 w-7"}`}>
                   <Trophy className="h-3.5 w-3.5 text-[#34d399]" strokeWidth={2.5} aria-hidden />
                 </div>
@@ -251,7 +252,7 @@ export default function LoginPage() {
                   <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-[#34d399]">Missão concluída!</p>
                   <div className={`flex items-center gap-2 ${shortDesktop ? "mt-0.5" : "mt-1"}`}>
                     <div className={`h-1.5 overflow-hidden rounded-full bg-white/15 ${shortDesktop ? "w-16" : "w-20"}`}>
-                      <div className="h-full w-[78%] rounded-full bg-[linear-gradient(90deg,#34d399,#6ee7b7)]" />
+                      <div className="h-full w-[78%] rounded-full bg-[linear-gradient(90deg,#34d399,#6ee7b7)] motion-safe:animate-pulse" />
                     </div>
                     <span className="text-[0.62rem] font-black text-[#6ee7b7]">+120 XP</span>
                   </div>
@@ -259,24 +260,40 @@ export default function LoginPage() {
               </div>
 
               <div className={compactDesktop ? "space-y-2" : "space-y-2"}>
-                <h1 className={`max-w-[10ch] text-4xl font-black uppercase leading-[0.81] tracking-[-0.045em] sm:text-5xl ${shortDesktop ? "lg:text-[3.15rem]" : compactDesktop ? "lg:text-[3.45rem]" : "lg:text-[3.8rem]"}`}>
-                  <span className="block text-[#fffaf4] drop-shadow-[0_10px_22px_rgba(7,20,17,0.28)]">Abrir</span>
-                  <span className="block bg-[linear-gradient(180deg,#fff1cf_0%,#f4ca97_44%,#de9b79_100%)] bg-clip-text text-transparent drop-shadow-[0_10px_26px_rgba(87,40,24,0.18)]">
-                    caminhos.
-                  </span>
-                  <span className="block text-[#f4f6fb] drop-shadow-[0_10px_22px_rgba(7,20,17,0.28)]">Cultivar</span>
-                  <span className="block bg-[linear-gradient(180deg,#f2f7f5_0%,#bddfd7_45%,#f6e8c8_100%)] bg-clip-text text-transparent drop-shadow-[0_10px_28px_rgba(13,49,52,0.14)]">
-                    conquistas.
-                  </span>
-                </h1>
-                <p className={`max-w-[33rem] font-semibold leading-[1.6] text-white/82 ${shortDesktop ? "text-[13px] leading-[1.45]" : compactDesktop ? "text-[13.5px] leading-[1.5]" : "text-sm"}`}>
+                <div className="flex items-center gap-1 lg:block">
+                  <h1 className={`flex-1 text-[2rem] font-black uppercase leading-[0.85] tracking-[-0.04em] sm:text-4xl ${shortDesktop ? "lg:text-[3.15rem]" : compactDesktop ? "lg:text-[3.45rem]" : "lg:text-[3.8rem]"} lg:max-w-[10ch] lg:leading-[0.81] lg:tracking-[-0.045em]`}>
+                    <span className="block text-[#fffaf4] drop-shadow-[0_10px_22px_rgba(7,20,17,0.28)]">Abrir</span>
+                    <span className="block bg-[linear-gradient(180deg,#fff1cf_0%,#f4ca97_44%,#de9b79_100%)] bg-clip-text text-transparent drop-shadow-[0_10px_26px_rgba(87,40,24,0.18)]">
+                      caminhos.
+                    </span>
+                    <span className="block text-[#f4f6fb] drop-shadow-[0_10px_22px_rgba(7,20,17,0.28)]">Cultivar</span>
+                    <span className="block bg-[linear-gradient(180deg,#f2f7f5_0%,#bddfd7_45%,#f6e8c8_100%)] bg-clip-text text-transparent drop-shadow-[0_10px_28px_rgba(13,49,52,0.14)]">
+                      conquistas.
+                    </span>
+                  </h1>
+                  {/* Mascote — direita da copy, apenas mobile */}
+                  <div className="relative shrink-0 lg:hidden" aria-hidden="true">
+                    <div
+                      className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                      style={{ background: "radial-gradient(circle, rgba(251,191,36,0.38) 0%, rgba(238,135,72,0.18) 50%, transparent 75%)", filter: "blur(14px)" }}
+                    />
+                    <Image
+                      src="/axiora/mascot/axiora-mascot.png"
+                      alt="Mascote Axiora"
+                      width={124}
+                      height={124}
+                      style={{ filter: "drop-shadow(0 8px 24px rgba(251,191,36,0.58)) drop-shadow(0 2px 10px rgba(238,135,72,0.34))" }}
+                    />
+                  </div>
+                </div>
+                <p className={`hidden max-w-[33rem] font-semibold leading-[1.6] text-white/82 lg:block ${shortDesktop ? "text-[13px] leading-[1.45]" : compactDesktop ? "text-[13.5px] leading-[1.5]" : "text-sm"}`}>
                   Seu filho aprende jogando, ganha XP e sobe de nível — enquanto você acompanha cada conquista em tempo real.
                 </p>
               </div>
 
-              <div className={`grid gap-2 sm:grid-cols-3 ${compactDesktop ? "lg:gap-1.5" : ""}`}>
+              <div className={`hidden gap-2 lg:grid lg:grid-cols-3 ${compactDesktop ? "lg:gap-1.5" : ""}`}>
                 {/* Famílias — âmbar quente */}
-                <div className={`axiora-login-info-card relative overflow-hidden border border-[rgba(251,191,36,0.38)] bg-[linear-gradient(150deg,rgba(120,72,8,0.72),rgba(78,44,6,0.82))] backdrop-blur-md ${shortDesktop ? "rounded-[1.15rem] px-3 py-2.5 shadow-[0_12px_26px_rgba(60,28,4,0.32)]" : compactDesktop ? "rounded-[1.25rem] px-3.5 py-2.5 shadow-[0_14px_30px_rgba(60,28,4,0.35)]" : "rounded-[1.4rem] px-3.5 py-3 shadow-[0_16px_36px_rgba(60,28,4,0.38)]"}`}>
+                <div className={`axiora-login-info-card relative overflow-hidden border border-[rgba(251,191,36,0.38)] bg-[linear-gradient(150deg,rgba(120,72,8,0.72),rgba(78,44,6,0.82))] backdrop-blur-md transition-all duration-200 hover:border-[rgba(251,191,36,0.60)] hover:brightness-110 ${shortDesktop ? "rounded-[1.15rem] px-3 py-2.5 shadow-[0_12px_26px_rgba(60,28,4,0.32)]" : compactDesktop ? "rounded-[1.25rem] px-3.5 py-2.5 shadow-[0_14px_30px_rgba(60,28,4,0.35)]" : "rounded-[1.4rem] px-3.5 py-3 shadow-[0_16px_36px_rgba(60,28,4,0.38)]"}`}>
                   <div className="absolute inset-x-0 top-0 h-[2.5px] rounded-t-[1.7rem] bg-[linear-gradient(90deg,#fde68a,#f59e0b,#d97706)]" aria-hidden="true" />
                   <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(253,230,138,0.14),transparent_55%)]" aria-hidden="true" />
                   <div className="relative">
@@ -288,7 +305,7 @@ export default function LoginPage() {
                   </div>
                 </div>
                 {/* Crianças — ciano/esmeralda */}
-                <div className={`axiora-login-info-card relative overflow-hidden border border-[rgba(52,211,153,0.35)] bg-[linear-gradient(150deg,rgba(6,78,59,0.76),rgba(4,54,40,0.84))] backdrop-blur-md ${shortDesktop ? "rounded-[1.15rem] px-3 py-2.5 shadow-[0_12px_26px_rgba(4,40,28,0.32)]" : compactDesktop ? "rounded-[1.25rem] px-3.5 py-2.5 shadow-[0_14px_30px_rgba(4,40,28,0.35)]" : "rounded-[1.4rem] px-3.5 py-3 shadow-[0_16px_36px_rgba(4,40,28,0.40)]"}`}>
+                <div className={`axiora-login-info-card relative overflow-hidden border border-[rgba(52,211,153,0.35)] bg-[linear-gradient(150deg,rgba(6,78,59,0.76),rgba(4,54,40,0.84))] backdrop-blur-md transition-all duration-200 hover:border-[rgba(52,211,153,0.58)] hover:brightness-110 ${shortDesktop ? "rounded-[1.15rem] px-3 py-2.5 shadow-[0_12px_26px_rgba(4,40,28,0.32)]" : compactDesktop ? "rounded-[1.25rem] px-3.5 py-2.5 shadow-[0_14px_30px_rgba(4,40,28,0.35)]" : "rounded-[1.4rem] px-3.5 py-3 shadow-[0_16px_36px_rgba(4,40,28,0.40)]"}`}>
                   <div className="absolute inset-x-0 top-0 h-[2.5px] rounded-t-[1.7rem] bg-[linear-gradient(90deg,#6ee7b7,#34d399,#059669)]" aria-hidden="true" />
                   <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(110,231,183,0.12),transparent_55%)]" aria-hidden="true" />
                   <div className="relative">
@@ -300,7 +317,7 @@ export default function LoginPage() {
                   </div>
                 </div>
                 {/* Escolas — índigo/violeta */}
-                <div className={`axiora-login-info-card relative overflow-hidden border border-[rgba(165,180,252,0.32)] bg-[linear-gradient(150deg,rgba(49,42,150,0.74),rgba(30,26,100,0.84))] backdrop-blur-md ${shortDesktop ? "rounded-[1.15rem] px-3 py-2.5 shadow-[0_12px_26px_rgba(20,14,80,0.32)]" : compactDesktop ? "rounded-[1.25rem] px-3.5 py-2.5 shadow-[0_14px_30px_rgba(20,14,80,0.35)]" : "rounded-[1.4rem] px-3.5 py-3 shadow-[0_16px_36px_rgba(20,14,80,0.40)]"}`}>
+                <div className={`axiora-login-info-card relative overflow-hidden border border-[rgba(165,180,252,0.32)] bg-[linear-gradient(150deg,rgba(49,42,150,0.74),rgba(30,26,100,0.84))] backdrop-blur-md transition-all duration-200 hover:border-[rgba(165,180,252,0.55)] hover:brightness-110 ${shortDesktop ? "rounded-[1.15rem] px-3 py-2.5 shadow-[0_12px_26px_rgba(20,14,80,0.32)]" : compactDesktop ? "rounded-[1.25rem] px-3.5 py-2.5 shadow-[0_14px_30px_rgba(20,14,80,0.35)]" : "rounded-[1.4rem] px-3.5 py-3 shadow-[0_16px_36px_rgba(20,14,80,0.40)]"}`}>
                   <div className="absolute inset-x-0 top-0 h-[2.5px] rounded-t-[1.7rem] bg-[linear-gradient(90deg,#c4b5fd,#818cf8,#6366f1)]" aria-hidden="true" />
                   <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(196,181,253,0.12),transparent_55%)]" aria-hidden="true" />
                   <div className="relative">
@@ -313,7 +330,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className={`flex flex-wrap items-center ${shortDesktop ? "hidden" : compactDesktop ? "gap-x-5 gap-y-2 pt-0.5" : "gap-x-6 gap-y-3"}`}>
+              <div className={`hidden flex-wrap items-center lg:flex ${shortDesktop ? "lg:hidden" : compactDesktop ? "gap-x-5 gap-y-2 pt-0.5" : "gap-x-6 gap-y-3"}`}>
                 <div className="flex items-center gap-2">
                   <Users className="h-3.5 w-3.5 shrink-0 text-[#fde68a]" strokeWidth={2.5} aria-hidden />
                   <span className="text-sm font-black text-white">12.000+</span>
@@ -335,38 +352,35 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="relative flex items-center justify-center pt-14 lg:justify-end lg:pt-0">
-            <div className="absolute inset-0 hidden lg:block bg-[radial-gradient(circle_at_65%_50%,rgba(255,248,238,0.28),transparent_38%)]" aria-hidden="true" />
-            <div className={`axiora-login-panel relative z-10 w-full overflow-hidden border border-[rgba(255,239,221,0.72)] bg-[linear-gradient(160deg,rgba(255,251,246,0.88)_0%,rgba(244,234,222,0.84)_100%)] backdrop-blur-2xl ${shortDesktop ? "max-w-[26.5rem] rounded-[1.85rem] p-3.5 shadow-[0_22px_54px_rgba(10,18,14,0.34),0_2px_0_rgba(255,255,255,0.55)_inset] sm:p-4" : compactDesktop ? "max-w-[27.75rem] rounded-[2rem] p-4 shadow-[0_26px_62px_rgba(10,18,14,0.37),0_2px_0_rgba(255,255,255,0.55)_inset] sm:p-[1.125rem]" : "max-w-[28.5rem] rounded-[2.15rem] p-4 shadow-[0_32px_80px_rgba(10,18,14,0.42),0_2px_0_rgba(255,255,255,0.55)_inset] sm:p-5"}`}>
-              <div className="absolute inset-x-0 top-0 h-[3px] rounded-t-[2.15rem] bg-[linear-gradient(90deg,#f6c870,#ee8748,#c8e6dc)]" aria-hidden="true" />
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.92),transparent_34%)]" aria-hidden="true" />
-              <div className={`flex items-center gap-4 lg:hidden ${compactDesktop ? "mb-4" : "mb-6"}`}>
-                <div className="shrink-0">
-                  <Image
-                    src="/axiora/mascot/axiora-mascot.png"
-                    alt="Mascote Axiora"
-                    width={80}
-                    height={80}
-                  />
-                </div>
-                <div>
-                  <p className="text-[0.68rem] font-black uppercase tracking-[0.22em] text-[#8b755d]">Boas-vindas</p>
-                  <h2 className="mt-1 text-2xl font-black text-[#22352f]">Entrar no Axiora</h2>
-                </div>
+          <div className="relative min-w-0 flex items-center justify-center pt-0 lg:justify-end lg:pt-0">
+            <div className={`axiora-login-panel relative z-10 w-full overflow-hidden border border-[rgba(255,239,221,0.72)] bg-[linear-gradient(160deg,rgba(255,251,246,0.88)_0%,rgba(244,234,222,0.84)_100%)] backdrop-blur-2xl ${shortDesktop ? "max-w-[26.5rem] rounded-[1.85rem] p-3.5 shadow-[0_22px_54px_rgba(10,18,14,0.34),0_2px_0_rgba(255,255,255,0.55)_inset] sm:p-4" : compactDesktop ? "max-w-[27.75rem] rounded-[2rem] p-4 shadow-[0_26px_62px_rgba(10,18,14,0.37),0_2px_0_rgba(255,255,255,0.55)_inset] sm:p-[1.125rem]" : "max-w-[28.5rem] rounded-[2.15rem] p-4 shadow-[0_24px_56px_-8px_rgba(10,18,14,0.42),0_2px_0_rgba(255,255,255,0.55)_inset] sm:p-5"}`}>
+              {/* Stripe topo com glow */}
+              <div className="absolute inset-x-0 top-0 h-1.5 rounded-t-[2.15rem] bg-[linear-gradient(90deg,#f6c870,#ee8748_40%,#e07060_60%,#c8e6dc)]" aria-hidden="true" />
+              <div className="absolute inset-x-0 top-0 h-8 rounded-t-[2.15rem] bg-[linear-gradient(180deg,rgba(238,135,72,0.10),transparent)]" aria-hidden="true" />
+              {/* Luz ambiente interior */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.94),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(255,220,170,0.10),transparent_44%)]" aria-hidden="true" />
+              <div className={`text-center lg:hidden ${compactDesktop ? "mb-3" : "mb-4"}`}>
+                <p className="text-[0.68rem] font-black uppercase tracking-[0.22em] text-[#8b755d]">Axiora Path</p>
+                <h2 className="mt-0.5 text-xl font-black leading-tight text-[#22352f]">Entrar <span className="font-normal">na sua</span> conta</h2>
               </div>
 
               <div className="relative hidden lg:block">
-                <div className={`flex items-center gap-2.5 ${compactDesktop ? "mb-1.5" : "mb-2"}`}>
-                  <div className="h-4 w-[3px] rounded-full bg-[linear-gradient(180deg,#ee8748,#f59e0b)]" aria-hidden="true" />
-                  <p className="text-[0.7rem] font-black uppercase tracking-[0.24em] text-[#9c7c58]">Acesso principal</p>
+                <div className={`${compactDesktop ? "mb-2" : "mb-3"}`}>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(238,135,72,0.28)] bg-[rgba(238,135,72,0.08)] px-3 py-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#ee8748]" aria-hidden="true" />
+                    <span className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-[#b06030]">Acesso principal</span>
+                  </span>
                 </div>
-                <h2 className={`font-black leading-tight tracking-[-0.025em] text-[#203846] ${shortDesktop ? "text-[1.52rem]" : compactDesktop ? "text-[1.64rem]" : "text-[1.75rem]"}`}>Entrar no Axiora</h2>
-                <p className={`max-w-[23rem] font-semibold text-[#5e605b] ${shortDesktop ? "mt-1 text-[13px] leading-5" : compactDesktop ? "mt-1 text-[13.5px] leading-5" : "mt-1.5 text-sm leading-5"}`}>
-                  Use email e senha ou continue com Google. Se você tiver mais de um perfil, escolheremos juntos qual usar.
+                <h2 className={`font-black leading-[1.05] tracking-[-0.03em] text-[#1a2e38] ${shortDesktop ? "text-[1.6rem]" : compactDesktop ? "text-[1.75rem]" : "text-[2rem]"}`}>
+                  Entrar no{" "}
+                  <span className="bg-[linear-gradient(135deg,#ee8748,#d4600a)] bg-clip-text text-transparent">Axiora</span>
+                </h2>
+                <p className={`max-w-[23rem] font-medium text-[#6b6560] ${shortDesktop ? "mt-1.5 text-[12.5px] leading-5" : compactDesktop ? "mt-1.5 text-[13px] leading-5" : "mt-2 text-[13.5px] leading-[1.55]"}`}>
+                  Use email e senha ou continue com Google. Com mais de um perfil, escolheremos juntos qual usar.
                 </p>
               </div>
 
-              <form className={`relative ${shortDesktop ? "mt-3 space-y-2.5" : compactDesktop ? "mt-3.5 space-y-2.5" : "mt-4 space-y-3"}`} onSubmit={handleEmailLogin}>
+              <form className={`relative ${shortDesktop ? "mt-2.5 space-y-2" : compactDesktop ? "mt-3 space-y-2.5" : "mt-3 space-y-2.5"}`} onSubmit={handleEmailLogin}>
                 <div className={compactDesktop ? "space-y-1.5" : "space-y-2"}>
                   <label className="block text-[0.78rem] font-black uppercase tracking-[0.18em] text-[#816b57]" htmlFor="email">
                     Email
@@ -382,7 +396,7 @@ export default function LoginPage() {
                       autoComplete="email"
                       aria-invalid={Boolean(error)}
                       aria-describedby={error ? "login-error" : undefined}
-                      className={`border-[rgba(230,213,195,0.92)] bg-[rgba(245,248,252,0.96)] pl-10 text-[#203846] shadow-[inset_0_1px_0_rgba(255,255,255,0.94),0_12px_26px_rgba(194,170,144,0.16)] placeholder:text-[#9e9386] focus-visible:ring-[#ffb170] ${shortDesktop ? "h-9 rounded-[0.95rem]" : compactDesktop ? "h-9.5 rounded-[0.95rem]" : "h-10 rounded-[1rem]"}`}
+                      className={`border-[rgba(210,185,162,0.80)] bg-[rgba(255,252,246,0.96)] pl-10 text-[#1e2e3a] shadow-[inset_0_2px_4px_rgba(180,140,100,0.10),0_1px_0_rgba(255,255,255,0.95)] placeholder:text-[#b0a090] transition-shadow focus-visible:ring-[#ee8748] focus-visible:shadow-[inset_0_2px_4px_rgba(180,140,100,0.08),0_0_0_3px_rgba(238,135,72,0.12)] ${shortDesktop ? "h-9 rounded-[0.95rem]" : compactDesktop ? "h-9.5 rounded-[0.95rem]" : "h-10 rounded-[1rem]"}`}
                       required
                     />
                   </div>
@@ -408,7 +422,7 @@ export default function LoginPage() {
                       autoComplete="current-password"
                       aria-invalid={Boolean(error)}
                       aria-describedby={error ? "login-error" : undefined}
-                      className={`border-[rgba(230,213,195,0.92)] bg-[rgba(245,248,252,0.96)] pl-10 pr-11 text-[#203846] shadow-[inset_0_1px_0_rgba(255,255,255,0.94),0_12px_26px_rgba(194,170,144,0.16)] placeholder:text-[#9e9386] focus-visible:ring-[#ffb170] ${shortDesktop ? "h-9 rounded-[0.95rem]" : compactDesktop ? "h-9.5 rounded-[0.95rem]" : "h-10 rounded-[1rem]"}`}
+                      className={`border-[rgba(210,185,162,0.80)] bg-[rgba(255,252,246,0.96)] pl-10 pr-11 text-[#1e2e3a] shadow-[inset_0_2px_4px_rgba(180,140,100,0.10),0_1px_0_rgba(255,255,255,0.95)] placeholder:text-[#b0a090] transition-shadow focus-visible:ring-[#ee8748] focus-visible:shadow-[inset_0_2px_4px_rgba(180,140,100,0.08),0_0_0_3px_rgba(238,135,72,0.12)] ${shortDesktop ? "h-9 rounded-[0.95rem]" : compactDesktop ? "h-9.5 rounded-[0.95rem]" : "h-10 rounded-[1rem]"}`}
                       required
                     />
                     <button
@@ -422,27 +436,19 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <p
-                  id="login-error"
-                  role="alert"
-                  aria-live="polite"
-                  className={`rounded-2xl border px-4 text-sm font-bold transition-colors duration-200 ${compactDesktop ? "py-2" : "py-2.5"}`}
-                  style={error ? {
-                    borderColor: "rgba(210,100,50,0.30)",
-                    background: "rgba(254,242,232,0.92)",
-                    color: "#9b3a18",
-                  } : {
-                    borderColor: "transparent",
-                    background: "transparent",
-                    color: "transparent",
-                    userSelect: "none",
-                    pointerEvents: "none",
-                  }}
-                >
-                  {error ?? "\u00A0"}
-                </p>
+                {error && (
+                  <p
+                    id="login-error"
+                    role="alert"
+                    aria-live="polite"
+                    className={`rounded-2xl border px-4 text-sm font-bold ${compactDesktop ? "py-1.5" : "py-2"}`}
+                    style={{ borderColor: "rgba(210,100,50,0.30)", background: "rgba(254,242,232,0.92)", color: "#9b3a18" }}
+                  >
+                    {error}
+                  </p>
+                )}
 
-                <Button className={`w-full bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] shadow-[inset_0_1px_0_rgba(255,219,190,0.46),0_6px_0_rgba(158,74,30,0.42),0_16px_24px_rgba(93,48,22,0.18)] ${shortDesktop ? "min-h-10" : compactDesktop ? "min-h-[42px]" : ""}`} type="submit" disabled={loading || googleLoading}>
+                <Button className={`w-full bg-[linear-gradient(180deg,#f49552_0%,#ee8748_35%,#d4600a_100%)] font-black tracking-wide shadow-[inset_0_1px_0_rgba(255,230,190,0.55),inset_0_-1px_0_rgba(120,50,10,0.20),0_6px_0_rgba(148,64,18,0.50),0_14px_28px_rgba(93,48,22,0.22)] transition-all duration-150 hover:shadow-[inset_0_1px_0_rgba(255,230,190,0.55),inset_0_-1px_0_rgba(120,50,10,0.20),0_3px_0_rgba(148,64,18,0.50),0_8px_18px_rgba(93,48,22,0.20)] hover:translate-y-[2px] active:translate-y-[5px] active:shadow-[inset_0_1px_0_rgba(255,230,190,0.40),0_1px_0_rgba(148,64,18,0.50),0_4px_12px_rgba(93,48,22,0.18)] ${shortDesktop ? "min-h-10" : compactDesktop ? "min-h-[42px]" : ""}`} type="submit" disabled={loading || googleLoading}>
                   {loading ? (
                     <span className="inline-flex items-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -452,7 +458,7 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              <div className={`flex items-center gap-3 ${shortDesktop ? "my-2.5" : compactDesktop ? "my-3" : "my-3"}`}>
+              <div className={`flex items-center gap-3 ${shortDesktop ? "my-2" : compactDesktop ? "my-2.5" : "my-2.5"}`}>
                 <span className="h-px flex-1 bg-[linear-gradient(to_right,transparent,#dbcab6)]" />
                 <span className="text-[0.72rem] font-black uppercase tracking-[0.18em] text-[#8f7a65]">ou</span>
                 <span className="h-px flex-1 bg-[linear-gradient(to_left,transparent,#dbcab6)]" />
@@ -465,7 +471,7 @@ export default function LoginPage() {
                   >
                     <div ref={googleButtonRef} className="flex min-h-[44px] items-center justify-center" aria-label="Entrar com Google" />
                   </div>
-                  <p className={`font-semibold text-[#6f665d] ${shortDesktop ? "text-[11px] leading-4.5" : compactDesktop ? "text-[11.5px] leading-5" : "text-xs leading-5"}`}>
+                  <p className={`hidden font-semibold text-[#6f665d] lg:block ${shortDesktop ? "text-[11px] leading-4.5" : compactDesktop ? "text-[11.5px] leading-5" : "text-xs leading-5"}`}>
                     Primeira vez? Sua conta familiar é criada automaticamente.
                   </p>
                 </div>
@@ -475,19 +481,20 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <div className={`rounded-[1.55rem] border border-[rgba(234,220,202,0.9)] bg-[rgba(255,255,255,0.62)] px-4 text-sm text-[#5f5a52] shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_12px_22px_rgba(194,170,144,0.1)] ${shortDesktop ? "mt-2.5 py-2.5" : compactDesktop ? "mt-3 py-3" : "mt-3 py-3"}`}>
-                <p className="font-bold text-[#27404a]">Novo aqui?</p>
-                <p className={`mt-1 font-semibold ${compactDesktop ? "leading-5" : "leading-6"}`}>Crie sua conta e comece em minutos.</p>
-                <div className={`grid gap-2 ${shortDesktop ? "mt-2.5" : compactDesktop ? "mt-2.5" : "mt-3"} ${GOOGLE_CLIENT_ID ? "sm:grid-cols-2" : ""}`}>
-                <Button asChild variant="outline" className={`w-full border-[#ddc6ab] bg-[rgba(255,250,244,0.88)] text-[#29403a] shadow-[0_8px_18px_rgba(194,170,144,0.1)] ${shortDesktop ? "min-h-10" : compactDesktop ? "min-h-[42px]" : ""}`}>
-                  <Link href="/signup">Criar conta gratuitamente</Link>
-                </Button>
-                {GOOGLE_CLIENT_ID ? (
-                  <Button asChild variant="outline" className={`w-full border-[rgba(216,196,172,0.96)] bg-[rgba(255,255,255,0.9)] text-[#6d5844] shadow-[0_8px_18px_rgba(194,170,144,0.08)] hover:bg-[rgba(255,252,247,0.96)] ${shortDesktop ? "min-h-10" : compactDesktop ? "min-h-[42px]" : ""}`}>
-                    <Link href="/signup">Criar conta com Google</Link>
-                  </Button>
-                ) : null}
+              {/* Separador + CTA de cadastro */}
+              <div className={`${shortDesktop ? "mt-2.5" : "mt-3"}`}>
+                <div className="flex items-center gap-3">
+                  <span className="h-px flex-1 bg-[linear-gradient(to_right,transparent,rgba(200,175,148,0.45))]" />
+                  <span className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-[#a8947c]">Novo aqui?</span>
+                  <span className="h-px flex-1 bg-[linear-gradient(to_left,transparent,rgba(200,175,148,0.45))]" />
                 </div>
+                <Link
+                  href="/signup"
+                  className={`group mt-3 flex w-full items-center justify-center gap-2 rounded-[1.15rem] border border-[rgba(238,135,72,0.22)] bg-[linear-gradient(135deg,rgba(255,248,238,0.90),rgba(255,238,218,0.80))] font-bold text-[#b05c22] shadow-[inset_0_1px_0_rgba(255,255,255,0.80),0_2px_8px_rgba(238,135,72,0.08)] transition-all duration-200 hover:border-[rgba(238,135,72,0.40)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.80),0_4px_14px_rgba(238,135,72,0.14)] ${shortDesktop ? "py-2.5 text-[13px]" : "py-3 text-sm"}`}
+                >
+                  Criar conta gratuita
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden />
+                </Link>
               </div>
             </div>
           </div>

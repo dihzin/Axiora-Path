@@ -31,7 +31,11 @@ function ParentProfileCompletionContent() {
 
 export default function ParentProfileCompletionPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-[#f4f6fb]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#1DB8A6]/20 border-t-[#1DB8A6]" aria-label="Carregando..." />
+      </div>
+    }>
       <ParentProfileCompletionContent />
     </Suspense>
   );

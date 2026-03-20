@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -55,8 +55,8 @@ export default function SelectChildPage() {
       return;
     }
     setSelectingChildId(child.id);
-    localStorage.setItem("axiora_child_id", String(child.id));
-    localStorage.setItem("axiora_child_name", child.display_name);
+    sessionStorage.setItem(.axiora_child_id", String(child.id));
+    sessionStorage.setItem(.axiora_child_name", child.display_name);
     setTheme(child.theme);
     router.push("/child");
   };

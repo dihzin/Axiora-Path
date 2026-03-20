@@ -7,7 +7,13 @@ const connectSrc = [
   "https://accounts.google.com",
   "https://oauth2.googleapis.com",
 ].join(" ");
-const scriptSrc = ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://accounts.google.com"].join(" ");
+const isDev = process.env.NODE_ENV === "development";
+const scriptSrc = [
+  "'self'",
+  "'unsafe-inline'",
+  ...(isDev ? ["'unsafe-eval'"] : []),
+  "https://accounts.google.com",
+].join(" ");
 const frameSrc = ["'self'", "https://accounts.google.com"].join(" ");
 
 const contentSecurityPolicy = [
@@ -15,8 +21,8 @@ const contentSecurityPolicy = [
   `connect-src ${connectSrc}`,
   "img-src 'self' data: blob: https:",
   "media-src 'self' data: blob:",
-  "font-src 'self' data:",
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://accounts.google.com https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
   `script-src ${scriptSrc}`,
   `frame-src ${frameSrc}`,
   "frame-ancestors 'none'",

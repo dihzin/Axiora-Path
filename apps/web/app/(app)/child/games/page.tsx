@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -142,7 +142,7 @@ export default function ChildGamesPage() {
   }, []);
 
   useEffect(() => {
-    const raw = localStorage.getItem("axiora_child_id");
+    const raw = sessionStorage.getItem(.axiora_child_id");
     const parsed = Number(raw);
     if (!raw || !Number.isFinite(parsed)) return;
     const fromQuery = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("decision_id") : null;
