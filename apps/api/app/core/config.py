@@ -20,7 +20,9 @@ class Settings(BaseSettings):
     auth_cookie_secure: bool = True
     auth_cookie_domain: str | None = None
     auth_cookie_samesite: str = "lax"
-    csrf_exempt_paths: str = "/health,/docs,/redoc,/openapi.json,/auth/login,/auth/login-primary,/auth/signup"
+    csrf_exempt_paths: str = (
+        "/health,/docs,/redoc,/openapi.json,/auth/login,/auth/login-primary,/auth/signup"
+    )
     account_lock_max_attempts: int = 5
     account_lock_minutes: int = 15
     coin_conversion_coins_per_real: int = 10
@@ -38,6 +40,35 @@ class Settings(BaseSettings):
     llm_model: str | None = Field(
         default=None,
         validation_alias=AliasChoices("LLM_MODEL", "AXIORA_LLM_MODEL"),
+    )
+    stripe_secret_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("STRIPE_SECRET_KEY", "AXIORA_STRIPE_SECRET_KEY"),
+    )
+    stripe_webhook_secret: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("STRIPE_WEBHOOK_SECRET", "AXIORA_STRIPE_WEBHOOK_SECRET"),
+    )
+    stripe_price_tools_credits_30: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "STRIPE_PRICE_TOOLS_CREDITS_30",
+            "AXIORA_STRIPE_PRICE_TOOLS_CREDITS_30",
+        ),
+    )
+    tools_checkout_success_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "TOOLS_CHECKOUT_SUCCESS_URL",
+            "AXIORA_TOOLS_CHECKOUT_SUCCESS_URL",
+        ),
+    )
+    tools_checkout_cancel_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "TOOLS_CHECKOUT_CANCEL_URL",
+            "AXIORA_TOOLS_CHECKOUT_CANCEL_URL",
+        ),
     )
     git_sha: str | None = Field(
         default=None,

@@ -62,6 +62,15 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  useEffect(() => {
     if (GOOGLE_CLIENT_ID && window.google) {
       setGoogleScriptReady(true);
     }
@@ -189,7 +198,7 @@ export default function LoginPage() {
   }, [googleScriptReady]);
 
   return (
-    <div className="axiora-brand-page relative isolate">
+    <div className="axiora-brand-page relative isolate flex h-dvh flex-col overflow-hidden">
       {GOOGLE_CLIENT_ID ? (
         <Script
           src="https://accounts.google.com/gsi/client"
@@ -326,7 +335,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="relative flex items-center justify-center lg:justify-end">
+          <div className="relative flex items-center justify-center pt-14 lg:justify-end lg:pt-0">
             <div className="absolute inset-0 hidden lg:block bg-[radial-gradient(circle_at_65%_50%,rgba(255,248,238,0.28),transparent_38%)]" aria-hidden="true" />
             <div className={`axiora-login-panel relative z-10 w-full overflow-hidden border border-[rgba(255,239,221,0.72)] bg-[linear-gradient(160deg,rgba(255,251,246,0.88)_0%,rgba(244,234,222,0.84)_100%)] backdrop-blur-2xl ${shortDesktop ? "max-w-[26.5rem] rounded-[1.85rem] p-3.5 shadow-[0_22px_54px_rgba(10,18,14,0.34),0_2px_0_rgba(255,255,255,0.55)_inset] sm:p-4" : compactDesktop ? "max-w-[27.75rem] rounded-[2rem] p-4 shadow-[0_26px_62px_rgba(10,18,14,0.37),0_2px_0_rgba(255,255,255,0.55)_inset] sm:p-[1.125rem]" : "max-w-[28.5rem] rounded-[2.15rem] p-4 shadow-[0_32px_80px_rgba(10,18,14,0.42),0_2px_0_rgba(255,255,255,0.55)_inset] sm:p-5"}`}>
               <div className="absolute inset-x-0 top-0 h-[3px] rounded-t-[2.15rem] bg-[linear-gradient(90deg,#f6c870,#ee8748,#c8e6dc)]" aria-hidden="true" />
@@ -405,7 +414,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-[#b09880] transition hover:text-[#7a5c40] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffb170]"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-[#b09880] transition hover:text-[#7a5c40] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffb170]"
                       aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -485,6 +494,15 @@ export default function LoginPage() {
         </section>
       </main>
 
+      <footer className="absolute bottom-0 left-0 right-0 z-20 py-4 text-center">
+        <p className="text-[11px] text-white/25">
+          <Link href="/privacidade" className="transition hover:text-white/50">Privacidade</Link>
+          <span className="mx-2 text-white/15">·</span>
+          <Link href="/termos" className="transition hover:text-white/50">Termos de uso</Link>
+          <span className="mx-2 text-white/15">·</span>
+          <span>© 2026 Axiora Educação Digital</span>
+        </p>
+      </footer>
     </div>
   );
 }

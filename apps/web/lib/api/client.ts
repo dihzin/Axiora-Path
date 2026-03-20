@@ -2360,6 +2360,97 @@ export async function finishGameEngineSession(sessionId: string): Promise<Finish
   });
 }
 
+export type ToolsPricingPack = {
+  code: string;
+  credits: number;
+  price_cents: number;
+  price_label: string;
+  currency: string;
+};
+
+export type ToolsPricingResponse = {
+  packs: ToolsPricingPack[];
+};
+
+export async function getToolsPricing(): Promise<ToolsPricingResponse> {
+  return apiRequest<ToolsPricingResponse>("/api/tools/pricing", {
+    method: "GET",
+    requireAuth: false,
+    includeTenant: false,
+  });
+}
+
+export type ToolsExerciseItem = {
+  number: number;
+  prompt: string;
+  answer: string;
+};
+
+export type ToolsGenerateExercisesResponse = {
+  title: string;
+  instructions: string;
+  exercises: ToolsExerciseItem[];
+  answer_key: ToolsExerciseItem[];
+  pdf_html: string;
+  free_limit: number;
+  free_used: number;
+  remaining_free_generations: number;
+  paywall_required: boolean;
+  upgrade_url: string;
+  llm_mode: "llm" | "fallback" | string;
+  paid_credits_remaining: number;
+};
+
+export type ToolsBillingStatusResponse = {
+  free_limit: number;
+  free_used: number;
+  remaining_free_generations: number;
+  paid_credits_remaining: number;
+};
+
+export type ToolsCheckoutSessionResponse = {
+  checkout_url: string;
+  checkout_session_id: string;
+};
+
+export async function generateToolsExercises(payload: {
+  subject: string;
+  topic: string;
+  age: number;
+  difficulty: string;
+  exercise_count?: number;
+  session_token?: string;
+}): Promise<ToolsGenerateExercisesResponse> {
+  return apiRequest<ToolsGenerateExercisesResponse>("/api/tools/generate-exercises", {
+    method: "POST",
+    body: payload,
+    requireAuth: false,
+    includeTenant: false,
+  });
+}
+
+export async function getToolsBillingStatus(sessionToken?: string): Promise<ToolsBillingStatusResponse> {
+  const query = sessionToken ? `?session_token=${encodeURIComponent(sessionToken)}` : "";
+  return apiRequest<ToolsBillingStatusResponse>(`/api/tools/billing/status${query}`, {
+    method: "GET",
+    requireAuth: false,
+    includeTenant: false,
+  });
+}
+
+export async function createToolsCheckoutSession(payload: {
+  plan_code?: "credits_30";
+  session_token?: string;
+  customer_email?: string;
+}): Promise<ToolsCheckoutSessionResponse> {
+  return apiRequest<ToolsCheckoutSessionResponse>("/api/tools/billing/checkout-session", {
+    method: "POST",
+    body: payload,
+    requireAuth: false,
+    includeTenant: false,
+  });
+}
+
 export type MultiplayerCreateResponse = {
   sessionId: string;
   joinCode: string;

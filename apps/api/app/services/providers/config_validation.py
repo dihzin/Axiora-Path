@@ -53,7 +53,18 @@ def validate_runtime_security_on_boot() -> None:
             raise RuntimeError("AXIORA_AUTH_COOKIE_SAMESITE must be one of: none, lax, strict.")
         if same_site == "none" and not settings.auth_cookie_secure:
             raise RuntimeError("AXIORA_AUTH_COOKIE_SECURE must be true when AXIORA_AUTH_COOKIE_SAMESITE=none.")
+        if not (settings.stripe_webhook_secret or "").strip():
+            raise RuntimeError(
+                "STRIPE_WEBHOOK_SECRET must be set in production. "
+                "Without it the webhook endpoint cannot verify Stripe signatures and will reject all events."
+            )
 
     if env != "production":
         if same_site not in {"none", "lax", "strict"}:
             logger.warning("Invalid AXIORA_AUTH_COOKIE_SAMESITE value. Expected none/lax/strict.")
+        if not (settings.stripe_webhook_secret or "").strip():
+            logger.warning(
+                "STRIPE_WEBHOOK_SECRET is not set. "
+                "The Stripe webhook endpoint will return 503 for all incoming events. "
+                "Set this env var to enable payment processing."
+            )

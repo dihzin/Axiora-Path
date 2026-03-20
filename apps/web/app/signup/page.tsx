@@ -199,16 +199,16 @@ export default function SignupPage() {
       ) : null}
 
       <div
-        className="pointer-events-none fixed left-[-12px] top-[-12px] z-0 h-[calc(100vh+24px)] w-[calc(100vw+24px)] bg-cover bg-[58%_center] bg-no-repeat"
+        className="pointer-events-none fixed inset-0 z-0 bg-cover bg-[58%_center] bg-no-repeat"
         style={{ backgroundImage: "url('/axiora/auth/wallpaper.jpg')" }}
         aria-hidden="true"
       />
       <div
-        className="pointer-events-none fixed left-[-12px] top-[-12px] z-0 h-[calc(100vh+24px)] w-[calc(100vw+24px)] bg-[linear-gradient(90deg,rgba(8,18,27,0.7)_0%,rgba(10,24,35,0.46)_34%,rgba(16,30,34,0.22)_100%)]"
+        className="pointer-events-none fixed inset-0 z-0 bg-[linear-gradient(90deg,rgba(8,18,27,0.7)_0%,rgba(10,24,35,0.46)_34%,rgba(16,30,34,0.22)_100%)]"
         aria-hidden="true"
       />
       <div
-        className="pointer-events-none fixed left-[-12px] top-[-12px] z-0 h-[calc(100vh+24px)] w-[calc(100vw+24px)] bg-[radial-gradient(circle_at_14%_20%,rgba(255,224,154,0.13),transparent_20%),radial-gradient(circle_at_82%_16%,rgba(150,234,221,0.1),transparent_22%),radial-gradient(circle_at_50%_100%,rgba(7,20,17,0.4),transparent_44%)]"
+        className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_14%_20%,rgba(255,224,154,0.13),transparent_20%),radial-gradient(circle_at_82%_16%,rgba(150,234,221,0.1),transparent_22%),radial-gradient(circle_at_50%_100%,rgba(7,20,17,0.4),transparent_44%)]"
         aria-hidden="true"
       />
 

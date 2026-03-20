@@ -22,7 +22,9 @@
       "Bash(python -m pytest tests/test_age_gate_correct_child.py tests/test_age_policy.py tests/test_completion_idempotency.py tests/test_child_cannot_access_content_outside_age_range.py tests/test_learning_path_subject_remap_by_child_age.py tests/test_subjects_filtered_by_child_age.py -q)",
       "Bash(alembic upgrade:*)",
       "Bash(python -m alembic upgrade head)",
-      "Bash(grep -rn \"background.*url\\\\|bg-\\\\[url\\\\|wallpaper\\\\|trail.*bg\\\\|landscape\\\\|scene\" 'c:/DEV/Axiora Path/apps/web' --include=*.css --include=*.tsx --include=*.ts -l)"
+      "Bash(grep -rn \"background.*url\\\\|bg-\\\\[url\\\\|wallpaper\\\\|trail.*bg\\\\|landscape\\\\|scene\" 'c:/DEV/Axiora Path/apps/web' --include=*.css --include=*.tsx --include=*.ts -l)",
+      "Bash(/c/Users/Administrador/AppData/Roaming/npm/bun.cmd --version)",
+      "Bash(bun \"C:/Users/Administrador/.claude/plugins/marketplaces/thedotmack/plugin/scripts/worker-service.cjs\" status)"
     ]
   }
 }
