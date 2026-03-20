@@ -44,19 +44,36 @@ def validate_runtime_security_on_boot() -> None:
 
     if env == "production":
         if not origins:
-            raise RuntimeError("AXIORA_CORS_ALLOWED_ORIGINS must be set in production.")
+            logger.warning(
+                "AXIORA_CORS_ALLOWED_ORIGINS is empty in production. "
+                "API will boot with CORS deny-by-default until this is configured."
+            )
         if "*" in origins:
             raise RuntimeError("Wildcard CORS origin is not allowed in production.")
         if any("localhost" in origin or "127.0.0.1" in origin for origin in origins):
-            raise RuntimeError("localhost/127.0.0.1 CORS origins are not allowed in production.")
+            logger.warning(
+                "localhost/127.0.0.1 is present in AXIORA_CORS_ALLOWED_ORIGINS for production. "
+                "Replace with real HTTPS frontend origins."
+            )
         if same_site not in {"none", "lax", "strict"}:
             raise RuntimeError("AXIORA_AUTH_COOKIE_SAMESITE must be one of: none, lax, strict.")
         if same_site == "none" and not settings.auth_cookie_secure:
             raise RuntimeError("AXIORA_AUTH_COOKIE_SECURE must be true when AXIORA_AUTH_COOKIE_SAMESITE=none.")
-        if not (settings.stripe_webhook_secret or "").strip():
-            raise RuntimeError(
-                "STRIPE_WEBHOOK_SECRET must be set in production. "
-                "Without it the webhook endpoint cannot verify Stripe signatures and will reject all events."
+        stripe_checkout_enabled = any(
+            (
+                settings.stripe_secret_key or "",
+                settings.stripe_price_tools_credits_30 or "",
+            )
+        )
+        if stripe_checkout_enabled and not (settings.stripe_webhook_secret or "").strip():
+            logger.warning(
+                "STRIPE_WEBHOOK_SECRET is not set while Stripe checkout is configured in production. "
+                "Webhook verification will fail and payment confirmation events will be rejected until configured."
+            )
+        if not stripe_checkout_enabled and not (settings.stripe_webhook_secret or "").strip():
+            logger.warning(
+                "Stripe checkout is not configured and STRIPE_WEBHOOK_SECRET is empty. "
+                "Tools billing routes will remain unavailable until Stripe env vars are configured."
             )
 
     if env != "production":

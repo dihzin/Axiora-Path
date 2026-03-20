@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     data_retention_days: int = 30
     queue_name: str = "axiora:jobs"
-    cors_allowed_origins: str = "http://localhost:3000"
+    cors_allowed_origins: str = ""
     auth_cookie_secure: bool = True
     auth_cookie_domain: str | None = None
     auth_cookie_samesite: str = "lax"
