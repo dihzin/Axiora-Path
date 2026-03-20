@@ -889,7 +889,7 @@ export function SheetGeneratorTool() {
     `flex-1 rounded-lg py-1.5 text-xs font-semibold transition ${active ? "bg-[#ee8748] text-white shadow-[0_2px_0_rgba(158,74,30,0.35)]" : "border border-[#d1d5db] bg-white text-[#64748b] hover:bg-[#f8fafc] hover:text-[#0f172a]"}`;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-52px)] min-h-[500px] overflow-hidden rounded-2xl border border-[#e2e8f0] shadow-[0_4px_24px_rgba(0,0,0,0.08)] md:flex-row md:h-[calc(100vh-62px)] md:min-h-[600px]" style={{ background: "#f1f5f9" }}>
+    <div className="flex flex-col h-[calc(100vh-52px)] min-h-[500px] overflow-hidden md:flex-row md:h-[calc(100vh-62px)] md:min-h-[600px]" style={{ background: "#ffffff" }}>
 
       {/* ── MOBILE TAB BAR ──────────────────────────────────────────── */}
       <div className="flex shrink-0 border-b border-[#e2e8f0] md:hidden" style={{ background: "#ffffff" }}>
