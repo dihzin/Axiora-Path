@@ -49,7 +49,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="pt-BR" className="bg-[#18312E]">
       <body
         suppressHydrationWarning
-        className={`${nunito.variable} ${baloo.variable} relative min-h-screen bg-[#18312E] text-foreground font-sans [background-image:none]`}
+        className={`${nunito.variable} ${baloo.variable} relative min-h-screen overflow-x-hidden bg-[#18312E] text-foreground font-sans [background-image:none]`}
       >
         <ThemeProvider>
           <div className="relative z-10">

@@ -51,6 +51,15 @@ export default function LoginPage() {
 
 
   useEffect(() => {
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  useEffect(() => {
     if (GOOGLE_CLIENT_ID && window.google) {
       setGoogleScriptReady(true);
     }
@@ -175,7 +184,7 @@ export default function LoginPage() {
   }, [googleScriptReady]);
 
   return (
-    <div className="axiora-brand-page relative isolate">
+    <div className="axiora-brand-page relative isolate flex h-dvh flex-col overflow-hidden">
       {GOOGLE_CLIENT_ID ? (
         <Script
           src="https://accounts.google.com/gsi/client"
@@ -199,9 +208,44 @@ export default function LoginPage() {
         aria-hidden="true"
       />
 
-      <main className="axiora-brand-content axiora-login-fullscreen relative z-10 w-full">
-        <section className="axiora-login-grid relative z-10 mx-auto grid w-full max-w-[1480px] items-center gap-6 px-4 py-4 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-10 lg:py-6">
-          <div className="axiora-login-hero flex flex-col justify-center gap-3 rounded-[2rem] border border-white/8 bg-[rgba(8,18,28,0.16)] p-5 backdrop-blur-[1px] sm:p-8 lg:h-full lg:border-transparent lg:bg-transparent lg:items-start lg:justify-center lg:p-8 lg:backdrop-blur-0">
+      <main className="axiora-brand-content axiora-login-fullscreen relative z-10 w-full flex-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] flex flex-col justify-center">
+        <section className="axiora-login-grid relative z-10 mx-auto grid w-full max-w-[1480px] items-center gap-3 px-4 py-3 pb-16 sm:px-6 lg:gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-10 lg:py-6 lg:pb-6">
+          {/* ── Mobile hero (compact) ─────────────────────────────────────── */}
+          <div className="lg:hidden flex flex-col items-center gap-2 pt-2 text-center text-white">
+            {/* Achievement pill */}
+            <div className="inline-flex items-center gap-2 rounded-2xl border border-[rgba(52,211,153,0.28)] bg-[rgba(6,24,18,0.72)] px-3 py-1.5 shadow-[0_6px_20px_rgba(0,0,0,0.3)] backdrop-blur-sm">
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgba(52,211,153,0.18)]">
+                <Trophy className="h-2.5 w-2.5 text-[#34d399]" strokeWidth={2.5} aria-hidden />
+              </div>
+              <p className="text-[0.6rem] font-black uppercase tracking-[0.12em] text-[#34d399]">Missão concluída!</p>
+              <div className="flex items-center gap-1">
+                <div className="h-1 w-14 overflow-hidden rounded-full bg-white/15">
+                  <div className="h-full w-[78%] rounded-full bg-[linear-gradient(90deg,#34d399,#6ee7b7)]" />
+                </div>
+                <span className="text-[0.6rem] font-black text-[#6ee7b7]">+120 XP</span>
+              </div>
+            </div>
+
+            {/* Headline */}
+            <h1 className="text-[1.55rem] font-black uppercase leading-[0.88] tracking-[-0.04em]">
+              <span className="block text-[#fffaf4] drop-shadow-[0_6px_14px_rgba(7,20,17,0.3)]">Abrir caminhos.</span>
+              <span className="block bg-[linear-gradient(180deg,#fff1cf_0%,#f4ca97_44%,#de9b79_100%)] bg-clip-text text-transparent">
+                Cultivar conquistas.
+              </span>
+            </h1>
+
+            {/* Stats */}
+            <div className="flex items-center gap-3 text-xs">
+              <span><strong className="font-extrabold text-white">12.000+</strong> <span className="text-white/50">famílias</span></span>
+              <span className="text-white/20">·</span>
+              <span><strong className="font-extrabold text-white">2,4 M</strong> <span className="text-white/50">missões</span></span>
+              <span className="text-white/20">·</span>
+              <span><strong className="font-extrabold text-white">4,9</strong> <span className="text-white/50 flex items-center gap-0.5"><Star className="inline h-3 w-3 text-[#fcd34d]" fill="#fcd34d" /></span></span>
+            </div>
+          </div>
+
+          {/* ── Desktop hero ───────────────────────────────────────────────── */}
+          <div className="axiora-login-hero hidden lg:flex flex-col justify-center gap-3 lg:h-full lg:items-start lg:justify-center lg:p-8">
             <div className="max-w-[36rem] space-y-3 text-white">
               {/* Mascot com aura radial */}
               <div className="relative w-fit">
@@ -312,24 +356,32 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="relative flex items-center justify-center lg:justify-end">
+          <div className="relative flex items-center justify-center pt-14 lg:justify-end lg:pt-0">
             <div className="absolute inset-0 hidden lg:block bg-[radial-gradient(circle_at_65%_50%,rgba(255,248,238,0.28),transparent_38%)]" aria-hidden="true" />
+
+            {/* Mascote espiando por cima do card (mobile only) */}
+            <div className="absolute -top-12 left-1/2 z-20 -translate-x-1/2 lg:hidden" aria-hidden="true">
+              <div className="relative">
+                <div
+                  className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[90px] w-[90px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+                  style={{ background: "radial-gradient(circle, rgba(251,191,36,0.30) 0%, rgba(238,135,72,0.12) 55%, transparent 75%)", filter: "blur(10px)" }}
+                />
+                <Image
+                  src="/axiora/mascot/axiora-mascot.png"
+                  alt="Mascote Axiora"
+                  width={56}
+                  height={56}
+                  priority
+                />
+              </div>
+            </div>
+
             <div className="axiora-login-panel relative z-10 w-full max-w-[28.5rem] overflow-hidden rounded-[2.15rem] border border-[rgba(255,239,221,0.72)] bg-[linear-gradient(160deg,rgba(255,251,246,0.88)_0%,rgba(244,234,222,0.84)_100%)] p-4 shadow-[0_32px_80px_rgba(10,18,14,0.42),0_2px_0_rgba(255,255,255,0.55)_inset] backdrop-blur-2xl sm:p-5">
               <div className="absolute inset-x-0 top-0 h-[3px] rounded-t-[2.15rem] bg-[linear-gradient(90deg,#f6c870,#ee8748,#c8e6dc)]" aria-hidden="true" />
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.92),transparent_34%)]" aria-hidden="true" />
-              <div className="mb-6 flex items-center gap-4 lg:hidden">
-                <div className="shrink-0">
-                  <Image
-                    src="/axiora/mascot/axiora-mascot.png"
-                    alt="Mascote Axiora"
-                    width={80}
-                    height={80}
-                  />
-                </div>
-                <div>
-                  <p className="text-[0.68rem] font-black uppercase tracking-[0.22em] text-[#8b755d]">Boas-vindas</p>
-                  <h2 className="mt-1 text-2xl font-black text-[#22352f]">Entrar no Axiora</h2>
-                </div>
+              <div className="mb-3 lg:hidden pt-2 text-center">
+                <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-[#9c7c58]">Axiora Path</p>
+                <h2 className="mt-0.5 text-lg font-black leading-tight text-[#22352f]">Entrar na sua conta</h2>
               </div>
 
               <div className="relative hidden lg:block">
@@ -343,7 +395,7 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              <form className="relative mt-4 space-y-3" onSubmit={handleEmailLogin}>
+              <form className="relative mt-3 space-y-2.5" onSubmit={handleEmailLogin}>
                 <div className="space-y-2">
                   <label className="block text-[0.78rem] font-black uppercase tracking-[0.18em] text-[#816b57]" htmlFor="email">
                     Email
@@ -391,7 +443,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-[#b09880] transition hover:text-[#7a5c40] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffb170]"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-[#b09880] transition hover:text-[#7a5c40] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffb170]"
                       aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -399,25 +451,17 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <p
-                  id="login-error"
-                  role="alert"
-                  aria-live="polite"
-                  className="rounded-2xl border px-4 py-2.5 text-sm font-bold transition-colors duration-200"
-                  style={error ? {
-                    borderColor: "rgba(210,100,50,0.30)",
-                    background: "rgba(254,242,232,0.92)",
-                    color: "#9b3a18",
-                  } : {
-                    borderColor: "transparent",
-                    background: "transparent",
-                    color: "transparent",
-                    userSelect: "none",
-                    pointerEvents: "none",
-                  }}
-                >
-                  {error ?? "\u00A0"}
-                </p>
+                <div aria-live="polite" aria-atomic="true">
+                  {error && (
+                    <p
+                      id="login-error"
+                      role="alert"
+                      className="rounded-2xl border border-[rgba(210,100,50,0.30)] bg-[rgba(254,242,232,0.92)] px-4 py-2.5 text-sm font-bold text-[#9b3a18]"
+                    >
+                      {error}
+                    </p>
+                  )}
+                </div>
 
                 <Button className="w-full bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] shadow-[inset_0_1px_0_rgba(255,219,190,0.46),0_6px_0_rgba(158,74,30,0.42),0_16px_24px_rgba(93,48,22,0.18)]" type="submit" disabled={loading || googleLoading}>
                   {loading ? (
@@ -429,20 +473,20 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              <div className="my-3 flex items-center gap-3">
+              <div className="my-2 flex items-center gap-3">
                 <span className="h-px flex-1 bg-[linear-gradient(to_right,transparent,#dbcab6)]" />
                 <span className="text-[0.72rem] font-black uppercase tracking-[0.18em] text-[#8f7a65]">ou</span>
                 <span className="h-px flex-1 bg-[linear-gradient(to_left,transparent,#dbcab6)]" />
               </div>
 
               {GOOGLE_CLIENT_ID ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <div
                     className={`rounded-[1.5rem] border border-[rgba(233,217,200,0.88)] bg-[rgba(255,255,255,0.8)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.94),0_14px_28px_rgba(194,170,144,0.14)] ${googleLoading ? "pointer-events-none opacity-70" : ""}`}
                   >
                     <div ref={googleButtonRef} className="flex min-h-[44px] items-center justify-center" aria-label="Entrar com Google" />
                   </div>
-                  <p className="text-xs font-semibold leading-5 text-[#6f665d]">
+                  <p className="text-xs font-semibold text-[#6f665d]">
                     Primeira vez? Sua conta familiar é criada automaticamente.
                   </p>
                 </div>
@@ -452,7 +496,14 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <div className="mt-3 rounded-[1.55rem] border border-[rgba(234,220,202,0.9)] bg-[rgba(255,255,255,0.62)] px-4 py-3 text-sm text-[#5f5a52] shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_12px_22px_rgba(194,170,144,0.1)]">
+              {/* Novo aqui — linha compacta no mobile, box completo no desktop */}
+              <p className="mt-2 text-center text-xs text-[#7a6e65] lg:hidden">
+                Novo aqui?{" "}
+                <Link href="/signup" className="font-extrabold text-[#a2602d] transition hover:text-[#7e4a23]">
+                  Criar conta gratuitamente
+                </Link>
+              </p>
+              <div className="mt-3 hidden rounded-[1.55rem] border border-[rgba(234,220,202,0.9)] bg-[rgba(255,255,255,0.62)] px-4 py-3 text-sm text-[#5f5a52] shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_12px_22px_rgba(194,170,144,0.1)] lg:block">
                 <p className="font-bold text-[#27404a]">Novo aqui?</p>
                 <p className="mt-1 font-semibold leading-6">Crie sua conta e comece em minutos.</p>
                 <Button asChild variant="outline" className="mt-3 w-full border-[#ddc6ab] bg-[rgba(255,250,244,0.88)] text-[#29403a] shadow-[0_8px_18px_rgba(194,170,144,0.1)]">
@@ -464,6 +515,15 @@ export default function LoginPage() {
         </section>
       </main>
 
+      <footer className="absolute bottom-0 left-0 right-0 z-20 py-4 text-center">
+        <p className="text-[11px] text-white/25">
+          <Link href="/privacidade" className="transition hover:text-white/50">Privacidade</Link>
+          <span className="mx-2 text-white/15">·</span>
+          <Link href="/termos" className="transition hover:text-white/50">Termos de uso</Link>
+          <span className="mx-2 text-white/15">·</span>
+          <span>© 2026 Axiora Educação Digital</span>
+        </p>
+      </footer>
     </div>
   );
 }
