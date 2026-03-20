@@ -2,9 +2,11 @@ import Link from "next/link";
 
 import { SheetGeneratorTool } from "@/components/tools/sheet-generator-tool";
 import { ArrowLeftIcon } from "../_components/icons";
+import { ToolsCheckoutRedirect } from "../_components/tools-checkout-redirect";
 
 type ToolsDetailPageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ upgrade?: string }>;
 };
 
 const TOOL_TITLES: Record<string, string> = {
@@ -22,9 +24,11 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
     "Diagnóstico rápido com plano de ação claro para os próximos 7 dias.",
 };
 
-export default async function ToolsDetailPage({ params }: ToolsDetailPageProps) {
+export default async function ToolsDetailPage({ params, searchParams }: ToolsDetailPageProps) {
   const { slug } = await params;
+  const { upgrade } = await searchParams;
   const isExerciseGenerator = slug === "gerador-atividades";
+  const shouldAutoCheckout = isExerciseGenerator && upgrade === "credits_30";
   const title = TOOL_TITLES[slug] ?? "Axiora Tools";
   const description = TOOL_DESCRIPTIONS[slug] ?? "Ferramenta educacional Axiora.";
 
@@ -70,7 +74,10 @@ export default async function ToolsDetailPage({ params }: ToolsDetailPageProps) 
 
       <main className={`relative z-10 flex w-full flex-col text-white ${isExerciseGenerator ? "p-2 sm:p-3" : "mx-auto max-w-5xl gap-6 px-4 py-8 sm:px-6 sm:py-12"}`}>
         {isExerciseGenerator ? (
-          <SheetGeneratorTool />
+          <>
+            {shouldAutoCheckout ? <ToolsCheckoutRedirect planCode="credits_30" /> : null}
+            <SheetGeneratorTool />
+          </>
         ) : (
           <>
             <header className="space-y-2">
