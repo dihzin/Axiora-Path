@@ -882,27 +882,27 @@ export function SheetGeneratorTool() {
   const selectedBlock = useMemo(() => blocks.find((b) => b.id === selectedBlockId) ?? null, [blocks, selectedBlockId]);
 
   // Input / select class
-  const inputCls = "mt-1 w-full rounded-lg border border-white/12 bg-[rgba(255,255,255,0.07)] px-3 py-2 text-[13px] text-white placeholder-white/25 outline-none transition focus:border-[#ee8748]/50 focus:bg-[rgba(255,255,255,0.10)] focus:shadow-[0_0_0_3px_rgba(238,135,72,0.12)]";
+  const inputCls = "mt-1 w-full rounded-lg border border-[#d1d5db] bg-white px-3 py-2 text-[13px] text-[#0f172a] placeholder-[#94a3b8] outline-none transition focus:border-[#ee8748] focus:shadow-[0_0_0_3px_rgba(238,135,72,0.12)]";
   const sectionTitle = (label: string) => (
     <div className="mb-3 flex items-center gap-2">
       <span className="h-3 w-[3px] rounded-full bg-[#ee8748]" />
-      <span className="text-[10px] font-bold uppercase tracking-[1.8px] text-white/55">{label}</span>
+      <span className="text-[10px] font-bold uppercase tracking-[1.8px] text-[#94a3b8]">{label}</span>
     </div>
   );
   const segBtnCls = (active: boolean) =>
-    `flex-1 rounded-lg py-1.5 text-xs font-semibold transition ${active ? "bg-[#ee8748] text-white shadow-[0_2px_0_rgba(158,74,30,0.5)]" : "border border-white/12 bg-[rgba(255,255,255,0.05)] text-white/55 hover:bg-[rgba(255,255,255,0.10)] hover:text-white"}`;
+    `flex-1 rounded-lg py-1.5 text-xs font-semibold transition ${active ? "bg-[#ee8748] text-white shadow-[0_2px_0_rgba(158,74,30,0.35)]" : "border border-[#d1d5db] bg-white text-[#64748b] hover:bg-[#f8fafc] hover:text-[#0f172a]"}`;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-52px)] min-h-[500px] overflow-hidden rounded-2xl border border-white/10 shadow-[0_8px_40px_rgba(0,0,0,0.5)] md:flex-row md:h-[calc(100vh-62px)] md:min-h-[600px]" style={{ background: "transparent" }}>
+    <div className="flex flex-col h-[calc(100vh-52px)] min-h-[500px] overflow-hidden rounded-2xl border border-[#e2e8f0] shadow-[0_4px_24px_rgba(0,0,0,0.08)] md:flex-row md:h-[calc(100vh-62px)] md:min-h-[600px]" style={{ background: "#f1f5f9" }}>
 
       {/* ── MOBILE TAB BAR ──────────────────────────────────────────── */}
-      <div className="flex shrink-0 border-b border-white/10 md:hidden" style={{ background: "rgba(4,9,18,0.97)" }}>
+      <div className="flex shrink-0 border-b border-[#e2e8f0] md:hidden" style={{ background: "#ffffff" }}>
         {([["config", "Configurar"], ["blocks", "Blocos"], ["detail", "Detalhes"]] as const).map(([id, label]) => (
           <button
             key={id}
             type="button"
             onClick={() => setMobileTab(id)}
-            className={`flex-1 py-3 text-[12px] font-semibold transition-colors ${mobileTab === id ? "border-b-2 border-[#ee8748] text-[#ee8748]" : "text-white/40 hover:text-white/70"}`}
+            className={`flex-1 py-3 text-[12px] font-semibold transition-colors ${mobileTab === id ? "border-b-2 border-[#ee8748] text-[#ee8748]" : "text-[#94a3b8] hover:text-[#475569]"}`}
           >
             {label}
           </button>
@@ -910,13 +910,13 @@ export function SheetGeneratorTool() {
       </div>
 
       {/* ── LEFT PANEL ──────────────────────────────────────────────── */}
-      <aside className={`${mobileTab === "config" ? "flex" : "hidden"} flex-col overflow-hidden backdrop-blur-md md:flex md:w-[272px] md:shrink-0`} style={{ background: "linear-gradient(180deg, rgba(6,12,22,0.88) 0%, rgba(4,9,18,0.92) 100%)", borderRight: "1px solid rgba(255,255,255,0.07)" }}>
+      <aside className={`${mobileTab === "config" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:w-[272px] md:shrink-0`} style={{ background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)", borderRight: "1px solid #e2e8f0" }}>
         {/* Panel header */}
-        <div className="relative overflow-hidden px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)", background: "linear-gradient(180deg, rgba(238,135,72,0.08) 0%, transparent 100%)" }}>
+        <div className="relative overflow-hidden px-5 py-4" style={{ borderBottom: "1px solid #e2e8f0", background: "linear-gradient(180deg, rgba(238,135,72,0.05) 0%, transparent 100%)" }}>
           <div className="absolute inset-x-0 top-0 h-[2px] bg-[linear-gradient(90deg,#ee8748,rgba(238,135,72,0.2),transparent)]" />
           <div className="flex items-center gap-2">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ee8748" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-            <span className="text-[11px] font-bold uppercase tracking-[1.8px] text-white/70">Configurações</span>
+            <span className="text-[11px] font-bold uppercase tracking-[1.8px] text-[#475569]">Configurações</span>
           </div>
         </div>
 
@@ -926,20 +926,20 @@ export function SheetGeneratorTool() {
           <section className="mb-5">
             {sectionTitle("Cabeçalho da Folha")}
             <div className="space-y-2.5">
-              <label className="block text-[11px] font-medium text-white/65">
+              <label className="block text-[11px] font-medium text-[#475569]">
                 Título
                 <input className={inputCls} value={cfg.title} onChange={(e) => updateCfg("title", e.target.value)} />
               </label>
-              <label className="block text-[11px] font-medium text-white/65">
+              <label className="block text-[11px] font-medium text-[#475569]">
                 Instruções
                 <textarea className={`${inputCls} resize-none`} rows={2} value={cfg.subtitle} onChange={(e) => updateCfg("subtitle", e.target.value)} />
               </label>
               <div className="grid grid-cols-2 gap-2">
-                <label className="block text-[11px] font-medium text-white/65">
+                <label className="block text-[11px] font-medium text-[#475569]">
                   Turma
                   <input className={inputCls} placeholder="7º Ano A" value={cfg.turma} onChange={(e) => updateCfg("turma", e.target.value)} />
                 </label>
-                <label className="block text-[11px] font-medium text-white/65">
+                <label className="block text-[11px] font-medium text-[#475569]">
                   Tempo
                   <input className={inputCls} placeholder="30 min" value={cfg.tempo} onChange={(e) => updateCfg("tempo", e.target.value)} />
                 </label>
@@ -947,7 +947,7 @@ export function SheetGeneratorTool() {
             </div>
           </section>
 
-          <div className="my-4 h-px" style={{ background: "linear-gradient(90deg, rgba(238,135,72,0.2), rgba(255,255,255,0.06), transparent)" }} />
+          <div className="my-4 h-px" style={{ background: "linear-gradient(90deg, rgba(238,135,72,0.2), #e2e8f0, transparent)" }} />
 
           {/* Preset */}
           <section className="mb-5">
@@ -962,14 +962,14 @@ export function SheetGeneratorTool() {
             </select>
           </section>
 
-          <div className="my-4 h-px" style={{ background: "linear-gradient(90deg, rgba(238,135,72,0.2), rgba(255,255,255,0.06), transparent)" }} />
+          <div className="my-4 h-px" style={{ background: "linear-gradient(90deg, rgba(238,135,72,0.2), #e2e8f0, transparent)" }} />
 
           {/* Layout */}
           <section className="mb-5">
             {sectionTitle("Layout Global")}
             <div className="space-y-4">
               <div>
-                <div className="mb-1.5 text-[11px] font-medium text-white/65">Colunas</div>
+                <div className="mb-1.5 text-[11px] font-medium text-[#475569]">Colunas</div>
                 <div className="flex gap-1.5">
                   {[1, 2, 3, 4].map((n) => (
                     <button key={n} onClick={() => updateCfg("cols", n)} className={segBtnCls(cfg.cols === n)}>{n}</button>
@@ -978,7 +978,7 @@ export function SheetGeneratorTool() {
               </div>
 
               <div>
-                <div className="mb-1.5 text-[11px] font-medium text-white/65">Tamanho da fonte</div>
+                <div className="mb-1.5 text-[11px] font-medium text-[#475569]">Tamanho da fonte</div>
                 <div className="flex gap-1.5">
                   {(["P", "M", "G"] as FontSize[]).map((s) => (
                     <button key={s} onClick={() => updateCfg("fontSize", s)} className={segBtnCls(cfg.fontSize === s)}>{s === "P" ? "Pequena" : s === "M" ? "Média" : "Grande"}</button>
@@ -989,16 +989,16 @@ export function SheetGeneratorTool() {
               <div>
                 <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-white/65">
                   <span>Espaçamento</span>
-                  <span className="rounded-md bg-[rgba(238,135,72,0.15)] px-2 py-0.5 text-[11px] font-bold text-[#ee8748]">{cfg.spacing}px</span>
+                  <span className="rounded-md bg-[rgba(238,135,72,0.12)] px-2 py-0.5 text-[11px] font-bold text-[#ee8748]">{cfg.spacing}px</span>
                 </div>
                 <input type="range" min={0} max={40} value={cfg.spacing} onChange={(e) => updateCfg("spacing", Number(e.target.value))} className="w-full accent-[#ee8748]" style={{ height: "4px" }} />
-                <div className="mt-1 flex justify-between text-[10px] text-white/35">
+                <div className="mt-1 flex justify-between text-[10px] text-[#94a3b8]">
                   <span>Compacto</span><span>Normal</span><span>Amplo</span>
                 </div>
               </div>
 
               <div>
-                <div className="mb-1.5 text-[11px] font-medium text-white/65">Gabarito</div>
+                <div className="mb-1.5 text-[11px] font-medium text-[#475569]">Gabarito</div>
                 <div className="flex flex-col gap-1.5">
                   <div className="flex gap-1.5">
                     <button onClick={() => updateCfg("gabarito", "sem")} className={segBtnCls(cfg.gabarito === "sem")}>Sem gabarito</button>
@@ -1010,7 +1010,7 @@ export function SheetGeneratorTool() {
             </div>
           </section>
 
-          <div className="my-4 h-px" style={{ background: "linear-gradient(90deg, rgba(238,135,72,0.2), rgba(255,255,255,0.06), transparent)" }} />
+          <div className="my-4 h-px" style={{ background: "linear-gradient(90deg, rgba(238,135,72,0.2), #e2e8f0, transparent)" }} />
 
           {/* Opções */}
           <section className="mb-5">
@@ -1028,10 +1028,10 @@ export function SheetGeneratorTool() {
                   role="switch"
                   aria-checked={!!cfg[key]}
                   onClick={() => updateCfg(key, !cfg[key] as never)}
-                  className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-white/8 bg-[rgba(255,255,255,0.04)] px-3 py-2.5 text-left transition hover:border-white/15 hover:bg-[rgba(255,255,255,0.07)]"
+                  className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 text-left transition hover:border-[#d1d5db] hover:bg-[#f8fafc]"
                 >
-                  <span className="text-[13px] text-white/80">{label}</span>
-                  <div className="relative ml-3 h-5 w-9 shrink-0 rounded-full transition-all duration-200" style={{ background: cfg[key] ? "#ee8748" : "rgba(255,255,255,0.15)", boxShadow: cfg[key] ? "0 0 8px rgba(238,135,72,0.4)" : "none" }}>
+                  <span className="text-[13px] text-[#334155]">{label}</span>
+                  <div className="relative ml-3 h-5 w-9 shrink-0 rounded-full transition-all duration-200" style={{ background: cfg[key] ? "#ee8748" : "#cbd5e1", boxShadow: cfg[key] ? "0 0 8px rgba(238,135,72,0.35)" : "none" }}>
                     <div className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-md transition-all duration-200" style={{ left: cfg[key] ? "20px" : "2px" }} />
                   </div>
                 </button>
@@ -1043,16 +1043,16 @@ export function SheetGeneratorTool() {
       </aside>
 
       {/* ── CENTER PANEL ────────────────────────────────────────────── */}
-      <main className={`${mobileTab === "blocks" ? "flex" : "hidden"} flex-col overflow-hidden backdrop-blur-sm md:flex md:flex-1`} style={{ background: "rgba(6,12,22,0.72)", borderLeft: "1px solid rgba(255,255,255,0.07)", borderRight: "1px solid rgba(255,255,255,0.07)" }}>
+      <main className={`${mobileTab === "blocks" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:flex-1`} style={{ background: "#ffffff", borderLeft: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0" }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)" }}>
+        <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: "1px solid #e2e8f0", background: "#fafafa" }}>
           <div className="flex items-center gap-3">
             <div>
-              <div className="text-[13px] font-bold text-white/85">Blocos de Exercícios</div>
-              <div className="mt-0.5 text-[11px] text-white/45">Clique em um bloco para configurar</div>
+              <div className="text-[13px] font-bold text-[#0f172a]">Blocos de Exercícios</div>
+              <div className="mt-0.5 text-[11px] text-[#94a3b8]">Clique em um bloco para configurar</div>
             </div>
             {activeCount > 0 && (
-              <span className="rounded-full bg-[rgba(238,135,72,0.18)] px-2.5 py-0.5 text-[11px] font-bold text-[#ee8748]">{activeCount} ativo{activeCount === 1 ? "" : "s"}</span>
+              <span className="rounded-full bg-[rgba(238,135,72,0.12)] px-2.5 py-0.5 text-[11px] font-bold text-[#ee8748]">{activeCount} ativo{activeCount === 1 ? "" : "s"}</span>
             )}
           </div>
           <button onClick={addBlock} className="flex items-center gap-2 rounded-xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-4 py-2 text-[12px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.25),0_3px_0_rgba(158,74,30,0.5),0_8px_16px_rgba(93,48,22,0.25)] transition hover:brightness-110 active:translate-y-[2px] active:shadow-none">
@@ -1065,12 +1065,12 @@ export function SheetGeneratorTool() {
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {blocks.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12h6M12 9v6"/></svg>
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[#e2e8f0] bg-[#f8fafc]">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12h6M12 9v6"/></svg>
               </div>
               <div>
-                <p className="text-[13px] font-semibold text-white/35">Nenhum bloco adicionado</p>
-                <p className="mt-1 text-[12px] text-white/20">Clique em &ldquo;Adicionar Bloco&rdquo; ou selecione um preset</p>
+                <p className="text-[13px] font-semibold text-[#94a3b8]">Nenhum bloco adicionado</p>
+                <p className="mt-1 text-[12px] text-[#cbd5e1]">Clique em &ldquo;Adicionar Bloco&rdquo; ou selecione um preset</p>
               </div>
             </div>
           ) : (
@@ -1082,12 +1082,12 @@ export function SheetGeneratorTool() {
                   <div
                     key={block.id}
                     onClick={() => { setSelectedBlockId(block.id); setMobileTab("detail"); }}
-                    className={`group relative cursor-pointer overflow-hidden rounded-xl transition-all duration-150 ${isSelected ? "shadow-[0_0_0_1.5px_rgba(238,135,72,0.6),0_8px_24px_rgba(238,135,72,0.12)]" : "shadow-[0_2px_8px_rgba(0,0,0,0.2)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.3)]"} ${!block.active ? "opacity-45" : ""}`}
+                    className={`group relative cursor-pointer overflow-hidden rounded-xl transition-all duration-150 ${isSelected ? "shadow-[0_0_0_1.5px_rgba(238,135,72,0.5),0_4px_16px_rgba(238,135,72,0.10)]" : "shadow-[0_1px_4px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.10)]"} ${!block.active ? "opacity-45" : ""}`}
                     style={{
                       background: isSelected
-                        ? `linear-gradient(135deg, rgba(238,135,72,0.12) 0%, rgba(255,255,255,0.04) 100%)`
-                        : `rgba(255,255,255,0.04)`,
-                      border: isSelected ? "1px solid rgba(238,135,72,0.4)" : "1px solid rgba(255,255,255,0.08)",
+                        ? `linear-gradient(135deg, rgba(238,135,72,0.07) 0%, #ffffff 100%)`
+                        : `#ffffff`,
+                      border: isSelected ? "1px solid rgba(238,135,72,0.4)" : "1px solid #e2e8f0",
                     }}
                   >
                     {/* Type color indicator bar */}
@@ -1102,8 +1102,8 @@ export function SheetGeneratorTool() {
                       {/* Info */}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="truncate text-[13px] font-semibold text-white/90">{meta.name}</span>
-                          <span className="shrink-0 text-[10px] text-white/35">#{idx + 1}</span>
+                          <span className="truncate text-[13px] font-semibold text-[#0f172a]">{meta.name}</span>
+                          <span className="shrink-0 text-[10px] text-[#94a3b8]">#{idx + 1}</span>
                         </div>
                         <div className="mt-0.5 truncate text-[11px]" style={{ color: meta.accent + "CC" }}>{blockMetaText(block)}</div>
                       </div>
@@ -1123,7 +1123,7 @@ export function SheetGeneratorTool() {
                         >
                           <div className={`absolute h-4 w-4 rounded-full bg-white shadow-md transition-all duration-200 ${block.active ? "left-6" : "left-1"}`} />
                         </button>
-                        <button onClick={() => removeBlock(block.id)} aria-label="Remover bloco" className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-white/20 transition hover:bg-[rgba(239,68,68,0.15)] hover:text-red-400 group-hover:text-white/40">
+                        <button onClick={() => removeBlock(block.id)} aria-label="Remover bloco" className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-[#cbd5e1] transition hover:bg-red-50 hover:text-red-400 group-hover:text-[#94a3b8]">
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                         </button>
                       </div>
@@ -1136,22 +1136,22 @@ export function SheetGeneratorTool() {
 
           {/* Total badge */}
           {blocks.length > 0 && (
-            <div className="mt-4 overflow-hidden rounded-xl" style={{ background: "linear-gradient(135deg, rgba(238,135,72,0.12) 0%, rgba(6,14,22,0.8) 100%)", border: "1px solid rgba(238,135,72,0.2)" }}>
+            <div className="mt-4 overflow-hidden rounded-xl" style={{ background: "linear-gradient(135deg, rgba(238,135,72,0.06) 0%, #fff7f0 100%)", border: "1px solid rgba(238,135,72,0.2)" }}>
               <div className="h-[2px] w-full" style={{ background: "linear-gradient(90deg, #fde68a, #ee8748, transparent)" }} />
               <div className="flex items-center justify-between px-5 py-3.5">
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-[1.5px] text-white/35">Total de exercícios</div>
-                  <div className="mt-0.5 text-3xl font-black tracking-tight text-white">{totalExercises}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Total de exercícios</div>
+                  <div className="mt-0.5 text-3xl font-black tracking-tight text-[#0f172a]">{totalExercises}</div>
                 </div>
-                <div className="h-10 w-px bg-white/10" />
+                <div className="h-10 w-px bg-[#e2e8f0]" />
                 <div className="text-right">
-                  <div className="text-[10px] font-bold uppercase tracking-[1.5px] text-white/35">Blocos ativos</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Blocos ativos</div>
                   <div className="mt-0.5 text-3xl font-black tracking-tight text-[#ee8748]">{activeCount}</div>
                 </div>
-                <div className="h-10 w-px bg-white/10" />
+                <div className="h-10 w-px bg-[#e2e8f0]" />
                 <div className="text-right">
-                  <div className="text-[10px] font-bold uppercase tracking-[1.5px] text-white/35">Colunas</div>
-                  <div className="mt-0.5 text-3xl font-black tracking-tight text-white/60">{cfg.cols}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Colunas</div>
+                  <div className="mt-0.5 text-3xl font-black tracking-tight text-[#64748b]">{cfg.cols}</div>
                 </div>
               </div>
             </div>
@@ -1159,14 +1159,14 @@ export function SheetGeneratorTool() {
         </div>
 
         {/* Bottom bar — Seed + Print */}
-        <div className="flex items-center gap-3 px-4 py-3" style={{ borderTop: "1px solid rgba(255,255,255,0.07)", background: "rgba(4,9,18,0.85)" }}>
+        <div className="flex items-center gap-3 px-4 py-3" style={{ borderTop: "1px solid #e2e8f0", background: "#f8fafc" }}>
           {/* Seed chip */}
-          <div className="flex items-center gap-0 overflow-hidden rounded-lg" style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
-            <div className="flex items-center gap-1.5 px-3 py-2" style={{ background: "rgba(255,255,255,0.04)" }}>
-              <span className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] text-white/30">Seed</span>
-              <span className="font-mono text-[13px] font-bold text-white/65">{seed}</span>
+          <div className="flex items-center gap-0 overflow-hidden rounded-lg" style={{ border: "1px solid #e2e8f0" }}>
+            <div className="flex items-center gap-1.5 px-3 py-2" style={{ background: "#ffffff" }}>
+              <span className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Seed</span>
+              <span className="font-mono text-[13px] font-bold text-[#475569]">{seed}</span>
             </div>
-            <button onClick={rerollSeed} aria-label="Gerar novo seed" title="Novo seed" className="flex h-full cursor-pointer items-center px-2.5 text-white/35 transition hover:bg-white/8 hover:text-white/70" style={{ borderLeft: "1px solid rgba(255,255,255,0.08)" }}>
+            <button onClick={rerollSeed} aria-label="Gerar novo seed" title="Novo seed" className="flex h-full cursor-pointer items-center px-2.5 text-[#94a3b8] transition hover:bg-[#f1f5f9] hover:text-[#475569]" style={{ borderLeft: "1px solid #e2e8f0" }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg>
             </button>
           </div>
@@ -1181,17 +1181,17 @@ export function SheetGeneratorTool() {
       </main>
 
       {/* ── RIGHT PANEL ─────────────────────────────────────────────── */}
-      <aside className={`${mobileTab === "detail" ? "flex" : "hidden"} flex-col overflow-hidden backdrop-blur-md md:flex md:w-[296px] md:shrink-0`} style={{ background: "linear-gradient(180deg, rgba(6,12,22,0.88) 0%, rgba(4,9,18,0.92) 100%)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
+      <aside className={`${mobileTab === "detail" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:w-[296px] md:shrink-0`} style={{ background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)", borderLeft: "1px solid #e2e8f0" }}>
         {!selectedBlock ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-6 p-8 text-center">
             {/* Empty state illustration */}
             <div className="relative flex h-20 w-20 items-center justify-center">
-              <div className="absolute inset-0 rounded-2xl" style={{ background: "rgba(238,135,72,0.08)", border: "1px solid rgba(238,135,72,0.15)" }} />
+              <div className="absolute inset-0 rounded-2xl" style={{ background: "rgba(238,135,72,0.06)", border: "1px solid rgba(238,135,72,0.15)" }} />
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(238,135,72,0.5)" strokeWidth="1.5" strokeLinecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
             </div>
             <div>
-              <p className="text-[14px] font-semibold text-white/40">Nenhum bloco selecionado</p>
-              <p className="mt-1.5 text-[12px] leading-relaxed text-white/20">Clique em qualquer bloco na lista central para configurar seus parâmetros detalhados.</p>
+              <p className="text-[14px] font-semibold text-[#94a3b8]">Nenhum bloco selecionado</p>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-[#cbd5e1]">Clique em qualquer bloco na lista central para configurar seus parâmetros detalhados.</p>
             </div>
             {/* Block type pills */}
             <div className="flex flex-wrap justify-center gap-2">
@@ -1210,7 +1210,7 @@ export function SheetGeneratorTool() {
 
       {/* ── TOAST ───────────────────────────────────────────────────── */}
       {toast && (
-        <div className="fixed bottom-8 left-1/2 z-[999] -translate-x-1/2 rounded-xl px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.4)]" style={{ background: "rgba(8,18,30,0.97)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(12px)" }}>
+        <div className="fixed bottom-8 left-1/2 z-[999] -translate-x-1/2 rounded-xl px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]" style={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(12px)" }}>
           {toast}
         </div>
       )}
@@ -1234,23 +1234,23 @@ function BlockDetailPanel({ block, onUpdate, onChangeType }: {
   const up = (key: keyof BlockConfig, val: unknown) => onUpdate(id, key, val);
 
   const SegBtn = ({ val, cur, onSel, label }: { val: string; cur: string | undefined; onSel: (v: string) => void; label: string }) => (
-    <button onClick={() => onSel(val)} className={`rounded px-2.5 py-1 text-xs font-semibold transition ${cur === val ? "bg-[#ee8748] text-white" : "border border-white/15 text-white/60 hover:text-white"}`}>{label}</button>
+    <button onClick={() => onSel(val)} className={`rounded px-2.5 py-1 text-xs font-semibold transition ${cur === val ? "bg-[#ee8748] text-white" : "border border-[#d1d5db] text-[#64748b] hover:text-[#0f172a]"}`}>{label}</button>
   );
 
   const Toggle = ({ val, onSel, label }: { val: boolean; onSel: (v: boolean) => void; label: string }) => (
     <button type="button" role="switch" aria-checked={val} onClick={() => onSel(!val)} className="flex cursor-pointer items-center gap-2 text-left">
-      <div className="relative h-5 w-9 shrink-0 rounded-full transition-all duration-200" style={{ background: val ? "#ee8748" : "rgba(255,255,255,0.2)" }}>
+      <div className="relative h-5 w-9 shrink-0 rounded-full transition-all duration-200" style={{ background: val ? "#ee8748" : "#cbd5e1" }}>
         <div className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all duration-200" style={{ left: val ? "20px" : "2px" }} />
       </div>
-      <span className="text-[13px] text-white/80">{label}</span>
+      <span className="text-[13px] text-[#334155]">{label}</span>
     </button>
   );
 
   const RangeRow = ({ label, value, min, max, onSel }: { label: string; value: number; min: number; max: number; onSel: (v: number) => void }) => (
     <div className="mb-3">
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs text-white/70">{label}</span>
-        <span className="rounded bg-[rgba(238,135,72,0.18)] px-1.5 py-0.5 text-[11px] font-semibold text-[#ee8748]">{value}</span>
+        <span className="text-xs text-[#475569]">{label}</span>
+        <span className="rounded bg-[rgba(238,135,72,0.12)] px-1.5 py-0.5 text-[11px] font-semibold text-[#ee8748]">{value}</span>
       </div>
       <input type="range" min={min} max={max} value={value} onChange={(e) => onSel(Number(e.target.value))} className="w-full accent-[#ee8748]" />
     </div>
@@ -1258,41 +1258,41 @@ function BlockDetailPanel({ block, onUpdate, onChangeType }: {
 
   return (
     <>
-      <div className="sticky top-0 border-b border-white/10 bg-[rgba(6,14,22,0.8)] px-4 py-3">
+      <div className="sticky top-0 border-b border-[#e2e8f0] bg-white px-4 py-3">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: meta.color, boxShadow: `0 0 0 1px ${meta.accent}33` }}>
             <meta.Icon size={18} strokeWidth={1.75} style={{ color: meta.accent }} />
           </div>
           <div>
-            <div className="text-[15px] font-bold text-white">{meta.name}</div>
-            <div className="text-[11px] text-white/50">#{block.id} · {block.active ? <span className="text-emerald-400">Ativo</span> : <span className="text-white/30">Inativo</span>}</div>
+            <div className="text-[15px] font-bold text-[#0f172a]">{meta.name}</div>
+            <div className="text-[11px] text-[#94a3b8]">#{block.id} · {block.active ? <span className="text-emerald-500">Ativo</span> : <span className="text-[#94a3b8]">Inativo</span>}</div>
           </div>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4 pb-20 ">
 
         {/* Type selector */}
-        <div className="mb-1 text-[10px] font-bold uppercase tracking-[1.3px] text-white/55">Tipo de Exercício</div>
+        <div className="mb-1 text-[10px] font-bold uppercase tracking-[1.3px] text-[#94a3b8]">Tipo de Exercício</div>
         <div className="mb-4">
-          <label className="mb-1 block text-xs text-white/70">Categoria</label>
-          <select className="w-full rounded-md border border-white/15 bg-[rgba(255,255,255,0.06)] px-2.5 py-1.5 text-[13px] text-white outline-none focus:border-[#ee8748]/60" value={block.type} onChange={(e) => onChangeType(id, e.target.value as BlockType)}>
+          <label className="mb-1 block text-xs text-[#475569]">Categoria</label>
+          <select className="w-full rounded-md border border-[#d1d5db] bg-white px-2.5 py-1.5 text-[13px] text-[#0f172a] outline-none focus:border-[#ee8748]" value={block.type} onChange={(e) => onChangeType(id, e.target.value as BlockType)}>
             {Object.entries(BLOCK_META).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}
           </select>
         </div>
 
         {/* Quantity */}
-        <div className="mb-1 text-[10px] font-bold uppercase tracking-[1.3px] text-white/55">Quantidade</div>
+        <div className="mb-1 text-[10px] font-bold uppercase tracking-[1.3px] text-[#94a3b8]">Quantidade</div>
         <RangeRow label="Exercícios" value={c.quantidade} min={1} max={40} onSel={(v) => up("quantidade", v)} />
 
         {/* Type-specific params */}
-        <div className="my-3 h-px bg-white/10" />
-        <div className="mb-3 text-[10px] font-bold uppercase tracking-[1.3px] text-white/55">Parâmetros</div>
+        <div className="my-3 h-px bg-[#e2e8f0]" />
+        <div className="mb-3 text-[10px] font-bold uppercase tracking-[1.3px] text-[#94a3b8]">Parâmetros</div>
 
         {block.type === "aritmetica" && (
           <>
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-white/70">Operação</label>
-              <select className="w-full rounded-md border border-white/15 bg-[rgba(255,255,255,0.06)] px-2.5 py-1.5 text-[13px] text-white outline-none focus:border-[#ee8748]/60" value={c.operacao} onChange={(e) => up("operacao", e.target.value)}>
+              <label className="mb-1 block text-xs text-[#475569]">Operação</label>
+              <select className="w-full rounded-md border border-[#d1d5db] bg-white px-2.5 py-1.5 text-[13px] text-[#0f172a] outline-none focus:border-[#ee8748]" value={c.operacao} onChange={(e) => up("operacao", e.target.value)}>
                 <option value="adicao">Adição</option>
                 <option value="subtracao">Subtração</option>
                 <option value="multiplicacao">Multiplicação</option>
@@ -1304,7 +1304,7 @@ function BlockDetailPanel({ block, onUpdate, onChangeType }: {
               <RangeRow label="Dígitos 2" value={c.digitos2 ?? 3} min={1} max={6} onSel={(v) => up("digitos2", v)} />
             </div>
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-white/70">Formato</label>
+              <label className="mb-1 block text-xs text-[#475569]">Formato</label>
               <div className="flex gap-1">
                 <SegBtn val="armada" cur={c.formato} onSel={(v) => up("formato", v)} label="Armada" />
                 <SegBtn val="linear" cur={c.formato} onSel={(v) => up("formato", v)} label="Linear" />
@@ -1340,10 +1340,10 @@ function BlockDetailPanel({ block, onUpdate, onChangeType }: {
         {block.type === "equacoes" && (
           <>
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-white/70">Tipo de Equação</label>
+              <label className="mb-1 block text-xs text-[#475569]">Tipo de Equação</label>
               <div className="grid grid-cols-2 gap-1">
                 {["misto", "ax+b=c", "ax-b=c", "x/a+b=c"].map((t) => (
-                  <button key={t} onClick={() => up("tipo", t)} className={`rounded py-1 font-mono text-xs font-semibold transition ${c.tipo === t ? "bg-[#ee8748] text-white" : "border border-white/15 text-white/60 hover:text-white"}`}>{t}</button>
+                  <button key={t} onClick={() => up("tipo", t)} className={`rounded py-1 font-mono text-xs font-semibold transition ${c.tipo === t ? "bg-[#ee8748] text-white" : "border border-[#d1d5db] text-[#64748b] hover:text-[#0f172a]"}`}>{t}</button>
                 ))}
               </div>
             </div>
@@ -1355,7 +1355,7 @@ function BlockDetailPanel({ block, onUpdate, onChangeType }: {
         {block.type === "potenciacao" && (
           <>
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-white/70">Tipo</label>
+              <label className="mb-1 block text-xs text-[#475569]">Tipo</label>
               <div className="flex gap-1">
                 <SegBtn val="misto" cur={c.tipo} onSel={(v) => up("tipo", v)} label="Misto" />
                 <SegBtn val="potencia" cur={c.tipo} onSel={(v) => up("tipo", v)} label="Potência" />
@@ -1370,7 +1370,7 @@ function BlockDetailPanel({ block, onUpdate, onChangeType }: {
         {block.type === "expressoes" && (
           <>
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-white/70">Complexidade</label>
+              <label className="mb-1 block text-xs text-[#475569]">Complexidade</label>
               <div className="flex gap-1">
                 <SegBtn val="simples" cur={c.complexidade} onSel={(v) => up("complexidade", v)} label="Simples" />
                 <SegBtn val="media" cur={c.complexidade} onSel={(v) => up("complexidade", v)} label="Média" />
@@ -1379,7 +1379,7 @@ function BlockDetailPanel({ block, onUpdate, onChangeType }: {
             </div>
             <RangeRow label="Nº de termos" value={c.termos ?? 4} min={2} max={8} onSel={(v) => up("termos", v)} />
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-white/70">Operações</label>
+              <label className="mb-1 block text-xs text-[#475569]">Operações</label>
               <div className="space-y-1.5">
                 {[["adicao", "Adição"], ["subtracao", "Subtração"], ["multiplicacao", "Multiplicação"], ["divisao", "Divisão"]].map(([op, label]) => {
                   const ops = c.operacoes ?? [];
@@ -1389,14 +1389,14 @@ function BlockDetailPanel({ block, onUpdate, onChangeType }: {
                         const newOps = e.target.checked ? [...ops, op] : ops.filter((o) => o !== op);
                         up("operacoes", newOps);
                       }} />
-                      <span className="text-[13px] text-white/80">{label}</span>
+                      <span className="text-[13px] text-[#334155]">{label}</span>
                     </label>
                   );
                 })}
               </div>
             </div>
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-white/70">Agrupamento</label>
+              <label className="mb-1 block text-xs text-[#475569]">Agrupamento</label>
               <div className="flex flex-wrap gap-1">
                 <button onClick={() => { up("usarParenteses", false); up("nivelAgrupamento", 0); }} className={`rounded px-2.5 py-1 text-xs font-semibold transition ${!c.usarParenteses ? "bg-[#ee8748] text-white" : "border border-white/15 text-white/60 hover:text-white"}`}>Nenhum</button>
                 <button onClick={() => { up("usarParenteses", true); up("nivelAgrupamento", 1); }} className={`rounded px-2.5 py-1 text-xs font-semibold transition ${c.usarParenteses && (c.nivelAgrupamento ?? 1) === 1 ? "bg-[#ee8748] text-white" : "border border-white/15 text-white/60 hover:text-white"}`}>( )</button>
