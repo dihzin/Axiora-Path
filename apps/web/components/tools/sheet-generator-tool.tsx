@@ -1081,9 +1081,9 @@ export function SheetGeneratorTool() {
         </div>
 
         {/* Blocks list */}
-        <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="flex-1 overflow-y-auto">
           {blocks.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-5 px-2 py-6 text-center">
+            <div className="flex h-full flex-col items-center justify-center gap-5 px-6 py-6 text-center">
               {/* Illustration */}
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "linear-gradient(135deg, #fff7f0 0%, #ffe8d4 100%)", border: "1px solid rgba(238,135,72,0.2)" }}>
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ee8748" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12h6M12 9v6"/></svg>
@@ -1128,7 +1128,7 @@ export function SheetGeneratorTool() {
               </div>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="divide-y divide-[#f1f5f9]">
               {blocks.map((block, idx) => {
                 const meta = BLOCK_META[block.type];
                 const isSelected = block.id === selectedBlockId;
@@ -1136,34 +1136,28 @@ export function SheetGeneratorTool() {
                   <div
                     key={block.id}
                     onClick={() => { setSelectedBlockId(block.id); setMobileTab("detail"); }}
-                    className={`group relative cursor-pointer overflow-hidden rounded-xl transition-all duration-150 ${isSelected ? "shadow-[0_0_0_1.5px_rgba(238,135,72,0.5),0_4px_16px_rgba(238,135,72,0.10)]" : "shadow-[0_1px_4px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.10)]"} ${!block.active ? "opacity-45" : ""}`}
-                    style={{
-                      background: isSelected
-                        ? `linear-gradient(135deg, rgba(238,135,72,0.07) 0%, #ffffff 100%)`
-                        : `#ffffff`,
-                      border: isSelected ? "1px solid rgba(238,135,72,0.4)" : "1px solid #e2e8f0",
-                    }}
+                    className={`group relative cursor-pointer transition-colors duration-100 ${isSelected ? "bg-[rgba(238,135,72,0.05)]" : "hover:bg-[#f8fafc]"} ${!block.active ? "opacity-40" : ""}`}
                   >
-                    {/* Type color indicator bar */}
-                    <div className="absolute inset-y-0 left-0 w-[3px] rounded-l-xl transition-all duration-150" style={{ background: isSelected ? "#ee8748" : meta.accent, opacity: isSelected ? 1 : 0.5 }} />
+                    {/* Selected left accent */}
+                    {isSelected && <div className="absolute inset-y-0 left-0 w-[2px]" style={{ background: "#ee8748" }} />}
 
-                    <div className="flex items-center gap-3 py-3 pl-4 pr-3">
+                    <div className="flex items-center gap-3 py-3 pl-5 pr-4">
                       {/* Icon */}
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition" style={{ background: meta.color, boxShadow: `0 0 0 1px ${meta.accent}33` }}>
-                        <meta.Icon size={18} strokeWidth={1.75} style={{ color: meta.accent }} />
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: meta.color }}>
+                        <meta.Icon size={15} strokeWidth={1.75} style={{ color: meta.accent }} />
                       </div>
 
                       {/* Info */}
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <span className="truncate text-[13px] font-semibold text-[#0f172a]">{meta.name}</span>
-                          <span className="shrink-0 text-[10px] text-[#94a3b8]">#{idx + 1}</span>
+                          <span className="shrink-0 text-[11px] text-[#cbd5e1]">#{idx + 1}</span>
                         </div>
-                        <div className="mt-0.5 truncate text-[11px]" style={{ color: meta.accent + "CC" }}>{blockMetaText(block)}</div>
+                        <div className="truncate text-[11px] text-[#94a3b8]">{blockMetaText(block)}</div>
                       </div>
 
-                      {/* Qty badge */}
-                      <div className="flex shrink-0 items-center justify-center rounded-lg px-2.5 py-1 text-[13px] font-bold" style={{ background: meta.color, color: meta.accent }}>
+                      {/* Qty pill */}
+                      <div className="shrink-0 rounded-md px-2 py-0.5 text-[12px] font-bold" style={{ background: meta.color, color: meta.accent }}>
                         {block.config.quantidade}
                       </div>
 
@@ -1188,24 +1182,23 @@ export function SheetGeneratorTool() {
             </div>
           )}
 
-          {/* Total badge */}
+          {/* Total stats */}
           {blocks.length > 0 && (
-            <div className="mt-4 overflow-hidden rounded-xl" style={{ background: "linear-gradient(135deg, rgba(238,135,72,0.06) 0%, #fff7f0 100%)", border: "1px solid rgba(238,135,72,0.2)" }}>
-              <div className="h-[2px] w-full" style={{ background: "linear-gradient(90deg, #fde68a, #ee8748, transparent)" }} />
-              <div className="flex items-center justify-between px-5 py-3.5">
+            <div style={{ borderTop: "1px solid #f1f5f9" }}>
+              <div className="flex items-center justify-between px-5 py-4">
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Total de exercícios</div>
-                  <div className="mt-0.5 text-3xl font-black tracking-tight text-[#0f172a]">{totalExercises}</div>
+                  <div className="mt-0.5 text-[22px] font-black tracking-tight text-[#0f172a]">{totalExercises}</div>
                 </div>
-                <div className="h-10 w-px bg-[#e2e8f0]" />
+                <div className="h-8 w-px bg-[#e2e8f0]" />
                 <div className="text-right">
                   <div className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Blocos ativos</div>
-                  <div className="mt-0.5 text-3xl font-black tracking-tight text-[#ee8748]">{activeCount}</div>
+                  <div className="mt-0.5 text-[22px] font-black tracking-tight text-[#ee8748]">{activeCount}</div>
                 </div>
-                <div className="h-10 w-px bg-[#e2e8f0]" />
+                <div className="h-8 w-px bg-[#e2e8f0]" />
                 <div className="text-right">
                   <div className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Colunas</div>
-                  <div className="mt-0.5 text-3xl font-black tracking-tight text-[#64748b]">{cfg.cols}</div>
+                  <div className="mt-0.5 text-[22px] font-black tracking-tight text-[#64748b]">{cfg.cols}</div>
                 </div>
               </div>
             </div>
