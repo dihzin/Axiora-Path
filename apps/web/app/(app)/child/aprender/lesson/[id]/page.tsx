@@ -2,7 +2,7 @@
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, CheckCircle2, Coins, Flame, Lightbulb, Star, Volume2, VolumeX, XCircle, Zap } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Coins, Flame, Lightbulb, Star, XCircle, Zap } from "lucide-react";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { ChildDesktopShell } from "@/components/child-desktop-shell";
@@ -50,7 +50,6 @@ import {
   hapticLevelUp,
   hapticPress,
   playSfx,
-  saveUXSettings,
 } from "@/lib/ux-feedback";
 import type { UserUXSettings } from "@/lib/api/client";
 import { trackAprenderEvent } from "@/lib/learning/analytics";
@@ -86,6 +85,23 @@ type OrderingItem = {
   correctOrder: number;
 };
 
+type LessonResumeSnapshot = {
+  lessonId: number;
+  childId: number | null;
+  savedAt: number;
+  session: LearningSessionStartResponse | null;
+  queue: LearningNextItem[];
+  index: number;
+  answeredByStep: Record<number, boolean>;
+  correctByStep: Record<number, boolean>;
+  sessionTargetQuestions: number;
+  questionSupplyExhausted: boolean;
+  offlineMode: boolean;
+  lessonContextLabel: string | null;
+  offlineSubjectName: string | null;
+  unitProgressPercent: number;
+};
+
 type LessonDesktopRailProps = {
   sessionProgress: number;
   masteryPercent: number;
@@ -114,6 +130,10 @@ function readActiveChildId(): number | null {
   const rawChildId = window.localStorage.getItem("axiora_child_id");
   const childId = rawChildId ? Number(rawChildId) : NaN;
   return Number.isFinite(childId) && childId > 0 ? childId : null;
+}
+
+function buildLessonResumeStorageKey(lessonId: number, childId: number | null): string {
+  return `axiora:lesson-resume:${childId ?? "anon"}:${lessonId}`;
 }
 
 function normalizeOptions(metadata: Record<string, unknown>): SelectOption[] {
@@ -146,6 +166,9 @@ function normalizePairs(metadata: Record<string, unknown>): DragPair[] {
 
 function normalizeOrderingItems(metadata: Record<string, unknown>): OrderingItem[] {
   const itemsRaw = asArray(metadata.items).length > 0 ? asArray(metadata.items) : asArray(metadata.sequence);
+  const correctOrderSequence = asArray(metadata.correctOrder).map((entry) =>
+    toStringSafe(asRecord(entry).label, toStringSafe(asRecord(entry).id, toStringSafe(entry))).trim().toLocaleLowerCase(),
+  );
   return itemsRaw
     .map((entry, index) => {
       const parsed = asRecord(entry);
@@ -153,7 +176,18 @@ function normalizeOrderingItems(metadata: Record<string, unknown>): OrderingItem
       const fallbackLabel = toStringSafe(entry, fallbackId);
       const label = toStringSafe(parsed.label, toStringSafe(parsed.text, fallbackLabel));
       const orderRaw = parsed.correctOrder ?? parsed.order ?? parsed.position;
-      const order = typeof orderRaw === "number" && Number.isFinite(orderRaw) ? Math.max(1, Math.floor(orderRaw)) : index + 1;
+      const normalizedLabel = label.trim().toLocaleLowerCase();
+      const normalizedId = toStringSafe(parsed.id, fallbackId).trim().toLocaleLowerCase();
+      const fallbackOrderFromSequence = Math.max(
+        correctOrderSequence.findIndex((token) => token === normalizedLabel || token === normalizedId),
+        -1,
+      );
+      const order =
+        typeof orderRaw === "number" && Number.isFinite(orderRaw)
+          ? Math.max(1, Math.floor(orderRaw))
+          : fallbackOrderFromSequence >= 0
+            ? fallbackOrderFromSequence + 1
+            : index + 1;
       return {
         id: toStringSafe(parsed.id, fallbackId),
         label,
@@ -179,10 +213,25 @@ function evaluateDragDrop(metadata: Record<string, unknown>, assignments: Record
   return { result: ok ? "CORRECT" : "WRONG", correct: ok };
 }
 
-function evaluateOrdering(metadata: Record<string, unknown>, orderingIds: string[]): QuestionOutcome {
+function evaluateOrdering(metadata: Record<string, unknown>, orderingIds: string[], promptText?: string | null): QuestionOutcome {
   const items = normalizeOrderingItems(metadata);
   if (items.length < 2 || orderingIds.length < items.length) return { result: "SKIPPED", correct: false };
-  const expected = [...items].sort((a, b) => a.correctOrder - b.correctOrder).map((item) => item.id);
+  const prompt = toStringSafe(promptText).toLocaleLowerCase();
+  const numericItems = items.map((item) => ({ ...item, numericValue: Number(item.label.replace(",", ".")) }));
+  const allNumeric = numericItems.every((item) => Number.isFinite(item.numericValue));
+  const expectsAscending =
+    prompt.includes("ordem crescente") ||
+    prompt.includes("menor para o maior") ||
+    prompt.includes("crescente");
+  const expectsDescending =
+    prompt.includes("ordem decrescente") ||
+    prompt.includes("maior para o menor") ||
+    prompt.includes("decrescente");
+  const expected = allNumeric && (expectsAscending || expectsDescending)
+    ? [...numericItems]
+        .sort((a, b) => (expectsDescending ? b.numericValue - a.numericValue : a.numericValue - b.numericValue))
+        .map((item) => item.id)
+    : [...items].sort((a, b) => a.correctOrder - b.correctOrder).map((item) => item.id);
   const ok = expected.every((id, idx) => orderingIds[idx] === id);
   return { result: ok ? "CORRECT" : "WRONG", correct: ok };
 }
@@ -249,9 +298,9 @@ function resolveAxionTip(question: LearningNextItem | null): string {
 }
 
 function difficultyLabel(difficulty: LearningNextItem["difficulty"] | undefined): { text: string; className: string } {
-  if (difficulty === "HARD") return { text: "Difícil", className: "border-violet-300/60 bg-violet-100/65 text-violet-700" };
-  if (difficulty === "MEDIUM") return { text: "Média", className: "border-amber-300/60 bg-amber-100/65 text-amber-700" };
-  return { text: "Fácil", className: "border-secondary/35 bg-secondary/10 text-secondary" };
+  if (difficulty === "HARD") return { text: "Difícil", className: "border-violet-400/70 bg-[linear-gradient(180deg,rgba(245,243,255,0.96),rgba(221,214,254,0.9))] text-violet-800 shadow-[0_2px_8px_rgba(109,40,217,0.14),inset_0_1px_0_rgba(255,255,255,0.6)]" };
+  if (difficulty === "MEDIUM") return { text: "Média", className: "border-amber-400/70 bg-[linear-gradient(180deg,rgba(255,251,235,0.96),rgba(253,230,138,0.86))] text-amber-800 shadow-[0_2px_8px_rgba(217,119,6,0.12),inset_0_1px_0_rgba(255,255,255,0.6)]" };
+  return { text: "Fácil", className: "border-emerald-400/65 bg-[linear-gradient(180deg,rgba(236,253,245,0.96),rgba(167,243,208,0.84))] text-emerald-800 shadow-[0_2px_8px_rgba(5,150,105,0.12),inset_0_1px_0_rgba(255,255,255,0.6)]" };
 }
 
 function LessonDesktopRail({
@@ -270,11 +319,11 @@ function LessonDesktopRail({
       {/* Card de sessão — estilo parchment igual ao rail da trilha */}
       <div className={cn("relative overflow-hidden rounded-[22px] border border-[#A07850]/40 bg-[linear-gradient(145deg,rgba(253,245,230,0.88),rgba(240,222,188,0.78))] shadow-[0_8px_24px_rgba(44,30,18,0.18),inset_0_1px_0_rgba(255,255,255,0.7)]", compact ? "p-3" : "p-3.5 xl:p-4")}>
         <div aria-hidden className={cn("pointer-events-none absolute inset-x-0 top-0 rounded-t-[22px] bg-[radial-gradient(60%_80%_at_50%_0%,rgba(255,183,3,0.08),transparent)]", compact ? "h-10" : "h-12")} />
-        <p className="text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: "#A07850" }}>Sessão</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: "#8A5A22" }}>Sessão</p>
         <p className={cn("mt-1 font-black leading-tight", compact ? "text-[16px]" : "text-[18px]")} style={{ color: "#2C1E16" }}>
           {answered}/{Math.max(1, target)} etapas
         </p>
-        <p className={cn("mt-1 font-semibold", compact ? "text-[11px]" : "text-[12px]")} style={{ color: "#5C4A3A" }}>
+        <p className={cn("mt-1 font-bold", compact ? "text-[11px]" : "text-[12px]")} style={{ color: "#4E3725" }}>
           {waitClock ? `Energia recarrega em ${waitClock}` : `Energia ${energyLabel}`}
         </p>
       </div>
@@ -283,7 +332,7 @@ function LessonDesktopRail({
       <div className={cn("relative overflow-hidden rounded-[22px] border border-[#A07850]/40 bg-[linear-gradient(145deg,rgba(253,245,230,0.88),rgba(240,222,188,0.78))] shadow-[0_8px_24px_rgba(44,30,18,0.18),inset_0_1px_0_rgba(255,255,255,0.7)]", compact ? "p-3" : "p-3.5 xl:p-4")}>
         <div className={cn(compact ? "space-y-2.5" : "space-y-3")}>
           <div>
-            <div className="mb-1.5 flex items-center justify-between text-[11px] font-bold" style={{ color: "#5C4A3A" }}>
+            <div className="mb-1.5 flex items-center justify-between text-[11px] font-extrabold" style={{ color: "#4E3725" }}>
               <span>Progresso da sessão</span>
               <span style={{ color: "#8B5E1A" }}>{safeSession}%</span>
             </div>
@@ -292,7 +341,7 @@ function LessonDesktopRail({
             </div>
           </div>
           <div>
-            <div className="mb-1.5 flex items-center justify-between text-[11px] font-bold" style={{ color: "#5C4A3A" }}>
+            <div className="mb-1.5 flex items-center justify-between text-[11px] font-extrabold" style={{ color: "#4E3725" }}>
               <span>Domínio atual</span>
               <span style={{ color: "#8B5E1A" }}>{safeMastery}%</span>
             </div>
@@ -307,7 +356,27 @@ function LessonDesktopRail({
 }
 
 function questionFingerprint(item: LearningNextItem): string {
-  return [item.questionId ?? "", item.templateId ?? "", item.generatedVariantId ?? "", item.variantId ?? "", item.prompt ?? ""].join("|");
+  const metadata = asRecord(item.metadata);
+  const options = normalizeOptions(metadata).map((option) => option.label.trim().toLocaleLowerCase()).join("|");
+  const pairs = normalizePairs(metadata)
+    .map((pair) => `${pair.itemLabel.trim().toLocaleLowerCase()}=>${pair.targetLabel.trim().toLocaleLowerCase()}`)
+    .join("|");
+  const ordering = normalizeOrderingItems(metadata)
+    .map((entry) => `${entry.label.trim().toLocaleLowerCase()}@${entry.correctOrder}`)
+    .join("|");
+  const answer = toStringSafe(metadata.answer).trim().toLocaleLowerCase();
+  const correctOrder = asArray(metadata.correctOrder)
+    .map((entry) => toStringSafe(asRecord(entry).label, toStringSafe(asRecord(entry).id, toStringSafe(entry))).trim().toLocaleLowerCase())
+    .join("|");
+  return [
+    item.type,
+    toStringSafe(item.prompt).trim().toLocaleLowerCase(),
+    options,
+    pairs,
+    ordering,
+    answer,
+    correctOrder,
+  ].join("|");
 }
 
 function resolveOfflineSubjectKey(subjectName: string | null): "portuguese" | "math" | "generic" {
@@ -884,6 +953,11 @@ export default function AdaptiveLessonSessionPage() {
     if (Number.isFinite(parsed) && parsed > 0) return parsed;
     return null;
   }, [searchParams]);
+  const activeChildId = useMemo(() => readActiveChildId(), []);
+  const lessonResumeStorageKey = useMemo(
+    () => buildLessonResumeStorageKey(lessonId, activeChildId),
+    [activeChildId, lessonId],
+  );
 
   useEffect(() => {
     if (!session || !axionDecisionId) return;
@@ -925,12 +999,13 @@ export default function AdaptiveLessonSessionPage() {
     const completed = Math.max(0, Math.min(target, weeklyGoal.completed));
     return Math.round((completed / target) * 100);
   }, [weeklyGoal.completed, weeklyGoal.target]);
-  const denseDesktop = layoutWidth >= 1024 && (layoutWidth <= 1450 || layoutHeight <= 820);
+  const denseDesktop = layoutWidth >= 1024 && (layoutWidth <= 1450 || layoutHeight <= 840);
+  const ultraDenseDesktop = denseDesktop && layoutHeight <= 840;
   const desktopScale = useMemo(() => {
     if (!denseDesktop) return 1;
     const widthScale = Math.min(1, layoutWidth / 1420);
-    const heightScale = Math.min(1, Math.max(0.8, (layoutHeight - 18) / 860));
-    return Math.max(0.8, Math.min(widthScale, heightScale));
+    const heightScale = Math.min(1, Math.max(0.74, (layoutHeight - 8) / 900));
+    return Math.max(0.74, Math.min(widthScale, heightScale));
   }, [denseDesktop, layoutHeight, layoutWidth]);
 
   const refreshWeeklyGoal = useCallback(async () => {
@@ -984,6 +1059,29 @@ export default function AdaptiveLessonSessionPage() {
       startedAt: new Date().toISOString(),
     };
   }, [lessonId, routeSubjectId]);
+
+  const clearLessonResumeSnapshot = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(lessonResumeStorageKey);
+  }, [lessonResumeStorageKey]);
+
+  const readLessonResumeSnapshot = useCallback((): LessonResumeSnapshot | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem(lessonResumeStorageKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as LessonResumeSnapshot;
+      if (!parsed || parsed.lessonId !== lessonId) return null;
+      if ((parsed.childId ?? null) !== (activeChildId ?? null)) return null;
+      if (!Array.isArray(parsed.queue) || parsed.queue.length === 0) return null;
+      if (!parsed.session || typeof parsed.session.sessionId !== "string" || !parsed.session.sessionId.trim()) return null;
+      if (!parsed.answeredByStep || Object.keys(parsed.answeredByStep).length === 0) return null;
+      if (!Number.isFinite(parsed.savedAt) || Date.now() - parsed.savedAt > 1000 * 60 * 60 * 8) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }, [activeChildId, lessonId, lessonResumeStorageKey]);
 
   const startLearningSessionWithBackoff = useCallback(async () => {
     const retryDelays = [0, 1200, 2500];
@@ -1148,6 +1246,32 @@ export default function AdaptiveLessonSessionPage() {
         setLoading(true);
         setError(null);
         setQuestionError(null);
+        const snapshot = readLessonResumeSnapshot();
+        if (snapshot) {
+          setSession(snapshot.session);
+          setQueue(snapshot.queue);
+          setSessionTargetQuestions(snapshot.sessionTargetQuestions);
+          setOfflineMode(snapshot.offlineMode);
+          setIndex(Math.max(0, Math.min(snapshot.index, Math.max(0, snapshot.queue.length - 1))));
+          setQuestionStartedAt(Date.now());
+          setAnsweredByStep(snapshot.answeredByStep);
+          setCorrectByStep(snapshot.correctByStep);
+          setFeedback({
+            tone: "success",
+            message: "Sua lição foi retomada de onde você parou.",
+          });
+          setSelectedOption(null);
+          setFillBlankAnswer("");
+          setDragAssignments({});
+          setOrderingIds([]);
+          setQuestionSupplyExhausted(snapshot.questionSupplyExhausted);
+          setContentUnavailableReason(null);
+          setLessonContextLabel(snapshot.lessonContextLabel);
+          setOfflineSubjectName(snapshot.offlineSubjectName);
+          setUnitProgressPercent(snapshot.unitProgressPercent);
+          setLoading(false);
+          return;
+        }
         const sessionStart = await startLearningSessionWithBackoff();
         setSession(sessionStart);
         trackAprenderEvent("lesson_opened", {
@@ -1216,9 +1340,11 @@ export default function AdaptiveLessonSessionPage() {
     activateOfflineMode,
     applyEmptyBatchUnavailableState,
     buildOfflineSession,
+    clearLessonResumeSnapshot,
     hydrateLessonContext,
     lessonId,
     loadQuestionBatchWithBackoff,
+    readLessonResumeSnapshot,
     refreshWeeklyGoal,
     routeSubjectId,
     startLearningSessionWithBackoff,
@@ -1264,6 +1390,55 @@ export default function AdaptiveLessonSessionPage() {
   useEffect(() => {
     setTipVisible(false);
   }, [index, current?.questionId, current?.templateId]);
+
+  useEffect(() => {
+    setFillBlankAnswer("");
+  }, [index, current?.questionId, current?.templateId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!session || queue.length === 0 || result || pendingCompletionResult) return;
+    if (answeredCount <= 0) {
+      clearLessonResumeSnapshot();
+      return;
+    }
+    const snapshot: LessonResumeSnapshot = {
+      lessonId,
+      childId: activeChildId,
+      savedAt: Date.now(),
+      session,
+      queue,
+      index,
+      answeredByStep,
+      correctByStep,
+      sessionTargetQuestions,
+      questionSupplyExhausted,
+      offlineMode,
+      lessonContextLabel,
+      offlineSubjectName,
+      unitProgressPercent,
+    };
+    window.localStorage.setItem(lessonResumeStorageKey, JSON.stringify(snapshot));
+  }, [
+    activeChildId,
+    answeredByStep,
+    answeredCount,
+    clearLessonResumeSnapshot,
+    correctByStep,
+    index,
+    lessonContextLabel,
+    lessonId,
+    lessonResumeStorageKey,
+    offlineMode,
+    offlineSubjectName,
+    pendingCompletionResult,
+    queue,
+    questionSupplyExhausted,
+    result,
+    session,
+    sessionTargetQuestions,
+    unitProgressPercent,
+  ]);
 
   useEffect(() => {
     if (!current || current.type !== "ORDERING") {
@@ -1490,7 +1665,7 @@ export default function AdaptiveLessonSessionPage() {
   const onCheckOrdering = async () => {
     if (!current || answeredByStep[index]) return;
     hapticPress(uxSettings);
-    const outcome = evaluateOrdering(asRecord(current.metadata), orderingIds);
+    const outcome = evaluateOrdering(asRecord(current.metadata), orderingIds, current.prompt);
     await submitAnswer(outcome);
   };
 
@@ -1626,6 +1801,7 @@ export default function AdaptiveLessonSessionPage() {
   };
 
   const pushPathWithResult = (payload: LearningSessionFinishResponse) => {
+    clearLessonResumeSnapshot();
     const childId = readActiveChildId();
     if (childId !== null) {
       writeRecentLearningReward(childId, payload.xpEarned, payload.coinsEarned);
@@ -1645,35 +1821,12 @@ export default function AdaptiveLessonSessionPage() {
       return;
     }
     if (!session || answeredCount === 0) {
+      clearLessonResumeSnapshot();
       navigateBackToPath(buildBackToPathUrl());
       return;
     }
-    setBackSaving(true);
-    try {
-      // Single finish call — lesson progress absorbed server-side (Wave 2).
-      const response = await finishLearningSession({
-        childId: readActiveChildId() ?? undefined,
-        sessionId: session.sessionId,
-        totalQuestions: answeredCount,
-        correctCount,
-        decisionId: axionDecisionId ?? undefined,
-      });
-      if (typeof window !== "undefined") {
-        window.sessionStorage.removeItem("axion_active_decision_id");
-      }
-      pushPathWithResult(response);
-    } catch (err: unknown) {
-      const message =
-        err instanceof ApiError
-          ? getApiErrorMessage(err, "Não foi possível salvar esta lição agora.")
-          : "Não foi possível salvar esta lição agora.";
-      setFeedback({
-        tone: "encourage",
-        message: buildBoundedMessage([message, "Tente finalizar novamente antes de voltar ao caminho."], 108),
-      });
-    } finally {
-      setBackSaving(false);
-    }
+    navigateBackToPath(buildBackToPathUrl());
+    return;
   };
 
   const goNext = async () => {
@@ -1848,8 +2001,17 @@ export default function AdaptiveLessonSessionPage() {
           backgroundPosition: "center top",
           backgroundSize: "cover",
           backgroundRepeat: "no-repeat",
-          opacity: 0.98,
+          opacity: 0.62,
+          filter: "saturate(0.65) brightness(0.90)",
           zIndex: 0,
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0"
+        style={{
+          zIndex: 1,
+          background: "rgba(4,10,24,0.34)",
         }}
       />
     <ChildDesktopShell
@@ -1871,8 +2033,8 @@ export default function AdaptiveLessonSessionPage() {
         />
       }
     >
-      <PageShell tone="child" width="content" className={denseDesktop ? "lg:px-2 lg:py-3" : undefined}>
-      <div className="lesson-cosmic">
+      <PageShell tone="child" width="content" className={denseDesktop ? cn("lg:h-full lg:px-2", ultraDenseDesktop ? "lg:py-2" : "lg:py-2.5") : undefined}>
+      <div className={cn("lesson-cosmic", denseDesktop ? "lg:flex lg:h-full lg:flex-col" : "")}>
       <div className="lg:hidden mb-2">
         <TopStatsBar
           streak={topBarStreak}
@@ -1883,61 +2045,34 @@ export default function AdaptiveLessonSessionPage() {
           isLoading={topBarLoading}
         />
       </div>
-      <div className="mb-2 flex flex-wrap items-center gap-1.5 xl:mb-2.5">
+      <div
+        className={cn(
+          "mb-2",
+          denseDesktop ? "xl:mb-1.5" : "xl:mb-2",
+        )}
+      >
+        <div className="flex items-center">
         <button
           type="button"
-          className="inline-flex w-full items-center gap-1.5 rounded-2xl border border-[#A07850]/50 bg-[linear-gradient(145deg,rgba(253,245,230,0.88),rgba(240,222,188,0.78))] px-2.5 py-1.5 text-sm font-semibold text-[#2C1E16] shadow-[0_4px_12px_rgba(44,30,18,0.14),inset_0_1px_0_rgba(255,255,255,0.65)] transition hover:border-[#A07850]/75 hover:bg-[linear-gradient(145deg,rgba(255,248,235,0.95),rgba(245,228,195,0.9))]"
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-[14px] border border-[#A07850]/45 bg-[linear-gradient(145deg,rgba(253,245,230,0.92),rgba(240,222,188,0.82))] font-semibold text-[#2C1E16] shadow-[0_4px_10px_rgba(44,30,18,0.10),inset_0_1px_0_rgba(255,255,255,0.65)] transition hover:border-[#A07850]/70 hover:bg-[linear-gradient(145deg,rgba(255,248,235,0.97),rgba(245,228,195,0.92))]",
+            denseDesktop ? "h-8.5 min-w-[164px] px-3 text-[12px]" : "h-10 min-w-[196px] px-3.5 text-[13px]",
+            "w-full sm:w-auto",
+          )}
           onClick={() => void onBackToPath()}
           disabled={backSaving}
         >
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-[rgba(160,120,80,0.15)] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
-            <ArrowLeft className="h-4 w-4 stroke-[2.6]" />
+          <span
+            className={cn(
+              "inline-flex items-center justify-center rounded-[10px] bg-[rgba(160,120,80,0.15)] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]",
+              denseDesktop ? "h-5 w-5" : "h-5.5 w-5.5",
+            )}
+          >
+            <ArrowLeft className={cn("stroke-[2.6]", denseDesktop ? "h-3.5 w-3.5" : "h-4 w-4")} />
           </span>
           {backSaving ? "Salvando..." : "Voltar ao caminho"}
         </button>
-        <Button
-          type="button"
-          variant="secondary"
-          className="min-w-0 flex-1 px-2 text-[11px]"
-          onClick={() =>
-            void saveUXSettings({
-              soundEnabled: !uxSettings.soundEnabled,
-              hapticsEnabled: uxSettings.hapticsEnabled,
-              reducedMotion: uxSettings.reducedMotion,
-            }).then(setUxSettings)
-          }
-        >
-          {uxSettings.soundEnabled ? <Volume2 className="mr-1 h-4 w-4" /> : <VolumeX className="mr-1 h-4 w-4" />}
-          Som {uxSettings.soundEnabled ? "ligado" : "desligado"}
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          className="min-w-0 flex-1 px-2 text-[11px]"
-          onClick={() =>
-            void saveUXSettings({
-              soundEnabled: uxSettings.soundEnabled,
-              hapticsEnabled: !uxSettings.hapticsEnabled,
-              reducedMotion: uxSettings.reducedMotion,
-            }).then(setUxSettings)
-          }
-        >
-          Haptics {uxSettings.hapticsEnabled ? "on" : "off"}
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          className="min-w-0 flex-1 px-2 text-[11px]"
-          onClick={() =>
-            void saveUXSettings({
-              soundEnabled: uxSettings.soundEnabled,
-              hapticsEnabled: uxSettings.hapticsEnabled,
-              reducedMotion: !uxSettings.reducedMotion,
-            }).then(setUxSettings)
-          }
-        >
-          Movimento {uxSettings.reducedMotion ? "reduzido" : "normal"}
-        </Button>
+      </div>
       </div>
 
       {offlineMode ? (
@@ -1948,22 +2083,22 @@ export default function AdaptiveLessonSessionPage() {
 
       <ConfettiBurst trigger={confettiTrigger} />
 
-      <Card className="lesson-card mb-2.5 overflow-hidden border xl:mb-3">
-        <CardHeader className="pb-1.5 pt-3.5 xl:pt-4">
+      <Card className={cn("lesson-card overflow-hidden border", denseDesktop ? (ultraDenseDesktop ? "mb-1.5 xl:mb-1.5" : "mb-2 xl:mb-2") : "mb-2.5 xl:mb-3")}>
+        <CardHeader className={cn(denseDesktop ? (ultraDenseDesktop ? "pb-0 pt-2" : "pb-0.5 pt-2.5") : "pb-1.5 pt-3.5 xl:pt-4")}>
           <div className="flex items-center justify-between gap-2">
             <div>
               <CardTitle className="text-[15px] text-[#FFF4E7] xl:text-base">Sessão adaptativa</CardTitle>
               <p className="mt-0.5 text-[11px] font-semibold text-[#E6D8C7]">{lessonContextLabel ?? "Lição em andamento"}</p>
             </div>
-            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/25 bg-amber-400/10 px-2 py-0.5 text-xs font-semibold text-amber-100">
-              <Flame className="h-3.5 w-3.5 text-accent" />
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/45 bg-[linear-gradient(180deg,rgba(255,248,225,0.92),rgba(253,230,138,0.72))] px-2 py-0.5 text-xs font-black text-[#8A5A22] shadow-[0_2px_6px_rgba(217,119,6,0.1),inset_0_1px_0_rgba(255,255,255,0.52)]">
+              <Flame className="h-3.5 w-3.5 text-[#F59E0B]" />
               {learningStreak?.currentStreak ?? 0}
             </span>
           </div>
         </CardHeader>
-        <CardContent className="space-y-1.5 pb-3.5 text-sm xl:pb-4">
-          <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.05] px-3 py-1.5">
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#E6D8C7]">
+        <CardContent className={cn("space-y-1.5 text-sm", denseDesktop ? (ultraDenseDesktop ? "pb-2" : "pb-2.5") : "pb-3.5 xl:pb-4")}>
+          <div className={cn("flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.05] px-3", ultraDenseDesktop ? "py-1" : "py-1.5")}>
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#8A5A22]">
               <Zap className="h-4 w-4 text-accent" />
               Energia
             </span>
@@ -1973,13 +2108,13 @@ export default function AdaptiveLessonSessionPage() {
             </div>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-[#E6D8C7]">Progresso da sessão</span>
-            <span className="font-semibold text-[#FFF4E7]">{Math.round(progressPercent)}%</span>
+            <span className="font-bold text-[#7A502A]">Progresso da sessão</span>
+            <span className="font-black text-[#5C3719]">{Math.round(progressPercent)}%</span>
           </div>
           <ProgressBar value={progressPercent} tone="secondary" />
-          <div className="flex items-center justify-between text-[11px] text-[#CDBAA6]">
-            <span className="font-semibold">Domínio {masteryPercent}%</span>
-            <span className="font-semibold">{answeredCount}/{stepTotal}</span>
+          <div className="flex items-center justify-between text-[11px] text-[#8A5A22]">
+            <span className="font-bold">Domínio {masteryPercent}%</span>
+            <span className="font-bold">{answeredCount}/{stepTotal}</span>
           </div>
         </CardContent>
       </Card>
@@ -1997,8 +2132,8 @@ export default function AdaptiveLessonSessionPage() {
       ) : null}
 
       {!loading && !error && current ? (
-        <Card className="lesson-card mb-4 border">
-          <CardContent className="space-y-3.5 p-4 md:p-5 xl:space-y-4 xl:p-5">
+        <Card className={cn("lesson-card border", denseDesktop ? "mb-0 lg:flex lg:flex-1 lg:min-h-0 lg:flex-col" : "mb-4")}>
+          <CardContent className={cn(denseDesktop ? (ultraDenseDesktop ? "flex h-full flex-col space-y-1.5 p-2 md:p-2 xl:space-y-1.5 xl:p-2" : "flex h-full flex-col space-y-2 p-3 md:p-3 xl:space-y-2.5 xl:p-3") : "space-y-3.5 p-4 md:p-5 xl:space-y-4 xl:p-5")}>
             {energyBlocked ? (
               <div className="rounded-2xl border border-accent/40 bg-accent/10 p-3">
                 <p className="text-sm font-semibold text-accent-foreground">Energia em recarga</p>
@@ -2017,19 +2152,19 @@ export default function AdaptiveLessonSessionPage() {
 
             <div
               key={`${current.questionId ?? current.templateId ?? "q"}-${index}-${correctFxTick}`}
-              className={cn("question-enter space-y-3", feedback?.tone === "success" ? "correct-glow" : "")}
+              className={cn("question-enter", denseDesktop ? (ultraDenseDesktop ? "flex-1 space-y-2" : "flex-1 space-y-2.5") : "space-y-3", feedback?.tone === "success" ? "correct-glow" : "")}
             >
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center rounded-full border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.04em] text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+              <div className={cn("flex items-center justify-between", denseDesktop ? "gap-2" : "")}>
+                <span className={cn("inline-flex items-center rounded-full border border-[#A07850]/35 bg-[linear-gradient(180deg,rgba(255,251,244,0.95),rgba(245,231,205,0.88))] font-black uppercase tracking-[0.04em] text-[#6C4423] shadow-[0_3px_8px_rgba(44,30,18,0.08),inset_0_1px_0_rgba(255,255,255,0.6)]", ultraDenseDesktop ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-[11px]")}>
                   Questão {stepCurrent}/{stepTotal}
                 </span>
-                <div className="flex items-center gap-1.5">
+                <div className={cn("flex items-center gap-1.5", denseDesktop ? "shrink-0" : "")}>
                   {SHOW_QUESTION_TYPE_DEBUG ? (
-                    <span className="inline-flex items-center rounded-full border border-white/12 bg-white/5 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.05em] text-slate-300">
+                    <span className="inline-flex items-center rounded-full border border-[#A07850]/25 bg-[rgba(255,250,244,0.75)] px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.05em] text-[#7A624B] shadow-[inset_0_1px_0_rgba(255,255,255,0.42)]">
                       DEV {questionTypeLabel(current.type)}
                     </span>
                   ) : null}
-                  <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-extrabold", currentDifficulty.className)}>
+                  <span className={cn("inline-flex items-center rounded-full border font-black tracking-[0.01em]", currentDifficulty.className, ultraDenseDesktop ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-[11px]")}>
                     {currentDifficulty.text}
                   </span>
                 </div>
@@ -2043,13 +2178,13 @@ export default function AdaptiveLessonSessionPage() {
                   <p className="mt-1 text-sm font-semibold text-secondary/90">{axionTip}</p>
                 </div>
               ) : (
-                <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-                  <p className="text-xs font-semibold text-muted-foreground">Precisa de ajuda? O Axion pode dar uma dica.</p>
+                <div className={cn("flex items-center justify-between gap-2 rounded-2xl border border-[#A07850]/22 bg-[linear-gradient(180deg,rgba(255,249,240,0.58),rgba(248,238,221,0.4))] px-3 shadow-[0_4px_10px_rgba(44,30,18,0.04),inset_0_1px_0_rgba(255,255,255,0.2)]", ultraDenseDesktop ? "py-1" : denseDesktop ? "py-1.5" : "py-2")}>
+                  <p className={cn("font-bold text-[#8A5A22]", ultraDenseDesktop ? "text-[11px]" : "text-xs")}>Precisa de ajuda? O Axion pode dar uma dica.</p>
                   <Button
                     type="button"
                     size="sm"
                     variant="secondary"
-                    className="h-8 shrink-0 whitespace-nowrap rounded-xl border-b-2 px-3 text-xs leading-none shadow-[0_3px_0_rgba(10,114,113,0.28),0_6px_10px_rgba(10,76,74,0.14)] active:translate-y-[1px]"
+                    className={cn("shrink-0 whitespace-nowrap rounded-xl border-b-2 leading-none shadow-[0_3px_0_rgba(10,114,113,0.28),0_6px_10px_rgba(10,76,74,0.14)] active:translate-y-[1px]", ultraDenseDesktop ? "h-7 px-2.5 text-[11px]" : "h-8 px-3 text-xs")}
                     onClick={() => {
                       setTipVisible(true);
                       trackAprenderEvent("question_hint_opened", {
@@ -2064,14 +2199,14 @@ export default function AdaptiveLessonSessionPage() {
                   </Button>
                 </div>
               )}
-              <h2 className="text-[21px] font-extrabold leading-tight text-foreground md:text-[25px] xl:text-[28px]">{current.prompt}</h2>
+              <h2 className={cn("font-extrabold leading-tight text-foreground", denseDesktop ? (ultraDenseDesktop ? "text-[16px] md:text-[17px] xl:text-[19px]" : "text-[18px] md:text-[20px] xl:text-[22px]") : "text-[21px] md:text-[25px] xl:text-[28px]")}>{current.prompt}</h2>
               {current.type === "DRAG_DROP" || current.type === "MATCH" ? (
-                <div className="space-y-3">
-                  <div className="rounded-2xl border border-[#A07850]/40 bg-[linear-gradient(145deg,rgba(253,245,230,0.85),rgba(240,222,188,0.75))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <div className={cn(ultraDenseDesktop ? "space-y-1" : "space-y-3")}>
+                  <div className={cn("rounded-2xl border border-[#A07850]/40 bg-[linear-gradient(145deg,rgba(253,245,230,0.85),rgba(240,222,188,0.75))] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]", ultraDenseDesktop ? "p-1.5" : "p-3")}>
+                    <p className={cn("font-semibold uppercase tracking-wide text-muted-foreground", ultraDenseDesktop ? "mb-1 text-[11px]" : denseDesktop ? "mb-1.5 text-xs" : "mb-2 text-xs")}>
                       {current.type === "MATCH" ? "Cartões" : "Itens"}
                     </p>
-                    <div className="flex flex-wrap gap-2">
+                    <div className={cn("flex flex-wrap", ultraDenseDesktop ? "gap-1" : denseDesktop ? "gap-1.5" : "gap-2")}>
                       {pairs
                         .filter((pair) => !dragAssignments[pair.itemId])
                         .map((pair) => (
@@ -2080,14 +2215,14 @@ export default function AdaptiveLessonSessionPage() {
                             type="button"
                             draggable={!currentAnswered}
                             onDragStart={() => setDraggingItemId(pair.itemId)}
-                            className="rounded-full border border-[#FFBE85]/25 bg-[#FF7A2F]/10 px-3 py-1.5 text-xs font-semibold text-[#FFF4E7] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                            className={cn("rounded-full border border-[#FFBE85]/25 bg-[#FF7A2F]/10 text-xs font-semibold text-[#FFF4E7] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]", ultraDenseDesktop ? "px-2 py-0.5 text-[11px]" : denseDesktop ? "px-2.5 py-1" : "px-3 py-1.5")}
                           >
                             {pair.itemLabel}
                           </button>
                         ))}
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 gap-2">
+                  <div className={cn("grid", ultraDenseDesktop ? "grid-cols-1 gap-1" : denseDesktop && current.type === "MATCH" && pairs.length >= 4 ? "grid-cols-2 gap-1.5" : denseDesktop ? "grid-cols-1 gap-1.5" : "grid-cols-1 gap-2")}>
                     {pairs.map((pair) => {
                       const assignedId = Object.keys(dragAssignments).find((itemId) => dragAssignments[itemId] === pair.targetId);
                       const assignedLabel = pairs.find((item) => item.itemId === assignedId)?.itemLabel;
@@ -2100,18 +2235,18 @@ export default function AdaptiveLessonSessionPage() {
                             setDragAssignments((prev) => ({ ...prev, [draggingItemId]: pair.targetId }));
                             setDraggingItemId(null);
                           }}
-                          className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] p-3"
+                          className={cn("rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))]", ultraDenseDesktop ? "p-1.5" : denseDesktop ? "p-2.5" : "p-3")}
                         >
-                          <p className="text-xs font-semibold text-muted-foreground">
+                          <p className={cn("font-semibold text-muted-foreground", ultraDenseDesktop ? "text-[10px]" : "text-xs")}>
                             {current.type === "MATCH" ? `Combine com: ${pair.targetLabel}` : pair.targetLabel}
                           </p>
-                          <p className="mt-1 text-sm font-bold text-foreground">{assignedLabel || "Solte aqui"}</p>
+                          <p className={cn("mt-1 font-bold text-foreground", ultraDenseDesktop ? "text-[12px] leading-3.5" : denseDesktop ? "text-[13px] leading-4" : "text-sm")}>{assignedLabel || "Solte aqui"}</p>
                         </div>
                       );
                     })}
                   </div>
                   <Button
-                    className="w-full"
+                    className={cn("w-full", ultraDenseDesktop ? "min-h-7 rounded-[13px] text-[11px]" : denseDesktop ? "min-h-9 rounded-[16px] text-[13px]" : "")}
                     disabled={currentAnswered || !canSubmitDragDrop || energyBlocked || submitting}
                     onClick={() => void onCheckDragDrop()}
                   >
@@ -2170,7 +2305,7 @@ export default function AdaptiveLessonSessionPage() {
                     </div>
                   </div>
                   <Button
-                    className="w-full"
+                    className={cn("w-full", denseDesktop ? "min-h-9 rounded-[16px] text-[13px]" : "")}
                     disabled={currentAnswered || !canSubmitOrdering || energyBlocked || submitting}
                     onClick={() => void onCheckOrdering()}
                   >
@@ -2178,8 +2313,8 @@ export default function AdaptiveLessonSessionPage() {
                   </Button>
                 </div>
               ) : current.type === "FILL_BLANK" ? (
-                <div className="space-y-3">
-                  <div className="rounded-2xl border border-[#A07850]/40 bg-[linear-gradient(145deg,rgba(253,245,230,0.85),rgba(240,222,188,0.75))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+                <div className={cn(denseDesktop ? "space-y-2" : "space-y-3")}>
+                  <div className={cn("rounded-2xl border border-[#A07850]/40 bg-[linear-gradient(145deg,rgba(253,245,230,0.85),rgba(240,222,188,0.75))] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]", denseDesktop ? "p-2.5" : "p-3")}>
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sua resposta</p>
                     <Input
                       value={fillBlankAnswer}
@@ -2196,7 +2331,7 @@ export default function AdaptiveLessonSessionPage() {
                     />
                   </div>
                   <Button
-                    className="w-full"
+                    className={cn("w-full", denseDesktop ? "min-h-9 rounded-[16px] text-[13px]" : "")}
                     disabled={currentAnswered || !canSubmitFillBlank || energyBlocked || submitting}
                     onClick={() => void onCheckFillBlank()}
                   >
@@ -2204,7 +2339,7 @@ export default function AdaptiveLessonSessionPage() {
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-2">
+                <div className={cn("grid grid-cols-1", denseDesktop ? "gap-1.5" : "gap-2")}>
                   {options.length > 0 ? (
                     options.map((option, optionIndex) => (
                       <button
@@ -2212,7 +2347,8 @@ export default function AdaptiveLessonSessionPage() {
                         type="button"
                         aria-pressed={selectedOption === option.id}
                         className={cn(
-                          "group flex min-h-[52px] items-center justify-between rounded-2xl border px-3 py-2.5 text-left text-sm font-semibold transition-transform transition-shadow transition-opacity duration-150 ease-out xl:min-h-[56px] xl:py-3",
+                          "group flex items-center justify-between rounded-2xl border px-3 text-left text-sm font-semibold transition-transform transition-shadow transition-opacity duration-150 ease-out",
+                          denseDesktop ? "min-h-[44px] py-2 xl:min-h-[46px] xl:py-2" : "min-h-[52px] py-2.5 xl:min-h-[56px] xl:py-3",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-[#18312E]",
                           "active:scale-[0.985]",
                           selectedOption === option.id
@@ -2228,7 +2364,7 @@ export default function AdaptiveLessonSessionPage() {
                           <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#A07850]/45 bg-[rgba(160,120,80,0.14)] text-[11px] font-black text-[#5C4A3A] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
                             {OPTION_LETTERS[optionIndex] ?? String(optionIndex + 1)}
                           </span>
-                          <span className="text-[15px] font-bold leading-5 text-inherit">{option.label}</span>
+                          <span className={cn("font-bold text-inherit", denseDesktop ? "text-[14px] leading-4.5" : "text-[15px] leading-5")}>{option.label}</span>
                         </span>
                         {currentAnswered ? (
                           option.id === correctOptionId ? (
@@ -2251,24 +2387,28 @@ export default function AdaptiveLessonSessionPage() {
             {feedback ? (
               <div
                 className={cn(
-                  "rounded-2xl border px-3 py-2 text-sm font-semibold leading-snug break-words lesson-feedback",
-                  feedback.tone === "success" ? "border-secondary/40 bg-secondary/10 text-secondary" : "border-accent/40 bg-accent/10 text-accent-foreground",
+                  "rounded-2xl border break-words lesson-feedback shadow-[0_8px_18px_rgba(44,30,18,0.12),inset_0_1px_0_rgba(255,255,255,0.38)]",
+                  ultraDenseDesktop ? "px-2.5 py-1.5 text-[12px] font-extrabold leading-[1.35]" : "px-3 py-2 text-sm font-bold leading-snug",
+                  feedback.tone === "success"
+                    ? "border-emerald-400/55 bg-[linear-gradient(180deg,rgba(236,253,245,0.98),rgba(187,247,208,0.92))] text-[#166534]"
+                    : "border-orange-400/55 bg-[linear-gradient(180deg,rgba(255,247,237,0.98),rgba(254,215,170,0.92))] text-[#9A3412]",
                 )}
               >
                 {feedback.message}
               </div>
             ) : null}
 
-            <div className="flex gap-2">
+            <div className={cn("flex gap-2", denseDesktop ? (ultraDenseDesktop ? "mt-auto pt-0" : "mt-auto pt-1") : "")}>
               <Button
                 variant="secondary"
-                className="w-full border border-[#A07850]/45 bg-[linear-gradient(145deg,rgba(253,245,230,0.88),rgba(240,222,188,0.78))] text-[#2C1E16] shadow-[0_4px_12px_rgba(44,30,18,0.12),inset_0_1px_0_rgba(255,255,255,0.65)] transition-transform transition-shadow transition-opacity duration-150 ease-out hover:border-[#A07850]/70 hover:bg-[linear-gradient(145deg,rgba(255,248,235,0.95),rgba(245,228,195,0.9))] disabled:opacity-45"
+                className={cn("w-full border border-[#A07850]/45 bg-[linear-gradient(145deg,rgba(253,245,230,0.88),rgba(240,222,188,0.78))] text-[#2C1E16] shadow-[0_4px_12px_rgba(44,30,18,0.12),inset_0_1px_0_rgba(255,255,255,0.65)] transition-transform transition-shadow transition-opacity duration-150 ease-out hover:border-[#A07850]/70 hover:bg-[linear-gradient(145deg,rgba(255,248,235,0.95),rgba(245,228,195,0.9))] disabled:opacity-45", ultraDenseDesktop ? "min-h-7 rounded-[13px] px-2.5 text-[11px]" : denseDesktop ? "min-h-9 rounded-[16px] px-3 text-[13px]" : "")}
                 disabled={!canGoPrevious}
                 onClick={() => {
                   setIndex((prev) => Math.max(0, prev - 1));
                   setQuestionStartedAt(Date.now());
                   setFeedback(null);
                   setSelectedOption(null);
+                  setFillBlankAnswer("");
                   setDragAssignments({});
                   setOrderingIds([]);
                 }}
@@ -2278,6 +2418,7 @@ export default function AdaptiveLessonSessionPage() {
               <Button
                 className={cn(
                   "w-full bg-[#FF7A45] text-white shadow-[0_4px_0_rgba(212,91,49,0.7)] transition-transform transition-shadow transition-opacity duration-150 ease-out hover:brightness-105 active:translate-y-[1px] active:shadow-[0_2px_0_rgba(212,91,49,0.75)]",
+                  ultraDenseDesktop ? "min-h-7 rounded-[13px] px-2.5 text-[11px]" : denseDesktop ? "min-h-9 rounded-[16px] px-3 text-[13px]" : "",
                   shouldHighlightFinish ? "ring-2 ring-secondary/35 ring-offset-2 ring-offset-[#18312E]" : "",
                   canGoNext ? "opacity-60 saturate-75" : "",
                 )}

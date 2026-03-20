@@ -1056,6 +1056,13 @@ def _build_question_item(
         age_group=skill_age_group,
     )
     inferred_type = _infer_item_type_from_metadata(metadata, question.type)
+    if inferred_type == QuestionType.ORDERING:
+        metadata = _normalize_ordering_metadata(metadata)
+    metadata = _diversify_metadata_layout(
+        metadata=metadata,
+        item_type=inferred_type,
+        seed_text=f"question:{question.id}:{variant.id if variant is not None else 'base'}:{prompt}",
+    )
     return NextQuestionItem(
         question_id=str(question.id),
         template_id=None,
@@ -1090,6 +1097,127 @@ def _infer_item_type_from_metadata(metadata: dict[str, Any], fallback: QuestionT
                 return QuestionType.TRUE_FALSE
         return QuestionType.MCQ
     return fallback
+
+
+def _normalize_ordering_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+    items_raw = metadata.get("items")
+    if not isinstance(items_raw, list):
+        sequence_raw = metadata.get("sequence")
+        items_raw = sequence_raw if isinstance(sequence_raw, list) else None
+    if not isinstance(items_raw, list) or len(items_raw) == 0:
+        return metadata
+
+    correct_order_tokens: list[str] = []
+    correct_order_raw = metadata.get("correctOrder")
+    if isinstance(correct_order_raw, list):
+        for entry in correct_order_raw:
+            if isinstance(entry, dict):
+                token = str(entry.get("label") or entry.get("id") or "").strip()
+            else:
+                token = str(entry).strip()
+            if token:
+                correct_order_tokens.append(token.casefold())
+
+    normalized_items: list[dict[str, Any]] = []
+    for index, entry in enumerate(items_raw):
+        item = entry if isinstance(entry, dict) else {}
+        fallback_id = f"ord-{index + 1}"
+        label = str(
+            item.get("label")
+            or item.get("text")
+            or (entry if not isinstance(entry, dict) else fallback_id)
+        ).strip()
+        item_id = str(item.get("id") or fallback_id).strip() or fallback_id
+        order_value = item.get("correctOrder", item.get("order", item.get("position")))
+        if isinstance(order_value, (int, float)) and int(order_value) > 0:
+            correct_order = int(order_value)
+        else:
+            token = (label or item_id).casefold()
+            mapped_index = correct_order_tokens.index(token) if token in correct_order_tokens else -1
+            correct_order = mapped_index + 1 if mapped_index >= 0 else index + 1
+        normalized_items.append(
+            {
+                "id": item_id,
+                "label": label,
+                "correctOrder": correct_order,
+            }
+        )
+
+    normalized_correct_order = [
+        item["label"]
+        for item in sorted(
+            normalized_items,
+            key=lambda candidate: (int(candidate["correctOrder"]), str(candidate["label"])),
+        )
+    ]
+
+    return {
+        **metadata,
+        "items": normalized_items,
+        "correctOrder": normalized_correct_order,
+    }
+
+
+def _seeded_shuffle(values: list[Any], *, seed_text: str) -> list[Any]:
+    if len(values) <= 1:
+        return list(values)
+    rng = SeededRng(seed_text)
+    shuffled = list(values)
+    for idx in range(len(shuffled) - 1, 0, -1):
+        swap_idx = rng.randint(0, idx)
+        shuffled[idx], shuffled[swap_idx] = shuffled[swap_idx], shuffled[idx]
+    if shuffled == list(values):
+        rotate_by = rng.randint(1, len(shuffled) - 1)
+        shuffled = shuffled[rotate_by:] + shuffled[:rotate_by]
+    return shuffled
+
+
+def _is_trivial_ordering_layout(candidate_ids: list[str], correct_ids: list[str]) -> bool:
+    if candidate_ids == correct_ids:
+        return True
+    if len(candidate_ids) != len(correct_ids):
+        return False
+    mismatches = [index for index, (candidate, correct) in enumerate(zip(candidate_ids, correct_ids, strict=True)) if candidate != correct]
+    if len(mismatches) != 2:
+        return False
+    left, right = mismatches
+    return (
+        right == left + 1
+        and candidate_ids[left] == correct_ids[right]
+        and candidate_ids[right] == correct_ids[left]
+    )
+
+
+def _diversify_metadata_layout(
+    *,
+    metadata: dict[str, Any],
+    item_type: QuestionType,
+    seed_text: str,
+) -> dict[str, Any]:
+    if item_type == QuestionType.ORDERING and isinstance(metadata.get("items"), list):
+        raw_items = [item for item in metadata.get("items", []) if isinstance(item, dict)]
+        if len(raw_items) >= 2:
+            correct_ids = [
+                str(item.get("id") or "")
+                for item in sorted(raw_items, key=lambda item: int(item.get("correctOrder", 0) or 0))
+            ]
+            diversified_items = list(raw_items)
+            for attempt in range(6):
+                candidate = _seeded_shuffle(diversified_items, seed_text=f"{seed_text}:ordering:{attempt}")
+                candidate_ids = [str(item.get("id") or "") for item in candidate]
+                if not _is_trivial_ordering_layout(candidate_ids, correct_ids):
+                    return {**metadata, "items": candidate}
+            fallback = list(reversed(diversified_items))
+            fallback_ids = [str(item.get("id") or "") for item in fallback]
+            if not _is_trivial_ordering_layout(fallback_ids, correct_ids):
+                return {**metadata, "items": fallback}
+    if item_type in {QuestionType.MCQ, QuestionType.TRUE_FALSE, QuestionType.FILL_BLANK}:
+        key = "options" if isinstance(metadata.get("options"), list) else "choices" if isinstance(metadata.get("choices"), list) else None
+        if key is not None:
+            values = [item for item in metadata.get(key, []) if isinstance(item, dict)]
+            if len(values) >= 2:
+                return {**metadata, key: _seeded_shuffle(values, seed_text=f"{seed_text}:{key}")}
+    return metadata
 
 
 def _creates_type_streak(items: list[NextQuestionItem], candidate_type: QuestionType, max_streak: int = 2) -> bool:
@@ -1219,6 +1347,13 @@ def _build_template_item(*, template: QuestionTemplate, generated_variant: Gener
             }
 
     inferred_type = _infer_item_type_from_metadata(metadata, QuestionType.MCQ)
+    if inferred_type == QuestionType.ORDERING:
+        metadata = _normalize_ordering_metadata(metadata)
+    metadata = _diversify_metadata_layout(
+        metadata=metadata,
+        item_type=inferred_type,
+        seed_text=f"template:{template.id}:{generated_variant.id}:{metadata.get('signature') or prompt}",
+    )
 
     # Diversify interaction format for arithmetic templates to avoid quiz-only sessions.
     if template.template_type in {QuestionTemplateType.MATH_ARITH, QuestionTemplateType.MATH_WORDPROB}:
@@ -1278,6 +1413,12 @@ def _build_template_item(*, template: QuestionTemplate, generated_variant: Gener
                 ],
             }
             inferred_type = QuestionType.ORDERING
+
+    metadata = _diversify_metadata_layout(
+        metadata=metadata,
+        item_type=inferred_type,
+        seed_text=f"template-final:{template.id}:{generated_variant.id}:{metadata.get('signature') or prompt}",
+    )
 
     return NextQuestionItem(
         question_id=None,

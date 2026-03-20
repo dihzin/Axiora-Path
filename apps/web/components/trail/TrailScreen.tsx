@@ -18,6 +18,16 @@ import { cn } from "@/lib/utils";
 import type { LearningPathResponse } from "@/lib/api/client";
 import { useTrailData, type SubjectAreaLabel } from "@/hooks/useTrailData";
 
+function normalizeLessonMissionTitle(title: string, lessonOrder: number): string {
+  const safeTitle = title.trim();
+  if (!safeTitle) return `Missão ${lessonOrder}`;
+  const normalizedOrder = Math.max(1, lessonOrder);
+  if (/miss[aã]o\s+\d+/i.test(safeTitle)) {
+    return safeTitle.replace(/miss[aã]o\s+\d+/i, `Missão ${normalizedOrder}`);
+  }
+  return safeTitle;
+}
+
 function getDomainData(path: LearningPathResponse, areaLabel: SubjectAreaLabel): TrailDomainSectionData {
   let currentAssigned = false;
   const units: TrailUnit[] = path.units.map((unit) => {
@@ -41,7 +51,7 @@ function getDomainData(path: LearningPathResponse, areaLabel: SubjectAreaLabel):
       return {
         id: `lesson-${lesson.id}`,
         lessonId: lesson.id,
-        title: lesson.title,
+        title: normalizeLessonMissionTitle(lesson.title, lesson.order),
         order: lesson.order,
         unlocked: lesson.unlocked,
         completed: lesson.completed,
@@ -101,7 +111,7 @@ function buildProgressionSectionsFromPath(path: LearningPathResponse | null): Ma
         difficulty: lesson.difficulty ?? "easy",
         completed: lesson.completed,
         stars: lesson.starsEarned ?? 0,
-        title: lesson.title,
+        title: normalizeLessonMissionTitle(lesson.title, lesson.order),
         subtitle: `Lição ${lesson.order}`,
         xp: lesson.xpReward ?? 30,
         status,

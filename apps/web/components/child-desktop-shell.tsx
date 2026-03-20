@@ -83,7 +83,7 @@ export function ChildDesktopShell({
           className={
             menuSkin === "trail"
               ? cn(
-                  "hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:flex-col lg:gap-1 lg:border-r-[3px] lg:border-r-[#6D4C41]/70 lg:border-t lg:border-t-[#FFB703]/12 lg:bg-[linear-gradient(180deg,rgba(42,24,16,0.78)_0%,rgba(30,14,8,0.72)_100%)] lg:shadow-[inset_-1px_0_0_rgba(255,183,3,0.06)] lg:backdrop-blur-xl",
+                  "hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:flex-col lg:gap-1 lg:border-r lg:border-white/8 lg:bg-[linear-gradient(180deg,rgba(6,18,39,0.46)_0%,rgba(4,13,30,0.42)_100%)] lg:backdrop-blur-md",
                   dense ? "lg:w-[184px] lg:px-2.5 lg:py-4" : "lg:w-[208px] lg:px-3 lg:py-5",
                 )
               : "hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-[208px] lg:flex-col lg:gap-1 lg:border-r-[3px] lg:border-r-[#5C4033] lg:bg-[linear-gradient(180deg,#3E2723_0%,#2A1810_100%)] lg:px-3 lg:py-5 lg:shadow-[4px_0_24px_rgba(0,0,0,0.4),inset_-1px_0_0_rgba(255,183,3,0.08)]"
@@ -93,7 +93,7 @@ export function ChildDesktopShell({
               <div
                 className={
                   menuSkin === "trail"
-                    ? cn("rounded-2xl border border-[#FFB703]/20 bg-[rgba(42,24,16,0.72)] shadow-[0_0_18px_rgba(255,183,3,0.12),inset_0_1px_0_rgba(255,255,255,0.06)]", dense ? "p-1" : "p-1.5")
+                    ? cn("rounded-2xl bg-[#12213D]/80 shadow-[inset_0_1px_12px_rgba(0,0,0,0.35)]", dense ? "p-1" : "p-1.5")
                     : "rounded-2xl border border-[#6D4C41]/60 bg-[linear-gradient(180deg,#4A2E22,#321A10)] p-1.5 shadow-[0_10px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,183,3,0.10)]"
                 }
               >
@@ -139,7 +139,7 @@ export function ChildDesktopShell({
           <div
             className={
               isTrailSkin
-                ? cn("mx-auto w-full max-w-sm px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:max-w-none lg:overflow-y-auto lg:pb-10", dense ? "lg:px-0.5 lg:pt-2" : "lg:px-1 lg:pt-3")
+                ? cn("mx-auto w-full max-w-sm px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:max-w-none lg:overflow-hidden lg:pb-6", dense ? "lg:px-0.5 lg:pt-2" : "lg:px-1 lg:pt-3")
                 : "mx-auto w-full max-w-sm px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:max-w-[820px] lg:px-0 lg:pb-10 lg:pt-5 xl:max-w-[880px]"
             }
           >

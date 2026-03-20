@@ -16,6 +16,16 @@ from app.services.adaptive_learning import (
 )
 
 
+def _ordering_is_trivial_adjacent_swap(labels: list[str], correct_order: list[str]) -> bool:
+    if labels == correct_order:
+        return True
+    mismatches = [index for index, (label, correct) in enumerate(zip(labels, correct_order, strict=True)) if label != correct]
+    if len(mismatches) != 2:
+        return False
+    left, right = mismatches
+    return right == left + 1 and labels[left] == correct_order[right] and labels[right] == correct_order[left]
+
+
 def test_build_template_item_pt_syllables_does_not_raise_unbound_variables() -> None:
     template = QuestionTemplate(
         id="00000000-0000-0000-0000-000000000101",
@@ -106,6 +116,13 @@ def test_build_question_item_infers_ordering_type_from_metadata() -> None:
     item = _build_question_item(question=question, variant=variant)
 
     assert item.type == QuestionType.ORDERING
+    assert item.metadata.get("correctOrder") == ["no parque", "Lia brincou", "com seus amigos"]
+    items = item.metadata.get("items")
+    assert isinstance(items, list) and len(items) == 3
+    assert all(isinstance(entry, dict) for entry in items)
+    assert sorted(int(entry.get("correctOrder")) for entry in items) == [1, 2, 3]
+    labels = [str(entry.get("label")) for entry in items]
+    assert not _ordering_is_trivial_adjacent_swap(labels, item.metadata["correctOrder"])
 
 
 def test_build_template_item_pt_sentence_order_creates_ordering_metadata() -> None:
@@ -136,8 +153,45 @@ def test_build_template_item_pt_sentence_order_creates_ordering_metadata() -> No
     item = _build_template_item(template=template, generated_variant=variant)
 
     assert item.type == QuestionType.ORDERING
-    assert item.metadata.get("items")
     assert item.metadata.get("correctOrder")
+    items = item.metadata.get("items")
+    assert isinstance(items, list) and len(items) == 3
+    assert all(isinstance(entry, dict) for entry in items)
+    assert [entry.get("label") for entry in sorted(items, key=lambda entry: int(entry["correctOrder"]))] == item.metadata.get("correctOrder")
+    labels = [str(entry.get("label")) for entry in items]
+    assert not _ordering_is_trivial_adjacent_swap(labels, list(item.metadata["correctOrder"]))
+
+
+def test_build_question_item_normalizes_ordering_sequence_without_embedded_positions() -> None:
+    question = Question(
+        id="00000000-0000-0000-0000-000000000107",
+        skill_id="00000000-0000-0000-0000-000000000207",
+        lesson_id=23,
+        type=QuestionType.MCQ,
+        difficulty=QuestionDifficulty.EASY,
+        prompt="Organize os numeros em ordem crescente.",
+        explanation=None,
+        metadata_json={
+            "items": ["7", "4", "5", "8"],
+            "correctOrder": ["4", "5", "7", "8"],
+        },
+        tags=[],
+    )
+    variant = QuestionVariant(
+        id="00000000-0000-0000-0000-000000000307",
+        question_id=question.id,
+        variant_data={},
+    )
+
+    item = _build_question_item(question=question, variant=variant)
+
+    assert item.type == QuestionType.ORDERING
+    assert item.metadata.get("correctOrder") == ["4", "5", "7", "8"]
+    items = item.metadata.get("items")
+    assert isinstance(items, list) and len(items) == 4
+    assert sorted(int(entry.get("correctOrder")) for entry in items) == [1, 2, 3, 4]
+    labels = [str(entry.get("label")) for entry in items]
+    assert not _ordering_is_trivial_adjacent_swap(labels, item.metadata["correctOrder"])
 
 
 def test_build_question_item_merges_question_metadata_with_variant_metadata() -> None:
@@ -171,6 +225,7 @@ def test_build_question_item_merges_question_metadata_with_variant_metadata() ->
     assert isinstance(item.metadata.get("options"), list)
     assert len(item.metadata["options"]) == 3
     assert item.metadata.get("correctOptionId") == "a"
+    assert {entry["id"] for entry in item.metadata["options"]} == {"a", "b", "c"}
 
 
 def test_build_template_item_pt_syllables_creates_options() -> None:
@@ -205,6 +260,38 @@ def test_build_template_item_pt_syllables_creates_options() -> None:
     options = item.metadata.get("options")
     assert isinstance(options, list) and len(options) == 3
     assert {"3", "4"}.intersection({entry.get("label") for entry in options if isinstance(entry, dict)})
+
+
+def test_build_question_item_true_false_not_always_renders_correct_answer_first() -> None:
+    question = Question(
+        id="00000000-0000-0000-0000-000000000108",
+        skill_id="00000000-0000-0000-0000-000000000208",
+        lesson_id=24,
+        type=QuestionType.TRUE_FALSE,
+        difficulty=QuestionDifficulty.EASY,
+        prompt="2 + 2 = 4. Essa afirmação está correta?",
+        explanation=None,
+        metadata_json={
+            "options": [
+                {"id": "true", "label": "Verdadeiro"},
+                {"id": "false", "label": "Falso"},
+            ],
+            "correctOptionId": "true",
+        },
+        tags=[],
+    )
+    variant = QuestionVariant(
+        id="00000000-0000-0000-0000-000000000308",
+        question_id=question.id,
+        variant_data={"prompt": question.prompt, "metadata": {}},
+    )
+
+    item = _build_question_item(question=question, variant=variant)
+
+    options = item.metadata.get("options")
+    assert isinstance(options, list) and len(options) == 2
+    assert item.metadata.get("correctOptionId") == "true"
+    assert str(options[0].get("id")) != "true"
 
 
 def test_effective_question_difficulty_caps_variant_override_for_age_group() -> None:

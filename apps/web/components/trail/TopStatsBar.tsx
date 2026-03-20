@@ -66,6 +66,7 @@ export function TopStatsBar({
   const hasEnergy = energyCurrent >= 0;
   const formatInt = (n: number) => new Intl.NumberFormat("pt-BR").format(n);
   const denseGlobal = variant === "global" && density === "dense";
+  const topBarShellClass = "border border-[#A07850]/42 bg-[linear-gradient(145deg,rgba(253,245,230,0.90),rgba(240,222,188,0.82))] backdrop-blur-md shadow-[0_10px_24px_rgba(44,30,18,0.16),inset_0_1px_0_rgba(255,255,255,0.70)]";
 
   // ── Skeleton state ─────────────────────────────────────────────────────────
   if (isLoading && variant === "global") {
@@ -73,8 +74,9 @@ export function TopStatsBar({
       <div
         className={cn(
           denseGlobal
-            ? "relative z-30 mx-auto flex h-[46px] w-full items-center justify-between gap-2 rounded-[13px] border-2 border-[#6D4C41]/70 bg-[linear-gradient(180deg,rgba(42,24,16,0.92),rgba(30,14,8,0.90))] px-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.18),0_0_0_1px_rgba(255,183,3,0.06),inset_0_1px_0_rgba(255,183,3,0.10)]"
-            : "relative z-30 mx-auto flex h-[52px] w-full items-center justify-between gap-3 rounded-[14px] border-2 border-[#6D4C41]/70 bg-[linear-gradient(180deg,rgba(42,24,16,0.92),rgba(30,14,8,0.90))] px-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.18),0_0_0_1px_rgba(255,183,3,0.06),inset_0_1px_0_rgba(255,183,3,0.10)]",
+            ? "relative z-30 mx-auto flex h-[46px] w-full items-center justify-between gap-2 rounded-[13px] px-2.5"
+            : "relative z-30 mx-auto flex h-[52px] w-full items-center justify-between gap-3 rounded-[14px] px-3.5",
+          topBarShellClass,
           className,
         )}
         aria-busy="true"
@@ -98,7 +100,7 @@ export function TopStatsBar({
   if (isLoading && variant === "compact") {
     return (
       <div className={cn("relative z-20 mx-auto flex w-full items-center justify-between gap-2", className)} aria-busy="true">
-        <div className="flex h-11 items-center gap-2 rounded-[20px] border-2 border-[#6D4C41]/70 bg-[linear-gradient(180deg,rgba(42,24,16,0.88),rgba(30,14,8,0.84))] px-2 py-1.5">
+        <div className={cn("flex h-11 items-center gap-2 rounded-[20px] px-2 py-1.5", topBarShellClass)}>
           <SkeletonPill width={72} />
           <SkeletonPill width={72} />
           <SkeletonPill width={64} />
@@ -112,8 +114,9 @@ export function TopStatsBar({
       <div
         className={cn(
           denseGlobal
-            ? "relative z-30 mx-auto flex h-[46px] w-full items-center justify-between gap-2 rounded-[13px] border-2 border-[#6D4C41]/70 bg-[linear-gradient(180deg,rgba(42,24,16,0.92),rgba(30,14,8,0.90))] px-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.18),0_0_0_1px_rgba(255,183,3,0.06),inset_0_1px_0_rgba(255,183,3,0.10)]"
-            : "relative z-30 mx-auto flex h-[52px] w-full items-center justify-between gap-3 rounded-[14px] border-2 border-[#6D4C41]/70 bg-[linear-gradient(180deg,rgba(42,24,16,0.92),rgba(30,14,8,0.90))] px-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.18),0_0_0_1px_rgba(255,183,3,0.06),inset_0_1px_0_rgba(255,183,3,0.10)]",
+            ? "relative z-30 mx-auto flex h-[46px] w-full items-center justify-between gap-2 rounded-[13px] px-2.5"
+            : "relative z-30 mx-auto flex h-[52px] w-full items-center justify-between gap-3 rounded-[14px] px-3.5",
+          topBarShellClass,
           className,
         )}
       >
@@ -142,7 +145,7 @@ export function TopStatsBar({
         </div>
 
         {/* Divider */}
-        <span aria-hidden className={cn("w-px shrink-0 bg-[#8B6642]/30", denseGlobal ? "h-4" : "h-5")} />
+        <span aria-hidden className={cn("w-px shrink-0 bg-[#A07850]/24", denseGlobal ? "h-4" : "h-5")} />
 
         {/* Right: economy + actions */}
         <div className={cn("flex min-w-0 items-center", denseGlobal ? "gap-1" : "gap-1.5")}>
@@ -196,7 +199,7 @@ export function TopStatsBar({
   // ── Compact (mobile) variant ───────────────────────────────────────────────
   return (
     <div className={cn("relative z-20 mx-auto flex w-full items-center justify-between gap-2", className)}>
-      <div className="flex h-11 flex-wrap items-center gap-2 rounded-[20px] border-2 border-[#6D4C41]/70 bg-[linear-gradient(180deg,rgba(42,24,16,0.88),rgba(30,14,8,0.84))] px-2 py-1.5 shadow-[0_10px_24px_rgba(0,0,0,0.32),0_0_0_1px_rgba(255,183,3,0.06),inset_0_1px_0_rgba(255,183,3,0.08)]">
+      <div className={cn("flex h-11 flex-wrap items-center gap-2 rounded-[20px] px-2 py-1.5", topBarShellClass)}>
         <StatItem
           label="dias"
           value={safeStreak}
@@ -243,7 +246,7 @@ function SkeletonPill({ width }: { width: number }) {
   return (
     <div
       aria-hidden
-      className="h-[34px] animate-pulse rounded-full bg-[rgba(255,183,3,0.08)]"
+      className="h-[34px] animate-pulse rounded-full border border-[#A07850]/24 bg-[rgba(160,120,80,0.10)]"
       style={{ width }}
     />
   );
@@ -253,7 +256,7 @@ function SkeletonCircle() {
   return (
     <div
       aria-hidden
-      className="h-[34px] w-[34px] animate-pulse rounded-full bg-[rgba(255,183,3,0.08)]"
+      className="h-[34px] w-[34px] animate-pulse rounded-full border border-[#A07850]/24 bg-[rgba(160,120,80,0.10)]"
     />
   );
 }
@@ -279,24 +282,24 @@ function HudPill({
   return (
     <div
       className={cn(
-        "group relative inline-flex h-[34px] select-none items-center gap-1.5 rounded-full border border-[#8B6642]/50 bg-[rgba(44,24,8,0.80)] px-3.5 text-[13px] font-bold leading-none",
-        "shadow-[inset_0_1px_0_rgba(255,183,3,0.10),0_0_8px_rgba(255,183,3,0.06)]",
+        "group relative inline-flex h-[34px] select-none items-center gap-1.5 rounded-full border border-[#A07850]/36 bg-[linear-gradient(145deg,rgba(253,245,230,0.96),rgba(240,222,188,0.86))] px-3.5 text-[13px] font-bold leading-none",
+        "shadow-[inset_0_1px_0_rgba(255,255,255,0.68),0_6px_14px_rgba(44,30,18,0.10)]",
         "transition-[border-color,background-color,box-shadow] duration-150",
-        "hover:border-[#8B6642]/80 hover:bg-[rgba(60,34,12,0.88)] hover:shadow-[inset_0_1px_0_rgba(255,183,3,0.16),0_0_12px_rgba(255,183,3,0.10)]",
+        "hover:border-[#A07850]/58 hover:bg-[linear-gradient(145deg,rgba(255,248,235,0.98),rgba(245,228,195,0.92))] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.74),0_8px_16px_rgba(44,30,18,0.12)]",
         className,
       )}
     >
       {icon}
       <span
         className={cn(
-          "text-[#FFF3CC] transition-[filter,transform] duration-300 ease-out",
+          "text-[#2C1E16] transition-[filter,transform] duration-300 ease-out",
           pulsing && "brightness-[1.7] scale-[1.08]",
         )}
       >
         {value}
       </span>
       {label ? (
-        <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[#C8A882]/80">{label}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[#8F6F4E]">{label}</span>
       ) : null}
       {tooltip ? <Tooltip text={tooltip} /> : null}
     </div>
@@ -321,7 +324,7 @@ function ActionPill({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="group relative inline-flex h-[34px] w-[34px] select-none items-center justify-center rounded-full border border-[#8B6642]/40 bg-[rgba(44,24,8,0.80)] text-[#C8A882] shadow-[inset_0_1px_0_rgba(255,183,3,0.08)] transition-[border-color,background-color,box-shadow,transform,color] duration-150 hover:border-[#8B6642]/65 hover:bg-[rgba(60,34,12,0.88)] hover:text-[#FFF3CC] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFB703]/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#1A0D05]"
+      className="group relative inline-flex h-[34px] w-[34px] select-none items-center justify-center rounded-full border border-[#A07850]/36 bg-[linear-gradient(145deg,rgba(253,245,230,0.96),rgba(240,222,188,0.86))] text-[#7A6149] shadow-[inset_0_1px_0_rgba(255,255,255,0.68),0_6px_14px_rgba(44,30,18,0.08)] transition-[border-color,background-color,box-shadow,transform,color] duration-150 hover:border-[#A07850]/58 hover:bg-[linear-gradient(145deg,rgba(255,248,235,0.98),rgba(245,228,195,0.92))] hover:text-[#2C1E16] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D8A44D]/38 focus-visible:ring-offset-1 focus-visible:ring-offset-[#F3E4C8]"
     >
       {icon}
       {alert ? (
@@ -353,20 +356,20 @@ function StatItem({
   const pulsing = useChangePulse(watchValue ?? value);
   return (
     <div
-      className="group relative inline-flex cursor-default select-none items-center gap-1.5 rounded-full border border-[#8B6642]/50 bg-[rgba(44,24,8,0.72)] px-3 py-1.5 leading-none shadow-[inset_0_1px_0_rgba(255,183,3,0.10),0_0_8px_rgba(255,183,3,0.06)] transition-[border-color,background-color] duration-150 hover:border-[#8B6642]/75 hover:bg-[rgba(60,34,12,0.80)]"
+      className="group relative inline-flex cursor-default select-none items-center gap-1.5 rounded-full border border-[#A07850]/36 bg-[linear-gradient(145deg,rgba(253,245,230,0.96),rgba(240,222,188,0.86))] px-3 py-1.5 leading-none shadow-[inset_0_1px_0_rgba(255,255,255,0.68),0_6px_14px_rgba(44,30,18,0.08)] transition-[border-color,background-color] duration-150 hover:border-[#A07850]/58 hover:bg-[linear-gradient(145deg,rgba(255,248,235,0.98),rgba(245,228,195,0.92))]"
       aria-label={tooltip ?? label}
     >
       {icon}
       <div className="inline-flex items-baseline gap-1">
         <span
           className={cn(
-            "text-[15px] font-bold leading-none text-[#FFF3CC] transition-[filter,transform] duration-300 ease-out",
+            "text-[15px] font-bold leading-none text-[#2C1E16] transition-[filter,transform] duration-300 ease-out",
             pulsing && "brightness-[1.7] scale-[1.08]",
           )}
         >
           {value}
         </span>
-        <span className="text-[10px] font-semibold uppercase leading-none tracking-[0.08em] text-[#C8A882]/80">
+        <span className="text-[10px] font-semibold uppercase leading-none tracking-[0.08em] text-[#8F6F4E]">
           {label}
         </span>
       </div>
@@ -385,8 +388,8 @@ function Tooltip({ text }: { text: string }) {
       aria-hidden
       className={cn(
         "pointer-events-none invisible absolute bottom-full left-1/2 z-50 mb-2.5 -translate-x-1/2 whitespace-nowrap",
-        "rounded-[8px] bg-[#1A0D05] px-2.5 py-[7px] text-[11px] font-medium leading-none text-[#FFF3CC]",
-        "shadow-[0_4px_14px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,183,3,0.08)]",
+        "rounded-[8px] border border-[#A07850]/34 bg-[linear-gradient(145deg,rgba(253,245,230,0.98),rgba(240,222,188,0.95))] px-2.5 py-[7px] text-[11px] font-medium leading-none text-[#2C1E16]",
+        "shadow-[0_10px_24px_rgba(44,30,18,0.16),inset_0_1px_0_rgba(255,255,255,0.72)]",
         // Delayed entry (200ms), instant exit
         "opacity-0 delay-0 transition-[opacity] duration-150",
         "group-hover:visible group-hover:opacity-100 group-hover:delay-[200ms]",
@@ -396,7 +399,7 @@ function Tooltip({ text }: { text: string }) {
       {text}
       <span
         aria-hidden
-        className="absolute left-1/2 top-full -translate-x-1/2 border-[5px] border-transparent border-t-[#1A0D05]"
+        className="absolute left-1/2 top-full -translate-x-1/2 border-[5px] border-transparent border-t-[#F0DEBC]"
       />
     </div>
   );
@@ -453,7 +456,7 @@ function ProfileMenuButton({ router }: { router: ReturnType<typeof useRouter> })
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((v) => !v)}
-        className="group relative inline-flex h-[34px] w-[34px] select-none items-center justify-center rounded-full border border-[#FFB703]/45 bg-[linear-gradient(135deg,rgba(92,64,33,0.9),rgba(62,39,19,0.9))] text-[#FFF3CC] shadow-[0_0_12px_rgba(255,183,3,0.18),inset_0_1px_0_rgba(255,255,255,0.10)] transition-[border-color,box-shadow,transform] duration-150 hover:border-[#FFB703]/70 hover:shadow-[0_0_20px_rgba(255,183,3,0.32)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFB703]/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#1A0D05]"
+        className="group relative inline-flex h-[34px] w-[34px] select-none items-center justify-center rounded-full border border-[#A07850]/42 bg-[linear-gradient(145deg,rgba(253,245,230,0.97),rgba(240,222,188,0.90))] text-[#7A6149] shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_6px_14px_rgba(44,30,18,0.10)] transition-[border-color,box-shadow,transform,background-color,color] duration-150 hover:border-[#A07850]/60 hover:bg-[linear-gradient(145deg,rgba(255,248,235,0.99),rgba(245,228,195,0.94))] hover:text-[#2C1E16] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D8A44D]/38 focus-visible:ring-offset-1 focus-visible:ring-offset-[#F3E4C8]"
       >
         <UserRound className="h-[18px] w-[18px]" strokeWidth={1.8} />
         {!open ? <Tooltip text="Meu perfil" /> : null}
@@ -465,8 +468,8 @@ function ProfileMenuButton({ router }: { router: ReturnType<typeof useRouter> })
         aria-label="Menu do perfil"
         className={cn(
           "absolute right-0 top-[calc(100%+6px)] z-50 w-[168px] overflow-hidden rounded-[12px]",
-          "border border-[#6D4C41]/60 bg-[rgba(26,12,4,0.97)] backdrop-blur-sm",
-          "shadow-[0_8px_24px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,183,3,0.06)]",
+          "border border-[#A07850]/34 bg-[linear-gradient(145deg,rgba(253,245,230,0.98),rgba(240,222,188,0.95))] backdrop-blur-md",
+          "shadow-[0_12px_28px_rgba(44,30,18,0.16),inset_0_1px_0_rgba(255,255,255,0.72)]",
           "origin-top-right transition-[opacity,transform,visibility] duration-150",
           open
             ? "visible translate-y-0 scale-100 opacity-100"
@@ -491,7 +494,7 @@ function ProfileMenuButton({ router }: { router: ReturnType<typeof useRouter> })
           onClick={() => navigate("/child/settings")}
           tabIndex={open ? 0 : -1}
         />
-        <div className="mx-3 my-1 border-t border-[#6D4C41]/40" />
+        <div className="mx-3 my-1 border-t border-[#A07850]/18" />
         <ProfileMenuItem
           icon={<LogOut className="h-3.5 w-3.5" strokeWidth={1.8} />}
           label="Sair"
@@ -528,10 +531,10 @@ function ProfileMenuItem({
       className={cn(
         "flex w-full items-center gap-2.5 px-3.5 py-2.5 text-[12px] font-semibold",
         "transition-colors duration-100",
-        "focus-visible:outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-[#FFB703]/40",
+        "focus-visible:outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-[#D8A44D]/30",
         danger
-          ? "text-red-400/80 hover:bg-red-950/40 hover:text-red-400"
-          : "text-[#C8A882] hover:bg-[rgba(255,183,3,0.08)] hover:text-[#FFF3CC]",
+          ? "text-red-300/80 hover:bg-red-950/30 hover:text-red-200"
+          : "text-[#6F5A47] hover:bg-[rgba(160,120,80,0.10)] hover:text-[#2C1E16]",
       )}
     >
       {icon}
