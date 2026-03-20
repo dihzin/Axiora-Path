@@ -807,6 +807,8 @@ export function SheetGeneratorTool() {
   });
   const [toast, setToast] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"config" | "blocks" | "detail">("blocks");
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set(["cabecalho"]));
+  const toggleSection = useCallback((id: string) => setOpenSections(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }), []);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -883,12 +885,6 @@ export function SheetGeneratorTool() {
 
   // Input / select class
   const inputCls = "mt-1 w-full rounded-lg border border-[#d1d5db] bg-white px-3 py-2 text-[13px] text-[#0f172a] placeholder-[#94a3b8] outline-none transition focus:border-[#ee8748] focus:shadow-[0_0_0_3px_rgba(238,135,72,0.12)]";
-  const sectionTitle = (label: string) => (
-    <div className="mb-3 flex items-center gap-2">
-      <span className="h-3 w-[3px] rounded-full bg-[#ee8748]" />
-      <span className="text-[10px] font-bold uppercase tracking-[1.8px] text-[#94a3b8]">{label}</span>
-    </div>
-  );
   const segBtnCls = (active: boolean) =>
     `flex-1 rounded-lg py-1.5 text-xs font-semibold transition ${active ? "bg-[#ee8748] text-white shadow-[0_2px_0_rgba(158,74,30,0.35)]" : "border border-[#d1d5db] bg-white text-[#64748b] hover:bg-[#f8fafc] hover:text-[#0f172a]"}`;
 
@@ -920,124 +916,147 @@ export function SheetGeneratorTool() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 pb-24 pt-5">
+        <div className="flex-1 overflow-y-auto pb-20">
 
-          {/* Cabeçalho da folha */}
-          <section className="mb-5">
-            {sectionTitle("Cabeçalho da Folha")}
-            <div className="space-y-2.5">
-              <label className="block text-[11px] font-medium text-[#475569]">
-                Título
-                <input className={inputCls} value={cfg.title} onChange={(e) => updateCfg("title", e.target.value)} />
-              </label>
-              <label className="block text-[11px] font-medium text-[#475569]">
-                Instruções
-                <textarea className={`${inputCls} resize-none`} rows={2} value={cfg.subtitle} onChange={(e) => updateCfg("subtitle", e.target.value)} />
-              </label>
-              <div className="grid grid-cols-2 gap-2">
+          {/* CABEÇALHO */}
+          <div className="border-b border-[#f1f5f9] px-4">
+            <button type="button" onClick={() => toggleSection("cabecalho")} className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70">
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-[3px] rounded-full bg-[#ee8748]" />
+                <span className="text-[10px] font-bold uppercase tracking-[1.8px] text-[#64748b]">Cabeçalho da Folha</span>
+              </div>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" className={`transition-transform duration-200 ${openSections.has("cabecalho") ? "rotate-180" : ""}`}><path d="M2 4l4 4 4-4"/></svg>
+            </button>
+            <div className={`overflow-hidden transition-all duration-200 ${openSections.has("cabecalho") ? "max-h-[400px] opacity-100 pb-4" : "max-h-0 opacity-0"}`}>
+              <div className="space-y-2.5">
                 <label className="block text-[11px] font-medium text-[#475569]">
-                  Turma
-                  <input className={inputCls} placeholder="7º Ano A" value={cfg.turma} onChange={(e) => updateCfg("turma", e.target.value)} />
+                  Título
+                  <input className={inputCls} value={cfg.title} onChange={(e) => updateCfg("title", e.target.value)} />
                 </label>
                 <label className="block text-[11px] font-medium text-[#475569]">
-                  Tempo
-                  <input className={inputCls} placeholder="30 min" value={cfg.tempo} onChange={(e) => updateCfg("tempo", e.target.value)} />
+                  Instruções
+                  <textarea className={`${inputCls} resize-none`} rows={2} value={cfg.subtitle} onChange={(e) => updateCfg("subtitle", e.target.value)} />
                 </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block text-[11px] font-medium text-[#475569]">
+                    Turma
+                    <input className={inputCls} placeholder="7º Ano A" value={cfg.turma} onChange={(e) => updateCfg("turma", e.target.value)} />
+                  </label>
+                  <label className="block text-[11px] font-medium text-[#475569]">
+                    Tempo
+                    <input className={inputCls} placeholder="30 min" value={cfg.tempo} onChange={(e) => updateCfg("tempo", e.target.value)} />
+                  </label>
+                </div>
               </div>
             </div>
-          </section>
+          </div>
 
-          <div className="my-4 h-px" style={{ background: "linear-gradient(90deg, rgba(238,135,72,0.2), #e2e8f0, transparent)" }} />
-
-          {/* Preset */}
-          <section className="mb-5">
-            {sectionTitle("Preset Pedagógico")}
-            <select className={inputCls} style={{ cursor: "pointer" }} onChange={(e) => { if (e.target.value) { applyPreset(e.target.value, setBlocks, nextId); setSelectedBlockId(null); invalidate(); e.target.value = ""; } }}>
-              <option value="">— Selecionar preset —</option>
-              <option value="2ano">2º Ano — Adição e Subtração</option>
-              <option value="3ano">3º Ano — Multiplicação e Divisão</option>
-              <option value="4ano">4º/5º Ano — Frações básicas</option>
-              <option value="6ano">6º Ano — Equações e Expressões</option>
-              <option value="limpar">↺ Limpar todos os blocos</option>
-            </select>
-          </section>
-
-          <div className="my-4 h-px" style={{ background: "linear-gradient(90deg, rgba(238,135,72,0.2), #e2e8f0, transparent)" }} />
-
-          {/* Layout */}
-          <section className="mb-5">
-            {sectionTitle("Layout Global")}
-            <div className="space-y-4">
-              <div>
-                <div className="mb-1.5 text-[11px] font-medium text-[#475569]">Colunas</div>
-                <div className="flex gap-1.5">
-                  {[1, 2, 3, 4].map((n) => (
-                    <button key={n} onClick={() => updateCfg("cols", n)} className={segBtnCls(cfg.cols === n)}>{n}</button>
-                  ))}
-                </div>
+          {/* PRESET */}
+          <div className="border-b border-[#f1f5f9] px-4">
+            <button type="button" onClick={() => toggleSection("preset")} className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70">
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-[3px] rounded-full bg-[#ee8748]" />
+                <span className="text-[10px] font-bold uppercase tracking-[1.8px] text-[#64748b]">Preset Pedagógico</span>
               </div>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" className={`transition-transform duration-200 ${openSections.has("preset") ? "rotate-180" : ""}`}><path d="M2 4l4 4 4-4"/></svg>
+            </button>
+            <div className={`overflow-hidden transition-all duration-200 ${openSections.has("preset") ? "max-h-[200px] opacity-100 pb-4" : "max-h-0 opacity-0"}`}>
+              <select className={inputCls} style={{ cursor: "pointer" }} onChange={(e) => { if (e.target.value) { applyPreset(e.target.value, setBlocks, nextId); setSelectedBlockId(null); invalidate(); e.target.value = ""; } }}>
+                <option value="">— Selecionar preset —</option>
+                <option value="2ano">2º Ano — Adição e Subtração</option>
+                <option value="3ano">3º Ano — Multiplicação e Divisão</option>
+                <option value="4ano">4º/5º Ano — Frações básicas</option>
+                <option value="6ano">6º Ano — Equações e Expressões</option>
+                <option value="limpar">↺ Limpar todos os blocos</option>
+              </select>
+            </div>
+          </div>
 
-              <div>
-                <div className="mb-1.5 text-[11px] font-medium text-[#475569]">Tamanho da fonte</div>
-                <div className="flex gap-1.5">
-                  {(["P", "M", "G"] as FontSize[]).map((s) => (
-                    <button key={s} onClick={() => updateCfg("fontSize", s)} className={segBtnCls(cfg.fontSize === s)}>{s === "P" ? "Pequena" : s === "M" ? "Média" : "Grande"}</button>
-                  ))}
-                </div>
+          {/* LAYOUT */}
+          <div className="border-b border-[#f1f5f9] px-4">
+            <button type="button" onClick={() => toggleSection("layout")} className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70">
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-[3px] rounded-full bg-[#ee8748]" />
+                <span className="text-[10px] font-bold uppercase tracking-[1.8px] text-[#64748b]">Layout Global</span>
               </div>
-
-              <div>
-                <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-white/65">
-                  <span>Espaçamento</span>
-                  <span className="rounded-md bg-[rgba(238,135,72,0.12)] px-2 py-0.5 text-[11px] font-bold text-[#ee8748]">{cfg.spacing}px</span>
-                </div>
-                <input type="range" min={0} max={40} value={cfg.spacing} onChange={(e) => updateCfg("spacing", Number(e.target.value))} className="w-full accent-[#ee8748]" style={{ height: "4px" }} />
-                <div className="mt-1 flex justify-between text-[10px] text-[#94a3b8]">
-                  <span>Compacto</span><span>Normal</span><span>Amplo</span>
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-1.5 text-[11px] font-medium text-[#475569]">Gabarito</div>
-                <div className="flex flex-col gap-1.5">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" className={`transition-transform duration-200 ${openSections.has("layout") ? "rotate-180" : ""}`}><path d="M2 4l4 4 4-4"/></svg>
+            </button>
+            <div className={`overflow-hidden transition-all duration-200 ${openSections.has("layout") ? "max-h-[500px] opacity-100 pb-4" : "max-h-0 opacity-0"}`}>
+              <div className="space-y-4">
+                <div>
+                  <div className="mb-1.5 text-[11px] font-medium text-[#475569]">Colunas</div>
                   <div className="flex gap-1.5">
-                    <button onClick={() => updateCfg("gabarito", "sem")} className={segBtnCls(cfg.gabarito === "sem")}>Sem gabarito</button>
-                    <button onClick={() => updateCfg("gabarito", "mesma")} className={segBtnCls(cfg.gabarito === "mesma")}>Mesma página</button>
+                    {[1, 2, 3, 4].map((n) => (
+                      <button key={n} onClick={() => updateCfg("cols", n)} className={segBtnCls(cfg.cols === n)}>{n}</button>
+                    ))}
                   </div>
-                  <button onClick={() => updateCfg("gabarito", "proxima")} className={segBtnCls(cfg.gabarito === "proxima")}>Próxima página</button>
+                </div>
+                <div>
+                  <div className="mb-1.5 text-[11px] font-medium text-[#475569]">Tamanho da fonte</div>
+                  <div className="flex gap-1.5">
+                    {(["P", "M", "G"] as FontSize[]).map((s) => (
+                      <button key={s} onClick={() => updateCfg("fontSize", s)} className={segBtnCls(cfg.fontSize === s)}>{s === "P" ? "Pequena" : s === "M" ? "Média" : "Grande"}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-[#475569]">
+                    <span>Espaçamento</span>
+                    <span className="rounded-md bg-[rgba(238,135,72,0.12)] px-2 py-0.5 text-[11px] font-bold text-[#ee8748]">{cfg.spacing}px</span>
+                  </div>
+                  <input type="range" min={0} max={40} value={cfg.spacing} onChange={(e) => updateCfg("spacing", Number(e.target.value))} className="w-full accent-[#ee8748]" style={{ height: "4px" }} />
+                  <div className="mt-1 flex justify-between text-[10px] text-[#94a3b8]">
+                    <span>Compacto</span><span>Normal</span><span>Amplo</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-1.5 text-[11px] font-medium text-[#475569]">Gabarito</div>
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex gap-1.5">
+                      <button onClick={() => updateCfg("gabarito", "sem")} className={segBtnCls(cfg.gabarito === "sem")}>Sem gabarito</button>
+                      <button onClick={() => updateCfg("gabarito", "mesma")} className={segBtnCls(cfg.gabarito === "mesma")}>Mesma página</button>
+                    </div>
+                    <button onClick={() => updateCfg("gabarito", "proxima")} className={segBtnCls(cfg.gabarito === "proxima")}>Próxima página</button>
+                  </div>
                 </div>
               </div>
             </div>
-          </section>
+          </div>
 
-          <div className="my-4 h-px" style={{ background: "linear-gradient(90deg, rgba(238,135,72,0.2), #e2e8f0, transparent)" }} />
-
-          {/* Opções */}
-          <section className="mb-5">
-            {sectionTitle("Opções")}
-            <div className="space-y-2.5">
-              {([
-                ["embaralhar", "Embaralhar exercícios"],
-                ["showNome", "Campo Nome / Data"],
-                ["numerar", "Numerar exercícios"],
-                ["repeatHeader", "Repetir cabeçalho"],
-              ] as [keyof GlobalConfig, string][]).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  role="switch"
-                  aria-checked={!!cfg[key]}
-                  onClick={() => updateCfg(key, !cfg[key] as never)}
-                  className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 text-left transition hover:border-[#d1d5db] hover:bg-[#f8fafc]"
-                >
-                  <span className="text-[13px] text-[#334155]">{label}</span>
-                  <div className="relative ml-3 h-5 w-9 shrink-0 rounded-full transition-all duration-200" style={{ background: cfg[key] ? "#ee8748" : "#cbd5e1", boxShadow: cfg[key] ? "0 0 8px rgba(238,135,72,0.35)" : "none" }}>
-                    <div className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-md transition-all duration-200" style={{ left: cfg[key] ? "20px" : "2px" }} />
-                  </div>
-                </button>
-              ))}
+          {/* OPÇÕES */}
+          <div className="px-4">
+            <button type="button" onClick={() => toggleSection("opcoes")} className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70">
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-[3px] rounded-full bg-[#ee8748]" />
+                <span className="text-[10px] font-bold uppercase tracking-[1.8px] text-[#64748b]">Opções</span>
+              </div>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" className={`transition-transform duration-200 ${openSections.has("opcoes") ? "rotate-180" : ""}`}><path d="M2 4l4 4 4-4"/></svg>
+            </button>
+            <div className={`overflow-hidden transition-all duration-200 ${openSections.has("opcoes") ? "max-h-[400px] opacity-100 pb-4" : "max-h-0 opacity-0"}`}>
+              <div className="space-y-2.5">
+                {([
+                  ["embaralhar", "Embaralhar exercícios"],
+                  ["showNome", "Campo Nome / Data"],
+                  ["numerar", "Numerar exercícios"],
+                  ["repeatHeader", "Repetir cabeçalho"],
+                ] as [keyof GlobalConfig, string][]).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    role="switch"
+                    aria-checked={!!cfg[key]}
+                    onClick={() => updateCfg(key, !cfg[key] as never)}
+                    className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 text-left transition hover:border-[#d1d5db] hover:bg-[#f8fafc]"
+                  >
+                    <span className="text-[13px] text-[#334155]">{label}</span>
+                    <div className="relative ml-3 h-5 w-9 shrink-0 rounded-full transition-all duration-200" style={{ background: cfg[key] ? "#ee8748" : "#cbd5e1", boxShadow: cfg[key] ? "0 0 8px rgba(238,135,72,0.35)" : "none" }}>
+                      <div className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-md transition-all duration-200" style={{ left: cfg[key] ? "20px" : "2px" }} />
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
-          </section>
+          </div>
 
         </div>
       </aside>
@@ -1064,13 +1083,48 @@ export function SheetGeneratorTool() {
         {/* Blocks list */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {blocks.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[#e2e8f0] bg-[#f8fafc]">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12h6M12 9v6"/></svg>
+            <div className="flex h-full flex-col items-center justify-center gap-5 px-2 py-6 text-center">
+              {/* Illustration */}
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "linear-gradient(135deg, #fff7f0 0%, #ffe8d4 100%)", border: "1px solid rgba(238,135,72,0.2)" }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ee8748" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12h6M12 9v6"/></svg>
               </div>
               <div>
-                <p className="text-[13px] font-semibold text-[#94a3b8]">Nenhum bloco adicionado</p>
-                <p className="mt-1 text-[12px] text-[#cbd5e1]">Clique em &ldquo;Adicionar Bloco&rdquo; ou selecione um preset</p>
+                <p className="text-[14px] font-bold text-[#1e293b]">Crie sua primeira atividade</p>
+                <p className="mt-1 text-[12px] leading-relaxed text-[#94a3b8]">Escolha um ponto de partida abaixo</p>
+              </div>
+              {/* Steps */}
+              <div className="w-full space-y-2">
+                {([
+                  { step: "1", label: "Escolha o conteúdo", desc: "Adicione blocos de exercícios" },
+                  { step: "2", label: "Ajuste o layout", desc: "Colunas, fonte e espaçamento" },
+                  { step: "3", label: "Exporte o PDF", desc: "Pronto para imprimir" },
+                ] as { step: string; label: string; desc: string }[]).map(({ step, label, desc }) => (
+                  <div key={step} className="flex items-center gap-3 rounded-xl border border-[#f1f5f9] bg-white px-4 py-3 text-left">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: "#ee8748" }}>{step}</div>
+                    <div>
+                      <div className="text-[12px] font-semibold text-[#334155]">{label}</div>
+                      <div className="text-[11px] text-[#94a3b8]">{desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* CTAs */}
+              <div className="flex w-full flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => { applyPreset("2ano", setBlocks, nextId); setSelectedBlockId(null); invalidate(); }}
+                  className="w-full cursor-pointer rounded-xl py-2.5 text-[13px] font-semibold text-white transition hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, #ee8748 0%, #f97316 100%)" }}
+                >
+                  Usar preset →
+                </button>
+                <button
+                  type="button"
+                  onClick={addBlock}
+                  className="w-full cursor-pointer rounded-xl border border-[#e2e8f0] bg-white py-2.5 text-[13px] font-semibold text-[#475569] transition hover:border-[#d1d5db] hover:bg-[#f8fafc]"
+                >
+                  Começar do zero
+                </button>
               </div>
             </div>
           ) : (
@@ -1114,7 +1168,7 @@ export function SheetGeneratorTool() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex shrink-0 items-center gap-1.5 pl-1" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex shrink-0 items-center gap-1.5 pl-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => toggleBlock(block.id)}
                           aria-label={block.active ? "Desativar bloco" : "Ativar bloco"}
@@ -1181,7 +1235,7 @@ export function SheetGeneratorTool() {
       </main>
 
       {/* ── RIGHT PANEL ─────────────────────────────────────────────── */}
-      <aside className={`${mobileTab === "detail" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:w-[296px] md:shrink-0`} style={{ background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)", borderLeft: "1px solid #e2e8f0" }}>
+      <aside className={`${mobileTab === "detail" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:shrink-0 transition-[width] duration-300 ${selectedBlock ? "md:w-[296px]" : "md:w-0"}`} style={{ background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)", borderLeft: selectedBlock ? "1px solid #e2e8f0" : "none" }}>
         {!selectedBlock ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-6 p-8 text-center">
             {/* Empty state illustration */}
