@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BuyPackButton } from "./buy-pack-button";
 
 function CheckIcon() {
   return (
@@ -96,12 +97,7 @@ export function PricingBlock() {
               </li>
             </ul>
             <div className="mt-auto pt-6">
-              <Link
-                href="/tools/gerador-atividades?upgrade=credits_30"
-                className="block w-full rounded-xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-4 py-3.5 text-center text-sm font-extrabold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.35),0_5px_0_rgba(158,74,30,0.55),0_14px_28px_rgba(93,48,22,0.28)] transition hover:brightness-110"
-              >
-                Comprar pacote
-              </Link>
+              <BuyPackButton />
             </div>
           </div>
         </div>
