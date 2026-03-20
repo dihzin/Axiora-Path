@@ -23,7 +23,7 @@ type ChildDesktopShellProps = {
 };
 
 const NAV_ITEMS: Array<{ href: string; label: string; iconName: ChildNavIconKey }> = [
-  { href: "/child", label: "Início", iconName: "inicio" },
+  { href: "/child", label: "InÃ­cio", iconName: "inicio" },
   { href: "/child/aprender", label: "Aprender", iconName: "aprender" },
   { href: "/child/stickers", label: "Figurinhas", iconName: "figurinhas" },
   { href: "/child/games", label: "Jogos", iconName: "jogos" },
@@ -268,7 +268,7 @@ function DefaultRightRail() {
       <div className="medieval-parchment-glass p-4">
         <div className="rune-divider mb-3" />
         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#A07850]">? Progresso</p>
-        <p className="mt-1 text-lg font-black text-[#2C1E16]">Você está indo bem!</p>
+        <p className="mt-1 text-lg font-black text-[#2C1E16]">VocÃª estÃ¡ indo bem!</p>
         <p className="mt-1 text-sm font-semibold text-[#5C4A3A]">Continue explorando para evoluir no Axiora.</p>
         <div className="rune-divider mt-3" />
       </div>

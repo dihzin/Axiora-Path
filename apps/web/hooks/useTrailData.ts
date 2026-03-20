@@ -133,7 +133,7 @@ export type TrailData = {
   xpInLevel: number;
   xpToNextLevel: number;
   subjectStreakDays: number;
-  // Energy (-1 = não carregado / indisponível)
+  // Energy (-1 = nÃ£o carregado / indisponÃ­vel)
   energyCurrent: number;
   energyMax: number;
   // Notifications
@@ -209,7 +209,7 @@ export function useTrailData(): TrailData {
   const subjectsForUi = useMemo(() => {
     if (subjects.length > 0) return subjects;
     if (!path) return [];
-    return [{ id: path.subjectId, name: path.subjectName || "Matéria", ageGroup: "9-12", order: 1 }] as AprenderSubjectOption[];
+    return [{ id: path.subjectId, name: path.subjectName || "MatÃ©ria", ageGroup: "9-12", order: 1 }] as AprenderSubjectOption[];
   }, [path, subjects]);
 
   const groupedByArea = useMemo(
@@ -223,14 +223,14 @@ export function useTrailData(): TrailData {
     const selectedFromList = subjectsForUi.find((item) => item.id === selectedSubjectId)?.name;
     if (selectedFromList) return selectedFromList;
     if (path?.subjectName) return path.subjectName;
-    return "Matéria";
+    return "MatÃ©ria";
   }, [path?.subjectName, selectedSubjectId, subjectsForUi]);
 
   const domainCompletion = useMemo(() => resolveDomainCompletion(path), [path]);
   const weeklyGoal = useMemo(() => resolveWeeklyGoalProgress(missions, 3), [missions]);
   const encouragementText = useMemo(() => {
     if (!insights) return "Continue assim!";
-    if (insights.dueReviewsCount > 0) return "Mais um passo e você desbloqueia novidades!";
+    if (insights.dueReviewsCount > 0) return "Mais um passo e vocÃª desbloqueia novidades!";
     return "Continue assim!";
   }, [insights]);
 
@@ -336,7 +336,7 @@ export function useTrailData(): TrailData {
         setSubjectsLoaded(true);
         if (list.length === 0) {
           setPath(null);
-          setError("Ainda não há missões disponíveis para a idade desta criança.");
+          setError("Ainda nÃ£o hÃ¡ missÃµes disponÃ­veis para a idade desta crianÃ§a.");
         }
       } catch {
         if (active) {
@@ -393,7 +393,7 @@ export function useTrailData(): TrailData {
             try {
               const cached = JSON.parse(cachedRaw) as LearningPathResponse;
               setPath(cached);
-              setError("Conexão instável. Exibindo trilha salva.");
+              setError("ConexÃ£o instÃ¡vel. Exibindo trilha salva.");
               hasLoadedPathRef.current = true;
               return;
             } catch {
@@ -484,11 +484,11 @@ export function useTrailData(): TrailData {
         setEnergyCurrent(Math.max(0, status.energy));
         setEnergyMax(Math.max(1, status.maxEnergy));
       })
-      .catch(() => { /* mantém -1 = indisponível */ });
+      .catch(() => { /* mantÃ©m -1 = indisponÃ­vel */ });
     return () => { active = false; };
   }, [completedLessonSignal]);
 
-  // Fetch notification count (recomendações não descartadas)
+  // Fetch notification count (recomendaÃ§Ãµes nÃ£o descartadas)
   useEffect(() => {
     if (typeof window === "undefined") return;
     const rawChildId = window.sessionStorage.getItem("axiora_child_id");
@@ -500,7 +500,7 @@ export function useTrailData(): TrailData {
         if (!active) return;
         setNotificationCount(recs.filter((r) => r.dismissed_at === null).length);
       })
-      .catch(() => { /* mantém 0 */ });
+      .catch(() => { /* mantÃ©m 0 */ });
     return () => { active = false; };
   }, []);
 

@@ -211,7 +211,7 @@ export default function ChildGamesPage() {
             status: item.status,
             title: item.title,
             description: item.description,
-            skill: item.tags.length > 0 ? item.tags.slice(0, 2).join(" ï ") : item.subject,
+            skill: item.tags.length > 0 ? item.tags.slice(0, 2).join(" ‚Ä¢ ") : item.subject,
             difficulty: difficultyLabel(item.difficulty),
             xpReward: item.xpReward,
             icon: iconForGame(item),
@@ -313,15 +313,15 @@ export default function ChildGamesPage() {
 
   const recommendedGame = useMemo(() => {
     if (activeSessionGame) {
-      return { game: activeSessionGame, reason: "Continue de onde parou para manter sua sequÍncia.", ctaLabel: "Continuar partida" };
+      return { game: activeSessionGame, reason: "Continue de onde parou para manter sua sequ√™ncia.", ctaLabel: "Continuar partida" };
     }
     const bestToBeat = availableGames.find((game) => game.personalBest !== null);
     if (bestToBeat) {
-      return { game: bestToBeat, reason: "VocÍ j· tem recorde aqui. Tente bater sua melhor marca.", ctaLabel: "Bater recorde" };
+      return { game: bestToBeat, reason: "Voc√™ j√° tem recorde aqui. Tente bater sua melhor marca.", ctaLabel: "Bater recorde" };
     }
     const quickGame = [...availableGames].sort((a, b) => (a.estimatedMinutes ?? 4) - (b.estimatedMinutes ?? 4))[0] ?? null;
     if (quickGame) {
-      return { game: quickGame, reason: "Partida r·pida para aquecer seu raciocÌnio agora.", ctaLabel: "Partida r·pida" };
+      return { game: quickGame, reason: "Partida r√°pida para aquecer seu racioc√≠nio agora.", ctaLabel: "Partida r√°pida" };
     }
     return null;
   }, [activeSessionGame, availableGames]);
@@ -404,7 +404,7 @@ export default function ChildGamesPage() {
           }),
         );
       } catch {
-        // fallback: mantÈm navegaÁ„o para rota mapeada pelo backend
+        // fallback: mant√©m navega√ß√£o para rota mapeada pelo backend
       } finally {
         setStartingId(null);
         setOnboardingGame(null);
@@ -444,7 +444,7 @@ export default function ChildGamesPage() {
     }
   }, [childId, refreshRemoteStats]);
 
-  const recommendationText = recommendedGame ? `Jogue ${recommendedGame.game.title} agora.` : "Escolha um jogo curto para manter sua evoluÁ„o.";
+  const recommendationText = recommendedGame ? `Jogue ${recommendedGame.game.title} agora.` : "Escolha um jogo curto para manter sua evolu√ß√£o.";
   const recordsCount = personalBests.length;
   const bestGameLabel = bestPersonalBest ? (gameTitleById[bestPersonalBest.gameId] ?? bestPersonalBest.gameId) : null;
   const bestScoreLabel =
@@ -471,9 +471,9 @@ export default function ChildGamesPage() {
       }
       rightRail={
         <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(160deg,rgba(28,54,48,0.88)_0%,rgba(24,48,43,0.84)_55%,rgba(18,39,35,0.92)_100%)] p-4 shadow-[0_10px_28px_rgba(7,20,17,0.32),inset_0_1px_0_rgba(255,255,255,0.08)]">
-          <p className="text-xs font-black uppercase tracking-[0.08em] text-[#CDBAA6]">ConsistÍncia</p>
+          <p className="text-xs font-black uppercase tracking-[0.08em] text-[#CDBAA6]">Consist√™ncia</p>
           <p className="mt-1 text-lg font-black text-[#FFF4E7]">
-            {metagame ? `${metagame.streak.current} dias em sequÍncia` : "VocÍ est· indo bem!"}
+            {metagame ? `${metagame.streak.current} dias em sequ√™ncia` : "Voc√™ est√° indo bem!"}
           </p>
           <p className="mt-1 text-sm font-semibold text-[#E6D8C7]">
             {metagame?.motivationMessage ?? "Continue explorando para evoluir no Axiora."}
@@ -533,7 +533,7 @@ export default function ChildGamesPage() {
                 icon={recommendedGame.game.icon}
                 disabled={startingId === recommendedGame.game.id}
                 infoChips={[
-                  `${recommendedGame.game.meta.durationLabel} de sess„o`,
+                  `${recommendedGame.game.meta.durationLabel} de sess√£o`,
                   recommendedGame.game.meta.skillLabel,
                   recommendedGame.game.meta.playStyle,
                 ]}
@@ -543,7 +543,7 @@ export default function ChildGamesPage() {
               />
             ) : (
               <article className="rounded-[24px] border border-[#C8E7DD]/80 bg-white/90 p-4 text-sm font-semibold text-[#356476]">
-                Nenhum jogo disponÌvel agora. Tente novamente em instantes.
+                Nenhum jogo dispon√≠vel agora. Tente novamente em instantes.
               </article>
             )}
 
@@ -563,7 +563,7 @@ export default function ChildGamesPage() {
           <section className="mt-4 flex gap-2 overflow-x-auto pb-1">
             {([
               { id: "all", label: "Todos" },
-              { id: "available", label: `DisponÌveis ${availableGames.length}` },
+              { id: "available", label: `Dispon√≠veis ${availableGames.length}` },
               { id: "upcoming", label: `Em breve ${upcomingGames.length}` },
             ] as const).map((option) => (
               <button
@@ -583,7 +583,7 @@ export default function ChildGamesPage() {
             <section className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[1fr_1fr]">
               <GamesMissionCard
                 mission={metagame.dailyMission}
-                title="Miss„o de hoje"
+                title="Miss√£o de hoje"
                 subtitle="Seu objetivo agora"
                 onPlayNow={() => {
                   if (!recommendedGame) return;
@@ -596,7 +596,7 @@ export default function ChildGamesPage() {
               />
               <GamesMissionCard
                 mission={metagame.weeklyMission}
-                title="Miss„o da semana"
+                title="Miss√£o da semana"
                 subtitle="Construindo seu ritmo"
                 actionLabel="Continuar semana"
                 onPlayNow={() => {
@@ -631,7 +631,7 @@ export default function ChildGamesPage() {
               <div className="games-achievements-scroll">
                 {(achievements.length > 0
                   ? achievements
-                  : [{ id: -1, title: "Primeira vitÛria", description: "Ganhe uma partida no Jogo da Velha", slug: "", icon_key: "", unlocked: false, unlocked_at: null }]
+                  : [{ id: -1, title: "Primeira vit√≥ria", description: "Ganhe uma partida no Jogo da Velha", slug: "", icon_key: "", unlocked: false, unlocked_at: null }]
                 ).map((achievement) => (
                   <article key={achievement.id} className="games-achievement-pill">
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-secondary/15 text-xs font-extrabold text-secondary">
@@ -667,12 +667,12 @@ export default function ChildGamesPage() {
           <section className="mt-5 space-y-5">
             {catalogState === "loading" && hubGames.length === 0 ? (
               <article className="rounded-2xl border border-[#D6E2F1] bg-white/90 p-3 text-xs font-semibold text-[#607E9E]">
-                Carregando cat·logo de jogos...
+                Carregando cat√°logo de jogos...
               </article>
             ) : null}
             {catalogState === "fallback" ? (
               <article className="rounded-2xl border border-[#D6E2F1] bg-white/90 p-3 text-xs font-semibold text-[#607E9E]">
-                Cat·logo online indisponÌvel no momento. Exibindo jogos locais para vocÍ continuar.
+                Cat√°logo online indispon√≠vel no momento. Exibindo jogos locais para voc√™ continuar.
               </article>
             ) : null}
             {GAMES_SKILL_GROUPS.map((group) => {
@@ -748,7 +748,7 @@ export default function ChildGamesPage() {
             <section className="mt-5 space-y-3">
               <header>
                 <h2 className="text-lg font-black text-[#E8F3FF]">Em breve no hub</h2>
-                <p className="text-xs font-semibold text-[#AFC5DE]">Novas pr·ticas para continuar sua evoluÁ„o.</p>
+                <p className="text-xs font-semibold text-[#AFC5DE]">Novas pr√°ticas para continuar sua evolu√ß√£o.</p>
               </header>
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                 {visibleUpcoming.map((game) => (
@@ -774,10 +774,10 @@ export default function ChildGamesPage() {
           ) : null}
 
           <section className="mt-5 rounded-[24px] border border-[#D2E2F4]/70 bg-[linear-gradient(145deg,rgba(255,255,255,0.97)_0%,rgba(242,250,255,0.95)_100%)] p-4 shadow-[0_10px_24px_rgba(17,45,77,0.12)] sm:p-5">
-            <p className="text-xs font-black uppercase tracking-[0.09em] text-[#6382A2]">EvoluÁ„o Axiora</p>
-            <h2 className="mt-1 text-lg font-black text-[#153A55]">Jogar hoje acelera seu progresso amanh„</h2>
+            <p className="text-xs font-black uppercase tracking-[0.09em] text-[#6382A2]">Evolu√ß√£o Axiora</p>
+            <h2 className="mt-1 text-lg font-black text-[#153A55]">Jogar hoje acelera seu progresso amanh√£</h2>
             <p className="mt-1 text-sm font-semibold leading-relaxed text-[#426684]">
-              Jogos r·pidos treinam sua mente para aprender mais r·pido nas trilhas e tomar decisıes financeiras melhores no dia a dia.
+              Jogos r√°pidos treinam sua mente para aprender mais r√°pido nas trilhas e tomar decis√µes financeiras melhores no dia a dia.
             </p>
             <div className="mt-4 flex flex-wrap gap-2.5">
               {recommendedGame ? (

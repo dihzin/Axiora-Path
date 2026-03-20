@@ -41,25 +41,25 @@ function mapCoachCopy(actionType: string): CoachCopy {
   const action = actionType.toUpperCase();
   if (action === "OPEN_REVIEWS") {
     return {
-      why: "Você tem revisões prontas agora e uma rodada curtinha ajuda a manter tudo fresco na memória.",
-      how: "Revisar hoje fortalece o que você já aprendeu e deixa o próximo desafio mais leve.",
+      why: "VocÃª tem revisÃµes prontas agora e uma rodada curtinha ajuda a manter tudo fresco na memÃ³ria.",
+      how: "Revisar hoje fortalece o que vocÃª jÃ¡ aprendeu e deixa o prÃ³ximo desafio mais leve.",
     };
   }
   if (action === "OPEN_GAME_BREAK") {
     return {
-      why: "Seu foco rende melhor com uma pausa ativa e estratégica antes da próxima sessão.",
-      how: "Uma partida curta recarrega sua atenção e melhora o desempenho no estudo.",
+      why: "Seu foco rende melhor com uma pausa ativa e estratÃ©gica antes da prÃ³xima sessÃ£o.",
+      how: "Uma partida curta recarrega sua atenÃ§Ã£o e melhora o desempenho no estudo.",
     };
   }
   if (action === "ACTIVATE_BOOST") {
     return {
-      why: "Este é um bom momento para acelerar: você está com ritmo favorável.",
+      why: "Este Ã© um bom momento para acelerar: vocÃª estÃ¡ com ritmo favorÃ¡vel.",
       how: "Com impulso ativo, cada acerto rende mais progresso no mesmo tempo.",
     };
   }
   return {
-    why: "Escolhi uma próxima ação curta e prática para você avançar sem sobrecarga.",
-    how: "Pequenos passos constantes criam evolução forte e duradoura.",
+    why: "Escolhi uma prÃ³xima aÃ§Ã£o curta e prÃ¡tica para vocÃª avanÃ§ar sem sobrecarga.",
+    how: "Pequenos passos constantes criam evoluÃ§Ã£o forte e duradoura.",
   };
 }
 
@@ -217,7 +217,7 @@ export default function ChildAxionPage() {
   const frustrationScore = Number(state.frustrationScore ?? 0);
   const dropoutRiskScore = Number(state.dropoutRiskScore ?? 0);
   const learningMomentum = Number(state.learningMomentum ?? 0);
-  const frustrationTrend = learningMomentum < -0.08 ? "Subindo" : learningMomentum > 0.08 ? "Descendo" : "Estável";
+  const frustrationTrend = learningMomentum < -0.08 ? "Subindo" : learningMomentum > 0.08 ? "Descendo" : "EstÃ¡vel";
 
   const scoreBar = (value: unknown) => {
     const numeric = Math.max(0, Math.min(1, Number(value ?? 0)));
@@ -327,19 +327,19 @@ export default function ChildAxionPage() {
                     </div>
                   </div>
                   <div>
-                    <p className="mb-1 font-bold">Confiança</p>
+                    <p className="mb-1 font-bold">ConfianÃ§a</p>
                     <div className="h-2 rounded-full bg-[#E6EEF9]">
                       <div className="h-2 rounded-full bg-[#20B3A8]" style={{ width: `${scoreBar(state.confidenceScore)}%` }} />
                     </div>
                   </div>
                   <div>
-                    <p className="mb-1 font-bold">Frustração</p>
+                    <p className="mb-1 font-bold">FrustraÃ§Ã£o</p>
                     <div className="h-2 rounded-full bg-[#E6EEF9]">
                       <div className="h-2 rounded-full bg-[#FF8A65]" style={{ width: `${scoreBar(state.frustrationScore)}%` }} />
                     </div>
                   </div>
                   <div>
-                    <p className="mb-1 font-bold">Risco de evasão</p>
+                    <p className="mb-1 font-bold">Risco de evasÃ£o</p>
                     <div className="h-2 rounded-full bg-[#E6EEF9]">
                       <div className="h-2 rounded-full bg-[#FF8A65]" style={{ width: `${scoreBar(state.dropoutRiskScore)}%` }} />
                     </div>
@@ -347,7 +347,7 @@ export default function ChildAxionPage() {
                 </div>
 
                 <p className="font-semibold">
-                  Tendência de frustração: <span className="font-extrabold">{frustrationTrend}</span>
+                  TendÃªncia de frustraÃ§Ã£o: <span className="font-extrabold">{frustrationTrend}</span>
                 </p>
                 <p className="font-semibold">
                   Indicador de risco: <span className="font-extrabold">{Math.round(dropoutRiskScore * 100)}%</span>
@@ -356,7 +356,7 @@ export default function ChildAxionPage() {
                   Regras disparadas: <span className="font-extrabold">{rulesFired.length > 0 ? rulesFired.join(", ") : "Nenhuma"}</span>
                 </p>
                 <p className="font-semibold">
-                  Decisões aplicadas: <span className="font-extrabold">{decisions.length}</span>
+                  DecisÃµes aplicadas: <span className="font-extrabold">{decisions.length}</span>
                 </p>
                 <p className="font-semibold">
                   Template escolhido: <span className="font-extrabold">{brief?.debug?.templateChosen ?? "-"}</span>
@@ -367,7 +367,7 @@ export default function ChildAxionPage() {
                 <p className="font-semibold">
                   Boosts ativos: <span className="font-extrabold">{temporaryBoosts.length}</span>
                 </p>
-                {frustrationScore > 0.7 ? <p className="rounded-lg bg-[#FFF2EC] px-2 py-1 font-bold text-[#B3563F]">Alerta interno: frustração elevada.</p> : null}
+                {frustrationScore > 0.7 ? <p className="rounded-lg bg-[#FFF2EC] px-2 py-1 font-bold text-[#B3563F]">Alerta interno: frustraÃ§Ã£o elevada.</p> : null}
               </div>
             ) : null}
           </section>

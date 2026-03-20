@@ -23,15 +23,15 @@ type ChildProfile = {
 };
 
 const THEME_LABELS: Record<ThemeName, string> = {
-  default: "Padrão",
-  space: "Espaço",
+  default: "PadrÃ£o",
+  space: "EspaÃ§o",
   jungle: "Selva",
   ocean: "Oceano",
   soccer: "Futebol",
   capybara: "Capivara",
   dinos: "Dinossauros",
   princess: "Princesa",
-  heroes: "Heróis",
+  heroes: "HerÃ³is",
 };
 
 export default function SelectChildPage() {
@@ -44,14 +44,14 @@ export default function SelectChildPage() {
   useEffect(() => {
     getMe()
       .then((data) => setChildren(data.child_profiles))
-      .catch(() => setError("Não foi possível carregar perfis. Faça login novamente."));
+      .catch(() => setError("NÃ£o foi possÃ­vel carregar perfis. FaÃ§a login novamente."));
   }, []);
 
   const chooseChild = (child: ChildProfile) => {
     if (selectingChildId !== null) return;
     const allowed = children.some((item) => item.id === child.id);
     if (!allowed) {
-      setError("Perfil inválido para este usuário.");
+      setError("Perfil invÃ¡lido para este usuÃ¡rio.");
       return;
     }
     setSelectingChildId(child.id);
@@ -74,7 +74,7 @@ export default function SelectChildPage() {
             {error ? <p role="alert" aria-live="polite" className="text-sm text-rose-700">{error}</p> : null}
             {children.length === 0 ? (
               <div className="axiora-auth-option rounded-2xl px-4 py-4 text-sm">
-                Nenhum perfil infantil disponível nesta organização. Complete o onboarding dos pais para criar o primeiro perfil.
+                Nenhum perfil infantil disponÃ­vel nesta organizaÃ§Ã£o. Complete o onboarding dos pais para criar o primeiro perfil.
               </div>
             ) : null}
             {children.map((child) => (
@@ -104,7 +104,7 @@ export default function SelectChildPage() {
               </button>
             ))}
             <Button className="w-full bg-[linear-gradient(180deg,#ffb170_0%,#ff8a45_100%)] text-[#fff9f2] shadow-[inset_0_1px_0_rgba(255,231,205,0.56),0_6px_0_rgba(158,74,30,0.42),0_16px_24px_rgba(93,48,22,0.18)]" variant="secondary" onClick={() => router.push("/parent-pin")} disabled={selectingChildId !== null}>
-              Ir para área dos pais
+              Ir para Ã¡rea dos pais
             </Button>
           </CardContent>
         </Card>
