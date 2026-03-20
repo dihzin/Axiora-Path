@@ -106,8 +106,11 @@ class ToolsBillingService:
         try:
             with urlopen(request, timeout=20.0) as response:
                 raw = response.read().decode("utf-8", errors="replace")
-        except (HTTPError, URLError, TimeoutError) as exc:
-            raise BillingGatewayError("Failed to create checkout session") from exc
+        except HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            raise BillingGatewayError(self._format_gateway_error(exc.code, body)) from exc
+        except (URLError, TimeoutError) as exc:
+            raise BillingGatewayError("Failed to create checkout session: network error") from exc
 
         try:
             parsed = json.loads(raw)
@@ -121,6 +124,26 @@ class ToolsBillingService:
         if not isinstance(session_id, str) or not isinstance(session_url, str):
             raise BillingGatewayError("Checkout response missing id/url")
         return CheckoutSessionResult(id=session_id, url=session_url)
+
+    @staticmethod
+    def _format_gateway_error(status_code: int, body: str) -> str:
+        message = f"Failed to create checkout session (Stripe HTTP {status_code})"
+        try:
+            parsed = json.loads(body)
+        except json.JSONDecodeError:
+            return message
+        if not isinstance(parsed, dict):
+            return message
+        error = parsed.get("error")
+        if not isinstance(error, dict):
+            return message
+        detail = error.get("message")
+        code = error.get("code")
+        if isinstance(code, str) and isinstance(detail, str):
+            return f"{message}: {code} - {detail}"
+        if isinstance(detail, str):
+            return f"{message}: {detail}"
+        return message
 
     def verify_webhook_signature(self, *, payload: bytes, signature_header: str | None) -> bool:
         if not self.webhook_secret or not signature_header:
