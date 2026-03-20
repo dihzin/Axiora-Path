@@ -517,7 +517,7 @@ const GENERATORS: Record<BlockType, (c: BlockConfig) => { html: string; answer: 
 
 function generateAllExercises(blocks: Block[], shuffle: boolean): ExerciseItem[] {
   const seen = new Set<string>();
-  let all: ExerciseItem[] = [];
+  const all: ExerciseItem[] = [];
   for (const block of blocks) {
     if (!block.active) continue;
     const fn = GENERATORS[block.type];
@@ -644,7 +644,7 @@ function buildPrintHTML(
     }
   }
 
-  let exSection = `<div style="${gridStyle}">${exRows}</div>`;
+  const exSection = `<div style="${gridStyle}">${exRows}</div>`;
 
   // Gabarito
   let gabSection = "";
