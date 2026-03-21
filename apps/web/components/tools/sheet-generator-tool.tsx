@@ -566,34 +566,43 @@ function buildPrintHTML(
   const numerar = cfg.numerar;
   const showNome = cfg.showNome;
 
+  const FONT = `Inter,system-ui,-apple-system,sans-serif`;
   const S = {
-    title: `font-family:Georgia,'Times New Roman',serif;font-size:${fzTitle};font-weight:700;text-align:center;letter-spacing:0.2px;`,
-    rule2: `height:2px;background:#111;margin:4px 0 2px;`,
-    rule1: `height:1px;background:#111;margin:2px 0;`,
-    ruleGray: `height:1px;background:#888;margin:3px 0;`,
-    infoRow: `font-family:'Courier New',monospace;font-size:${fz};color:#111;padding:3px 0;`,
-    secHead: `font-family:'Courier New',monospace;font-size:${fz};font-weight:700;color:#111;margin:10px 0 6px;`,
-    exNum: `font-family:'Courier New',monospace;font-size:${fz};color:#111;white-space:nowrap;flex-shrink:0;min-width:28px;line-height:1.6;`,
-    exBody: `font-family:'Courier New',monospace;font-size:${fz};color:#111;line-height:1.6;flex:1;min-width:0;`,
-    page: `font-family:'Courier New',Courier,monospace;font-size:${fz};color:#111;line-height:1.6;`,
-    footer: `font-size:${fzSm};color:#888;`,
+    // Título: tracking um pouco mais aberto, peso levemente reduzido — elegante sem ser pesado
+    title: `font-family:${FONT};font-size:18px;font-weight:500;text-align:center;letter-spacing:1.2px;color:#111827;margin-bottom:18px;`,
+    // Dupla linha substituída por uma linha única mais espessa — mais limpa
+    rule2: `height:1.5px;background:#D1D5DB;margin:0 0 4px;`,
+    rule1: `display:none;`,
+    // Separador pós-campos: leve
+    ruleGray: `height:1px;background:#F3F4F6;margin:12px 0 16px;`,
+    // Linha de info do aluno: text menor, mais ar
+    infoRow: `font-family:${FONT};font-size:12px;color:#1F2937;padding:6px 0;letter-spacing:0.04em;`,
+    // Seção: tracking mais generoso, margem superior maior para respirar
+    secHead: `font-family:${FONT};font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.14em;margin:36px 0 14px;padding-bottom:8px;border-bottom:1px solid #E5E7EB;`,
+    // Número: discreto, não compete com o exercício
+    exNum: `font-family:${FONT};font-size:${fz};color:#9CA3AF;white-space:nowrap;flex-shrink:0;min-width:28px;line-height:1.8;`,
+    // Conteúdo: levemente mais espaçado verticalmente
+    exBody: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.8;flex:1;min-width:0;`,
+    page: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.6;`,
+    footer: `font-family:${FONT};font-size:${fzSm};color:#9CA3AF;letter-spacing:0.04em;`,
   };
 
+  const labelStyle = `font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:#9CA3AF;white-space:nowrap;flex-shrink:0;`;
+  const fillLine = `border-bottom:1px solid #9CA3AF;display:inline-block;vertical-align:bottom;`;
   const nomeLine = showNome ? `
-    <div style="${S.infoRow} display:flex;align-items:baseline;">
-      <span style="white-space:nowrap;flex-shrink:0;">Nome:&nbsp;</span>
-      <span style="flex:1;border-bottom:1px solid #555;display:inline-block;vertical-align:bottom;min-width:120px;">&nbsp;</span>
-      <span style="white-space:nowrap;flex-shrink:0;margin-left:32px;">
-        Data:&nbsp;<span style="display:inline-block;min-width:28px;border-bottom:1px solid #555;vertical-align:bottom">&nbsp;</span>/<span style="display:inline-block;min-width:28px;border-bottom:1px solid #555;vertical-align:bottom">&nbsp;</span>/<span style="display:inline-block;min-width:42px;border-bottom:1px solid #555;vertical-align:bottom">&nbsp;</span>
-      </span>
+    <div style="${S.infoRow} display:flex;align-items:baseline;gap:8px;">
+      <span style="${labelStyle}">Nome</span>
+      <span style="${fillLine} flex:1;min-width:120px;">&nbsp;</span>
+      <span style="${labelStyle} margin-left:24px;">Data</span>
+      <span style="${fillLine} min-width:28px;">&nbsp;</span><span style="color:#9CA3AF;padding:0 1px;">/</span><span style="${fillLine} min-width:28px;">&nbsp;</span><span style="color:#9CA3AF;padding:0 1px;">/</span><span style="${fillLine} min-width:40px;">&nbsp;</span>
     </div>
-    <div style="${S.infoRow} display:flex;align-items:baseline;margin-top:2px;">
-      <span style="white-space:nowrap;flex-shrink:0;">Turma:${cfg.turma ? "&nbsp;" + cfg.turma : ""}</span>
-      <span style="flex:1;">&nbsp;</span>
-      <span style="white-space:nowrap;flex-shrink:0;">
-        Nota:&nbsp;<span style="display:inline-block;min-width:60px;border-bottom:1px solid #555;vertical-align:bottom">&nbsp;</span>
-        ${cfg.tempo ? `&nbsp;&nbsp;Tempo:&nbsp;<span style="display:inline-block;min-width:60px;border-bottom:1px solid #555;vertical-align:bottom"><strong>${cfg.tempo}</strong></span>` : ""}
-      </span>
+    <div style="${S.infoRow} display:flex;align-items:baseline;gap:8px;margin-top:8px;">
+      <span style="${labelStyle}">Turma</span>
+      <span style="${fillLine} min-width:80px;">${cfg.turma ? "&nbsp;" + cfg.turma : "&nbsp;"}</span>
+      <span style="flex:1;"></span>
+      <span style="${labelStyle}">Nota</span>
+      <span style="${fillLine} min-width:60px;">&nbsp;</span>
+      ${cfg.tempo ? `<span style="${labelStyle} margin-left:16px;">Tempo</span><span style="${fillLine} min-width:60px;"><strong style="color:#1F2937;">${cfg.tempo}</strong></span>` : ""}
     </div>` : "";
 
   const header = `
@@ -626,7 +635,8 @@ function buildPrintHTML(
   }
 
   // Build exercise grid
-  const gridStyle = `display:grid;grid-template-columns:repeat(${cols},1fr);gap:${cfg.spacing}px 24px;align-items:start;`;
+  const rowGap = Math.max(cfg.spacing, 18);
+  const gridStyle = `display:grid;grid-template-columns:repeat(${cols},1fr);gap:${rowGap}px 48px;align-items:start;`;
   let exRows = "";
   for (let i = 0; i < exercises.length; i++) {
     const ex = exercises[i];
@@ -635,7 +645,7 @@ function buildPrintHTML(
       ? `<span style="${S.exNum}">${i + 1})</span>`
       : "";
     if (sectionHeaders[i]) {
-      exRows += `<div style="grid-column:1/-1;${S.secHead} margin-top:8px;padding-bottom:2px;border-bottom:1px solid #e0e0e0;">${sectionHeaders[i]}</div>`;
+      exRows += `<div style="grid-column:1/-1;${S.secHead}">${sectionHeaders[i]}</div>`;
     }
     if (isArmada) {
       exRows += `<div style="display:flex;align-items:flex-start;gap:6px;break-inside:avoid;page-break-inside:avoid;">${numSpan}<div style="${S.exBody}">${ex.html}</div></div>`;
@@ -652,7 +662,7 @@ function buildPrintHTML(
     const ansItems = exercises.map((ex, i) => {
       const num = numerar ? `${i + 1})` : "";
       const val = ex.answer !== undefined && ex.answer !== null ? String(ex.answer) : "—";
-      return `<div style="font-family:'Courier New',monospace;font-size:${fz};line-height:1.8;">${num}&nbsp;${val}</div>`;
+      return `<div style="font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.8;">${num}&nbsp;${val}</div>`;
     });
     const gabGrid = `display:grid;grid-template-columns:repeat(2,1fr);gap:2px 32px;`;
     if (cfg.gabarito === "proxima") {
@@ -668,53 +678,58 @@ function buildPrintHTML(
         <div style="margin-top:16px;">
           <div style="${S.rule2}"></div>
           <div style="${S.rule1} margin-bottom:8px;"></div>
-          <div style="font-family:'Courier New',monospace;font-size:${fz};font-weight:700;margin-bottom:6px;">Gabarito&nbsp;&nbsp;Seed: ${seed}</div>
+          <div style="font-family:${FONT};font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#374151;margin-bottom:6px;">Gabarito&nbsp;&nbsp;<span style="font-weight:400;color:#9CA3AF;">Seed: ${seed}</span></div>
           <div style="${gabGrid}">${ansItems.join("")}</div>
         </div>`;
     }
   }
 
-  const footerHtml = `<div style="margin-top:auto;padding-top:4mm;border-top:1px solid #ddd;display:flex;justify-content:space-between;${S.footer}"><span>Axiora Tools · axiora.com.br&nbsp;&nbsp;Seed: ${seed}</span><span>Reprodução livre para fins pedagógicos</span></div>`;
+  const footerHtml = `<div style="margin-top:auto;padding-top:8mm;margin-top:24px;border-top:1px solid #ddd;display:flex;justify-content:space-between;${S.footer}"><span>Axiora Tools · axiora.com.br&nbsp;&nbsp;Seed: ${seed}</span><span>Reprodução livre para fins pedagógicos</span></div>`;
 
-  const subtitleHtml = cfg.subtitle ? `<p style="font-style:italic;font-size:${fz};color:#444;margin:6px 0 10px;border-bottom:1px solid #ddd;border-top:1px solid #ddd;padding:4px 0;">${cfg.subtitle}</p>` : "";
+  const subtitleHtml = cfg.subtitle ? `<p style="font-family:${FONT};font-size:${fz};color:#6B7280;margin:0 0 20px;padding:8px 0;border-bottom:1px solid #E5E7EB;">${cfg.subtitle}</p>` : "";
 
+  /* Monospace preservado apenas nas classes de alinhamento de cálculo armado */
+  const MONO = `'Courier New',Courier,monospace`;
   const exStyles = `
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
-    html,body{background:#fff;font-family:'Courier New',Courier,monospace;font-size:${fz};color:#111;line-height:1.6;}
+    html,body{background:#fff;font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.6;}
     @page{size:A4 portrait;margin:18mm 20mm;}
     @media print{body{background:#fff;}.no-print{display:none!important;}}
-    .ex-mult-armada{display:inline-flex;flex-direction:column;align-items:flex-end;font-family:'Courier New',monospace;font-size:${fz};gap:2px;}
+    /* — Aritmética armada: monospace para alinhamento de colunas — */
+    .ex-mult-armada{display:inline-flex;flex-direction:column;align-items:flex-end;font-family:${MONO};font-size:${fz};gap:2px;}
     .ex-mult-row{display:flex;align-items:center;gap:6px;white-space:nowrap;}
     .ex-mult-op-symbol{min-width:16px;text-align:right;}
-    .ex-mult-line{width:100%;height:0;border-top:1.5px solid #111;margin:2px 0 0;}
-    .ex-divisao-armada{display:inline-flex;align-items:flex-start;font-family:'Courier New',monospace;font-size:${fz};}
+    .ex-mult-line{width:100%;height:0;border-top:1.5px solid #374151;margin:2px 0 0;}
+    .ex-divisao-armada{display:inline-flex;align-items:flex-start;font-family:${MONO};font-size:${fz};}
     .ex-divisao-dividendo{white-space:nowrap;padding-right:4px;line-height:1.5;}
     .ex-divisao-right{display:flex;flex-direction:column;}
-    .ex-divisao-divisor{white-space:nowrap;padding:0 2px 3px 6px;border-left:1px solid #111;border-bottom:1px solid #111;}
+    .ex-divisao-divisor{white-space:nowrap;padding:0 2px 3px 6px;border-left:1px solid #374151;border-bottom:1px solid #374151;}
     .ex-divisao-quociente{min-height:1.8em;padding:2px 2px 0 6px;}
-    .ex-linear{font-family:'Courier New',monospace;font-size:${fz};white-space:normal;word-break:break-word;}
+    /* — Exercícios lineares e expressões — */
+    .ex-linear{font-family:${FONT};font-size:${fz};white-space:normal;word-break:break-word;}
     .ex-frac{display:inline-flex;flex-direction:column;align-items:center;line-height:1.1;}
-    .ex-frac-num{border-bottom:1.5px solid #111;padding-bottom:2px;text-align:center;min-width:16px;font-size:${fz};}
+    .ex-frac-num{border-bottom:1.5px solid #374151;padding-bottom:2px;text-align:center;min-width:16px;font-size:${fz};}
     .ex-frac-den{padding-top:2px;text-align:center;min-width:16px;font-size:${fz};}
     .ex-frac-op{font-size:${fz};padding:0 2px;align-self:center;}
     .ex-frac-result{align-self:center;font-size:${fz};}
-    .ex-fracao-expr{display:inline-flex;align-items:center;gap:10px;font-family:'Courier New',monospace;font-size:${fz};}
-    .ex-equacao{font-family:'Courier New',monospace;font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;}
-    .ex-eq-var{font-style:italic;font-size:${fz};}
+    .ex-fracao-expr{display:inline-flex;align-items:center;gap:10px;font-family:${FONT};font-size:${fz};}
+    .ex-equacao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;}
+    .ex-eq-var{font-style:italic;font-size:${fz};color:#1F2937;}
     .ex-eq-op,.ex-eq-equals,.ex-eq-num,.ex-eq-coef{font-size:${fz};}
     .ex-eq-frac-wrap{display:inline-flex;flex-direction:column;align-items:center;line-height:1.1;vertical-align:middle;margin:0 2px;}
-    .ex-eq-frac-top{font-style:italic;font-size:calc(${fz} * 0.85);border-bottom:1.5px solid #111;padding-bottom:1px;min-width:14px;text-align:center;}
+    .ex-eq-frac-top{font-style:italic;font-size:calc(${fz} * 0.85);border-bottom:1.5px solid #374151;padding-bottom:1px;min-width:14px;text-align:center;}
     .ex-eq-frac-bot{font-size:calc(${fz} * 0.85);padding-top:1px;text-align:center;}
-    .ex-pot{font-family:'Courier New',monospace;font-size:${fz};white-space:nowrap;display:inline;}
+    .ex-pot{font-family:${FONT};font-size:${fz};white-space:nowrap;display:inline;}
     .ex-pot-base{font-size:${fz};}
     .ex-pot-exp{font-size:.6em;vertical-align:super;line-height:1;margin-left:1px;}
     .ex-pot-result{font-size:${fz};margin-left:6px;}
-    .ex-raiz{display:inline-flex;align-items:flex-end;font-family:'Courier New',monospace;font-size:${fz};gap:0;vertical-align:middle;}
+    .ex-raiz{display:inline-flex;align-items:flex-end;font-family:${FONT};font-size:${fz};gap:0;vertical-align:middle;}
     .ex-raiz-svg{height:1.5em;width:auto;overflow:visible;flex-shrink:0;}
-    .ex-raiz-val{border-top:1.5px solid #111;padding:0 4px 0 0;font-size:${fz};line-height:1.5;}
+    .ex-raiz-val{border-top:1.5px solid #374151;padding:0 4px 0 0;font-size:${fz};line-height:1.5;}
     .ex-raiz-idx-wrap{position:relative;display:inline-block;line-height:0;}
-    .ex-raiz-idx{position:absolute;top:0;left:1px;font-size:0.55em;line-height:1;font-family:'Courier New',monospace;}
-    .ex-expressao{font-family:'Courier New',monospace;font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;}
+    .ex-raiz-idx{position:absolute;top:0;left:1px;font-size:0.55em;line-height:1;font-family:${FONT};}
+    .ex-expressao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;}
     .ex-expr-term,.ex-expr-op,.ex-expr-eq{font-size:${fz};}
   `;
 
@@ -724,7 +739,7 @@ function buildPrintHTML(
 <title>${cfg.title || "Folha de Exercícios"}</title>
 <style>${exStyles}</style>
 </head><body style="padding:0;margin:0;">
-<div style="${S.page} padding:0; display:flex; flex-direction:column; min-height:100vh;">
+<div style="${S.page} padding:24px 32px; box-sizing:border-box; display:flex; flex-direction:column; min-height:100vh;">
   ${header}
   ${subtitleHtml}
   ${exSection}
@@ -734,6 +749,385 @@ function buildPrintHTML(
 ${cfg.gabarito === "proxima" ? gabSection : ""}
 </body></html>`;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAGINATION ENGINE — Canva / Google Docs model
+// Each page is an exact A4 document (794 × 1123 px). JS distributes exercises.
+// No CSS cutting, no overflow hacks, no scale tricks.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const A4_W = 794;
+const A4_H = 1123;
+const PAGE_PX = 32; // horizontal padding (matches print margins)
+const PAGE_PY = 24; // vertical padding   (matches print margins)
+
+interface PageSlice {
+  exIndexes: number[]; // which exercise indices belong on this page
+  isFirstPage: boolean;
+}
+
+/**
+ * Splits exercises into A4 page slices using conservative estimated heights.
+ * Fully synchronous — no DOM measurement, no hidden iframes, no setTimeout.
+ */
+function paginateSimple(exercises: ExerciseItem[], blocks: Block[], cfg: GlobalConfig): PageSlice[] {
+  if (!exercises.length) return [];
+
+  const rowGap = Math.max(cfg.spacing, 18);
+  const cols = cfg.cols;
+  const secHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
+
+  // Conservative height estimates (px).
+  // These are deliberately larger than actual rendered heights so pages never overflow.
+  // Actual CSS: section header = margin(36+14) + content(27) + gap_after(18) = 95px
+  //             armada mult/div = monospace rows ~120-150px
+  //             frac/raiz = inline fraction ~65-80px
+  //             linear = single text row ~50px
+  function estimateExH(ex: ExerciseItem): number {
+    if (ex.html.includes("ex-mult-armada") || ex.html.includes("ex-divisao-armada")) return 150;
+    if (ex.html.includes("ex-frac") || ex.html.includes("ex-raiz")) return 85;
+    return 52; // equacoes, potenciacao, expressoes, linear aritmetica
+  }
+
+  // Fixed UI chrome heights (px) — all over-estimated for safety
+  // title(54) + rule(6) + nome(70) + ruleGray(29) = ~159px; subtitle ~56px; footer ~60px
+  const HEADER1_H  = cfg.showNome ? 165 : 100;
+  const SUBTITLE1_H = cfg.subtitle ? 65 : 0;
+  const FOOTER_H   = 75;
+  // Section header: margin:36px 0 14px + content:27px + gap_after:18px = 95px
+  // Use 100px as the safe value for mid-page.
+  // At page-top for non-first pages suppressTopMargin removes the 36px, but we still
+  // use 100px conservatively so we never accidentally put too many items on a page.
+  const SEC_H_MID  = 100;
+  const SEC_H_TOP  = 100;
+  const BALANCE_THRESHOLD = 120;
+
+  const p1Avail = A4_H - 2 * PAGE_PY - HEADER1_H - SUBTITLE1_H - FOOTER_H;
+  const pnAvail = A4_H - 2 * PAGE_PY - FOOTER_H;
+
+  // Build logical grid rows: group exercises cols-at-a-time, split on section headers
+  interface GridRow {
+    exIndexes: number[];
+    rowH: number;        // max exercise height in this row
+    startsWithSec: boolean;
+    secH: number;        // height of section header, if any precedes this row
+  }
+  const gridRows: GridRow[] = [];
+  let pending: number[] = [];
+  let pendingH = 0;
+  let pendingSecH = 0;
+  let pendingStartsSec = false;
+
+  const pushPending = () => {
+    if (!pending.length) return;
+    gridRows.push({ exIndexes: [...pending], rowH: pendingH, startsWithSec: pendingStartsSec, secH: pendingSecH });
+    pending = []; pendingH = 0; pendingSecH = 0; pendingStartsSec = false;
+  };
+
+  for (let i = 0; i < exercises.length; i++) {
+    if (secHeaders[i]) {
+      pushPending();
+      // Section header goes on the NEXT row's metadata
+      pendingStartsSec = true;
+      pendingSecH = SEC_H_MID; // will be corrected to SEC_H_TOP if this row starts a page
+    }
+    const h = estimateExH(exercises[i]);
+    pendingH = Math.max(pendingH, h);
+    pending.push(i);
+    if (pending.length >= cols) pushPending();
+  }
+  pushPending();
+
+  // Greedy bin rows into pages
+  const slices: PageSlice[] = [];
+  let pageExes: number[] = [];
+  let usedH = 0;
+  let avail = p1Avail;
+  let isFirstPage = true;
+
+  for (let rowIndex = 0; rowIndex < gridRows.length; rowIndex++) {
+    const row = gridRows[rowIndex];
+    const rowsLeftIncludingCurrent = gridRows.length - rowIndex;
+    const calcRowTotal = (baseUsedH: number) => {
+      const secH = (baseUsedH === 0 && row.startsWithSec) ? SEC_H_TOP : (row.startsWithSec ? SEC_H_MID : 0);
+      const rowGapNow = baseUsedH > 0 ? rowGap : 0;
+      return rowGapNow + secH + row.rowH;
+    };
+    let rowTotal = calcRowTotal(usedH);
+
+    // Balance rule: if this row would leave a tiny tail and we still have more rows,
+    // force a new page before placing it.
+    const remainingAfterRow = avail - (usedH + rowTotal);
+    if (
+      pageExes.length > 0 &&
+      rowsLeftIncludingCurrent > 1 &&
+      row.rowH >= BALANCE_THRESHOLD &&
+      remainingAfterRow > 0 &&
+      remainingAfterRow < BALANCE_THRESHOLD
+    ) {
+      slices.push({ exIndexes: pageExes, isFirstPage });
+      pageExes = [];
+      usedH = 0;
+      avail = pnAvail;
+      isFirstPage = false;
+      rowTotal = calcRowTotal(usedH);
+    }
+
+    if (usedH + rowTotal > avail && pageExes.length > 0) {
+      // This row doesn't fit — flush current page
+      slices.push({ exIndexes: pageExes, isFirstPage });
+      pageExes = [];
+      usedH = 0;
+      avail = pnAvail;
+      isFirstPage = false;
+      // Re-compute for fresh page start
+      const secHStart = row.startsWithSec ? SEC_H_TOP : 0;
+      usedH += secHStart + row.rowH;
+    } else {
+      usedH += rowTotal;
+    }
+
+    pageExes.push(...row.exIndexes);
+  }
+
+  if (pageExes.length > 0) slices.push({ exIndexes: pageExes, isFirstPage });
+  return slices;
+}
+
+// ── Shared style builders ─────────────────────────────────────────────────────
+
+function buildDocCSS(cfg: GlobalConfig): string {
+  const fzMap: Record<FontSize, string> = { P: "12px", M: "14px", G: "18px" };
+  const fz = fzMap[cfg.fontSize];
+  const FONT = `Inter,system-ui,-apple-system,sans-serif`;
+  const MONO = `'Courier New',Courier,monospace`;
+  return `
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+    @keyframes previewPageFade {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .sheet-root .preview-page{
+      all:revert;
+      width:${A4_W}px;
+      height:${A4_H}px;
+      background:#fff;
+      margin:0 auto;
+      box-shadow:none;
+      padding:32px;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      font-family:${FONT};
+      font-size:${fz};
+      color:#1F2937;
+      line-height:1.6;
+    }
+    .sheet-root .preview-page,.sheet-root .preview-page *,.sheet-root .preview-page *::before,.sheet-root .preview-page *::after{box-sizing:border-box;}
+    .sheet-root .preview-page .ex-mult-armada{display:inline-flex;flex-direction:column;align-items:flex-end;font-family:${MONO};font-size:${fz};gap:2px;}
+    .sheet-root .preview-page .ex-mult-row{display:flex;align-items:center;gap:6px;white-space:nowrap;}
+    .sheet-root .preview-page .ex-mult-op-symbol{min-width:16px;text-align:right;}
+    .sheet-root .preview-page .ex-mult-line{width:100%;height:0;border-top:1.5px solid #374151;margin:2px 0 0;}
+    .sheet-root .preview-page .ex-divisao-armada{display:inline-flex;align-items:flex-start;font-family:${MONO};font-size:${fz};}
+    .sheet-root .preview-page .ex-divisao-dividendo{white-space:nowrap;padding-right:4px;line-height:1.5;}
+    .sheet-root .preview-page .ex-divisao-right{display:flex;flex-direction:column;}
+    .sheet-root .preview-page .ex-divisao-divisor{white-space:nowrap;padding:0 2px 3px 6px;border-left:1px solid #374151;border-bottom:1px solid #374151;}
+    .sheet-root .preview-page .ex-divisao-quociente{min-height:1.8em;padding:2px 2px 0 6px;}
+    .sheet-root .preview-page .ex-linear{font-family:${FONT};font-size:${fz};white-space:normal;word-break:break-word;}
+    .sheet-root .preview-page .ex-frac{display:inline-flex;flex-direction:column;align-items:center;line-height:1.1;}
+    .sheet-root .preview-page .ex-frac-num{border-bottom:1.5px solid #374151;padding-bottom:2px;text-align:center;min-width:16px;font-size:${fz};}
+    .sheet-root .preview-page .ex-frac-den{padding-top:2px;text-align:center;min-width:16px;font-size:${fz};}
+    .sheet-root .preview-page .ex-frac-op{font-size:${fz};padding:0 2px;align-self:center;}
+    .sheet-root .preview-page .ex-frac-result{align-self:center;font-size:${fz};}
+    .sheet-root .preview-page .ex-fracao-expr{display:inline-flex;align-items:center;gap:10px;font-family:${FONT};font-size:${fz};}
+    .sheet-root .preview-page .ex-equacao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;}
+    .sheet-root .preview-page .ex-eq-var{font-style:italic;font-size:${fz};color:#1F2937;}
+    .sheet-root .preview-page .ex-eq-op,.sheet-root .preview-page .ex-eq-equals,.sheet-root .preview-page .ex-eq-num,.sheet-root .preview-page .ex-eq-coef{font-size:${fz};}
+    .sheet-root .preview-page .ex-eq-frac-wrap{display:inline-flex;flex-direction:column;align-items:center;line-height:1.1;vertical-align:middle;margin:0 2px;}
+    .sheet-root .preview-page .ex-eq-frac-top{font-style:italic;font-size:calc(${fz} * 0.85);border-bottom:1.5px solid #374151;padding-bottom:1px;min-width:14px;text-align:center;}
+    .sheet-root .preview-page .ex-eq-frac-bot{font-size:calc(${fz} * 0.85);padding-top:1px;text-align:center;}
+    .sheet-root .preview-page .ex-pot{font-family:${FONT};font-size:${fz};white-space:nowrap;display:inline;}
+    .sheet-root .preview-page .ex-pot-base{font-size:${fz};}
+    .sheet-root .preview-page .ex-pot-exp{font-size:.6em;vertical-align:super;line-height:1;margin-left:1px;}
+    .sheet-root .preview-page .ex-pot-result{font-size:${fz};margin-left:6px;}
+    .sheet-root .preview-page .ex-raiz{display:inline-flex;align-items:flex-end;font-family:${FONT};font-size:${fz};gap:0;vertical-align:middle;}
+    .sheet-root .preview-page .ex-raiz-svg{height:1.5em;width:auto;overflow:visible;flex-shrink:0;}
+    .sheet-root .preview-page .ex-raiz-val{border-top:1.5px solid #374151;padding:0 4px 0 0;font-size:${fz};line-height:1.5;}
+    .sheet-root .preview-page .ex-raiz-idx-wrap{position:relative;display:inline-block;line-height:0;}
+    .sheet-root .preview-page .ex-raiz-idx{position:absolute;top:0;left:1px;font-size:0.55em;line-height:1;}
+    .sheet-root .preview-page .ex-expressao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;}
+    .sheet-root .preview-page .ex-expr-term,.sheet-root .preview-page .ex-expr-op,.sheet-root .preview-page .ex-expr-eq{font-size:${fz};}
+  `;
+}
+
+function buildDocStyles(cfg: GlobalConfig) {
+  const fzMap: Record<FontSize, string> = { P: "12px", M: "14px", G: "18px" };
+  const fz = fzMap[cfg.fontSize];
+  const fzSm = cfg.fontSize === "P" ? "10px" : cfg.fontSize === "G" ? "14px" : "11px";
+  const FONT = `Inter,system-ui,-apple-system,sans-serif`;
+  const S = {
+    title: `font-family:${FONT};font-size:18px;font-weight:500;text-align:center;letter-spacing:1.2px;color:#111827;margin-bottom:18px;`,
+    rule2: `height:1.5px;background:#D1D5DB;margin:0 0 4px;`,
+    ruleGray: `height:1px;background:#F3F4F6;margin:12px 0 16px;`,
+    infoRow: `font-family:${FONT};font-size:12px;color:#1F2937;padding:6px 0;letter-spacing:0.04em;`,
+    secHead: `font-family:${FONT};font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.14em;margin:36px 0 14px;padding-bottom:8px;border-bottom:1px solid #E5E7EB;`,
+    exNum: `font-family:${FONT};font-size:${fz};color:#9CA3AF;white-space:nowrap;flex-shrink:0;min-width:28px;line-height:1.8;`,
+    exBody: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.8;flex:1;min-width:0;`,
+    page: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.6;`,
+    footer: `font-family:${FONT};font-size:${fzSm};color:#9CA3AF;letter-spacing:0.04em;`,
+  };
+  const lbl = `font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:#9CA3AF;white-space:nowrap;flex-shrink:0;`;
+  const ln = `border-bottom:1px solid #9CA3AF;display:inline-block;vertical-align:bottom;`;
+  return { fz, fzSm, FONT, S, lbl, ln };
+}
+
+/** Returns sectionHeaders map: first-exercise-index → block name */
+function buildSectionHeaderMap(exercises: ExerciseItem[], blocks: Block[], cfg: GlobalConfig): Record<number, string> {
+  const map: Record<number, string> = {};
+  if (cfg.embaralhar) return map;
+  const active = blocks.filter((b) => b.active);
+  const nameMap: Record<number, string> = {};
+  active.forEach((b) => { nameMap[b.id] = BLOCK_META[b.type].name; });
+  const byBlock = new Map<number, number[]>();
+  exercises.forEach((ex, idx) => {
+    if (!byBlock.has(ex.blockId)) byBlock.set(ex.blockId, []);
+    byBlock.get(ex.blockId)!.push(idx);
+  });
+  active.forEach((b) => {
+    const idxs = byBlock.get(b.id);
+    if (idxs?.length) map[idxs[0]] = nameMap[b.id] ?? b.type;
+  });
+  return map;
+}
+
+function buildStudentRowHTML(cfg: GlobalConfig, S: ReturnType<typeof buildDocStyles>["S"], lbl: string, ln: string): string {
+  if (!cfg.showNome) return "";
+  const nomeLine = `
+    <div style="${S.infoRow} display:flex;align-items:baseline;gap:8px;">
+      <span style="${lbl}">Nome</span>
+      <span style="${ln} flex:1;min-width:120px;">&nbsp;</span>
+      <span style="${lbl} margin-left:24px;">Data</span>
+      <span style="${ln} min-width:28px;">&nbsp;</span><span style="color:#9CA3AF;padding:0 1px;">/</span><span style="${ln} min-width:28px;">&nbsp;</span><span style="color:#9CA3AF;padding:0 1px;">/</span><span style="${ln} min-width:40px;">&nbsp;</span>
+    </div>
+    <div style="${S.infoRow} display:flex;align-items:baseline;gap:8px;margin-top:8px;">
+      <span style="${lbl}">Turma</span>
+      <span style="${ln} min-width:80px;">${cfg.turma ? "&nbsp;" + cfg.turma : "&nbsp;"}</span>
+      <span style="flex:1;"></span>
+      <span style="${lbl}">Nota</span>
+      <span style="${ln} min-width:60px;">&nbsp;</span>
+      ${cfg.tempo ? `<span style="${lbl} margin-left:16px;">Tempo</span><span style="${ln} min-width:60px;"><strong style="color:#1F2937;">${cfg.tempo}</strong></span>` : ""}
+    </div>`;
+  return nomeLine;
+}
+
+/** Measurement-only HTML: all exercises in a single long scroll, each element has an id. */
+function buildMeasurementDoc(exercises: ExerciseItem[], blocks: Block[], cfg: GlobalConfig): string {
+  const { fz, FONT, S, lbl, ln } = buildDocStyles(cfg);
+  const css = buildDocCSS(cfg);
+  const sectionHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
+  const rowGap = Math.max(cfg.spacing, 18);
+  const nomeLine = buildStudentRowHTML(cfg, S, lbl, ln);
+  const headerHTML = `
+    <div style="${S.title}">${cfg.title || "Folha de Exercícios"}</div>
+    <div style="${S.rule2}"></div>
+    ${nomeLine}
+    ${cfg.showNome ? `<div style="${S.ruleGray}"></div>` : ""}
+  `;
+  const subtitleHTML = cfg.subtitle
+    ? `<p style="font-family:${FONT};font-size:${fz};color:#6B7280;margin:0 0 20px;padding:8px 0;border-bottom:1px solid #E5E7EB;">${cfg.subtitle}</p>`
+    : "";
+
+  let gridItems = "";
+  for (let i = 0; i < exercises.length; i++) {
+    const ex = exercises[i];
+    if (sectionHeaders[i]) {
+      gridItems += `<div id="sg-sec-${i}" style="grid-column:1/-1;${S.secHead}">${sectionHeaders[i]}</div>`;
+    }
+    const numSpan = cfg.numerar ? `<span style="${S.exNum}">${i + 1})</span>` : "";
+    const align = ex.type === "aritmetica" ? "flex-start" : "baseline";
+    gridItems += `<div id="sg-ex-${i}" style="display:flex;align-items:${align};gap:6px;">${numSpan}<div style="${S.exBody}">${ex.html}</div></div>`;
+  }
+
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><style>${css}</style></head>` +
+    `<body style="margin:0;padding:${PAGE_PY}px ${PAGE_PX}px;box-sizing:border-box;width:${A4_W}px;">` +
+    `<div id="sg-header">${headerHTML}</div>` +
+    (subtitleHTML ? `<div id="sg-subtitle">${subtitleHTML}</div>` : "") +
+    `<div style="display:grid;grid-template-columns:repeat(${cfg.cols},1fr);gap:${rowGap}px 48px;align-items:start;">${gridItems}</div>` +
+    `<div id="sg-footer" style="${S.footer} padding-top:24px;border-top:1px solid #E5E7EB;display:flex;justify-content:space-between;">` +
+    `<span>Axiora Tools</span><span>Reprodução livre para fins pedagógicos</span></div>` +
+    `</body></html>`;
+}
+
+/** Builds a standalone A4 HTML page for preview (exact 794 × 1123 px). */
+function buildOnePageHTML(
+  pageItems: Array<{ index: number; item: ExerciseItem }>,
+  cfg: GlobalConfig,
+  seed: number,
+  isFirstPage: boolean,
+  sectionHeaders: Record<number, string>,
+): string {
+  const { fz, FONT, S, lbl, ln } = buildDocStyles(cfg);
+  const css = buildDocCSS(cfg);
+  const rowGap = Math.max(cfg.spacing, 18);
+
+  const pageSections: Record<number, string> = {};
+  for (const { index } of pageItems) {
+    if (sectionHeaders[index]) pageSections[index] = sectionHeaders[index];
+  }
+
+  let gridItems = "";
+  for (const { index: exIdx, item: ex } of pageItems) {
+    if (pageSections[exIdx]) {
+      const suppressTopMargin = !isFirstPage && exIdx === pageItems[0]?.index;
+      const secStyle = `grid-column:1/-1;${S.secHead}${suppressTopMargin ? "margin-top:0;" : ""}`;
+      gridItems += `<div style="${secStyle}">${pageSections[exIdx]}</div>`;
+    }
+    const numSpan = cfg.numerar ? `<span style="${S.exNum}">${exIdx + 1})</span>` : "";
+    const align = ex.type === "aritmetica" ? "flex-start" : "baseline";
+    gridItems += `<div style="display:flex;align-items:${align};gap:6px;">${numSpan}<div style="${S.exBody}">${ex.html}</div></div>`;
+  }
+
+  let pageHeaderHTML = "";
+  if (isFirstPage) {
+    const nomeLine = buildStudentRowHTML(cfg, S, lbl, ln);
+    pageHeaderHTML = `
+      <div style="${S.title}">${cfg.title || "Folha de Exercícios"}</div>
+      <div style="${S.rule2}"></div>
+      ${nomeLine}
+      ${cfg.showNome ? `<div style="${S.ruleGray}"></div>` : ""}
+    `;
+  }
+  const subtitleHTML = isFirstPage && cfg.subtitle
+    ? `<p style="font-family:${FONT};font-size:${fz};color:#6B7280;margin:0 0 20px;padding:8px 0;border-bottom:1px solid #E5E7EB;">${cfg.subtitle}</p>`
+    : "";
+  const footerHTML = `<div style="${S.footer} margin-top:auto;padding-top:24px;border-top:1px solid #E5E7EB;display:flex;justify-content:space-between;">` +
+    `<span>Axiora Tools · axiora.com.br&nbsp;&nbsp;Seed: ${seed}</span><span>Reprodução livre para fins pedagógicos</span></div>`;
+
+  return `<style>${css}</style>` +
+    `<div class="sheet-root"><div class="preview-page" style="${S.page}">` +
+    pageHeaderHTML + subtitleHTML +
+    `<div style="display:grid;grid-template-columns:repeat(${cfg.cols},1fr);gap:${rowGap}px 48px;align-items:start;">` +
+    gridItems + `</div>` + footerHTML + `</div></div>`;
+}
+
+/** Builds the gabarito (answer key) page. */
+function buildAnswerPageHTML(exercises: ExerciseItem[], cfg: GlobalConfig, seed: number): string {
+  const { fz, FONT, S } = buildDocStyles(cfg);
+  const css = buildDocCSS(cfg);
+  const ansItems = exercises.map((ex, i) => {
+    const num = cfg.numerar ? `${i + 1})` : "";
+    const val = ex.answer !== undefined && ex.answer !== null ? String(ex.answer) : "—";
+    return `<div style="font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.8;">${num}&nbsp;${val}</div>`;
+  });
+  const footerHTML = `<div style="${S.footer} margin-top:auto;padding-top:24px;border-top:1px solid #E5E7EB;display:flex;justify-content:space-between;">` +
+    `<span>Axiora Tools · axiora.com.br&nbsp;&nbsp;Seed: ${seed}</span><span>Reprodução livre para fins pedagógicos</span></div>`;
+  return `<style>${css}</style>` +
+    `<div class="sheet-root"><div class="preview-page" style="${S.page}">` +
+    `<div style="${S.title}">Gabarito</div><div style="${S.rule2}"></div>` +
+    `<div style="margin-top:16px;display:grid;grid-template-columns:repeat(2,1fr);gap:2px 32px;">${ansItems.join("")}</div>` +
+    footerHTML + `</div></div>`;
+}
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PRESETS
@@ -833,7 +1227,7 @@ export function SheetGeneratorTool() {
     DEFAULT_BLOCKS.map((b) => ({ ...b, id: nextId.current++ }))
   );
   const [selectedBlockId, setSelectedBlockId] = useState<number | null>(null);
-  const [seed, setSeed] = useState<number>(() => Math.floor(10000 + Math.random() * 90000));
+  const [seed, setSeed] = useState<number>(10000);
   const [snapshot, setSnapshot] = useState<ExerciseItem[] | null>(null);
   const [cfg, setCfg] = useState<GlobalConfig>({
     title: "Folha de Exercícios",
@@ -857,6 +1251,68 @@ export function SheetGeneratorTool() {
   const [presetModalOpen, setPresetModalOpen] = useState(false);
   const [layoutModalOpen, setLayoutModalOpen] = useState(false);
   const [opcoesModalOpen, setOpcoesModalOpen] = useState(false);
+  const [blockDetailModalOpen, setBlockDetailModalOpen] = useState(false);
+
+  // ── Preview: auto-fit + zoom (Canva-like) ─────────────────────────────────
+  const previewCanvasRef = useRef<HTMLDivElement>(null);
+  const [autoFitScale, setAutoFitScale] = useState(1);
+  const [zoom, setZoom] = useState(1);
+  useEffect(() => {
+    const el = previewCanvasRef.current;
+    if (!el) return;
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      const canvasPaddingX = 48; // preview-canvas horizontal padding (24 * 2)
+      const canvasPaddingY = 48; // preview-canvas vertical padding
+      const availableW = Math.max(0, rect.width - canvasPaddingX);
+      const availableH = Math.max(0, rect.height - canvasPaddingY);
+      const fit = Math.min(availableW / A4_W, availableH / A4_H, 1);
+      setAutoFitScale(fit > 0 ? fit : 1);
+    };
+    update();
+    const obs = new ResizeObserver(update);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  const previewScale = autoFitScale * zoom;
+
+  // ── Pagination state ────────────────────────────────────────────────────────
+  const [previewPages, setPreviewPages] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  console.log("previewPages length:", previewPages.length, "| currentPage:", currentPage);
+
+  useEffect(() => {
+    setSeed(Math.floor(10000 + Math.random() * 90000));
+  }, []);
+
+  // Rebuild pages synchronously whenever blocks / cfg / seed change
+  useEffect(() => {
+    const active = blocks.filter((b) => b.active);
+    if (active.length === 0) { setPreviewPages([]); setCurrentPage(0); return; }
+    const exercises = generateAllExercises(blocks, cfg.embaralhar);
+    if (exercises.length === 0) { setPreviewPages([]); setCurrentPage(0); return; }
+
+    const slices = paginateSimple(exercises, blocks, cfg);
+    if (!slices.length) { setPreviewPages([]); setCurrentPage(0); return; }
+
+    const sectionHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
+    const pages = slices.map((slice) => ({
+      isFirstPage: slice.isFirstPage,
+      items: slice.exIndexes.map((index) => ({ index, item: exercises[index] })),
+    }));
+
+    const htmlPages = pages.map((page) =>
+      buildOnePageHTML(page.items, cfg, seed, page.isFirstPage, sectionHeaders)
+    );
+
+    if (cfg.gabarito === "proxima") {
+      htmlPages.push(buildAnswerPageHTML(exercises, cfg, seed));
+    }
+    console.log("html page 0 !== page 1:", htmlPages[0] !== htmlPages[1]);
+    console.log("pages:", htmlPages.length, "| exercises:", exercises.length, "| slices:", slices.map(s => s.exIndexes.length));
+    setPreviewPages(htmlPages);
+    setCurrentPage(0);
+  }, [blocks, cfg, seed]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -902,13 +1358,6 @@ export function SheetGeneratorTool() {
     invalidate();
   }, [invalidate]);
 
-  const getOrBuildSnapshot = useCallback((): ExerciseItem[] => {
-    if (snapshot) return snapshot;
-    const result = generateAllExercises(blocks, cfg.embaralhar);
-    setSnapshot(result);
-    return result;
-  }, [snapshot, blocks, cfg.embaralhar]);
-
   const rerollSeed = useCallback(() => {
     setSeed(Math.floor(10000 + Math.random() * 90000));
     invalidate();
@@ -916,16 +1365,34 @@ export function SheetGeneratorTool() {
   }, [invalidate, showToast]);
 
   const handlePrint = useCallback(() => {
-    const exercises = getOrBuildSnapshot();
-    if (exercises.length === 0) { showToast("Nenhum exercício ativo — adicione blocos"); return; }
-    const html = buildPrintHTML(exercises, blocks, cfg, seed);
     const win = window.open("", "_blank", "width=860,height=750");
     if (!win) { showToast("Permita pop-ups para imprimir"); return; }
+    let html = "";
+    if (previewPages.length > 0) {
+      const pagesHtml = previewPages
+        .map((page) => `<div class="print-page">${page}</div>`)
+        .join("");
+      html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${cfg.title || "Folha de Exercícios"}</title>
+        <style>
+          html,body{margin:0;padding:0;background:#fff;}
+          .print-page{break-after:page;page-break-after:always;}
+          .print-page:last-child{break-after:auto;page-break-after:auto;}
+          @media print{
+            .preview-container{transform:none !important;}
+            .sheet-root .preview-page{box-shadow:none !important;}
+          }
+        </style>
+      </head><body>${pagesHtml}</body></html>`;
+    } else {
+      const exercises = generateAllExercises(blocks, cfg.embaralhar);
+      if (exercises.length === 0) { showToast("Nenhum exercício ativo — adicione blocos"); win.close(); return; }
+      html = buildPrintHTML(exercises, blocks, cfg, seed);
+    }
     win.document.write(html);
     win.document.close();
     win.focus();
-    setTimeout(() => win.print(), 400);
-  }, [getOrBuildSnapshot, blocks, cfg, seed, showToast]);
+    setTimeout(() => win.print(), 300);
+  }, [previewPages, cfg, blocks, seed, showToast]);
 
   const totalExercises = useMemo(() => blocks.filter((b) => b.active).reduce((s, b) => s + b.config.quantidade, 0), [blocks]);
   const activeCount = useMemo(() => blocks.filter((b) => b.active).length, [blocks]);
@@ -937,7 +1404,7 @@ export function SheetGeneratorTool() {
     `flex-1 rounded-lg py-1.5 text-xs font-semibold transition ${active ? "bg-[#ee8748] text-white shadow-[0_2px_0_rgba(158,74,30,0.35)]" : "border border-[#d1d5db] bg-white text-[#64748b] hover:bg-[#f8fafc] hover:text-[#0f172a]"}`;
 
   return (
-    <div className="flex flex-col h-full min-h-[500px] overflow-hidden md:flex-row md:min-h-[600px]" style={{ background: "#ffffff" }}>
+    <div className="h-full flex-1 flex flex-col min-h-0 overflow-hidden md:grid md:min-h-0" style={{ background: "#ffffff", gridTemplateColumns: "minmax(280px,1fr) minmax(320px,1fr) minmax(560px,2fr)", gridTemplateRows: "1fr" }}>
 
       {/* ── MOBILE TAB BAR ──────────────────────────────────────────── */}
       <div className="flex shrink-0 border-b border-[#e2e8f0] md:hidden" style={{ background: "#ffffff" }}>
@@ -954,11 +1421,11 @@ export function SheetGeneratorTool() {
       </div>
 
       {/* ── LEFT PANEL ──────────────────────────────────────────────── */}
-      <aside className={`${mobileTab === "config" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:w-[272px] md:shrink-0`} style={{ background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)", borderRight: "1px solid #e2e8f0" }}>
+      <aside className={`${mobileTab === "config" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:min-w-0`} style={{ background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)", borderRight: "1px solid #e2e8f0" }}>
         {/* Panel header */}
-        <div className="relative overflow-hidden px-5 py-3.5" style={{ borderBottom: "1px solid #e2e8f0", background: "linear-gradient(180deg, rgba(238,135,72,0.05) 0%, transparent 100%)" }}>
+        <div className="relative shrink-0 overflow-hidden px-5 py-3.5" style={{ borderBottom: "1px solid #e2e8f0", background: "linear-gradient(180deg, rgba(238,135,72,0.05) 0%, transparent 100%)" }}>
           <div className="absolute inset-x-0 top-0 h-[2px] bg-[linear-gradient(90deg,#ee8748,rgba(238,135,72,0.2),transparent)]" />
-          <div className="text-[13px] font-bold text-[#0f172a]">Configurações</div>
+          <div className="text-[13px] font-semibold tracking-[0.01em] text-[#1e293b]">Configurações</div>
           <div className="mt-0.5 text-[11px] text-[#94a3b8]">Personalize sua folha</div>
         </div>
 
@@ -969,7 +1436,7 @@ export function SheetGeneratorTool() {
             <button type="button" onClick={() => toggleSection("cabecalho")} className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70">
               <div className="flex items-center gap-2">
                 <span className="h-3 w-[3px] rounded-full bg-[#ee8748]" />
-                <span className="text-[10px] font-bold uppercase tracking-[1.8px] text-[#64748b]">Cabeçalho da Folha</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#94a3b8]">Cabeçalho da Folha</span>
               </div>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" className={`transition-transform duration-200 ${openSections.has("cabecalho") ? "rotate-180" : ""}`}><path d="M2 4l4 4 4-4"/></svg>
             </button>
@@ -1002,7 +1469,7 @@ export function SheetGeneratorTool() {
             <button type="button" onClick={() => setPresetModalOpen(true)} className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70">
               <div className="flex items-center gap-2">
                 <span className="h-3 w-[3px] rounded-full bg-[#ee8748]" />
-                <span className="text-[10px] font-bold uppercase tracking-[1.8px] text-[#64748b]">Preset Pedagógico</span>
+                <span className="text-[12px] font-medium text-[#475569]">Preset Pedagógico</span>
               </div>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
             </button>
@@ -1013,7 +1480,7 @@ export function SheetGeneratorTool() {
             <button type="button" onClick={() => setLayoutModalOpen(true)} className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70">
               <div className="flex items-center gap-2">
                 <span className="h-3 w-[3px] rounded-full bg-[#ee8748]" />
-                <span className="text-[10px] font-bold uppercase tracking-[1.8px] text-[#64748b]">Layout Global</span>
+                <span className="text-[12px] font-medium text-[#475569]">Layout Global</span>
               </div>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
             </button>
@@ -1024,22 +1491,42 @@ export function SheetGeneratorTool() {
             <button type="button" onClick={() => setOpcoesModalOpen(true)} className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70">
               <div className="flex items-center gap-2">
                 <span className="h-3 w-[3px] rounded-full bg-[#ee8748]" />
-                <span className="text-[10px] font-bold uppercase tracking-[1.8px] text-[#64748b]">Opções</span>
+                <span className="text-[12px] font-medium text-[#475569]">Opções</span>
               </div>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
             </button>
+          </div>
+
+          {/* RESUMO */}
+          <div className="border-t border-[#e2e8f0] px-5 py-4">
+            <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#94a3b8]">Resumo da Folha</div>
+            <div className="space-y-1.5">
+              {([
+                ["Colunas", String(cfg.cols)],
+                ["Fonte", cfg.fontSize === "P" ? "Pequena" : cfg.fontSize === "M" ? "Média" : "Grande"],
+                ["Espaçamento", `${cfg.spacing}px`],
+                ["Gabarito", cfg.gabarito === "sem" ? "Sem gabarito" : cfg.gabarito === "mesma" ? "Mesma página" : "Próxima página"],
+                ["Total exercícios", String(totalExercises)],
+                ["Blocos ativos", `${activeCount} de ${blocks.length}`],
+              ] as [string, string][]).map(([label, value]) => (
+                <div key={label} className="flex items-center justify-between py-0.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#94a3b8]">{label}</span>
+                  <span className="text-[11px] font-medium text-[#475569]">{value}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
         </div>
       </aside>
 
       {/* ── CENTER PANEL ────────────────────────────────────────────── */}
-      <main className={`${mobileTab === "blocks" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:flex-1`} style={{ background: "#ffffff", borderLeft: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0" }}>
+      <main className={`${mobileTab === "blocks" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:min-w-0 md:min-h-0`} style={{ background: "#ffffff", borderLeft: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0" }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: "1px solid #e2e8f0", background: "#ffffff" }}>
+        <div className="flex shrink-0 items-center justify-between px-5 py-3.5" style={{ borderBottom: "1px solid #e2e8f0", background: "#ffffff" }}>
           <div className="flex items-center gap-3">
             <div>
-              <div className="text-[13px] font-bold text-[#0f172a]">Blocos de Exercícios</div>
+              <div className="text-[13px] font-semibold tracking-[0.01em] text-[#1e293b]">Blocos de Exercícios</div>
               <div className="mt-0.5 text-[11px] text-[#94a3b8]">Clique em um bloco para configurar</div>
             </div>
             {activeCount > 0 && (
@@ -1107,7 +1594,7 @@ export function SheetGeneratorTool() {
                 return (
                   <div
                     key={block.id}
-                    onClick={() => { setSelectedBlockId(block.id); setMobileTab("detail"); }}
+                    onClick={() => { setSelectedBlockId(block.id); setBlockDetailModalOpen(true); setMobileTab("detail"); }}
                     className={`group relative cursor-pointer transition-colors duration-100 ${isSelected ? "bg-[rgba(238,135,72,0.05)]" : "hover:bg-[#f8fafc]"} ${!block.active ? "opacity-40" : ""}`}
                   >
                     {/* Selected left accent */}
@@ -1159,17 +1646,17 @@ export function SheetGeneratorTool() {
             <div style={{ borderTop: "1px solid #f1f5f9" }}>
               <div className="flex items-center justify-between px-5 py-4">
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Total de exercícios</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#94a3b8]">Total de exercícios</div>
                   <div className="mt-0.5 text-[22px] font-black tracking-tight text-[#0f172a]">{totalExercises}</div>
                 </div>
                 <div className="h-8 w-px bg-[#e2e8f0]" />
                 <div className="text-right">
-                  <div className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Blocos ativos</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#94a3b8]">Blocos ativos</div>
                   <div className="mt-0.5 text-[22px] font-black tracking-tight text-[#ee8748]">{activeCount}</div>
                 </div>
                 <div className="h-8 w-px bg-[#e2e8f0]" />
                 <div className="text-right">
-                  <div className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Colunas</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#94a3b8]">Colunas</div>
                   <div className="mt-0.5 text-[22px] font-black tracking-tight text-[#64748b]">{cfg.cols}</div>
                 </div>
               </div>
@@ -1178,115 +1665,151 @@ export function SheetGeneratorTool() {
         </div>
 
         {/* Bottom bar — Seed + Print */}
-        <div className="flex items-center gap-3 px-4 py-3" style={{ borderTop: "1px solid #e2e8f0", background: "#f8fafc" }}>
+        <div className="flex shrink-0 items-center gap-3 px-4 py-3" style={{ borderTop: "1px solid #e2e8f0", background: "#f8fafc" }}>
           {/* Seed chip */}
-          <div className="flex items-center gap-0 overflow-hidden rounded-lg" style={{ border: "1px solid #e2e8f0" }}>
+          <div className="flex items-center overflow-hidden rounded-lg" style={{ border: "1px solid #e2e8f0" }}>
             <div className="flex items-center gap-1.5 px-3 py-2" style={{ background: "#ffffff" }}>
-              <span className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Seed</span>
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#94a3b8]">Seed</span>
               <span className="font-mono text-[13px] font-bold text-[#475569]">{seed}</span>
             </div>
             <button onClick={rerollSeed} aria-label="Gerar novo seed" title="Novo seed" className="flex h-full cursor-pointer items-center px-2.5 text-[#94a3b8] transition hover:bg-[#f1f5f9] hover:text-[#475569]" style={{ borderLeft: "1px solid #e2e8f0" }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg>
             </button>
           </div>
-
-          <div className="flex-1" />
-
-          <button onClick={handlePrint} className="flex items-center gap-2.5 rounded-xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-5 py-2.5 text-[13px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.3),0_4px_0_rgba(158,74,30,0.5),0_10px_20px_rgba(93,48,22,0.25)] transition hover:brightness-110 active:translate-y-[3px] active:shadow-[inset_0_1px_0_rgba(255,219,190,0.3),0_1px_0_rgba(158,74,30,0.5)]">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          <button onClick={handlePrint} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] py-2 text-[12px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.25),0_3px_0_rgba(158,74,30,0.5),0_8px_16px_rgba(93,48,22,0.25)] transition hover:brightness-110 active:translate-y-[2px] active:shadow-none">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
             Imprimir / Salvar PDF
           </button>
         </div>
       </main>
 
-      {/* ── RIGHT PANEL ─────────────────────────────────────────────── */}
-      <aside className={`${mobileTab === "detail" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:w-[280px] md:shrink-0`} style={{ background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)", borderLeft: "1px solid #e2e8f0" }}>
-        {!selectedBlock ? (
-          <div className="flex flex-1 flex-col gap-0 overflow-y-auto">
-            {/* Header */}
-            <div className="px-5 py-3.5" style={{ borderBottom: "1px solid #e2e8f0" }}>
-              <div className="text-[13px] font-bold text-[#0f172a]">Resumo da Folha</div>
-              <div className="mt-0.5 text-[11px] text-[#94a3b8]">Visão geral da configuração atual</div>
-            </div>
+      {/* ── RIGHT PANEL — PREVIEW ───────────────────────────────── */}
+      <aside className={`${mobileTab === "detail" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:min-w-0 md:min-h-0`} style={{ background: "#fff", borderLeft: "1px solid #e2e8f0" }}>
 
-            {/* Cabeçalho preview */}
-            <div className="px-5 py-4" style={{ borderBottom: "1px solid #f1f5f9" }}>
-              <div className="mb-2 text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Cabeçalho</div>
-              <div className="space-y-1.5">
-                <div className="truncate text-[13px] font-bold text-[#0f172a]">{cfg.title || <span className="italic text-[#cbd5e1]">Sem título</span>}</div>
-                {cfg.subtitle && <div className="truncate text-[11px] text-[#64748b]">{cfg.subtitle}</div>}
-                <div className="flex gap-3 text-[11px] text-[#94a3b8]">
-                  {cfg.turma && <span>Turma: <span className="font-medium text-[#475569]">{cfg.turma}</span></span>}
-                  {cfg.tempo && <span>Tempo: <span className="font-medium text-[#475569]">{cfg.tempo}</span></span>}
+        <div className="preview-root" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden", background: "#f1f5f9" }}>
+          <div className="preview-toolbar" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, padding: "10px 12px", borderBottom: "1px solid #e2e8f0", background: "#fff" }}>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94a3b8]">Zoom</span>
+            {([
+              { label: "50%", value: 0.5 },
+              { label: "75%", value: 0.75 },
+              { label: "100%", value: 1 },
+            ] as const).map((z) => (
+              <button
+                key={z.label}
+                type="button"
+                onClick={() => setZoom(z.value)}
+                className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition ${zoom === z.value ? "bg-[#ee8748] text-white" : "bg-white text-[#64748b] hover:bg-[#f8fafc]"}`}
+                style={{ border: "1px solid #e2e8f0" }}
+                aria-label={`Zoom ${z.label}`}
+              >
+                {z.label}
+              </button>
+            ))}
+          </div>
+
+          <div
+            ref={previewCanvasRef}
+            className="preview-canvas"
+            style={{ flex: 1, minHeight: 0, overflow: "hidden", background: "#f1f5f9", padding: 24, display: "flex", justifyContent: "center", alignItems: "flex-start" }}
+          >
+            {previewPages.length > 0 ? (
+              <div
+                className="page-wrapper"
+                style={{
+                  width: `${A4_W}px`,
+                  height: `${A4_H}px`,
+                  transform: `scale(${previewScale})`,
+                  transformOrigin: "top center",
+                  transition: "transform 160ms ease-out",
+                  borderRadius: 8,
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.10)",
+                }}
+              >
+                <div
+                  className="preview-container"
+                  key={currentPage}
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "flex-start",
+                    height: "100%",
+                    overflow: "hidden",
+                    animation: "previewPageFade 180ms ease-out",
+                  }}
+                >
+                  <div dangerouslySetInnerHTML={{ __html: previewPages[currentPage] }} />
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "linear-gradient(135deg, #fff7f0 0%, #ffe8d4 100%)", border: "1px solid rgba(238,135,72,0.2)" }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ee8748" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                </div>
+                <div>
+                  <p className="text-[13px] font-semibold text-[#94a3b8]">Preview indisponível</p>
+                  <p className="mt-1 text-[11px] text-[#cbd5e1]">Adicione blocos ativos para visualizar</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
-            {/* Layout preview */}
-            <div className="px-5 py-4" style={{ borderBottom: "1px solid #f1f5f9" }}>
-              <div className="mb-3 text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Layout</div>
-              {/* Column diagram */}
-              <div className="mb-3 flex gap-1">
-                {Array.from({ length: cfg.cols }).map((_, i) => (
-                  <div key={i} className="flex-1 rounded" style={{ background: "rgba(238,135,72,0.15)", border: "1px solid rgba(238,135,72,0.3)", height: "40px" }} />
-                ))}
-              </div>
-              <div className="space-y-1.5">
-                {([
-                  ["Colunas", String(cfg.cols)],
-                  ["Fonte", cfg.fontSize === "P" ? "Pequena" : cfg.fontSize === "M" ? "Média" : "Grande"],
-                  ["Espaçamento", `${cfg.spacing}px`],
-                  ["Gabarito", cfg.gabarito === "sem" ? "Sem gabarito" : cfg.gabarito === "mesma" ? "Mesma página" : "Próxima página"],
-                ] as [string, string][]).map(([label, value]) => (
-                  <div key={label} className="flex items-center justify-between">
-                    <span className="text-[11px] text-[#94a3b8]">{label}</span>
-                    <span className="text-[11px] font-semibold text-[#334155]">{value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+        {/* Rodapé do preview: paginação */}
+        <div className="shrink-0 px-4 py-3" style={{ background: "#fff", borderTop: "1px solid #e2e8f0" }}>
+          <div
+            className="pagination"
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: 16,
+              marginTop: 16,
+            }}
+          >
+            <button
+              onClick={() => { console.log("clicked prev | currentPage:", currentPage, "| total:", previewPages.length); setCurrentPage((p) => Math.max(0, p - 1)); }}
+              disabled={currentPage === 0 || previewPages.length <= 1}
+              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#f8fafc] disabled:opacity-35"
+              style={{ border: "1px solid #e2e8f0", transition: "all 180ms ease" }}
+              aria-label="Página anterior"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <span className="text-[12px] font-semibold tabular-nums text-[#475569]">
+              {previewPages.length > 0 ? `Página ${currentPage + 1} de ${previewPages.length}` : "—"}
+            </span>
+            <button
+              onClick={() => { console.log("clicked next | currentPage:", currentPage, "| total:", previewPages.length); setCurrentPage((p) => Math.min(previewPages.length - 1, p + 1)); }}
+              disabled={currentPage === previewPages.length - 1 || previewPages.length <= 1}
+              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#f8fafc] disabled:opacity-35"
+              style={{ border: "1px solid #e2e8f0", transition: "all 180ms ease" }}
+              aria-label="Próxima página"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+        </div>
+      </aside>
 
-            {/* Opções ativas */}
-            <div className="px-5 py-4" style={{ borderBottom: "1px solid #f1f5f9" }}>
-              <div className="mb-3 text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Opções ativas</div>
-              <div className="flex flex-wrap gap-1.5">
-                {([
-                  [cfg.showNome, "Nome/Data"],
-                  [cfg.numerar, "Numeração"],
-                  [cfg.embaralhar, "Embaralhado"],
-                  [cfg.repeatHeader, "Repete cabeçalho"],
-                ] as [boolean, string][]).map(([on, label]) => (
-                  <span key={label} className="rounded-full px-2.5 py-0.5 text-[11px] font-medium" style={{ background: on ? "rgba(238,135,72,0.12)" : "#f1f5f9", color: on ? "#ee8748" : "#94a3b8", border: `1px solid ${on ? "rgba(238,135,72,0.25)" : "#e2e8f0"}` }}>
-                    {on ? "✓ " : ""}{label}
-                  </span>
-                ))}
+      {/* ── BLOCK DETAIL MODAL ───────────────────────────────────────── */}
+      {blockDetailModalOpen && selectedBlock && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center" style={{ backdropFilter: "blur(6px)", background: "rgba(15,23,42,0.45)" }} onClick={() => setBlockDetailModalOpen(false)}>
+          <div className="relative mx-4 flex max-h-[85vh] w-full max-w-[420px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-[#f1f5f9] px-5 py-4">
+              <div>
+                <div className="text-[15px] font-bold text-[#0f172a]">{BLOCK_META[selectedBlock.type].name}</div>
+                <div className="text-[11px] text-[#94a3b8]">#{selectedBlock.id} · {selectedBlock.active ? <span className="text-emerald-500">Ativo</span> : <span className="text-[#94a3b8]">Inativo</span>}</div>
               </div>
+              <button onClick={() => setBlockDetailModalOpen(false)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#94a3b8] transition hover:bg-[#f1f5f9] hover:text-[#475569]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
             </div>
-
-            {/* Blocos summary */}
-            <div className="px-5 py-4">
-              <div className="mb-3 text-[10px] font-bold uppercase tracking-[1.5px] text-[#94a3b8]">Blocos ({blocks.length})</div>
-              <div className="space-y-1.5">
-                {blocks.map((b, i) => {
-                  const meta = BLOCK_META[b.type];
-                  return (
-                    <div key={b.id} onClick={() => { setSelectedBlockId(b.id); setMobileTab("detail"); }} className={`flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 transition hover:bg-white ${!b.active ? "opacity-40" : ""}`} style={{ border: "1px solid #e2e8f0" }}>
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md" style={{ background: meta.color }}>
-                        <meta.Icon size={12} strokeWidth={2} style={{ color: meta.accent }} />
-                      </div>
-                      <span className="flex-1 truncate text-[11px] font-medium text-[#334155]">{meta.name}</span>
-                      <span className="text-[10px] font-bold" style={{ color: meta.accent }}>#{i + 1}</span>
-                    </div>
-                  );
-                })}
-                {blocks.length === 0 && <p className="text-[11px] italic text-[#cbd5e1]">Nenhum bloco adicionado</p>}
-              </div>
+            <div className="flex-1 overflow-y-auto">
+              <BlockDetailPanel block={selectedBlock} onUpdate={updateBlockConfig} onChangeType={changeBlockType} />
             </div>
           </div>
-        ) : (
-          <BlockDetailPanel block={selectedBlock} onUpdate={updateBlockConfig} onChangeType={changeBlockType} />
-        )}
-      </aside>
+        </div>
+      )}
 
       {/* ── LAYOUT MODAL ─────────────────────────────────────────── */}
       {layoutModalOpen && (
@@ -1514,6 +2037,7 @@ export function SheetGeneratorTool() {
           {toast}
         </div>
       )}
+
 
     </div>
   );

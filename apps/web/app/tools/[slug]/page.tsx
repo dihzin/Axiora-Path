@@ -33,7 +33,7 @@ export default async function ToolsDetailPage({ params, searchParams }: ToolsDet
   const description = TOOL_DESCRIPTIONS[slug] ?? "Ferramenta educacional Axiora.";
 
   return (
-    <div className={`relative isolate${isExerciseGenerator ? " h-screen overflow-hidden flex flex-col" : ""}`}>
+    <div className={`relative isolate${isExerciseGenerator ? " h-dvh overflow-hidden flex flex-col" : ""}`}>
       {/* ── Background: wallpaper + overlays (igual ao /tools) ─────────────── */}
       <div
         className="pointer-events-none fixed inset-0 z-0 bg-cover bg-[58%_center] bg-no-repeat"
