@@ -81,6 +81,47 @@ interface ExerciseItem {
   answer: string | number;
 }
 
+interface SavedTemplate {
+  id: string;
+  name: string;
+  config: GlobalConfig;
+  blocks: Block[];
+  createdAt: string;
+  previewHtml?: string;
+}
+
+const TEMPLATE_STORAGE_KEY = "axiora_templates";
+
+function getTemplates(): SavedTemplate[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(TEMPLATE_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as SavedTemplate[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  } catch {
+    return [];
+  }
+}
+
+function saveTemplate(template: SavedTemplate): SavedTemplate[] {
+  const all = getTemplates();
+  const next = [template, ...all].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(next));
+  }
+  return next;
+}
+
+function deleteTemplate(id: string): SavedTemplate[] {
+  const next = getTemplates().filter((t) => t.id !== id);
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(next));
+  }
+  return next;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // BLOCK TYPE DEFINITIONS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -635,7 +676,7 @@ function buildPrintHTML(
   }
 
   // Build exercise grid
-  const rowGap = Math.max(cfg.spacing, 18);
+  const rowGap = Math.max(cfg.spacing, 10);
   const gridStyle = `display:grid;grid-template-columns:repeat(${cols},1fr);gap:${rowGap}px 48px;align-items:start;`;
   let exRows = "";
   for (let i = 0; i < exercises.length; i++) {
@@ -773,7 +814,7 @@ interface PageSlice {
 function paginateSimple(exercises: ExerciseItem[], blocks: Block[], cfg: GlobalConfig): PageSlice[] {
   if (!exercises.length) return [];
 
-  const rowGap = Math.max(cfg.spacing, 18);
+  const rowGap = Math.max(cfg.spacing, 10);
   const cols = cfg.cols;
   const secHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
 
@@ -800,7 +841,7 @@ function paginateSimple(exercises: ExerciseItem[], blocks: Block[], cfg: GlobalC
   // use 100px conservatively so we never accidentally put too many items on a page.
   const SEC_H_MID  = 100;
   const SEC_H_TOP  = 100;
-  const BALANCE_THRESHOLD = 120;
+  const BALANCE_THRESHOLD = 160;
 
   const p1Avail = A4_H - 2 * PAGE_PY - HEADER1_H - SUBTITLE1_H - FOOTER_H;
   const pnAvail = A4_H - 2 * PAGE_PY - FOOTER_H;
@@ -858,10 +899,10 @@ function paginateSimple(exercises: ExerciseItem[], blocks: Block[], cfg: GlobalC
     // Balance rule: if this row would leave a tiny tail and we still have more rows,
     // force a new page before placing it.
     const remainingAfterRow = avail - (usedH + rowTotal);
+    const singleExerciseRow = row.exIndexes.length === 1;
     if (
       pageExes.length > 0 &&
       rowsLeftIncludingCurrent > 1 &&
-      row.rowH >= BALANCE_THRESHOLD &&
       remainingAfterRow > 0 &&
       remainingAfterRow < BALANCE_THRESHOLD
     ) {
@@ -873,7 +914,29 @@ function paginateSimple(exercises: ExerciseItem[], blocks: Block[], cfg: GlobalC
       rowTotal = calcRowTotal(usedH);
     }
 
-    if (usedH + rowTotal > avail && pageExes.length > 0) {
+    // If this would end a page with a single-exercise line while there are more rows,
+    // move this row to the next page for better visual balance.
+    if (
+      pageExes.length > 0 &&
+      rowsLeftIncludingCurrent > 1 &&
+      singleExerciseRow &&
+      avail - (usedH + rowTotal) < BALANCE_THRESHOLD
+    ) {
+      slices.push({ exIndexes: pageExes, isFirstPage });
+      pageExes = [];
+      usedH = 0;
+      avail = pnAvail;
+      isFirstPage = false;
+      rowTotal = calcRowTotal(usedH);
+    }
+
+    // Avoid single orphan exercise on page tail when more content exists.
+    const wouldLeaveSingleOrphan =
+      pageExes.length === 1 &&
+      rowsLeftIncludingCurrent > 1 &&
+      usedH + rowTotal > avail;
+
+    if ((usedH + rowTotal > avail && pageExes.length > 0) || wouldLeaveSingleOrphan) {
       // This row doesn't fit — flush current page
       slices.push({ exIndexes: pageExes, isFirstPage });
       pageExes = [];
@@ -904,8 +967,8 @@ function buildDocCSS(cfg: GlobalConfig): string {
   return `
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
     @keyframes previewPageFade {
-      from { opacity: 0; }
-      to { opacity: 1; }
+      from { opacity: 0; transform: scale(0.992); }
+      to { opacity: 1; transform: scale(1); }
     }
     .sheet-root .preview-page{
       all:revert;
@@ -918,10 +981,11 @@ function buildDocCSS(cfg: GlobalConfig): string {
       overflow:hidden;
       display:flex;
       flex-direction:column;
+      justify-content:space-between;
       font-family:${FONT};
       font-size:${fz};
       color:#1F2937;
-      line-height:1.6;
+      line-height:1.25;
     }
     .sheet-root .preview-page,.sheet-root .preview-page *,.sheet-root .preview-page *::before,.sheet-root .preview-page *::after{box-sizing:border-box;}
     .sheet-root .preview-page .ex-mult-armada{display:inline-flex;flex-direction:column;align-items:flex-end;font-family:${MONO};font-size:${fz};gap:2px;}
@@ -966,14 +1030,14 @@ function buildDocStyles(cfg: GlobalConfig) {
   const fzSm = cfg.fontSize === "P" ? "10px" : cfg.fontSize === "G" ? "14px" : "11px";
   const FONT = `Inter,system-ui,-apple-system,sans-serif`;
   const S = {
-    title: `font-family:${FONT};font-size:18px;font-weight:500;text-align:center;letter-spacing:1.2px;color:#111827;margin-bottom:18px;`,
+    title: `font-family:${FONT};font-size:18px;font-weight:500;text-align:center;letter-spacing:0.8px;color:#111827;margin-bottom:18px;`,
     rule2: `height:1.5px;background:#D1D5DB;margin:0 0 4px;`,
     ruleGray: `height:1px;background:#F3F4F6;margin:12px 0 16px;`,
     infoRow: `font-family:${FONT};font-size:12px;color:#1F2937;padding:6px 0;letter-spacing:0.04em;`,
-    secHead: `font-family:${FONT};font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.14em;margin:36px 0 14px;padding-bottom:8px;border-bottom:1px solid #E5E7EB;`,
+    secHead: `font-family:${FONT};font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.12em;margin:10px 0 10px;padding-bottom:6px;border-bottom:1px solid #E5E7EB;`,
     exNum: `font-family:${FONT};font-size:${fz};color:#9CA3AF;white-space:nowrap;flex-shrink:0;min-width:28px;line-height:1.8;`,
-    exBody: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.8;flex:1;min-width:0;`,
-    page: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.6;`,
+    exBody: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.25;flex:1;min-width:0;`,
+    page: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.25;`,
     footer: `font-family:${FONT};font-size:${fzSm};color:#9CA3AF;letter-spacing:0.04em;`,
   };
   const lbl = `font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:#9CA3AF;white-space:nowrap;flex-shrink:0;`;
@@ -1025,7 +1089,7 @@ function buildMeasurementDoc(exercises: ExerciseItem[], blocks: Block[], cfg: Gl
   const { fz, FONT, S, lbl, ln } = buildDocStyles(cfg);
   const css = buildDocCSS(cfg);
   const sectionHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
-  const rowGap = Math.max(cfg.spacing, 18);
+  const rowGap = Math.max(cfg.spacing, 10);
   const nomeLine = buildStudentRowHTML(cfg, S, lbl, ln);
   const headerHTML = `
     <div style="${S.title}">${cfg.title || "Folha de Exercícios"}</div>
@@ -1068,7 +1132,7 @@ function buildOnePageHTML(
 ): string {
   const { fz, FONT, S, lbl, ln } = buildDocStyles(cfg);
   const css = buildDocCSS(cfg);
-  const rowGap = Math.max(cfg.spacing, 18);
+  const rowGap = Math.max(cfg.spacing, 10);
 
   const pageSections: Record<number, string> = {};
   for (const { index } of pageItems) {
@@ -1106,7 +1170,7 @@ function buildOnePageHTML(
   return `<style>${css}</style>` +
     `<div class="sheet-root"><div class="preview-page" style="${S.page}">` +
     pageHeaderHTML + subtitleHTML +
-    `<div style="display:grid;grid-template-columns:repeat(${cfg.cols},1fr);gap:${rowGap}px 48px;align-items:start;">` +
+    `<div style="flex:1;display:grid;grid-template-columns:repeat(${cfg.cols},1fr);gap:${rowGap}px 48px;align-items:start;">` +
     gridItems + `</div>` + footerHTML + `</div></div>`;
 }
 
@@ -1124,7 +1188,7 @@ function buildAnswerPageHTML(exercises: ExerciseItem[], cfg: GlobalConfig, seed:
   return `<style>${css}</style>` +
     `<div class="sheet-root"><div class="preview-page" style="${S.page}">` +
     `<div style="${S.title}">Gabarito</div><div style="${S.rule2}"></div>` +
-    `<div style="margin-top:16px;display:grid;grid-template-columns:repeat(2,1fr);gap:2px 32px;">${ansItems.join("")}</div>` +
+    `<div style="flex:1;margin-top:16px;display:grid;grid-template-columns:repeat(2,1fr);gap:2px 32px;">${ansItems.join("")}</div>` +
     footerHTML + `</div></div>`;
 }
 
@@ -1252,6 +1316,11 @@ export function SheetGeneratorTool() {
   const [layoutModalOpen, setLayoutModalOpen] = useState(false);
   const [opcoesModalOpen, setOpcoesModalOpen] = useState(false);
   const [blockDetailModalOpen, setBlockDetailModalOpen] = useState(false);
+  const [saveTemplateModalOpen, setSaveTemplateModalOpen] = useState(false);
+  const [templatesModalOpen, setTemplatesModalOpen] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [templates, setTemplates] = useState<SavedTemplate[]>([]);
+  const [templateBusyId, setTemplateBusyId] = useState<string | null>(null);
 
   // ── Preview: auto-fit + zoom (Canva-like) ─────────────────────────────────
   const previewCanvasRef = useRef<HTMLDivElement>(null);
@@ -1262,11 +1331,10 @@ export function SheetGeneratorTool() {
     if (!el) return;
     const update = () => {
       const rect = el.getBoundingClientRect();
-      const canvasPaddingX = 48; // preview-canvas horizontal padding (24 * 2)
-      const canvasPaddingY = 48; // preview-canvas vertical padding
+      const canvasPaddingX = 24; // preview-canvas horizontal padding (12 * 2)
+      const usableHeight = Math.max(0, rect.height - 24);
       const availableW = Math.max(0, rect.width - canvasPaddingX);
-      const availableH = Math.max(0, rect.height - canvasPaddingY);
-      const fit = Math.min(availableW / A4_W, availableH / A4_H, 1);
+      const fit = Math.min(availableW / A4_W, usableHeight / A4_H, 1);
       setAutoFitScale(fit > 0 ? fit : 1);
     };
     update();
@@ -1274,15 +1342,17 @@ export function SheetGeneratorTool() {
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
-  const previewScale = autoFitScale * zoom;
+  const previewScale = Math.min(autoFitScale, autoFitScale * zoom);
 
   // ── Pagination state ────────────────────────────────────────────────────────
   const [previewPages, setPreviewPages] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
-  console.log("previewPages length:", previewPages.length, "| currentPage:", currentPage);
-
   useEffect(() => {
     setSeed(Math.floor(10000 + Math.random() * 90000));
+  }, []);
+
+  useEffect(() => {
+    setTemplates(getTemplates());
   }, []);
 
   // Rebuild pages synchronously whenever blocks / cfg / seed change
@@ -1308,8 +1378,6 @@ export function SheetGeneratorTool() {
     if (cfg.gabarito === "proxima") {
       htmlPages.push(buildAnswerPageHTML(exercises, cfg, seed));
     }
-    console.log("html page 0 !== page 1:", htmlPages[0] !== htmlPages[1]);
-    console.log("pages:", htmlPages.length, "| exercises:", exercises.length, "| slices:", slices.map(s => s.exIndexes.length));
     setPreviewPages(htmlPages);
     setCurrentPage(0);
   }, [blocks, cfg, seed]);
@@ -1317,6 +1385,10 @@ export function SheetGeneratorTool() {
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
+  }, []);
+
+  const refreshTemplates = useCallback(() => {
+    setTemplates(getTemplates());
   }, []);
 
   const invalidate = useCallback(() => setSnapshot(null), []);
@@ -1363,6 +1435,57 @@ export function SheetGeneratorTool() {
     invalidate();
     showToast("Novo seed gerado — clique em Imprimir para ver os novos exercícios");
   }, [invalidate, showToast]);
+
+  const handleSaveTemplate = useCallback(() => {
+    const trimmed = templateName.trim();
+    if (!trimmed) { showToast("Informe um nome para o template"); return; }
+    const payload: SavedTemplate = {
+      id: `tpl_${Date.now()}_${Math.floor(Math.random() * 9999)}`,
+      name: trimmed,
+      config: JSON.parse(JSON.stringify(cfg)) as GlobalConfig,
+      blocks: JSON.parse(JSON.stringify(blocks)) as Block[],
+      createdAt: new Date().toISOString(),
+      previewHtml: previewPages[0] ?? "",
+    };
+    setTemplates(saveTemplate(payload));
+    setTemplateName("");
+    setSaveTemplateModalOpen(false);
+    showToast("Template salvo");
+  }, [templateName, cfg, blocks, previewPages, showToast]);
+
+  const handleLoadTemplate = useCallback((tpl: SavedTemplate) => {
+    setTemplateBusyId(tpl.id);
+    setCfg(JSON.parse(JSON.stringify(tpl.config)) as GlobalConfig);
+    const loadedBlocks = JSON.parse(JSON.stringify(tpl.blocks)) as Block[];
+    setBlocks(loadedBlocks);
+    const next = loadedBlocks.reduce((max, b) => Math.max(max, b.id), 0) + 1;
+    nextId.current = Math.max(next, 1);
+    setSelectedBlockId(null);
+    invalidate();
+    setTemplatesModalOpen(false);
+    setTemplateBusyId(null);
+    showToast(`Template "${tpl.name}" carregado`);
+  }, [invalidate, showToast]);
+
+  const handleDeleteTemplate = useCallback((id: string) => {
+    setTemplateBusyId(id);
+    setTemplates(deleteTemplate(id));
+    setTemplateBusyId(null);
+    showToast("Template excluído");
+  }, [showToast]);
+
+  const handleDuplicateTemplate = useCallback((tpl: SavedTemplate) => {
+    setTemplateBusyId(tpl.id);
+    const duplicated: SavedTemplate = {
+      ...JSON.parse(JSON.stringify(tpl)) as SavedTemplate,
+      id: `tpl_${Date.now()}_${Math.floor(Math.random() * 9999)}`,
+      name: `${tpl.name} (cópia)`,
+      createdAt: new Date().toISOString(),
+    };
+    setTemplates(saveTemplate(duplicated));
+    setTemplateBusyId(null);
+    showToast("Template duplicado");
+  }, [showToast]);
 
   const handlePrint = useCallback(() => {
     const win = window.open("", "_blank", "width=860,height=750");
@@ -1533,10 +1656,26 @@ export function SheetGeneratorTool() {
               <span className="rounded-full bg-[rgba(238,135,72,0.12)] px-2.5 py-0.5 text-[11px] font-bold text-[#ee8748]">{activeCount} ativo{activeCount === 1 ? "" : "s"}</span>
             )}
           </div>
-          <button onClick={addBlock} className="flex items-center gap-2 rounded-xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-4 py-2 text-[12px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.25),0_3px_0_rgba(158,74,30,0.5),0_8px_16px_rgba(93,48,22,0.25)] transition hover:brightness-110 active:translate-y-[2px] active:shadow-none">
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="#fff" strokeWidth="2" strokeLinecap="round" /></svg>
-            Adicionar Bloco
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => { refreshTemplates(); setTemplatesModalOpen(true); }}
+              className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-[11px] font-semibold text-[#64748b] transition hover:bg-[#f8fafc] hover:text-[#334155]"
+            >
+              Meus Templates
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTemplateName(cfg.title || "Template Axiora"); setSaveTemplateModalOpen(true); }}
+              className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-[11px] font-semibold text-[#64748b] transition hover:bg-[#f8fafc] hover:text-[#334155]"
+            >
+              Salvar Template
+            </button>
+            <button onClick={addBlock} className="flex items-center gap-2 rounded-xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-4 py-2 text-[12px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.25),0_3px_0_rgba(158,74,30,0.5),0_8px_16px_rgba(93,48,22,0.25)] transition hover:brightness-110 active:translate-y-[2px] active:shadow-none">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="#fff" strokeWidth="2" strokeLinecap="round" /></svg>
+              Adicionar Bloco
+            </button>
+          </div>
         </div>
 
         {/* Blocks list */}
@@ -1687,8 +1826,8 @@ export function SheetGeneratorTool() {
       <aside className={`${mobileTab === "detail" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:min-w-0 md:min-h-0`} style={{ background: "#fff", borderLeft: "1px solid #e2e8f0" }}>
 
         <div className="preview-root" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden", background: "#f1f5f9" }}>
-          <div className="preview-toolbar" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, padding: "10px 12px", borderBottom: "1px solid #e2e8f0", background: "#fff" }}>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94a3b8]">Zoom</span>
+          <div className="preview-toolbar" style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, padding: "8px 16px", borderBottom: "1px solid #e5e7eb", background: "#fff" }}>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#94a3b8] mr-1">Zoom</span>
             {([
               { label: "50%", value: 0.5 },
               { label: "75%", value: 0.75 },
@@ -1698,7 +1837,7 @@ export function SheetGeneratorTool() {
                 key={z.label}
                 type="button"
                 onClick={() => setZoom(z.value)}
-                className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition ${zoom === z.value ? "bg-[#ee8748] text-white" : "bg-white text-[#64748b] hover:bg-[#f8fafc]"}`}
+                className={`rounded-[6px] px-[10px] py-1 text-[11px] font-semibold transition ${zoom === z.value ? "bg-[#f97316] text-white" : "bg-white text-[#64748b] hover:bg-gray-100"}`}
                 style={{ border: "1px solid #e2e8f0" }}
                 aria-label={`Zoom ${z.label}`}
               >
@@ -1710,7 +1849,7 @@ export function SheetGeneratorTool() {
           <div
             ref={previewCanvasRef}
             className="preview-canvas"
-            style={{ flex: 1, minHeight: 0, overflow: "hidden", background: "#f1f5f9", padding: 24, display: "flex", justifyContent: "center", alignItems: "flex-start" }}
+            style={{ flex: 1, minHeight: 0, height: "100%", overflow: "hidden", background: "#f1f5f9", padding: 12, display: "flex", justifyContent: "center", alignItems: "center" }}
           >
             {previewPages.length > 0 ? (
               <div
@@ -1720,9 +1859,10 @@ export function SheetGeneratorTool() {
                   height: `${A4_H}px`,
                   transform: `scale(${previewScale})`,
                   transformOrigin: "top center",
-                  transition: "transform 160ms ease-out",
+                  transition: "transform 0.2s ease, opacity 0.2s ease",
                   borderRadius: 8,
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.10)",
+                  boxShadow: "0 20px 40px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04)",
+                  margin: "auto",
                 }}
               >
                 <div
@@ -1734,7 +1874,7 @@ export function SheetGeneratorTool() {
                     alignItems: "flex-start",
                     height: "100%",
                     overflow: "hidden",
-                    animation: "previewPageFade 180ms ease-out",
+                    animation: "previewPageFade 200ms ease-out",
                   }}
                 >
                   <div dangerouslySetInnerHTML={{ __html: previewPages[currentPage] }} />
@@ -1762,30 +1902,32 @@ export function SheetGeneratorTool() {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              gap: 16,
-              marginTop: 16,
+              gap: 12,
+              marginTop: 12,
+              fontSize: 13,
+              color: "#6b7280",
             }}
           >
             <button
-              onClick={() => { console.log("clicked prev | currentPage:", currentPage, "| total:", previewPages.length); setCurrentPage((p) => Math.max(0, p - 1)); }}
+              onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
               disabled={currentPage === 0 || previewPages.length <= 1}
-              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#f8fafc] disabled:opacity-35"
+              className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-[#f8fafc] disabled:opacity-35"
               style={{ border: "1px solid #e2e8f0", transition: "all 180ms ease" }}
               aria-label="Página anterior"
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
             </button>
-            <span className="text-[12px] font-semibold tabular-nums text-[#475569]">
+            <span className="text-[13px] font-medium tabular-nums text-[#6b7280]">
               {previewPages.length > 0 ? `Página ${currentPage + 1} de ${previewPages.length}` : "—"}
             </span>
             <button
-              onClick={() => { console.log("clicked next | currentPage:", currentPage, "| total:", previewPages.length); setCurrentPage((p) => Math.min(previewPages.length - 1, p + 1)); }}
+              onClick={() => setCurrentPage((p) => Math.min(previewPages.length - 1, p + 1))}
               disabled={currentPage === previewPages.length - 1 || previewPages.length <= 1}
-              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#f8fafc] disabled:opacity-35"
+              className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-[#f8fafc] disabled:opacity-35"
               style={{ border: "1px solid #e2e8f0", transition: "all 180ms ease" }}
               aria-label="Próxima página"
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
             </button>
           </div>
         </div>
@@ -1919,6 +2061,117 @@ export function SheetGeneratorTool() {
               <button onClick={() => setOpcoesModalOpen(false)} className="w-full cursor-pointer rounded-lg bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] py-2.5 text-[13px] font-semibold text-white transition hover:brightness-110">
                 Confirmar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SAVE TEMPLATE MODAL ───────────────────────────────────── */}
+      {saveTemplateModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center" style={{ backdropFilter: "blur(6px)", background: "rgba(15,23,42,0.45)" }} onClick={() => setSaveTemplateModalOpen(false)}>
+          <div className="relative mx-4 w-full max-w-[460px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-[#f1f5f9] px-5 py-4">
+              <div>
+                <div className="text-[15px] font-bold text-[#0f172a]">Salvar Template</div>
+                <div className="text-[12px] text-[#94a3b8]">Reutilize este layout depois</div>
+              </div>
+              <button onClick={() => setSaveTemplateModalOpen(false)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#94a3b8] transition hover:bg-[#f1f5f9] hover:text-[#475569]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div className="space-y-3 px-5 py-4">
+              <label className="block text-[11px] font-medium text-[#475569]">
+                Nome do template
+                <input
+                  className={inputCls}
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  placeholder="Ex.: Prova Trimestral 7º ano"
+                />
+              </label>
+              <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2 text-[11px] text-[#64748b]">
+                {totalExercises} exercícios · {blocks.filter((b) => b.active).length} blocos ativos
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-[#f1f5f9] px-5 py-3">
+              <button onClick={() => setSaveTemplateModalOpen(false)} className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-[12px] font-semibold text-[#64748b] transition hover:bg-[#f8fafc]">
+                Cancelar
+              </button>
+              <button onClick={handleSaveTemplate} className="rounded-lg bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-3 py-2 text-[12px] font-semibold text-white transition hover:brightness-110">
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TEMPLATES MODAL ──────────────────────────────────────── */}
+      {templatesModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center" style={{ backdropFilter: "blur(6px)", background: "rgba(15,23,42,0.45)" }} onClick={() => setTemplatesModalOpen(false)}>
+          <div className="relative mx-4 flex max-h-[85vh] w-full max-w-[780px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-[#f1f5f9] px-5 py-4">
+              <div>
+                <div className="text-[15px] font-bold text-[#0f172a]">Meus Templates</div>
+                <div className="text-[12px] text-[#94a3b8]">Carregue, duplique ou exclua templates</div>
+              </div>
+              <button onClick={() => setTemplatesModalOpen(false)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#94a3b8] transition hover:bg-[#f1f5f9] hover:text-[#475569]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {templates.length === 0 ? (
+                <div className="flex h-full min-h-[220px] items-center justify-center rounded-xl border border-dashed border-[#e2e8f0] bg-[#f8fafc] text-[12px] text-[#94a3b8]">
+                  Nenhum template salvo ainda
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {templates.map((tpl) => {
+                    const total = tpl.blocks.filter((b) => b.active).reduce((s, b) => s + b.config.quantidade, 0);
+                    return (
+                      <div key={tpl.id} className="rounded-xl border border-[#e2e8f0] bg-white p-3 transition hover:shadow-sm">
+                        <div className="flex items-start gap-3">
+                          <div className="h-[226px] w-[160px] shrink-0 overflow-hidden rounded-lg border border-[#e2e8f0] bg-[#f8fafc]">
+                            {tpl.previewHtml ? (
+                              <div style={{ width: `${A4_W}px`, height: `${A4_H}px`, transform: "scale(0.2)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: tpl.previewHtml }} />
+                            ) : (
+                              <div className="flex h-full items-center justify-center text-[10px] text-[#94a3b8]">Sem preview</div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-[13px] font-semibold text-[#0f172a]">{tpl.name}</div>
+                            <div className="mt-1 text-[11px] text-[#94a3b8]">
+                              {total} exercícios · {new Date(tpl.createdAt).toLocaleDateString("pt-BR")} {new Date(tpl.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                            </div>
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                              <button
+                                onClick={() => handleLoadTemplate(tpl)}
+                                disabled={templateBusyId === tpl.id}
+                                className="rounded-lg bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-3 py-1.5 text-[11px] font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
+                              >
+                                {templateBusyId === tpl.id ? "Carregando..." : "Carregar"}
+                              </button>
+                              <button
+                                onClick={() => handleDuplicateTemplate(tpl)}
+                                disabled={templateBusyId === tpl.id}
+                                className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#64748b] transition hover:bg-[#f8fafc] disabled:opacity-60"
+                              >
+                                Duplicar
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTemplate(tpl.id)}
+                                disabled={templateBusyId === tpl.id}
+                                className="rounded-lg border border-[#fee2e2] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#ef4444] transition hover:bg-[#fef2f2] disabled:opacity-60"
+                              >
+                                Excluir
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
