@@ -176,10 +176,21 @@ h2 {
     linear-gradient(180deg, rgba(241, 245, 249, 0.92) 0%, rgba(226, 236, 250, 0.84) 100%);
 }
 
+/* ── Luminous Light Home ──────────────────────────────────────────────── */
+.axiora-luminous-bg {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.12), transparent 55%),
+    radial-gradient(circle at 80% 30%, rgba(251, 146, 60, 0.10), transparent 52%),
+    radial-gradient(circle at 50% 80%, rgba(168, 85, 247, 0.07), transparent 50%),
+    #f8fafc;
+}
+/* ─────────────────────────────────────────────────────────────────────── */
+
 .axiora-surface-glass {
   border: 1px solid var(--axiora-line-soft);
   border-radius: var(--axiora-radius-xl);
   background: linear-gradient(160deg, var(--axiora-surface-glass-strong) 0%, var(--axiora-surface-glass) 100%);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   box-shadow: var(--axiora-shadow-soft);
 }

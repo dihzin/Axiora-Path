@@ -111,7 +111,7 @@ export function MissionCardV2({
           </div>
         </div>
 
-        <div className="rounded-xl border border-[#E5E7EB] bg-white/90 px-3 py-2">
+        <div className="rounded-xl border border-[#F0E4D2] bg-white/80 px-3 py-2">
           <div className="mb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.08em] text-[#64748B]">
             <span>Progresso</span>
             <span>{clampedProgress}%</span>
@@ -136,7 +136,7 @@ export function MissionCardV2({
             initial={false}
             animate={rewardState ? { scale: [1, 1.08, 1], y: [0, -2, 0] } : { scale: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="flex items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-white px-3 py-1.5 text-[13px] font-bold text-[#0F172A]"
+            className="flex items-center gap-1.5 rounded-xl border border-[#F0E4D2] bg-white/80 px-3 py-1.5 text-[13px] font-bold text-[#0F172A]"
           >
             <Sparkles className="h-3.5 w-3.5 text-[#FB923C]" />
             +{xpReward} XP
@@ -145,7 +145,7 @@ export function MissionCardV2({
             initial={false}
             animate={rewardState ? { scale: [1, 1.08, 1], y: [0, -2, 0] } : { scale: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut", delay: 0.08 }}
-            className="flex items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-white px-3 py-1.5 text-[13px] font-bold text-[#0F172A]"
+            className="flex items-center gap-1.5 rounded-xl border border-[#F0E4D2] bg-white/80 px-3 py-1.5 text-[13px] font-bold text-[#0F172A]"
           >
             <Coins className="h-3.5 w-3.5 text-[#FB923C]" />
             +{coinReward} moedas

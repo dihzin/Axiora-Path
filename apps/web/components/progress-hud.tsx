@@ -75,14 +75,21 @@ export function ProgressHUD({
               <Star className="h-3.5 w-3.5 text-[#FB923C]" />
               XP Global
             </p>
-            <p className="axiora-title text-sm font-extrabold">Nível {Math.max(1, Math.floor(level))}</p>
+            <p
+            className={cn(
+              "axiora-title text-sm font-extrabold transition-[transform,filter] duration-300 ease-out",
+              xpPulse && "scale-[1.08] brightness-125",
+            )}
+          >
+            Nível {Math.max(1, Math.floor(level))}
+          </p>
           </div>
-          <div className="h-2.5 overflow-hidden rounded-full border border-[#E2E8F0] bg-white/75">
+          <div className="h-3 overflow-hidden rounded-full border border-[#E2E8F0] bg-white/75 shadow-[inset_0_1px_3px_rgba(0,0,0,0.08)]">
             <motion.div
-              className="h-full bg-[linear-gradient(90deg,#FB923C_0%,#FDBA74_52%,#FED7AA_100%)]"
+              className="h-full rounded-full bg-[linear-gradient(90deg,#EA580C_0%,#FB923C_45%,#FDBA74_80%,#FED7AA_100%)] shadow-[0_0_8px_rgba(251,146,60,0.50)]"
               initial={false}
               animate={{ width: `${safePercent}%` }}
-              transition={{ duration: 0.45, ease: "easeOut" }}
+              transition={{ duration: 0.55, ease: "easeOut" }}
             />
           </div>
           <p
@@ -95,7 +102,7 @@ export function ProgressHUD({
           </p>
         </div>
 
-        <div className="axiora-surface-soft rounded-2xl px-3 py-2">
+        <div className="rounded-2xl border border-white/45 bg-white/50 px-3 py-2 backdrop-blur-sm">
           <p className="axiora-subtitle inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-[0.08em]">
             <Compass className="h-3.5 w-3.5 text-[#64748B]" />
             Mini Trail
