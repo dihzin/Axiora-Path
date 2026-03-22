@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getApiErrorMessage, verifyParentPin } from "@/lib/api/client";
+import { parentPinSchema } from "@/lib/schemas";
 
 export default function ParentPinPage() {
   const router = useRouter();
@@ -17,6 +18,11 @@ export default function ParentPinPage() {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    const validation = parentPinSchema.safeParse({ pin });
+    if (!validation.success) {
+      setError(validation.error.errors[0].message);
+      return;
+    }
     setError(null);
     setLoading(true);
     try {

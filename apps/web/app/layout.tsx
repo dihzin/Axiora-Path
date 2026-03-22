@@ -3,6 +3,8 @@ import type { Metadata, Viewport } from "next";
 import { Baloo_2, Nunito } from "next/font/google";
 import { ReactNode } from "react";
 
+import { Toaster } from "sonner";
+
 import { OfflineBanner } from "@/components/offline-banner";
 import { OfflineSyncBootstrap } from "@/components/offline-sync-bootstrap";
 import { PwaRegister } from "@/components/pwa-register";
@@ -58,6 +60,20 @@ export default function RootLayout({ children }: RootLayoutProps) {
             <OfflineBanner />
             {children}
           </div>
+          <Toaster
+            position="bottom-center"
+            toastOptions={{
+              style: {
+                background: "#1e293b",
+                border: "1px solid rgba(255,255,255,0.10)",
+                color: "#fff",
+                fontFamily: "var(--font-ui)",
+                fontSize: "13px",
+                fontWeight: 600,
+                backdropFilter: "blur(12px)",
+              },
+            }}
+          />
         </ThemeProvider>
       </body>
     </html>

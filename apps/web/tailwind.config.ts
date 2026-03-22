@@ -61,6 +61,10 @@ const config: Config = {
         },
       },
       keyframes: {
+        "fade-slide-up": {
+          "0%": { opacity: "0", transform: "translateY(12px) scale(0.98)" },
+          "100%": { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
         "pop-in": {
           "0%": { transform: "scale(0.5)", opacity: "0" },
           "70%": { transform: "scale(1.15)" },
@@ -80,6 +84,7 @@ const config: Config = {
         },
       },
       animation: {
+        "fade-slide-up": "fade-slide-up 200ms ease-out both",
         "pop-in":    "pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both",
         "pulse-ring":"pulse-ring 1.2s ease-out infinite",
         float:       "float 3s ease-in-out infinite",

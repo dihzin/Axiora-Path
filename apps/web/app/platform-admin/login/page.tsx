@@ -7,6 +7,7 @@ import { AuthWallpaper } from "@/components/layout/auth-wallpaper";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage, platformLogin } from "@/lib/api/client";
 import { setAccessToken, setTenantSlug } from "@/lib/api/session";
+import { platformAdminLoginSchema } from "@/lib/schemas";
 
 export default function PlatformAdminLoginPage() {
   const router = useRouter();
@@ -26,6 +27,11 @@ export default function PlatformAdminLoginPage() {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    const validation = platformAdminLoginSchema.safeParse({ email, password });
+    if (!validation.success) {
+      setError(validation.error.errors[0].message);
+      return;
+    }
     setError(null);
     setLoading(true);
     try {

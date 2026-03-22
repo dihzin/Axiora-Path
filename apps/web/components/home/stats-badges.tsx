@@ -58,7 +58,7 @@ export function StatsBadges({
           className="w-full sm:min-w-[200px] sm:w-auto"
         />
         {/* Hint de contexto logo ao lado */}
-        <p className="axiora-subtitle text-[12px] opacity-60 sm:max-w-[200px]">
+        <p className="axiora-subtitle text-[13px] opacity-80 sm:max-w-[200px]">
           {nextAction.helperText}
         </p>
       </div>

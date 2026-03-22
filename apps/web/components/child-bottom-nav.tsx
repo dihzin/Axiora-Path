@@ -50,15 +50,19 @@ function ChildBottomNavComponent({ spacer = true }: ChildBottomNavProps) {
                 <div
                   className={cn(
                     "flex h-10 w-10 items-center justify-center rounded-xl transition-transform transition-shadow transition-opacity duration-200",
-                    isActive ? "scale-[1.12]" : "opacity-45 grayscale-[60%]",
+                    isActive
+                      ? "scale-[1.12]"
+                      : item.iconKey === "aprender"
+                        ? "opacity-65"
+                        : "opacity-55 grayscale-[50%]",
                   )}
                 >
                   <ChildNavIcon name={item.iconKey} active={isActive} size={28} />
                 </div>
-                <span className={cn("text-[10px] font-extrabold tracking-wide transition-colors", isActive ? "text-[#1CB0F6]" : "text-gray-400")}>
+                <span className={cn("text-[10px] font-extrabold tracking-wide transition-colors", isActive ? "text-[#FF9600]" : "text-gray-400")}>
                   {item.label}
                 </span>
-                {isActive ? <span className="h-[3px] w-6 rounded-full bg-[#1CB0F6]" /> : null}
+                {isActive ? <span className="h-[3px] w-6 rounded-full bg-[#FF9600]" /> : null}
               </Link>
             );
           })}

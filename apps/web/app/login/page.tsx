@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiErrorMessage, getLegalStatus, googleLogin, listMemberships, loginPrimary, type PrimaryLoginResponse, selectTenant } from "@/lib/api/client";
 import { clearTenantSlug, clearTokens, setAccessToken, setTenantSlug } from "@/lib/api/session";
+import { loginSchema } from "@/lib/schemas";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() ?? "";
 
@@ -132,6 +133,11 @@ export default function LoginPage() {
 
   const handleEmailLogin = async (event: FormEvent) => {
     event.preventDefault();
+    const validation = loginSchema.safeParse({ email, password });
+    if (!validation.success) {
+      setError(validation.error.errors[0].message);
+      return;
+    }
     setError(null);
     setLoading(true);
     try {

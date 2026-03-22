@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 import { ChildBottomNav } from "@/components/child-bottom-nav";
@@ -21,6 +22,43 @@ import { EconomyHud } from "@/components/home/economy-hud";
 import { JourneySection } from "@/components/home/journey-section";
 import { PulseSection } from "@/components/home/pulse-section";
 
+// ── Skeleton de loading ───────────────────────────────────────────────────────
+
+function SkeletonBlock({ className }: { className?: string }) {
+  return (
+    <div
+      aria-hidden
+      className={cn(
+        "animate-pulse rounded-2xl bg-white/60 backdrop-blur",
+        className,
+      )}
+    />
+  );
+}
+
+function HomeSkeletonFallback() {
+  return (
+    <div className="flex flex-col gap-5 p-4 lg:p-6">
+      {/* HUD */}
+      <SkeletonBlock className="h-24 w-full" />
+      {/* Hero */}
+      <SkeletonBlock className="h-44 w-full" />
+      {/* Grid */}
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+        <div className="flex flex-col gap-5">
+          <SkeletonBlock className="h-32 w-full" />
+          <SkeletonBlock className="h-24 w-full" />
+        </div>
+        <div className="flex flex-col gap-5">
+          <SkeletonBlock className="h-20 w-full" />
+          <SkeletonBlock className="h-36 w-full" />
+          <SkeletonBlock className="h-16 w-full" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Page component ────────────────────────────────────────────────────────────
 
 export default function ChildPage() {
@@ -29,19 +67,12 @@ export default function ChildPage() {
   const missionSectionRef = useRef<HTMLElement | null>(null);
 
   // ── Visual-only state ─────────────────────────────────────────────────────
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  const toastTimerRef = useRef<number | null>(null);
-
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
-    setToast({ message, type });
-    if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = window.setTimeout(() => setToast(null), 1800);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
-    };
+    if (type === "error") {
+      toast.error(message);
+    } else {
+      toast.success(message);
+    }
   }, []);
 
   // ── Viewport measurement ──────────────────────────────────────────────────
@@ -122,8 +153,12 @@ export default function ChildPage() {
   }, [home.nextAction.type, onMissionCardAction, router]);
 
   // ── Render ────────────────────────────────────────────────────────────────
+  const isLoading = home.childId === null;
+
   return (
     <div ref={layoutRef} className="relative h-screen overflow-x-hidden">
+      {isLoading ? <HomeSkeletonFallback /> : null}
+
       {home.levelUpOverlayLevel !== null ? (
         <LevelUpOverlay
           level={home.levelUpOverlayLevel}
@@ -131,6 +166,7 @@ export default function ChildPage() {
         />
       ) : null}
 
+      <div className={cn(isLoading && "invisible")}>
       <HomeContainer
         density={denseDesktop ? "dense" : "regular"}
         contentScale={desktopScale}
@@ -243,20 +279,8 @@ export default function ChildPage() {
         </section>
 
         <ChildBottomNav />
-
-        {/* ── Toast ─────────────────────────────────────────────────────── */}
-        {toast ? (
-          <div className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4">
-            <div
-              className={`rounded-xl px-3 py-2 text-xs font-semibold text-white shadow-sm ${
-                toast.type === "success" ? "bg-secondary" : "bg-destructive"
-              }`}
-            >
-              {toast.message}
-            </div>
-          </div>
-        ) : null}
       </HomeContainer>
+      </div>
     </div>
   );
 }

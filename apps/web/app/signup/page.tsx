@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiErrorMessage, getLegalStatus, googleLogin, listMemberships, type PrimaryLoginResponse, selectTenant, signup } from "@/lib/api/client";
 import { clearTenantSlug, clearTokens, setAccessToken, setTenantSlug } from "@/lib/api/session";
+import { signupSchema } from "@/lib/schemas";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() ?? "";
 
@@ -108,6 +109,11 @@ export default function SignupPage() {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    const validation = signupSchema.safeParse({ name, familyName, email, password });
+    if (!validation.success) {
+      setError(validation.error.errors[0].message);
+      return;
+    }
     setError(null);
     setLoading(true);
     try {

@@ -2058,9 +2058,9 @@ h2 {
   box-shadow: 0 2px 8px rgba(72, 202, 228, 0.3), 0 1px 0 rgba(0, 80, 140, 0.4);
 }
 
-/* Golden focus ring (accessibility) */
+/* Brand focus ring (accessibility) */
 *:focus-visible {
-  outline: 2px solid var(--magic-gold);
+  outline: 2px solid #FF7A2F;
   outline-offset: 3px;
 }
 
@@ -2076,6 +2076,18 @@ h2 {
 .medieval-hover:hover {
   transform: translateY(-2px) scale(1.01);
   transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+/* ── Accessibility: Reduced Motion ─────────────────────────────────────────── */
+/* Desativa animações CSS para usuários com preferência por movimento reduzido.  */
+/* Framer Motion e scroll behaviour já verificam esta media query por conta própria. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 /* Rune divider */

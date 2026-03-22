@@ -201,13 +201,17 @@ function DesktopNavItem({
         skin === "trail"
           ? `mx-1.5 inline-flex items-center rounded-2xl font-bold uppercase tracking-[0.04em] transition-all duration-200 ${compact ? "gap-2 px-3 py-1.5 text-[13px]" : "gap-2.5 px-4 py-[7px] text-[15px]"} ${
               active
-                ? "border-l-[3px] border-l-[#FFB703] bg-[rgba(255,183,3,0.12)] text-[#FFF3CC] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-                : "text-[#FAEBD7]/80 hover:bg-[rgba(255,183,3,0.07)] hover:text-[#FFF3CC]"
+                ? "border-l-[3px] border-l-[#FF9600] bg-[rgba(255,150,0,0.14)] text-[#FFF0D6] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                : iconName === "aprender"
+                  ? "text-[#FFD580] hover:bg-[rgba(255,150,0,0.10)] hover:text-[#FFF0D6]"
+                  : "text-[#FAEBD7]/80 hover:bg-[rgba(255,150,0,0.07)] hover:text-[#FFF0D6]"
             }`
           : `mx-1.5 inline-flex items-center rounded-2xl font-black uppercase tracking-[0.04em] transition-all duration-200 ${compact ? "gap-2 px-3 py-1.5 text-[13px]" : "gap-2.5 px-4 py-[7px] text-[15px]"} ${
               active
-                ? "border border-[#FFB703]/40 bg-[linear-gradient(135deg,rgba(255,183,3,0.18),rgba(255,140,0,0.12))] text-[#FFF3CC] shadow-[0_0_12px_rgba(255,183,3,0.18),inset_0_1px_0_rgba(255,255,255,0.08)]"
-                : "text-[#C8A882] hover:bg-[rgba(255,183,3,0.08)] hover:text-[#F5DEB3]"
+                ? "border border-[#FF9600]/40 bg-[linear-gradient(135deg,rgba(255,150,0,0.18),rgba(255,120,0,0.12))] text-[#FFF0D6] shadow-[0_0_12px_rgba(255,150,0,0.20),inset_0_1px_0_rgba(255,255,255,0.08)]"
+                : iconName === "aprender"
+                  ? "text-[#FFD580] hover:bg-[rgba(255,150,0,0.10)] hover:text-[#F5DEB3]"
+                  : "text-[#C8A882] hover:bg-[rgba(255,183,3,0.08)] hover:text-[#F5DEB3]"
             }`
       }
     >

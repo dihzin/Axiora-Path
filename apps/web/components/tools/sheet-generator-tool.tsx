@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { toast } from "sonner";
 import {
   Calculator,
   Divide,
@@ -1511,7 +1512,6 @@ export function SheetGeneratorTool() {
     debouncedLightCfg.title,
     debouncedLightCfg.subtitle,
   ]);
-  const [toast, setToast] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"config" | "blocks" | "detail">("blocks");
   const [editorTab, setEditorTab] = useState<"config" | "blocos">("blocos");
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(["cabecalho"]));
@@ -1701,8 +1701,7 @@ export function SheetGeneratorTool() {
   }, [blocks.length, editorTab]);
 
   const showToast = useCallback((msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2500);
+    toast(msg);
   }, []);
 
   const refreshTemplates = useCallback(() => {
@@ -2863,11 +2862,6 @@ export function SheetGeneratorTool() {
         </div>
       )}
 
-      {toast && (
-        <div className="fixed bottom-8 left-1/2 z-[999] -translate-x-1/2 rounded-xl px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]" style={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(12px)" }}>
-          {toast}
-        </div>
-      )}
 
 
     </div>

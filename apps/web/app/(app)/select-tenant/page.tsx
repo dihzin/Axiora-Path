@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { NativeSelect } from "@/components/ui/native-select";
 import { getApiErrorMessage, listMemberships, selectTenant, type OrganizationMembership } from "@/lib/api/client";
 import { clearTenantSlug, getTenantSlug, setAccessToken, setTenantSlug } from "@/lib/api/session";
+import { selectTenantSchema } from "@/lib/schemas";
 
 export default function SelectTenantPage() {
   const router = useRouter();
@@ -19,12 +20,12 @@ export default function SelectTenantPage() {
   const [loading, setLoading] = useState(false);
 
   const proceedWithSlug = async (selectedSlug: string) => {
-    setError(null);
-    if (!selectedSlug.trim()) {
-      setError("Selecione uma organização.");
+    const validation = selectTenantSchema.safeParse({ slug: selectedSlug });
+    if (!validation.success) {
+      setError(validation.error.errors[0].message);
       return;
     }
-
+    setError(null);
     setLoading(true);
     const previousSlug = getTenantSlug();
     try {

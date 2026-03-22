@@ -109,7 +109,7 @@ export function ProgressHUD({
           </p>
           <p className="axiora-title mt-1 text-sm font-bold">{recentProgressLabel}</p>
           <p className="axiora-subtitle mt-0.5 text-sm">{nextObjective}</p>
-          <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#C2410C]">
+          <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#0E8F62]">
             <Sparkles className="h-3.5 w-3.5" />
             Feedback contínuo ativo
           </p>
