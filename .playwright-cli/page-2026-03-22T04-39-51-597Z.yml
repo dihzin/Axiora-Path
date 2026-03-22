@@ -1,0 +1,41 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e7]:
+    - main [ref=e8]:
+      - generic [ref=e9]:
+        - img [ref=e11]
+        - heading "Ajuda" [level=1] [ref=e14]
+        - paragraph [ref=e15]: A central de ajuda infantil está em preparação. Se precisar agora, use Axion para orientação rápida.
+        - generic [ref=e16]:
+          - link "Voltar ao início" [ref=e17] [cursor=pointer]:
+            - /url: /child
+          - link "Ir para aprender" [ref=e18] [cursor=pointer]:
+            - /url: /child/aprender
+    - navigation [ref=e19]:
+      - generic [ref=e20]:
+        - link "Início" [ref=e21] [cursor=pointer]:
+          - /url: /child
+          - img [ref=e24]
+          - generic [ref=e28]: Início
+        - link "Aprender" [ref=e29] [cursor=pointer]:
+          - /url: /child/aprender
+          - img [ref=e32]
+          - generic [ref=e37]: Aprender
+        - link "Figurinhas" [ref=e38] [cursor=pointer]:
+          - /url: /child/stickers
+          - img [ref=e41]
+          - generic [ref=e45]: Figurinhas
+        - link "Jogos" [ref=e46] [cursor=pointer]:
+          - /url: /child/games
+          - img [ref=e49]
+          - generic [ref=e56]: Jogos
+        - link "Loja" [ref=e57] [cursor=pointer]:
+          - /url: /child/store
+          - img [ref=e60]
+          - generic [ref=e63]: Loja
+        - link "Axion" [ref=e64] [cursor=pointer]:
+          - /url: /child/axion
+          - img [ref=e67]
+          - generic [ref=e68]: Axion
+  - button "Open Next.js Dev Tools" [ref=e74] [cursor=pointer]:
+    - img [ref=e75]
+  - alert [ref=e2]

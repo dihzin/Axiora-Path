@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#18312E",
+  themeColor: "#F3F7FF",
 };
 
 type RootLayoutProps = {
@@ -46,10 +46,10 @@ const baloo = Baloo_2({
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="pt-BR" className="bg-[#18312E]">
+    <html lang="pt-BR" className="bg-[#F3F7FF]">
       <body
         suppressHydrationWarning
-        className={`${nunito.variable} ${baloo.variable} relative min-h-screen overflow-x-hidden bg-[#18312E] text-foreground font-sans [background-image:none]`}
+        className={`${nunito.variable} ${baloo.variable} relative min-h-screen overflow-x-hidden bg-[#F3F7FF] text-foreground font-sans [background-image:none]`}
       >
         <ThemeProvider>
           <div className="relative z-10">

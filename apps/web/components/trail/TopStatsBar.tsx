@@ -7,23 +7,8 @@ import { cn } from "@/lib/utils";
 import { FlameIcon } from "@/components/ui/icons/FlameIcon";
 import { GemIcon } from "@/components/ui/icons/GemIcon";
 import { StarIcon } from "@/components/ui/icons/StarIcon";
-
-// ── Value-change pulse ─────────────────────────────────────────────────────────
-// Returns true for ~550ms whenever `value` changes, enabling a brief brightness
-// flash on the number — game feel without being distracting.
-
-function useChangePulse(value: string | number, duration = 550): boolean {
-  const [pulsing, setPulsing] = useState(false);
-  const prevRef = useRef<string | number>(value);
-  useEffect(() => {
-    if (prevRef.current === value) return;
-    prevRef.current = value;
-    setPulsing(true);
-    const t = setTimeout(() => setPulsing(false), duration);
-    return () => clearTimeout(t);
-  }, [value, duration]);
-  return pulsing;
-}
+import { useChangePulse } from "@/hooks/use-change-pulse";
+import { useHoverEffect } from "@/hooks/use-hover-effect";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -279,8 +264,15 @@ function HudPill({
   className?: string;
 }) {
   const pulsing = useChangePulse(watchValue ?? value);
+  const hoverFx = useHoverEffect({
+    hoverScale: 1.02,
+    tapScale: 0.97,
+    glowShadow: "0 0 0 1px rgba(160,120,80,0.24), 0 10px 18px rgba(44,30,18,0.14)",
+  });
   return (
     <div
+      {...hoverFx.eventHandlers}
+      style={hoverFx.style}
       className={cn(
         "group relative inline-flex h-[34px] select-none items-center gap-1.5 rounded-full border border-[#A07850]/36 bg-[linear-gradient(145deg,rgba(253,245,230,0.96),rgba(240,222,188,0.86))] px-3.5 text-[13px] font-bold leading-none",
         "shadow-[inset_0_1px_0_rgba(255,255,255,0.68),0_6px_14px_rgba(44,30,18,0.10)]",
@@ -319,11 +311,18 @@ function ActionPill({
   alert?: boolean;
   onClick?: () => void;
 }) {
+  const hoverFx = useHoverEffect({
+    hoverScale: 1.02,
+    tapScale: 0.97,
+    glowShadow: "0 0 0 1px rgba(160,120,80,0.30), 0 10px 20px rgba(44,30,18,0.16)",
+  });
   return (
     <button
       type="button"
       aria-label={label}
       onClick={onClick}
+      {...hoverFx.eventHandlers}
+      style={hoverFx.style}
       className="group relative inline-flex h-[34px] w-[34px] select-none items-center justify-center rounded-full border border-[#A07850]/36 bg-[linear-gradient(145deg,rgba(253,245,230,0.96),rgba(240,222,188,0.86))] text-[#7A6149] shadow-[inset_0_1px_0_rgba(255,255,255,0.68),0_6px_14px_rgba(44,30,18,0.08)] transition-[border-color,background-color,box-shadow,transform,color] duration-150 hover:border-[#A07850]/58 hover:bg-[linear-gradient(145deg,rgba(255,248,235,0.98),rgba(245,228,195,0.92))] hover:text-[#2C1E16] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D8A44D]/38 focus-visible:ring-offset-1 focus-visible:ring-offset-[#F3E4C8]"
     >
       {icon}
@@ -354,8 +353,15 @@ function StatItem({
   watchValue?: number | string;
 }) {
   const pulsing = useChangePulse(watchValue ?? value);
+  const hoverFx = useHoverEffect({
+    hoverScale: 1.02,
+    tapScale: 0.97,
+    glowShadow: "0 0 0 1px rgba(160,120,80,0.24), 0 10px 18px rgba(44,30,18,0.12)",
+  });
   return (
     <div
+      {...hoverFx.eventHandlers}
+      style={hoverFx.style}
       className="group relative inline-flex cursor-default select-none items-center gap-1.5 rounded-full border border-[#A07850]/36 bg-[linear-gradient(145deg,rgba(253,245,230,0.96),rgba(240,222,188,0.86))] px-3 py-1.5 leading-none shadow-[inset_0_1px_0_rgba(255,255,255,0.68),0_6px_14px_rgba(44,30,18,0.08)] transition-[border-color,background-color] duration-150 hover:border-[#A07850]/58 hover:bg-[linear-gradient(145deg,rgba(255,248,235,0.98),rgba(245,228,195,0.92))]"
       aria-label={tooltip ?? label}
     >
@@ -390,10 +396,10 @@ function Tooltip({ text }: { text: string }) {
         "pointer-events-none invisible absolute bottom-full left-1/2 z-50 mb-2.5 -translate-x-1/2 whitespace-nowrap",
         "rounded-[8px] border border-[#A07850]/34 bg-[linear-gradient(145deg,rgba(253,245,230,0.98),rgba(240,222,188,0.95))] px-2.5 py-[7px] text-[11px] font-medium leading-none text-[#2C1E16]",
         "shadow-[0_10px_24px_rgba(44,30,18,0.16),inset_0_1px_0_rgba(255,255,255,0.72)]",
-        // Delayed entry (200ms), instant exit
+        // Delayed entry (300ms), instant exit
         "opacity-0 delay-0 transition-[opacity] duration-150",
-        "group-hover:visible group-hover:opacity-100 group-hover:delay-[200ms]",
-        "group-focus-visible:visible group-focus-visible:opacity-100 group-focus-visible:delay-[200ms]",
+        "group-hover:visible group-hover:opacity-100 group-hover:delay-[300ms]",
+        "group-focus-visible:visible group-focus-visible:opacity-100 group-focus-visible:delay-[300ms]",
       )}
     >
       {text}
@@ -416,6 +422,11 @@ function ProfileMenuButton({ router }: { router: ReturnType<typeof useRouter> })
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const hoverFx = useHoverEffect({
+    hoverScale: 1.02,
+    tapScale: 0.97,
+    glowShadow: "0 0 0 1px rgba(160,120,80,0.30), 0 10px 20px rgba(44,30,18,0.16)",
+  });
 
   // Outside click
   useEffect(() => {
@@ -456,6 +467,8 @@ function ProfileMenuButton({ router }: { router: ReturnType<typeof useRouter> })
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((v) => !v)}
+        {...hoverFx.eventHandlers}
+        style={hoverFx.style}
         className="group relative inline-flex h-[34px] w-[34px] select-none items-center justify-center rounded-full border border-[#A07850]/42 bg-[linear-gradient(145deg,rgba(253,245,230,0.97),rgba(240,222,188,0.90))] text-[#7A6149] shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_6px_14px_rgba(44,30,18,0.10)] transition-[border-color,box-shadow,transform,background-color,color] duration-150 hover:border-[#A07850]/60 hover:bg-[linear-gradient(145deg,rgba(255,248,235,0.99),rgba(245,228,195,0.94))] hover:text-[#2C1E16] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D8A44D]/38 focus-visible:ring-offset-1 focus-visible:ring-offset-[#F3E4C8]"
       >
         <UserRound className="h-[18px] w-[18px]" strokeWidth={1.8} />

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   ApiError,
   createToolsCheckoutSession,
@@ -163,7 +164,7 @@ export function ExerciseGeneratorTool() {
         <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
           <label className="block text-sm text-white/80">
             Matéria
-            <select
+            <NativeSelect
               className="mt-1 w-full rounded-lg border border-white/20 bg-[rgba(6,14,22,0.55)] px-3 py-2 text-white backdrop-blur-sm"
               value={subject}
               onChange={(event) => setSubject(event.target.value)}
@@ -173,7 +174,7 @@ export function ExerciseGeneratorTool() {
                   {option}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </label>
 
           <label className="block text-sm text-white/80">
@@ -200,7 +201,7 @@ export function ExerciseGeneratorTool() {
             </label>
             <label className="block text-sm text-white/80">
               Dificuldade
-              <select
+              <NativeSelect
                 className="mt-1 w-full rounded-lg border border-white/20 bg-[rgba(6,14,22,0.55)] px-3 py-2 text-white backdrop-blur-sm"
                 value={difficulty}
                 onChange={(event) => setDifficulty(event.target.value)}
@@ -210,7 +211,7 @@ export function ExerciseGeneratorTool() {
                     {option}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </label>
           </div>
 
@@ -229,7 +230,7 @@ export function ExerciseGeneratorTool() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 w-full rounded-xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-4 py-2.5 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.3),0_4px_0_rgba(158,74,30,0.45),0_10px_18px_rgba(93,48,22,0.2)] transition hover:brightness-110 disabled:opacity-60 disabled:shadow-none"
+            className="axiora-chunky-btn axiora-chunky-btn--secondary mt-2 w-full px-4 py-2.5 text-sm font-black"
           >
             {loading ? "Gerando..." : "Gerar exercícios"}
           </button>
@@ -255,7 +256,7 @@ export function ExerciseGeneratorTool() {
               type="button"
               onClick={handleUpgradeCheckout}
               disabled={checkoutLoading}
-              className="mt-3 inline-flex rounded-lg bg-[linear-gradient(180deg,#ee8748,#db6728)] px-3 py-2 text-sm font-bold text-white shadow-[0_3px_0_rgba(158,74,30,0.45)] transition hover:brightness-110 disabled:opacity-60 disabled:shadow-none"
+              className="axiora-chunky-btn axiora-chunky-btn--secondary mt-3 inline-flex px-3 py-2 text-sm font-black"
             >
               {checkoutLoading ? "Abrindo pagamento..." : "Desbloquear 30 gerações por R$ 29"}
             </button>
@@ -270,7 +271,7 @@ export function ExerciseGeneratorTool() {
             type="button"
             onClick={handleDownloadPdf}
             disabled={!result}
-            className="rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/10 disabled:opacity-50"
+            className="axiora-chunky-btn axiora-chunky-btn--outline px-3 py-2 text-xs font-black text-[#2f527d]"
           >
             Baixar PDF
           </button>
@@ -361,3 +362,4 @@ export function ExerciseGeneratorTool() {
     </div>
   );
 }
+

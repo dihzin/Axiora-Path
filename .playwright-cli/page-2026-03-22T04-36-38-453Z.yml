@@ -1,0 +1,375 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - complementary [ref=e5]:
+      - img "Axion" [ref=e11]
+      - link "Início" [ref=e12] [cursor=pointer]:
+        - /url: /child
+        - img [ref=e15]
+        - text: Início
+      - link "Aprender" [ref=e19] [cursor=pointer]:
+        - /url: /child/aprender
+        - img [ref=e22]
+        - text: Aprender
+      - link "Figurinhas" [ref=e27] [cursor=pointer]:
+        - /url: /child/stickers
+        - img [ref=e30]
+        - text: Figurinhas
+      - link "Jogos" [ref=e34] [cursor=pointer]:
+        - /url: /child/games
+        - img [ref=e37]
+        - text: Jogos
+      - link "Loja" [ref=e44] [cursor=pointer]:
+        - /url: /child/store
+        - img [ref=e47]
+        - text: Loja
+      - link "Axion" [ref=e50] [cursor=pointer]:
+        - /url: /child/axion
+        - img [ref=e53]
+        - text: Axion
+    - generic [ref=e55]:
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - img [ref=e58]
+          - generic [ref=e61]: "0"
+          - generic [ref=e62]: dias
+        - generic [ref=e63]:
+          - img [ref=e64]
+          - generic [ref=e66]: 0%
+          - generic [ref=e67]: nível
+      - generic [ref=e69]:
+        - generic [ref=e70]:
+          - img [ref=e71]
+          - generic [ref=e74]: "0"
+        - generic [ref=e75]:
+          - img [ref=e76]
+          - generic [ref=e78]: "0"
+          - generic [ref=e79]: xp
+        - button "Sem novos avisos" [ref=e80] [cursor=pointer]:
+          - img [ref=e81]
+        - button "Ajuda" [ref=e85] [cursor=pointer]:
+          - img [ref=e86]
+        - button "Meu perfil" [ref=e90] [cursor=pointer]:
+          - img [ref=e91]
+    - generic [ref=e94]:
+      - main [ref=e96]:
+        - generic [ref=e97]:
+          - link "Voltar" [ref=e99] [cursor=pointer]:
+            - /url: /child
+          - generic [ref=e101]:
+            - paragraph [ref=e102]:
+              - img [ref=e103]
+              - text: Hub de prática Axiora
+            - heading "Jogos para subir de nível com inteligência" [level=1] [ref=e105]
+            - paragraph [ref=e106]: Cada partida treina raciocínio, foco e decisões financeiras. Jogue rápido, ganhe XP e evolua no seu caminho.
+            - generic [ref=e107]:
+              - generic [ref=e108]:
+                - paragraph [ref=e109]: Nível
+                - paragraph [ref=e110]: "1"
+              - generic [ref=e111]:
+                - paragraph [ref=e112]: XP em jogos
+                - paragraph [ref=e113]: "0"
+              - generic [ref=e114]:
+                - paragraph [ref=e115]: Jogos ativos
+                - paragraph [ref=e116]: "7"
+              - generic [ref=e117]:
+                - paragraph [ref=e118]: Recordes
+                - paragraph [ref=e119]:
+                  - img [ref=e120]
+                  - text: "0"
+            - generic [ref=e126]:
+              - button "Jogar agora" [ref=e127] [cursor=pointer]:
+                - text: Jogar agora
+                - img [ref=e128]
+              - link "Ver trilhas de aprendizado" [ref=e130] [cursor=pointer]:
+                - /url: /child/aprender
+          - generic [ref=e131]:
+            - article [ref=e132]:
+              - generic [ref=e133]:
+                - img [ref=e135]
+                - generic [ref=e140]:
+                  - paragraph [ref=e141]:
+                    - img [ref=e142]
+                    - text: Recomendado para agora
+                  - heading "Corrida da Soma" [level=2] [ref=e144]
+                  - paragraph [ref=e145]: Desafios rápidos de soma com progressão por sessão.
+                  - paragraph [ref=e146]: Partida rápida para aquecer seu raciocínio agora.
+              - generic [ref=e147]:
+                - generic [ref=e148]:
+                  - img [ref=e149]
+                  - text: 3 min de sessão
+                - generic [ref=e152]:
+                  - img [ref=e153]
+                  - text: Cálculo e rapidez
+                - generic [ref=e156]:
+                  - img [ref=e157]
+                  - text: Perguntas rápidas
+              - button "Partida rápida" [ref=e160] [cursor=pointer]:
+                - text: Partida rápida
+                - img [ref=e161]
+            - article [ref=e163]:
+              - generic [ref=e164]:
+                - generic [ref=e165]:
+                  - paragraph [ref=e166]: Seu progresso em games
+                  - paragraph [ref=e167]: Ainda sem histórico local
+                - generic [ref=e168]:
+                  - img [ref=e169]
+                  - text: 0/350 XP
+              - progressbar [ref=e172]
+              - generic [ref=e173]:
+                - generic [ref=e174]:
+                  - paragraph [ref=e175]: XP total
+                  - paragraph [ref=e176]: "0"
+                - generic [ref=e177]:
+                  - paragraph [ref=e178]: XP de hoje
+                  - paragraph [ref=e179]: "0"
+                - generic [ref=e180]:
+                  - paragraph [ref=e181]:
+                    - img [ref=e182]
+                    - text: AxionCoins
+                  - paragraph [ref=e187]: "0"
+                - generic [ref=e188]:
+                  - paragraph [ref=e189]:
+                    - img [ref=e190]
+                    - text: Recordes
+                  - paragraph [ref=e196]: "0"
+              - generic [ref=e197]:
+                - paragraph [ref=e198]: Próxima jogada
+                - paragraph [ref=e199]: Jogue Corrida da Soma agora.
+          - generic [ref=e200]:
+            - button "Todos" [ref=e201] [cursor=pointer]
+            - button "Disponíveis 7" [ref=e202] [cursor=pointer]
+            - button "Em breve 0" [ref=e203] [cursor=pointer]
+          - generic [ref=e204]:
+            - generic [ref=e205]:
+              - img [ref=e206]
+              - paragraph [ref=e212]: Conquistas desbloqueadas
+            - article [ref=e214]:
+              - generic [ref=e215]: P
+              - generic [ref=e216]:
+                - paragraph [ref=e217]: Primeira vitória
+                - paragraph [ref=e218]: Ganhe uma partida no Jogo da Velha
+          - article [ref=e220]:
+            - generic [ref=e221]:
+              - generic [ref=e222]:
+                - paragraph [ref=e223]: Ranking da semana
+                - paragraph [ref=e224]: Pontuação
+              - img [ref=e226]
+            - paragraph [ref=e229]: Ainda sem ranking nesta semana.
+            - generic [ref=e230]:
+              - paragraph [ref=e231]: Sua posição
+              - paragraph [ref=e232]: Sem posição ainda
+          - article [ref=e234]:
+            - paragraph [ref=e235]: Sua liga desta semana
+            - paragraph [ref=e236]: Carregando sua liga...
+          - generic [ref=e237]:
+            - article [ref=e238]: Catálogo online indisponível no momento. Exibindo jogos locais para você continuar.
+            - generic [ref=e239]:
+              - generic [ref=e241]:
+                - heading "Cálculo e rapidez" [level=2] [ref=e242]
+                - paragraph [ref=e243]: Para pensar rápido, acertar mais e ganhar ritmo.
+              - generic [ref=e244]:
+                - article [ref=e245]:
+                  - generic [ref=e246]:
+                    - img [ref=e248]
+                    - generic [ref=e253]:
+                      - generic [ref=e254]:
+                        - generic [ref=e255]: Jogar agora
+                        - generic [ref=e256]:
+                          - img [ref=e257]
+                          - text: Recomendado
+                      - heading "Corrida da Soma" [level=3] [ref=e259]
+                      - paragraph [ref=e260]: Desafios rápidos de soma com progressão por sessão.
+                  - generic [ref=e261]:
+                    - generic [ref=e262]: Cálculo e rapidez
+                    - generic [ref=e263]:
+                      - img [ref=e264]
+                      - text: 3 min
+                    - generic [ref=e267]: 6-10 anos
+                  - paragraph [ref=e268]: Perguntas rápidas
+                  - paragraph [ref=e269]: Agilidade com contas simples ajuda em compras, troco e decisões do dia a dia.
+                  - generic [ref=e271]:
+                    - img [ref=e272]
+                    - text: +20 XP
+                  - button "Jogar" [ref=e274] [cursor=pointer]:
+                    - text: Jogar
+                    - img [ref=e275]
+                - article [ref=e277]:
+                  - generic [ref=e278]:
+                    - img [ref=e280]
+                    - generic [ref=e282]:
+                      - generic [ref=e284]: Pronto para jogar
+                      - heading "Cabo de Guerra" [level=3] [ref=e285]
+                      - paragraph [ref=e286]: "Duelo matemático em tempo real: acerte para puxar a corda e vencer."
+                  - generic [ref=e287]:
+                    - generic [ref=e288]: Cálculo e reação
+                    - generic [ref=e289]:
+                      - img [ref=e290]
+                      - text: 4 min
+                    - generic [ref=e293]: 7-13 anos
+                  - paragraph [ref=e294]: Duelo em tempo real
+                  - paragraph [ref=e295]: Treina velocidade de raciocínio e precisão sob pressão.
+                  - generic [ref=e297]:
+                    - img [ref=e298]
+                    - text: +90 XP
+                  - button "Jogar" [ref=e300] [cursor=pointer]:
+                    - text: Jogar
+                    - img [ref=e301]
+            - generic [ref=e303]:
+              - generic [ref=e305]:
+                - heading "Estratégia e decisão" [level=2] [ref=e306]
+                - paragraph [ref=e307]: Treinos de lógica, previsão e escolhas inteligentes.
+              - article [ref=e309]:
+                - generic [ref=e310]:
+                  - img [ref=e312]
+                  - generic [ref=e314]:
+                    - generic [ref=e316]: Pronto para jogar
+                    - heading "Jogo da Velha" [level=3] [ref=e317]
+                    - paragraph [ref=e318]: Treine lógica, antecipação e tomada de decisão em partidas rápidas.
+                - generic [ref=e319]:
+                  - generic [ref=e320]: Estratégia e decisão
+                  - generic [ref=e321]:
+                    - img [ref=e322]
+                    - text: 3 min
+                  - generic [ref=e325]: 6-12 anos
+                - paragraph [ref=e326]: Duelo tático
+                - paragraph [ref=e327]: Antecipar jogadas fortalece planejamento e tomada de decisão com calma.
+                - generic [ref=e329]:
+                  - img [ref=e330]
+                  - text: +50 XP
+                - button "Jogar" [ref=e332] [cursor=pointer]:
+                  - text: Jogar
+                  - img [ref=e333]
+            - generic [ref=e335]:
+              - generic [ref=e337]:
+                - heading "Memória e atenção" [level=2] [ref=e338]
+                - paragraph [ref=e339]: Concentração e associação para aprender com confiança.
+              - generic [ref=e340]:
+                - article [ref=e341]:
+                  - generic [ref=e342]:
+                    - img [ref=e344]
+                    - generic [ref=e348]:
+                      - generic [ref=e350]: Pronto para jogar
+                      - heading "Mapa de Capitais" [level=3] [ref=e351]
+                      - paragraph [ref=e352]: Ligue capitais e regiões em rodadas de memória visual.
+                  - generic [ref=e353]:
+                    - generic [ref=e354]: Memória e associação
+                    - generic [ref=e355]:
+                      - img [ref=e356]
+                      - text: 5 min
+                    - generic [ref=e359]: 8-13 anos
+                  - paragraph [ref=e360]: Combinação visual
+                  - paragraph [ref=e361]: Melhora memória de trabalho e associação, base para leitura e resolução de problemas.
+                  - generic [ref=e363]:
+                    - img [ref=e364]
+                    - text: +28 XP
+                  - button "Jogar" [ref=e366] [cursor=pointer]:
+                    - text: Jogar
+                    - img [ref=e367]
+                - article [ref=e369]:
+                  - generic [ref=e370]:
+                    - img [ref=e372]
+                    - generic [ref=e375]:
+                      - generic [ref=e377]: Pronto para jogar
+                      - heading "Estação de Inglês" [level=3] [ref=e378]
+                      - paragraph [ref=e379]: Vocabulário e leitura em desafios curtos.
+                  - generic [ref=e380]:
+                    - generic [ref=e381]: Vocabulário e foco
+                    - generic [ref=e382]:
+                      - img [ref=e383]
+                      - text: 4 min
+                    - generic [ref=e386]: 8-14 anos
+                  - paragraph [ref=e387]: Quiz de vocabulário
+                  - paragraph [ref=e388]: Vocabulário forte acelera compreensão e dá mais autonomia para aprender.
+                  - generic [ref=e390]:
+                    - img [ref=e391]
+                    - text: +24 XP
+                  - button "Jogar" [ref=e393] [cursor=pointer]:
+                    - text: Jogar
+                    - img [ref=e394]
+                - article [ref=e396]:
+                  - generic [ref=e397]:
+                    - img [ref=e399]
+                    - generic [ref=e402]:
+                      - generic [ref=e404]: Pronto para jogar
+                      - heading "Caça-palavras" [level=3] [ref=e405]
+                      - paragraph [ref=e406]: Encontre palavras por tema em grades dinâmicas com seleção por arraste.
+                  - generic [ref=e407]:
+                    - generic [ref=e408]: Memória e atenção
+                    - generic [ref=e409]:
+                      - img [ref=e410]
+                      - text: 4 min
+                    - generic [ref=e413]: 7-13 anos
+                  - paragraph [ref=e414]: Busca por padrões
+                  - paragraph [ref=e415]: Atenção visual e foco sustentado ajudam em leitura, provas e concentração.
+                  - generic [ref=e417]:
+                    - img [ref=e418]
+                    - text: +130 XP
+                  - button "Jogar" [ref=e420] [cursor=pointer]:
+                    - text: Jogar
+                    - img [ref=e421]
+            - generic [ref=e423]:
+              - generic [ref=e425]:
+                - heading "Prática financeira" [level=2] [ref=e426]
+                - paragraph [ref=e427]: Jogos para dominar decisões de dinheiro no mundo real.
+              - article [ref=e429]:
+                - generic [ref=e430]:
+                  - img [ref=e432]
+                  - generic [ref=e435]:
+                    - generic [ref=e437]: Pronto para jogar
+                    - heading "Mesada Inteligente" [level=3] [ref=e438]
+                    - paragraph [ref=e439]: Simule decisões financeiras em 5 rodadas com eventos surpresa.
+                - generic [ref=e440]:
+                  - generic [ref=e441]: Prática financeira
+                  - generic [ref=e442]:
+                    - img [ref=e443]
+                    - text: 5 min
+                  - generic [ref=e446]: 9-15 anos
+                - paragraph [ref=e447]: Simulação por rodadas
+                - paragraph [ref=e448]: Treina escolhas de curto e longo prazo para construir inteligência financeira.
+                - generic [ref=e450]:
+                  - img [ref=e451]
+                  - text: +80 XP
+                - button "Jogar" [ref=e453] [cursor=pointer]:
+                  - text: Jogar
+                  - img [ref=e454]
+          - generic [ref=e457]:
+            - generic [ref=e458]:
+              - generic [ref=e459]:
+                - paragraph [ref=e460]: Destaque de recordes
+                - heading "Seus melhores resultados" [level=2] [ref=e461]
+              - generic [ref=e462]:
+                - img [ref=e463]
+                - text: "0"
+            - generic [ref=e469]:
+              - article [ref=e470]:
+                - paragraph [ref=e471]: Melhor jogo
+                - paragraph [ref=e472]: Continue jogando para desbloquear recordes
+              - article [ref=e473]:
+                - paragraph [ref=e474]: Recorde recente
+                - paragraph [ref=e475]: Seu próximo replay pode virar recorde
+                - paragraph [ref=e476]:
+                  - img [ref=e477]
+                  - text: Pratique e supere sua marca
+            - button "Jogar Corrida da Soma" [ref=e483] [cursor=pointer]:
+              - text: Jogar Corrida da Soma
+              - img [ref=e484]
+          - generic [ref=e486]:
+            - paragraph [ref=e487]: Evolução Axiora
+            - heading "Jogar hoje acelera seu progresso amanhã" [level=2] [ref=e488]
+            - paragraph [ref=e489]: Jogos rápidos treinam sua mente para aprender mais rápido nas trilhas e tomar decisões financeiras melhores no dia a dia.
+            - generic [ref=e490]:
+              - button "Praticar agora" [ref=e491] [cursor=pointer]:
+                - text: Praticar agora
+                - img [ref=e492]
+              - link "Continuar aprender" [ref=e494] [cursor=pointer]:
+                - /url: /child/aprender
+                - text: Continuar aprender
+                - img [ref=e495]
+      - complementary [ref=e497]:
+        - generic [ref=e499]:
+          - paragraph [ref=e500]: Consistência
+          - paragraph [ref=e501]: Você está indo bem!
+          - paragraph [ref=e502]: Continue explorando para evoluir no Axiora.
+  - button "Open Next.js Dev Tools" [ref=e508] [cursor=pointer]:
+    - img [ref=e509]
+  - alert [ref=e512]

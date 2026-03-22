@@ -281,7 +281,7 @@ export default function FinanceSimPage() {
   const donateAmountPreview = Math.max(0, balance - spendAmountPreview - saveAmountPreview - investAmountPreview);
 
   return (
-    <ChildDesktopShell activeNav="jogos">
+    <ChildDesktopShell activeNav="jogos" menuSkin="trail">
       <ConfettiBurst trigger={confettiTrigger} />
       {levelUpLevel !== null ? (
         <LevelUpOverlay

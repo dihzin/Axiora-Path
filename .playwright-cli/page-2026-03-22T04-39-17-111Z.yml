@@ -1,0 +1,67 @@
+- generic [active] [ref=e1]:
+  - main [ref=e7]:
+    - generic [ref=e8]:
+      - link "Voltar" [ref=e9] [cursor=pointer]:
+        - /url: /child
+        - img [ref=e10]
+        - text: Voltar
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]:
+            - paragraph [ref=e15]: Loja Axiora
+            - heading "Loja" [level=1] [ref=e16]
+          - img [ref=e18]
+        - generic [ref=e21]:
+          - generic [ref=e22]:
+            - paragraph [ref=e23]: "0"
+            - paragraph [ref=e24]: Meus itens
+          - generic [ref=e25]:
+            - paragraph [ref=e26]: "0"
+            - paragraph [ref=e27]: Bloqueados
+          - generic [ref=e28]:
+            - paragraph [ref=e29]: "0"
+            - paragraph [ref=e30]: AxionCoins
+        - paragraph [ref=e31]: Consentimento parental pendente. Peça para um responsável aceitar os termos para continuar.
+      - generic [ref=e32]:
+        - button "Todos" [ref=e33] [cursor=pointer]
+        - button "Meus" [ref=e34] [cursor=pointer]
+        - button "Compraveis 0" [ref=e35] [cursor=pointer]
+        - button "Bloqueados" [ref=e36] [cursor=pointer]
+      - generic [ref=e37]:
+        - button "Categorias" [ref=e38] [cursor=pointer]
+        - button "Skins" [ref=e39] [cursor=pointer]
+        - button "Temas" [ref=e40] [cursor=pointer]
+        - button "Celebracao" [ref=e41] [cursor=pointer]
+        - button "Molduras" [ref=e42] [cursor=pointer]
+    - generic [ref=e44]:
+      - paragraph [ref=e45]: Nenhum item nesta visão
+      - paragraph [ref=e46]: Troque o filtro para ver outras recompensas.
+    - navigation [ref=e47]:
+      - generic [ref=e48]:
+        - link "Início" [ref=e49] [cursor=pointer]:
+          - /url: /child
+          - img [ref=e52]
+          - generic [ref=e56]: Início
+        - link "Aprender" [ref=e57] [cursor=pointer]:
+          - /url: /child/aprender
+          - img [ref=e60]
+          - generic [ref=e65]: Aprender
+        - link "Figurinhas" [ref=e66] [cursor=pointer]:
+          - /url: /child/stickers
+          - img [ref=e69]
+          - generic [ref=e73]: Figurinhas
+        - link "Jogos" [ref=e74] [cursor=pointer]:
+          - /url: /child/games
+          - img [ref=e77]
+          - generic [ref=e84]: Jogos
+        - link "Loja" [ref=e85] [cursor=pointer]:
+          - /url: /child/store
+          - img [ref=e88]
+          - generic [ref=e91]: Loja
+        - link "Axion" [ref=e93] [cursor=pointer]:
+          - /url: /child/axion
+          - img [ref=e96]
+          - generic [ref=e97]: Axion
+  - button "Open Next.js Dev Tools" [ref=e103] [cursor=pointer]:
+    - img [ref=e104]
+  - alert [ref=e107]

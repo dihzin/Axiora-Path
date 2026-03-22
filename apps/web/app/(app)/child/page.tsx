@@ -3,32 +3,36 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Coins, Flame, Lock, Snowflake, Sparkles, Volume2, VolumeX, X } from "lucide-react";
+import { CheckCircle2, Flame, Lock, Volume2, VolumeX, X } from "lucide-react";
 
-import { ActionFeedback, type ActionFeedbackState } from "@/components/action-feedback";
-import { MoodSelector } from "@/components/axiora/MoodSelector";
-import { AxionCharacter } from "@/components/axion-character";
-import { AxionDialogue } from "@/components/axion-dialogue";
+import type { ActionFeedbackState } from "@/components/action-feedback";
+import { AxionCompanion } from "@/components/axion-companion";
 import { AvatarEvolution } from "@/components/avatar-evolution";
 import { ChildAvatar } from "@/components/child-avatar";
 import { ChildBottomNav } from "@/components/child-bottom-nav";
 import { ChildDesktopShell } from "@/components/child-desktop-shell";
 import { PageShell } from "@/components/layout/page-shell";
 import { LevelUpOverlay } from "@/components/level-up-overlay";
+import { MissionCardV2, type MissionLoopState } from "@/components/mission-card-v2";
+import { PrimaryAction } from "@/components/primary-action";
+import { ProgressHUD } from "@/components/progress-hud";
+import { JourneyPreview } from "@/components/trail/journey-preview";
 import { useTheme } from "@/components/theme-provider";
 import { PiggyJar } from "@/components/piggy-jar";
-import { RecommendationsPanel } from "@/components/recommendations-panel";
 import { WeeklyBossMeter } from "@/components/weekly-boss-meter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
+import { useMeasuredViewportContainer } from "@/hooks/useMeasuredViewportContainer";
 import {
   ApiError,
   completeDailyMission,
   getDailyMission,
+  getAprenderSubjects,
   getAprenderLearningProfile,
   getApiErrorMessage,
   getMe,
   getAxionState,
+  getLearningPath,
   getGoals,
   getLevels,
   getMood,
@@ -41,7 +45,9 @@ import {
   postMood,
   useAiCoach as requestAiCoach,
   type DailyMissionResponse,
+  type AprenderSubjectOption,
   type GoalOut,
+  type LearningPathResponse,
   type LevelResponse,
   type MoodType,
   type RoutineTaskProgress,
@@ -56,6 +62,10 @@ import { readRecentLearningReward } from "@/lib/learning/reward-cache";
 import { getSoundEnabled as getChildSoundEnabled, playSound, setSoundEnabled as setChildSoundEnabled } from "@/lib/sound-manager";
 import type { Mood } from "@/lib/types/mood";
 import { cn } from "@/lib/utils";
+import { useChangePulse } from "@/hooks/use-change-pulse";
+import { useDailyEngagement } from "@/hooks/use-daily-engagement";
+import { useEconomyFeedbackEvents } from "@/hooks/use-economy-feedback-events";
+import { useHomeState } from "@/hooks/use-home-state";
 import { enforceProfileCompletionRedirect } from "@/lib/profile-completion-middleware";
 
 function formatBRL(valueCents: number): string {
@@ -111,13 +121,6 @@ const AXION_CELEBRATION_PHRASES: Record<AxionCelebrationType, string> = {
   level_up: "Subiu de nível! Axion evoluiu junto com você!",
   goal_completed: "Meta concluída! Axion está comemorando essa conquista!",
 };
-
-const AXION_CELEBRATION_BADGES: Record<AxionCelebrationType, string> = {
-  streak_7: "Sequência 7",
-  streak_30: "Sequência 30",
-  level_up: "Subiu de nível",
-  goal_completed: "Meta concluída",
-};
 const TASK_XP_PER_WEIGHT = 10;
 
 function taskDifficultyLabel(value: string): string {
@@ -128,40 +131,19 @@ function taskDifficultyLabel(value: string): string {
   return value;
 }
 
-function axionMoodStateLabel(value: string): string {
-  if (value === "NEUTRAL") return "Neutro";
-  if (value === "HAPPY") return "Feliz";
-  if (value === "SAD") return "Triste";
-  if (value === "ANGRY") return "Bravo";
-  if (value === "TIRED") return "Cansado";
-  if (value === "CELEBRATING") return "Comemorando";
-  if (value === "CONCERNED") return "Atento";
-  if (value === "EXCITED") return "Animado";
-  if (value === "PROUD") return "Orgulhoso";
-  return value;
-}
-
-function childMoodLabel(value: Mood | null): string | null {
-  if (value === "happy") return "Feliz";
-  if (value === "neutral") return "Neutro";
-  if (value === "sad") return "Triste";
-  if (value === "angry") return "Bravo";
-  if (value === "tired") return "Cansado";
-  return null;
-}
-
-function moodToAxionVisualState(value: Mood | null): string | null {
-  if (value === "happy") return "HAPPY";
-  if (value === "neutral") return "NEUTRAL";
-  if (value === "sad") return "SAD";
-  if (value === "angry") return "ANGRY";
-  if (value === "tired") return "TIRED";
-  return null;
-}
-
 export default function ChildPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const layoutRef = useRef<HTMLDivElement | null>(null);
+  const { width: layoutWidth, height: layoutHeight } = useMeasuredViewportContainer(layoutRef, {
+    initialWidth: 1366,
+    initialHeight: 768,
+    minWidth: 320,
+    minHeight: 1,
+  });
+  const [viewportHeight, setViewportHeight] = useState(768);
+  const [viewportWidth, setViewportWidth] = useState(1366);
+  const missionSectionRef = useRef<HTMLElement | null>(null);
   const [childId, setChildId] = useState<number | null>(null);
   const [childName, setChildName] = useState<string>("");
   const [isSchoolTenant, setIsSchoolTenant] = useState(false);
@@ -188,11 +170,18 @@ export default function ChildPage() {
   const [avatarStage, setAvatarStage] = useState(1);
   const [childAvatarKey, setChildAvatarKey] = useState<string | null>(null);
   const [taskView, setTaskView] = useState<"list" | "journey">("list");
+  const [learningPath, setLearningPath] = useState<LearningPathResponse | null>(null);
+  const [learningPathLoading, setLearningPathLoading] = useState(false);
+  const [learningPathError, setLearningPathError] = useState<string | null>(null);
+  const [journeySubjects, setJourneySubjects] = useState<AprenderSubjectOption[]>([]);
+  const [selectedJourneySubjectId, setSelectedJourneySubjectId] = useState<number | null>(null);
   const [showDailyWelcome, setShowDailyWelcome] = useState(false);
   const [dailyMission, setDailyMission] = useState<DailyMissionResponse | null>(null);
+  const [missionRewardClaimed, setMissionRewardClaimed] = useState(false);
   const [missionLoadError, setMissionLoadError] = useState(false);
   const [tasksLoadError, setTasksLoadError] = useState(false);
   const [missionCompleting, setMissionCompleting] = useState(false);
+  const [pulseOpen, setPulseOpen] = useState(false);
   const [markingTaskIds, setMarkingTaskIds] = useState<number[]>([]);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [axionState, setAxionState] = useState<AxionStateResponse | null>(null);
@@ -207,6 +196,7 @@ export default function ChildPage() {
   const goalNearShownRef = useRef(false);
   const celebrationTimerRef = useRef<number | null>(null);
   const previousGoalRef = useRef<{ id: number; isLocked: boolean } | null>(null);
+  const missionResetSyncRef = useRef<string | null>(null);
   const todayIso = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
@@ -361,6 +351,69 @@ export default function ChildPage() {
       });
   }, [router, setTheme, todayIso]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onResize = () => {
+      setViewportHeight(window.innerHeight || 768);
+      setViewportWidth(window.innerWidth || 1366);
+    };
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
+    if (childId === null) return;
+    let cancelled = false;
+    getAprenderSubjects({ childId })
+      .then((subjects) => {
+        if (cancelled) return;
+        const ordered = [...subjects].sort((a, b) => a.order - b.order);
+        setJourneySubjects(ordered);
+        if (ordered.length === 0) {
+          setSelectedJourneySubjectId(null);
+          return;
+        }
+        setSelectedJourneySubjectId((prev) => {
+          if (prev && ordered.some((item) => item.id === prev)) return prev;
+          return ordered[0].id;
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setJourneySubjects([]);
+        setSelectedJourneySubjectId(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [childId]);
+
+  useEffect(() => {
+    if (childId === null) return;
+    let cancelled = false;
+    setLearningPathLoading(true);
+    setLearningPathError(null);
+    getLearningPath(selectedJourneySubjectId ?? undefined, childId)
+      .then((data) => {
+        if (cancelled) return;
+        setLearningPath(data);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLearningPath(null);
+        setLearningPathError("Não foi possível carregar sua trilha agora.");
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLearningPathLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [childId, selectedJourneySubjectId]);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (childId === null) return;
@@ -512,8 +565,15 @@ export default function ChildPage() {
   const savePercent = nextGoal && nextGoal > 0 ? (currentSave / nextGoal) * 100 : 0;
   const goalLocked = activeGoal?.is_locked ?? false;
   const streakCount = streak?.current ?? 0;
-  const effectiveAxionMoodState = moodToAxionVisualState(todayMood) ?? (axionState?.mood_state ?? "NEUTRAL");
   const flameClassName = getFlameIntensityClass(streakCount);
+  const heroXpPulsing = useChangePulse(Math.round(xpBarPercent));
+  const dailyEngagement = useDailyEngagement({
+    childId,
+    todayIso,
+    streak,
+    mission: dailyMission,
+  });
+  const currentMission = dailyEngagement.effectiveMission;
 
   useEffect(() => {
     if (childId === null || !showDailyWelcome) return;
@@ -522,6 +582,30 @@ export default function ChildPage() {
     localStorage.setItem(dailyKey, "1");
     void fetchCoachDialogue("first_login");
   }, [childId, showDailyWelcome, todayIso]);
+
+  useEffect(() => {
+    if (childId === null) return;
+    if (!dailyEngagement.missionResetApplied) {
+      missionResetSyncRef.current = null;
+      return;
+    }
+    const syncKey = `${childId}-${todayIso}`;
+    if (missionResetSyncRef.current === syncKey) return;
+    missionResetSyncRef.current = syncKey;
+    void getDailyMission(childId)
+      .then((nextMission) => {
+        setDailyMission(nextMission);
+      })
+      .catch(() => {
+        // keep current stale-safe state until next poll/navigation
+      });
+  }, [childId, dailyEngagement.missionResetApplied, todayIso]);
+
+  useEffect(() => {
+    if (!currentMission || currentMission.status !== "completed") {
+      setMissionRewardClaimed(false);
+    }
+  }, [currentMission?.id, currentMission?.status]);
 
   useEffect(() => {
     if (childId === null) return;
@@ -707,25 +791,31 @@ export default function ChildPage() {
   };
 
   const onCompleteDailyMission = async () => {
-    if (!dailyMission || missionCompleting) return;
-    if (dailyMission.status === "completed") return;
+    if (!currentMission || missionCompleting) return;
+    if (currentMission.status === "completed") return;
 
     setMissionCompleting(true);
     setMissionFeedback("loading");
     if (!navigator.onLine) {
-      await enqueueDailyMissionComplete({ mission_id: dailyMission.id });
+      await enqueueDailyMissionComplete({ mission_id: currentMission.id });
       setDailyMission((prev) => (prev ? { ...prev, status: "completed" } : prev));
+      setMissionRewardClaimed(true);
       setTransientFeedback(setMissionFeedback, missionFeedbackTimerRef, "success");
       showToast("Missão concluída offline. Vai sincronizar ao reconectar.", "success");
+      economyEvents.emitXp(currentMission.xp_reward);
+      economyEvents.emitCoins(currentMission.coin_reward);
       setMissionCompleting(false);
       return;
     }
 
     try {
-      await completeDailyMission(dailyMission.id);
+      await completeDailyMission(currentMission.id);
       setDailyMission((prev) => (prev ? { ...prev, status: "completed" } : prev));
+      setMissionRewardClaimed(true);
       setTransientFeedback(setMissionFeedback, missionFeedbackTimerRef, "success");
       showToast("Missão concluída!", "success");
+      economyEvents.emitXp(currentMission.xp_reward);
+      economyEvents.emitCoins(currentMission.coin_reward);
       if (childId !== null) {
         void getLevels(childId).then((data) => {
           lastKnownLevelRef.current = data.level;
@@ -740,10 +830,13 @@ export default function ChildPage() {
       }
     } catch (err) {
       if (!(err instanceof ApiError)) {
-        await enqueueDailyMissionComplete({ mission_id: dailyMission.id });
+        await enqueueDailyMissionComplete({ mission_id: currentMission.id });
         setDailyMission((prev) => (prev ? { ...prev, status: "completed" } : prev));
+        setMissionRewardClaimed(true);
         setTransientFeedback(setMissionFeedback, missionFeedbackTimerRef, "success");
         showToast("Sem conexao. Missão enfileirada para sincronizar.", "success");
+        economyEvents.emitXp(currentMission.xp_reward);
+        economyEvents.emitCoins(currentMission.coin_reward);
       } else {
         setTransientFeedback(setMissionFeedback, missionFeedbackTimerRef, "error");
         showToast(getApiErrorMessage(err, "Não foi possível concluir a missão."), "error");
@@ -817,392 +910,356 @@ export default function ChildPage() {
     return "Pendente";
   };
 
-  const missionCardClass = (status: DailyMissionResponse["status"]) => {
-    if (status === "completed") {
-      return "border-secondary/35 bg-secondary/10";
+  const missionProgressPercent =
+    currentMission?.status === "completed"
+      ? 100
+      : tasks.length > 0
+        ? Math.min(90, Math.round((Object.keys(taskStatusById).length / Math.max(1, tasks.length)) * 100))
+        : 10;
+
+  const hasJourneyNodes = (learningPath?.units ?? []).some((unit) => unit.nodes.length > 0);
+  const missionSubtitle = currentMission
+    ? "Complete a missão central para manter o ritmo e acelerar sua evolução."
+    : dailyEngagement.missionResetApplied
+      ? "Nova missão diária será liberada automaticamente."
+    : missionLoadError
+      ? "Não foi possível carregar a missão de hoje."
+      : "Missão ainda não foi gerada para este perfil.";
+  const missionRarity = currentMission ? missionRarityLabel(currentMission.rarity) : "Sem missão";
+  const activeGoalTitle = activeGoal ? activeGoal.title : "Definir objetivo";
+  const activeGoalTargetLabel = activeGoal ? formatBRL(activeGoal.target_cents) : "Sem objetivo ativo";
+  const logsTodayCount = routineLogs.filter((log) => log.date === todayIso).length;
+  const todayStatusCounts = Object.values(taskStatusById).reduce(
+    (acc, status) => {
+      if (status === "APPROVED") acc.approved += 1;
+      else if (status === "PENDING") acc.pending += 1;
+      else if (status === "REJECTED") acc.rejected += 1;
+      return acc;
+    },
+    { approved: 0, pending: 0, rejected: 0 },
+  );
+  const latestActivityTimestamp = routineLogs.reduce<number>((latest, log) => {
+    const parsed = Date.parse(log.created_at);
+    if (Number.isNaN(parsed)) return latest;
+    return Math.max(latest, parsed);
+  }, 0);
+  const offlineHours = latestActivityTimestamp > 0 ? (Date.now() - latestActivityTimestamp) / (1000 * 60 * 60) : 72;
+  const missionsCompletedCount =
+    routineLogs.filter((log) => log.status === "APPROVED").length + (currentMission?.status === "completed" ? 1 : 0);
+  const usageFrequencyScore = Math.min(10, routineLogs.length);
+  const homeState = useHomeState({
+    childName,
+    learningLevel,
+    fallbackLevel: level?.level ?? null,
+    xpPercent: xpBarPercent,
+    streakCount,
+    routineLogsCount: routineLogs.length,
+    logsTodayCount,
+    dailyMission: currentMission,
+    missionRewardClaimed,
+    hasJourneyNodes,
+    learningPath,
+    progressionError: learningPathError,
+    progressionLoading: learningPathLoading,
+    axionStage: axionState?.stage ?? 1,
+    usageFrequencyScore,
+    missionsCompletedCount,
+    offlineHours,
+    loopBroken: dailyEngagement.loopBroken,
+    axionDialogueMessage: axionDialogue.message,
+    axionDialogueVisible: axionDialogue.visible,
+    axionCelebrating: axionCelebration !== null,
+    walletBalanceCents: walletSummary?.total_balance_cents ?? 0,
+    missionSubtitle,
+    missionRarityLabel: missionRarity,
+    missionProgressPercent,
+    activeGoalTitle,
+    activeGoalTargetLabel,
+    streakFreezeUsedToday: Boolean(streak?.freeze_used_today),
+  });
+  const effectiveViewportHeight = Math.min(layoutHeight, viewportHeight);
+  const effectiveViewportWidth = Math.min(layoutWidth, viewportWidth);
+  const shouldAutoFitDesktop = effectiveViewportWidth >= 1024;
+  const desktopScale = (() => {
+    if (!shouldAutoFitDesktop) return 1;
+    const widthScale = Math.min(1, effectiveViewportWidth / 1720);
+    const heightScale = Math.min(1, Math.max(0.74, (effectiveViewportHeight - 22) / 980));
+    return Math.max(0.74, Math.min(widthScale, heightScale));
+  })();
+  const denseDesktop = shouldAutoFitDesktop && (desktopScale < 0.93 || effectiveViewportWidth <= 1600 || effectiveViewportHeight <= 980);
+  const ultraDenseDesktop = denseDesktop && (desktopScale < 0.86 || effectiveViewportHeight <= 900);
+  const economyEvents = useEconomyFeedbackEvents({
+    xpPercent: homeState.user.xpPercent,
+    balanceCents: homeState.economy.balanceCents,
+  });
+
+  const onMissionCardAction = async (state: MissionLoopState) => {
+    if (state === "active") {
+      await onCompleteDailyMission();
+      return;
     }
-    return "border-border bg-card shadow-sm";
+    if (state === "completed") {
+      setMissionRewardClaimed(true);
+      setTransientFeedback(setMissionFeedback, missionFeedbackTimerRef, "success");
+      showToast("Recompensa resgatada!", "success");
+      economyEvents.emitXp(homeState.mission.reward.xp);
+      economyEvents.emitCoins(homeState.mission.reward.coins);
+      if (childId !== null && soundEnabled) {
+        playSound("level_up", { childId, theme });
+      }
+    }
+  };
+
+  const onPrimaryHomeAction = () => {
+    if (homeState.nextAction.type === "progress") {
+      router.push("/child/aprender");
+      return;
+    }
+    if (homeState.nextAction.type === "claim") {
+      void onMissionCardAction("completed");
+      return;
+    }
+    if (homeState.nextAction.type === "mission") {
+      missionSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
   };
 
   return (
-    <>
+    <div ref={layoutRef} className="relative h-screen overflow-x-hidden">
       {levelUpOverlayLevel !== null ? (
         <LevelUpOverlay level={levelUpOverlayLevel} onDismiss={() => setLevelUpOverlayLevel(null)} />
       ) : null}
-      <ChildDesktopShell activeNav="inicio">
+      <ChildDesktopShell activeNav="inicio" menuSkin="trail" density={denseDesktop ? "dense" : "regular"} contentScale={desktopScale}>
         <PageShell
           tone="child"
-          width={isSchoolTenant ? "wide" : "content"}
+          width="full"
           className={cn(
-            "flex flex-col pt-5",
+            "axiora-core-bg flex flex-col",
+            shouldAutoFitDesktop
+              ? cn(
+                  "gap-3 pt-3 !pb-2 md:!pb-2 lg:!h-full lg:!min-h-0 lg:!overflow-y-auto lg:!pb-2",
+                  ultraDenseDesktop && "gap-2 pt-2",
+                  !denseDesktop && "gap-4 pt-4",
+                )
+              : "gap-5 pt-5",
           )}
         >
-        <div className="mb-3 flex flex-wrap items-center gap-2 sm:flex-nowrap sm:justify-between">
-          <p className="order-2 min-w-0 flex-1 basis-full truncate text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:order-1 sm:basis-auto">
-            {childName ? `Perfil: ${childName}` : "Perfil infantil"}
-          </p>
-          <button
-            type="button"
-            aria-label="Abrir modo pais"
-            className="axiora-chunky-btn axiora-control-btn order-1 ml-auto inline-flex shrink-0 items-center gap-1.5 px-2.5 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 sm:order-2 sm:ml-0"
-            onClick={() => router.push("/parent-pin")}
-          >
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded-lg bg-[#EDE4D8]">
-              <Lock className="h-3.5 w-3.5 stroke-[2.6]" />
-            </span>
-            Modo pais
-          </button>
-        </div>
-        <Card variant="emphasis" className={cn("mb-4 overflow-hidden", dailyMission ? missionCardClass(dailyMission.status) : "border-border shadow-sm")}>
-            <CardHeader className="bg-gradient-to-r from-[#ff9600] to-[#ffb132] p-4 pb-2 text-white">
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="flex items-center gap-1.5 text-base font-extrabold tracking-tight">
-                  <Sparkles className="h-4 w-4 stroke-[2.8]" />
-                  Missão do Dia
-                </CardTitle>
-                {dailyMission ? (
-                  <span
-                    className="rounded-full border border-white/40 bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
+          <ProgressHUD
+            level={homeState.user.level}
+            xpPercent={homeState.user.xpPercent}
+            nextObjective={homeState.progression.nextStepIdeal}
+            recentProgressLabel={homeState.progression.recentProgressLabel}
+            levelUpSignal={levelUpOverlayLevel}
+            className={cn(ultraDenseDesktop && "lg:!p-2.5")}
+          />
+          <section className={cn("axiora-surface-glass relative overflow-hidden", "p-2.5 lg:p-3")}>
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[radial-gradient(circle,rgba(251,146,60,0.25)_0%,rgba(251,146,60,0)_70%)] blur-2xl"
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -left-10 bottom-0 h-32 w-32 rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.20)_0%,rgba(56,189,248,0)_72%)] blur-2xl"
+            />
+            <div className="relative z-[1] flex flex-col gap-2.5 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-2.5">
+                <p className="axiora-subtitle text-[11px] font-black uppercase tracking-[0.08em]">Axiora Core Hub</p>
+                <h1 className={cn("axiora-title font-extrabold leading-tight", "text-[22px] lg:text-[24px]")}>
+                  {homeState.user.greeting}
+                </h1>
+                <p className="axiora-subtitle text-sm lg:text-[15px]">{homeState.user.subtitle}</p>
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  <div className="axiora-surface-soft inline-flex items-center gap-2 rounded-2xl px-2.5 py-1.5">
+                    <span className="axiora-subtitle text-[11px] font-black uppercase tracking-[0.08em]">Economia</span>
+                    <span className="axiora-title text-base font-extrabold">{formatBRL(homeState.economy.balanceCents)}</span>
+                  </div>
+                  <div className="axiora-surface-soft inline-flex items-center gap-2 rounded-2xl px-2.5 py-1.5">
+                    <span className="axiora-subtitle text-[11px] font-black uppercase tracking-[0.08em]">Nível</span>
+                    <span className="axiora-title text-base font-extrabold">{homeState.user.level}</span>
+                  </div>
+                  <div className="axiora-surface-soft inline-flex items-center gap-2 rounded-2xl px-2.5 py-1.5">
+                    <span className="axiora-subtitle text-[11px] font-black uppercase tracking-[0.08em]">XP</span>
+                    <span
+                      className={cn(
+                        "axiora-title font-extrabold transition-[transform,filter] duration-300 ease-out",
+                        "text-base",
+                        heroXpPulsing && "scale-[1.06] brightness-125",
+                      )}
+                    >
+                      {homeState.user.xpPercent.toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="axiora-surface-soft inline-flex items-center gap-2 rounded-2xl px-2.5 py-1.5">
+                    <span className="axiora-subtitle text-[11px] font-black uppercase tracking-[0.08em]">Streak</span>
+                    <span className="axiora-title inline-flex items-center gap-1 text-base font-extrabold">
+                      <Flame className={`${isSchoolTenant ? "" : "flame-flicker"} ${flameClassName} h-3.5 w-3.5 text-[#FB923C]`} />
+                      {homeState.user.streak}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  <PrimaryAction label={homeState.nextAction.label} onClick={onPrimaryHomeAction} compact />
+                  <button
+                    type="button"
+                    aria-label="Abrir modo pais"
+                    className="axiora-chunky-btn axiora-control-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs"
+                    onClick={() => router.push("/parent-pin")}
                   >
-                    {missionRarityLabel(dailyMission.rarity)}
-                  </span>
+                    <Lock className="h-3.5 w-3.5 stroke-[2.6]" />
+                    Modo pais
+                  </button>
+                </div>
+                <p className="axiora-subtitle pt-0.5 text-sm">
+                  <span className="font-black uppercase tracking-[0.08em] text-[11px]">Próximo passo:</span>{" "}
+                  <span className="font-semibold text-[#334155]">{homeState.progression.nextStepIdeal}</span>
+                </p>
+              </div>
+              <div className="axiora-surface-soft mx-auto flex w-full max-w-[170px] flex-col items-center rounded-2xl p-2 md:mx-0">
+                {childAvatarKey ? (
+                  <ChildAvatar name={childName || "Criança"} avatarKey={childAvatarKey} size={56} />
+                ) : (
+                  <AvatarEvolution stage={avatarStage} />
+                )}
+                <p className="axiora-subtitle mt-1 text-center text-[11px] font-semibold">{childName || "Perfil infantil"}</p>
+              </div>
+            </div>
+          </section>
+
+          <section
+            ref={missionSectionRef}
+            className={cn(
+              "grid items-start lg:flex-1 lg:min-h-0",
+              ultraDenseDesktop ? "gap-2" : denseDesktop ? "gap-3" : "gap-4",
+              isSchoolTenant ? "xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]" : "lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]",
+            )}
+          >
+            <div className={cn("flex flex-col", ultraDenseDesktop ? "gap-2" : denseDesktop ? "gap-3" : "gap-4")}>
+              <MissionCardV2
+                state={homeState.mission.loopState}
+                title={homeState.mission.title}
+                subtitle={homeState.mission.subtitle}
+                progress={homeState.mission.progressPercent}
+                xpReward={homeState.mission.reward.xp}
+                coinReward={homeState.mission.reward.coins}
+                rarityLabel={homeState.mission.rarityLabel}
+                loading={missionCompleting}
+                disabled={homeState.mission.loopState === "locked"}
+                soundEnabled={soundEnabled}
+                onPlayRewardSound={() => {
+                  if (childId !== null) {
+                    playSound("level_up", { childId, theme });
+                  }
+                }}
+                onAction={(state) => {
+                  void onMissionCardAction(state);
+                }}
+              />
+              <AxionCompanion
+                stage={homeState.axion.stage}
+                visualMoodState={homeState.axion.visualMoodState}
+                behaviorState={homeState.axion.behaviorState}
+                idleMotion={homeState.axion.idleMotion}
+                headline={homeState.axion.headline}
+                message={homeState.axion.message}
+                dialogueMessage={homeState.axion.dialogueMessage}
+                dialogueVisible={homeState.axion.dialogueVisible}
+                todayMood={todayMood}
+                moodError={moodError}
+                moodFeedback={moodFeedback}
+                reducedMotion={isSchoolTenant}
+                celebrating={homeState.axion.celebrating}
+                compact
+                onDismissDialogue={() => setAxionDialogue((prev) => ({ ...prev, visible: false }))}
+                onChangeMood={(mood) => void onQuickMood(mood)}
+              />
+            </div>
+
+            <div className={cn("flex h-full flex-col", ultraDenseDesktop ? "gap-2" : denseDesktop ? "gap-3" : "gap-4")}>
+              <Card variant="subtle" className="axiora-surface-glass rounded-2xl">
+                <CardHeader className={cn(ultraDenseDesktop ? "pb-1" : denseDesktop ? "pb-1.5" : "pb-2")}>
+                  <CardTitle className="axiora-title text-[22px] font-extrabold">Caminho de Progressão</CardTitle>
+                  <p className="axiora-subtitle text-[15px]">Prévia da sua trilha</p>
+                </CardHeader>
+                <CardContent className={cn(ultraDenseDesktop ? "pb-2.5" : denseDesktop ? "pb-3" : "pb-4")}>
+                  <JourneyPreview
+                    learningPath={homeState.progression.learningPath}
+                    subjectOptions={journeySubjects.map((subject) => ({ id: subject.id, name: subject.name }))}
+                    selectedSubjectId={selectedJourneySubjectId}
+                    onChangeSubject={setSelectedJourneySubjectId}
+                    loading={homeState.progression.loading}
+                    error={homeState.progression.error}
+                    onContinueJourney={() => router.push("/child/aprender")}
+                  />
+                </CardContent>
+              </Card>
+
+              <div className="axiora-surface-glass rounded-2xl border border-[rgba(148,163,184,0.26)] px-4 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="axiora-title text-[18px] font-extrabold">Pulso da Semana</p>
+                    <p className="axiora-subtitle mt-0.5 text-sm">Resumo rápido para manter seu ritmo</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="axiora-chunky-btn axiora-control-btn axiora-chunky-btn--compact px-3 py-1.5 text-xs"
+                    onClick={() => setPulseOpen((prev) => !prev)}
+                  >
+                    {pulseOpen ? "Ocultar" : "Expandir"}
+                  </button>
+                </div>
+                {pulseOpen ? (
+                  <div className="mt-3 space-y-3">
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="axiora-surface-soft rounded-xl px-3 py-2.5">
+                        <p className="axiora-subtitle text-[11px] font-black uppercase tracking-[0.08em]">Ações hoje</p>
+                        <p className="axiora-title mt-1 text-xl font-extrabold">{logsTodayCount}</p>
+                      </div>
+                      <div className="axiora-surface-soft rounded-xl px-3 py-2.5">
+                        <p className="axiora-subtitle text-[11px] font-black uppercase tracking-[0.08em]">Missão</p>
+                        <p className="axiora-title mt-1 text-xl font-extrabold">{missionProgressPercent}%</p>
+                      </div>
+                    </div>
+
+                    <div className="axiora-surface-soft rounded-xl px-3 py-2.5">
+                      <p className="axiora-subtitle text-[11px] font-black uppercase tracking-[0.08em]">Status das tarefas</p>
+                      <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <p className="axiora-title text-base font-extrabold text-[#0E8F62]">{todayStatusCounts.approved}</p>
+                          <p className="axiora-subtitle text-[12px]">Aprovadas</p>
+                        </div>
+                        <div>
+                          <p className="axiora-title text-base font-extrabold text-[#B87400]">{todayStatusCounts.pending}</p>
+                          <p className="axiora-subtitle text-[12px]">Pendentes</p>
+                        </div>
+                        <div>
+                          <p className="axiora-title text-base font-extrabold text-[#B23B3B]">{todayStatusCounts.rejected}</p>
+                          <p className="axiora-subtitle text-[12px]">Rejeitadas</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="axiora-surface-soft rounded-xl px-3 py-2.5">
+                      <p className="axiora-subtitle text-[11px] font-black uppercase tracking-[0.08em]">Meta ativa</p>
+                      <p className="axiora-title mt-1 text-base font-extrabold">{homeState.economy.activeGoalTitle}</p>
+                      <p className="axiora-subtitle mt-0.5 text-[14px]">Alvo: {homeState.economy.activeGoalTargetLabel}</p>
+                    </div>
+                  </div>
                 ) : null}
               </div>
-            </CardHeader>
-            <CardContent className="space-y-2.5 p-4 pt-3 text-sm">
-              {dailyMission ? (
-                <>
-                  <p className="line-clamp-1 text-sm font-semibold text-foreground">{dailyMission.title}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2 py-1.5 text-xs font-bold">
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-secondary/15">
-                        <Sparkles className="h-3.5 w-3.5 stroke-[2.6] text-secondary" />
-                      </span>
-                      +{dailyMission.xp_reward} XP
-                    </div>
-                    <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2 py-1.5 text-xs font-bold">
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-accent/20">
-                        <Coins className="h-3.5 w-3.5 stroke-[2.6] text-accent-foreground" />
-                      </span>
-                      +{dailyMission.coin_reward} moedas
-                    </div>
-                  </div>
-                  {dailyMission.status === "completed" ? (
-                    <div className="flex items-center justify-center gap-1 rounded-xl border border-secondary/35 bg-secondary/10 px-3 py-2 text-sm font-semibold text-secondary">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      Missão concluída
-                    </div>
-                  ) : null}
-                  <ActionFeedback
-                    type="button"
-                    state={missionCompleting ? "loading" : missionFeedback}
-                    loadingLabel="Processando..."
-                    disabled={missionCompleting || dailyMission.status === "completed"}
-                    className="axiora-chunky-btn axiora-control-btn--teal w-full px-3 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() => void onCompleteDailyMission()}
-                  >
-                    {dailyMission.status === "completed" ? "Concluída" : "Completar missão"}
-                  </ActionFeedback>
-                </>
-              ) : (
-                <div className="rounded-xl border border-border bg-muted px-3 py-4 text-center">
-                  <p className="text-sm font-medium text-foreground">Missão indisponível no momento</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {missionLoadError ? "Não foi possível carregar a missão de hoje." : "Missão ainda não foi gerada para este perfil."}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        <Card variant="subtle"
-          className={cn(
-            "relative mb-4 overflow-hidden border-[#E5D5C0]/22 bg-[#FFF9F1] shadow-[0_18px_34px_rgba(59,45,32,0.12)]",
-            isSchoolTenant ? "bg-card" : "axion-card-idle bg-card",
-          )}
-        >
-          <CardHeader className="p-4 pb-2 text-center">
-            <CardTitle className="text-lg font-extrabold tracking-tight">Axion</CardTitle>
-            <p className="text-xs text-[#4F9D8A]">Seu parceiro de missão</p>
-          </CardHeader>
-          <CardContent className="space-y-2.5 p-4 pt-0 text-sm text-center">
-            {axionCelebration ? (
-              <div className="celebrate-badge-pop absolute right-3 top-3 rounded-xl border border-secondary/35 bg-secondary/10 px-2 py-0.5 text-sm font-semibold text-secondary">
-                {AXION_CELEBRATION_BADGES[axionCelebration]}
-              </div>
-            ) : null}
-            <div className="mx-auto flex w-full max-w-[18rem] justify-center">
-              <div className="overflow-hidden rounded-full border border-[#E8D8BF] bg-[radial-gradient(circle_at_50%_35%,rgba(255,163,94,0.12),rgba(30,42,56,0.02)_70%)] p-2.5 shadow-md">
-                <AxionCharacter
-                  stage={axionState?.stage ?? 1}
-                  moodState={effectiveAxionMoodState}
-                  celebrating={axionCelebration !== null}
-                  reducedMotion={isSchoolTenant}
-                />
-              </div>
             </div>
-            <AxionDialogue
-              message={axionDialogue.message}
-              visible={axionDialogue.visible}
-              onDismiss={() => setAxionDialogue((prev) => ({ ...prev, visible: false }))}
-              reducedMotion={isSchoolTenant}
-            />
-            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                <span className="rounded-xl border border-[#E8D8BF] bg-[#FFF9F1] px-2 py-1">Estágio {axionState?.stage ?? 1}</span>
-                <span className="rounded-xl border border-[#E8D8BF] bg-[#FFF9F1] px-2 py-1">
-                {childMoodLabel(todayMood) ?? axionMoodStateLabel(effectiveAxionMoodState)}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-        <section className={cn("space-y-4", isSchoolTenant && "grid gap-4 lg:grid-cols-2 lg:items-start lg:space-y-0")}>
-          {showDailyWelcome ? (
-            <Card variant="subtle" className="border-[#E5D5C0]/22 bg-[#FFF9F1] shadow-[0_16px_30px_rgba(59,45,32,0.1)]">
-              <CardHeader className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <CardTitle className="min-w-0 break-words text-sm leading-tight [overflow-wrap:anywhere]">Ritmo do dia</CardTitle>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <button
-                      type="button"
-                      aria-label="Alternar som"
-                      className="axiora-chunky-btn axiora-control-btn inline-flex h-8 items-center gap-1 px-2 text-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
-                      onClick={onToggleSound}
-                    >
-                      {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
-                      Som {soundEnabled ? "ligado" : "desligado"}
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Fechar boas-vindas"
-                      className="axiora-chunky-btn axiora-control-btn inline-flex h-7 w-7 items-center justify-center px-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
-                      onClick={dismissDailyWelcome}
-                    >
-                      <X className="h-4 w-4 stroke-[2.6]" />
-                    </button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3 p-4 pt-0 text-sm">
-                <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2">
-                  <span className="text-muted-foreground">Sequência</span>
-                  <span className="text-right font-semibold">{streakCount} dias</span>
-                </div>
-                <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2">
-                  <span className="text-muted-foreground">Meta principal</span>
-                  {activeGoal ? (
-                    <span className="text-right font-semibold break-words [overflow-wrap:anywhere]">{`${activeGoal.title} • ${formatBRL(activeGoal.target_cents)}`}</span>
-                  ) : (
-                    <span className="justify-self-end rounded-full border border-border bg-white px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">Definir meta</span>
-                  )}
-                </div>
-                <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Humor rápido</p>
-                  <MoodSelector value={todayMood ?? undefined} onChange={(mood) => void onQuickMood(mood)} />
-                  {moodFeedback === "loading" ? <p className="mt-2 text-sm text-muted-foreground">Salvando humor...</p> : null}
-                  {moodError ? <p className="mt-2 text-sm text-destructive">{moodError}</p> : null}
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card variant="flat">
-              <CardContent className="flex items-center justify-between gap-2 p-4">
-                <p className="text-sm font-medium text-muted-foreground">Painel da missão recolhido</p>
-                <ActionFeedback
-                  type="button"
-                  className="axiora-chunky-btn axiora-control-btn px-3 py-1 text-sm"
-                  onClick={restoreDailyWelcome}
-                >
-                  Mostrar painel
-                </ActionFeedback>
-              </CardContent>
-            </Card>
-          )}
-            <Card variant="subtle" className="border-[#E5D5C0]/22 bg-[#FFF9F1] shadow-[0_16px_30px_rgba(59,45,32,0.1)]">
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-base font-semibold">Progresso</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 p-4 pt-0">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <PiggyJar
-                  currentSaveAmountCents={currentSave}
-                  nextGoalAmountCents={nextGoal}
-                  savePercent={savePercent}
-                  isLocked={goalLocked}
-                />
-                <div className="rounded-xl border border-[#E8D8BF] bg-[#FFF9F1] p-4 shadow-sm">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Avatar</p>
-                  {childAvatarKey ? (
-                    <div className="mx-auto w-fit rounded-xl border border-[#E8D8BF] bg-[#FFF9F1] p-3">
-                      <ChildAvatar name={childName || "Criança"} avatarKey={childAvatarKey} size={96} />
-                      <p className="mt-2 text-center text-xs font-medium text-muted-foreground">Foto do perfil</p>
-                    </div>
-                  ) : (
-                    <AvatarEvolution stage={avatarStage} />
-                  )}
-                </div>
-              </div>
-                <div className="rounded-xl border border-[#E8D8BF] bg-[#FFF9F1] p-4 shadow-sm">
-                <div className="mb-2 flex items-center justify-between text-xs">
-                  <span className="font-semibold text-foreground">XP</span>
-                  <span className="font-medium text-muted-foreground">
-                    Nível {learningLevel ?? level?.level ?? 1} • {xpBarPercent.toFixed(0)}%
-                  </span>
-                </div>
-                <ProgressBar tone="secondary" value={xpBarPercent} />
-              </div>
-              <WeeklyBossMeter completionRate={weeklyMetrics?.completion_rate ?? 0} />
-            </CardContent>
-          </Card>
-          <Card variant="subtle" className="border-[#E5D5C0]/22 bg-[#FFF9F1] shadow-[0_16px_30px_rgba(59,45,32,0.1)]">
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-base">Tarefas</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 p-4 pt-0 text-sm text-muted-foreground">
-              <div className="flex items-center justify-between">
-                <div className="inline-flex rounded-xl border border-border p-0.5 text-sm">
-                  <button
-                    type="button"
-                    className={`axiora-chunky-btn axiora-control-btn axiora-chunky-btn--compact px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${taskView === "list" ? "axiora-control-btn--orange text-white" : "text-muted-foreground"}`}
-                    onClick={() => onToggleTaskView("list")}
-                  >
-                    Lista
-                  </button>
-                  <button
-                    type="button"
-                    className={`axiora-chunky-btn axiora-control-btn axiora-chunky-btn--compact px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${taskView === "journey" ? "axiora-control-btn--orange text-white" : "text-muted-foreground"}`}
-                    onClick={() => onToggleTaskView("journey")}
-                  >
-                    Jornada
-                  </button>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-xl border border-[#E8D8BF] bg-[#FFF9F1] shadow-[0_2px_0_rgba(108,97,84,0.12)]">
-                  <Flame className={`${isSchoolTenant ? "" : "flame-flicker"} ${flameClassName} stroke-[2.6] text-accent`} />
-                </span>
-                <span className="font-medium text-accent-foreground">Sequência: {streakCount} dias</span>
-                {streak?.freeze_used_today ? <Snowflake className="h-3.5 w-3.5 text-secondary" /> : null}
-              </div>
-              <div className="space-y-2">
-                {tasksLoadError ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">Não foi possível carregar tarefas agora.</p>
-                ) : tasks.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma tarefa ativa para hoje.</p>
-                ) : (
-                  tasks.slice(0, 4).map((task) => {
-                    const status = taskStatusById[task.id];
-                    const isProcessing = markingTaskIds.includes(task.id);
-                    const isMarked = status !== undefined;
-                    const progress = taskProgressById[task.id];
-                    const completionPercent = progress?.completion_percent_week ?? 0;
-                    const xpPerApproval = progress?.xp_per_approval ?? task.weight * TASK_XP_PER_WEIGHT;
-                    return (
-                      <div key={task.id} className={`space-y-2 rounded-xl border px-2 py-2 transition ${taskRowClass(status)}`}>
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-foreground">{task.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {taskDifficultyLabel(task.difficulty)} • peso {task.weight}
-                            </p>
-                            <p className="text-xs font-semibold text-secondary">+{xpPerApproval} XP por aprovação</p>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            {progress?.completed_today ? (
-                              <span className="rounded-xl bg-secondary/15 px-2 py-0.5 text-xs font-semibold text-secondary">Concluída hoje</span>
-                            ) : null}
-                            {status ? (
-                                <span className={`rounded-xl px-2 py-0.5 text-xs font-semibold ${statusBadgeClass(status)}`}>
-                                  {routineStatusLabel(status)}
-                                </span>
-                            ) : null}
-                            <ActionFeedback
-                              type="button"
-                              state={taskFeedback[task.id] ?? "idle"}
-                              loadingLabel="Marcando..."
-                              disabled={isProcessing || isMarked}
-                              className="axiora-chunky-btn axiora-control-btn px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
-                              onClick={() => void onMarkTask(task.id)}
-                            >
-                              {isMarked ? "Marcada" : "Marcar"}
-                            </ActionFeedback>
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                            <span>Progresso semanal</span>
-                            <span>{completionPercent.toFixed(0)}%</span>
-                          </div>
-                          <ProgressBar tone="secondary" value={completionPercent} />
-                          <p className="text-[11px] text-muted-foreground">
-                            {progress
-                              ? `${progress.approved_count_week}/${progress.marked_count_week} aprovações • +${progress.xp_gained_week} XP na semana`
-                              : "Sem marcações nesta semana"}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-              {routineLogs.length === 0 ? (
-                <p className="py-3 text-center text-xs text-muted-foreground">Sem registros da semana ainda.</p>
-              ) : taskView === "list" ? (
-                <details className="rounded-xl border border-border bg-background px-3 py-2">
-                  <summary className="cursor-pointer list-none text-xs font-semibold text-muted-foreground">Ver histórico da semana</summary>
-                  <div className="mt-2 space-y-1.5">
-                    {groupedWeeklyLogs.map((group) => (
-                      <p key={group.status} className="text-xs text-muted-foreground">
-                        <span className="font-semibold text-foreground">{group.title}:</span> {group.items.length}
-                      </p>
-                    ))}
-                    <div className="mt-2 space-y-1">
-                      {weeklyLogs.slice(0, 8).map((log) => (
-                        <p key={log.id} className="text-xs text-muted-foreground">
-                          <span className="font-semibold text-foreground">{log.date}</span> • {log.task_title} • {routineStatusLabel(log.status)}
-                          {log.xp_awarded > 0 ? ` • +${log.xp_awarded} XP` : ""}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                </details>
-              ) : (
-                <div className="overflow-x-auto pb-2">
-                  <div className="relative flex min-w-max items-center gap-3 px-1 py-3">
-                    {weeklyLogs.map((log, index) => (
-                      <div key={log.id} className="flex items-center gap-3">
-                        <div className="flex flex-col items-center gap-1">
-                          <span className={`h-5 w-5 rounded-full border-2 ${checkpointClass(log.status)}`} />
-                          <span className="max-w-20 truncate text-xs text-muted-foreground">{log.task_title || taskLabelById[log.task_id] || `#${log.task_id}`}</span>
-                        </div>
-                        {index < weeklyLogs.length - 1 ? <span className="h-0.5 w-8 bg-[#E5D5C0]" /> : null}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          {childId !== null && !isSchoolTenant ? (
-            <details className="rounded-2xl border border-border bg-card px-4 py-3">
-              <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Recomendações do Axion
-              </summary>
-              <div className="mt-3">
-                <RecommendationsPanel childId={childId} />
-              </div>
-            </details>
-          ) : null}
-        </section>
+          </section>
 
-        <ChildBottomNav />
-        {toast ? (
-          <div className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4">
-            <div className={`rounded-xl px-3 py-2 text-xs font-semibold text-white shadow-sm ${toast.type === "success" ? "bg-secondary" : "bg-destructive"}`}>
-              {toast.message}
+          <ChildBottomNav />
+          {toast ? (
+            <div className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4">
+              <div className={`rounded-xl px-3 py-2 text-xs font-semibold text-white shadow-sm ${toast.type === "success" ? "bg-secondary" : "bg-destructive"}`}>
+                {toast.message}
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
         </PageShell>
       </ChildDesktopShell>
-    </>
+    </div>
   );
 }

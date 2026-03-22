@@ -6,8 +6,6 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
 import { AxionCharacter } from "@/components/axion-character";
 import { ChildNavIcon, type ChildNavIconKey } from "@/components/child-bottom-nav";
-import { TopStatsBar } from "@/components/trail/TopStatsBar";
-import { getAprenderLearningProfile, getStreak } from "@/lib/api/client";
 import { enforceProfileCompletionRedirect } from "@/lib/profile-completion-middleware";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +46,8 @@ export function ChildDesktopShell({
   const isTrailSkin = menuSkin === "trail";
   const dense = density === "dense";
   const scaledStyle = contentScale < 0.999 ? ({ zoom: contentScale } as CSSProperties) : undefined;
+  const railContent = rightRail ?? rightRailAppend ?? null;
+  const hasRightRailContent = Boolean(railContent);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -74,8 +74,8 @@ export function ChildDesktopShell({
     <div
       className={
         isTrailSkin
-          ? "relative z-[1] min-h-screen lg:flex lg:h-screen lg:min-h-0 lg:flex-col lg:overflow-hidden"
-          : "min-h-screen bg-[radial-gradient(circle_at_46%_16%,rgba(255,163,94,0.16),rgba(24,49,46,0.04)_28%,rgba(2,6,23,0)_56%),radial-gradient(circle_at_72%_24%,rgba(79,157,138,0.12),rgba(2,6,23,0)_24%),linear-gradient(180deg,#112826_0%,#16312E_40%,#17322F_100%)]"
+          ? "relative z-[1] min-h-screen bg-[radial-gradient(1200px_540px_at_8%_-12%,rgba(56,189,248,0.10),transparent_60%),radial-gradient(980px_520px_at_92%_-10%,rgba(251,146,60,0.12),transparent_58%),linear-gradient(180deg,rgba(241,245,249,0.94)_0%,rgba(226,236,250,0.86)_100%)] lg:flex lg:h-screen lg:min-h-0 lg:flex-col lg:overflow-hidden"
+          : "min-h-screen bg-[radial-gradient(1200px_540px_at_8%_-12%,rgba(56,189,248,0.10),transparent_60%),radial-gradient(980px_520px_at_92%_-10%,rgba(251,146,60,0.12),transparent_58%),linear-gradient(180deg,rgba(241,245,249,0.94)_0%,rgba(226,236,250,0.86)_100%)]"
       }
     >
       <div className={isTrailSkin ? cn("flex w-full flex-1 min-h-0 flex-col lg:overflow-hidden", dense ? "lg:pl-[184px]" : "lg:pl-[208px]") : "w-full lg:pl-[208px]"}>
@@ -131,31 +131,39 @@ export function ChildDesktopShell({
         <div
             className={
               isTrailSkin
-                ? cn("mx-auto w-full flex-1 min-h-0 lg:grid lg:overflow-hidden", dense ? "lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-3 lg:px-2.5 xl:grid-cols-[minmax(0,1fr)_320px] xl:px-3.5 2xl:px-4" : "lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4 lg:px-3 xl:grid-cols-[minmax(0,1fr)_356px] xl:px-4 2xl:px-5")
-                : "mx-auto w-full lg:grid lg:max-w-[1320px] lg:grid-cols-[minmax(680px,820px)_320px] lg:gap-8 lg:px-6 xl:max-w-[1420px] xl:grid-cols-[minmax(720px,880px)_340px] xl:px-8"
+                ? cn(
+                    "mx-auto w-full flex-1 min-h-0 lg:grid lg:overflow-hidden",
+                    hasRightRailContent
+                      ? dense
+                        ? "lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-3 lg:px-2.5 xl:grid-cols-[minmax(0,1fr)_320px] xl:px-3.5 2xl:px-4"
+                        : "lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4 lg:px-3 xl:grid-cols-[minmax(0,1fr)_356px] xl:px-4 2xl:px-5"
+                      : dense
+                        ? "lg:grid-cols-[minmax(0,1fr)] lg:gap-0 lg:px-2.5 xl:px-3.5 2xl:px-4"
+                        : "lg:grid-cols-[minmax(0,1fr)] lg:gap-0 lg:px-3 xl:px-4 2xl:px-5",
+                  )
+                : hasRightRailContent
+                  ? "mx-auto w-full lg:grid lg:max-w-[1320px] lg:grid-cols-[minmax(680px,820px)_320px] lg:gap-8 lg:px-6 xl:max-w-[1420px] xl:grid-cols-[minmax(720px,880px)_340px] xl:px-8"
+                  : "mx-auto w-full lg:max-w-[1320px] lg:px-6 xl:max-w-[1420px] xl:px-8"
             }
           style={isTrailSkin ? scaledStyle : undefined}
         >
           <div
             className={
               isTrailSkin
-                ? cn("mx-auto w-full max-w-sm px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:max-w-none lg:overflow-hidden lg:pb-6", dense ? "lg:px-0.5 lg:pt-2" : "lg:px-1 lg:pt-3")
+                ? cn("mx-auto w-full px-4 pb-4 pt-3 md:px-6 lg:overflow-hidden lg:pb-6", dense ? "lg:px-0.5 lg:pt-2" : "lg:px-1 lg:pt-3")
                 : "mx-auto w-full max-w-sm px-4 pb-4 pt-3 md:max-w-3xl md:px-6 lg:max-w-[820px] lg:px-0 lg:pb-10 lg:pt-5 xl:max-w-[880px]"
             }
           >
             {children}
           </div>
 
-          <aside className={isTrailSkin ? cn("hidden lg:block lg:overflow-y-auto", dense ? "lg:py-2" : "lg:py-3") : "hidden lg:block lg:py-5"}>
-            <div className={cn("sticky space-y-3.5", dense ? "top-3 space-y-3" : "top-5")}>
-              {rightRail ?? (
-                <>
-                  <DefaultRightRail />
-                  {rightRailAppend}
-                </>
-              )}
-            </div>
-          </aside>
+          {hasRightRailContent ? (
+            <aside className={isTrailSkin ? cn("hidden lg:block lg:overflow-y-auto", dense ? "lg:py-2" : "lg:py-3") : "hidden lg:block lg:py-5"}>
+              <div className={cn("sticky space-y-3.5", dense ? "top-3 space-y-3" : "top-5")}>
+                {railContent}
+              </div>
+            </aside>
+          ) : null}
         </div>
       </div>
     </div>
@@ -208,70 +216,5 @@ function DesktopNavItem({
       </span>
       {label}
     </Link>
-  );
-}
-
-function DefaultRightRail() {
-  const [streak, setStreak] = useState(0);
-  const [gems, setGems] = useState(0);
-  const [xp, setXp] = useState(0);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const rawChildId = window.sessionStorage.getItem("axiora_child_id");
-    const childId = rawChildId ? Number(rawChildId) : NaN;
-    if (!Number.isFinite(childId) || childId <= 0) {
-      setStreak(0);
-      setGems(0);
-      setXp(0);
-      return;
-    }
-
-    let cancelled = false;
-    const loadStats = () => {
-      void getStreak(childId)
-        .then((data) => {
-          if (!cancelled) setStreak(Math.max(0, data.current));
-        })
-        .catch(() => {
-          if (!cancelled) setStreak(0);
-        });
-      void getAprenderLearningProfile()
-        .then((data) => {
-          if (!cancelled) {
-            setGems(Math.max(0, Math.round(data.axionCoins ?? 0)));
-            setXp(Math.max(0, Math.min(100, Math.round(data.xpLevelPercent ?? 0))));
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setGems(0);
-            setXp(0);
-          }
-        });
-    };
-
-    loadStats();
-    const intervalId = window.setInterval(loadStats, 15000);
-    window.addEventListener("focus", loadStats);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-      window.removeEventListener("focus", loadStats);
-    };
-  }, []);
-
-  return (
-    <>
-      <TopStatsBar streak={streak} gems={gems} xp={xp} className="max-w-none" />
-      <div className="medieval-parchment-glass p-4">
-        <div className="rune-divider mb-3" />
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#A07850]">? Progresso</p>
-        <p className="mt-1 text-lg font-black text-[#2C1E16]">Você está indo bem!</p>
-        <p className="mt-1 text-sm font-semibold text-[#5C4A3A]">Continue explorando para evoluir no Axiora.</p>
-        <div className="rune-divider mt-3" />
-      </div>
-    </>
   );
 }

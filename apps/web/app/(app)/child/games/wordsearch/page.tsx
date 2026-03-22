@@ -373,7 +373,7 @@ export default function WordSearchPage() {
   const selectedCellSet = useMemo(() => new Set(selectedPath.map((cell) => toCellKey(cell))), [selectedPath]);
 
   return (
-    <ChildDesktopShell activeNav="jogos">
+    <ChildDesktopShell activeNav="jogos" menuSkin="trail">
       <ConfettiBurst trigger={confettiTrigger} />
       {levelUpLevel !== null ? (
         <LevelUpOverlay

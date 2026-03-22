@@ -1,0 +1,64 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - complementary [ref=e5]:
+      - img "Axion" [ref=e11]
+      - link "Início" [ref=e12] [cursor=pointer]:
+        - /url: /child
+        - img [ref=e15]
+        - text: Início
+      - link "Aprender" [ref=e19] [cursor=pointer]:
+        - /url: /child/aprender
+        - img [ref=e22]
+        - text: Aprender
+      - link "Figurinhas" [ref=e27] [cursor=pointer]:
+        - /url: /child/stickers
+        - img [ref=e30]
+        - text: Figurinhas
+      - link "Jogos" [ref=e34] [cursor=pointer]:
+        - /url: /child/games
+        - img [ref=e37]
+        - text: Jogos
+      - link "Loja" [ref=e44] [cursor=pointer]:
+        - /url: /child/store
+        - img [ref=e47]
+        - text: Loja
+      - link "Axion" [ref=e50] [cursor=pointer]:
+        - /url: /child/axion
+        - img [ref=e53]
+        - text: Axion
+    - generic [ref=e54]:
+      - main [ref=e56]:
+        - generic [ref=e57]:
+          - img [ref=e59]
+          - heading "Meu Perfil" [level=1] [ref=e62]
+          - paragraph [ref=e63]: Estamos organizando esta área para mostrar evolução, preferências e resumo da criança.
+          - generic [ref=e64]:
+            - link "Voltar ao início" [ref=e65] [cursor=pointer]:
+              - /url: /child
+            - link "Ir para aprender" [ref=e66] [cursor=pointer]:
+              - /url: /child/aprender
+      - complementary [ref=e67]:
+        - generic [ref=e68]:
+          - generic [ref=e70]:
+            - generic "Nenhuma sequência ativa — estude hoje!" [ref=e71]:
+              - img [ref=e72]
+              - generic [ref=e75]:
+                - generic [ref=e76]: "0"
+                - generic [ref=e77]: dias
+            - generic "Saldo disponível de moedas Axion" [ref=e78]:
+              - img [ref=e79]
+              - generic [ref=e82]:
+                - generic [ref=e83]: "0"
+                - generic [ref=e84]: gemas
+            - generic "0% do nível atual completo" [ref=e85]:
+              - img [ref=e86]
+              - generic [ref=e88]:
+                - generic [ref=e89]: 0%
+                - generic [ref=e90]: xp
+          - generic [ref=e91]:
+            - paragraph [ref=e93]: "? Progresso"
+            - paragraph [ref=e94]: Você está indo bem!
+            - paragraph [ref=e95]: Continue explorando para evoluir no Axiora.
+  - button "Open Next.js Dev Tools" [ref=e102] [cursor=pointer]:
+    - img [ref=e103]
+  - alert [ref=e106]

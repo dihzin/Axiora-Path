@@ -36,6 +36,7 @@ from app.api.routes.school import router as school_router
 from app.api.routes.store import router as store_router
 from app.api.routes.sync import router as sync_router
 from app.api.routes.tools import router as tools_router
+from app.api.routes.tools_templates import router as tools_templates_router
 from app.api.routes.user_ux_settings import router as user_ux_settings_router
 from app.api.routes.wallet import router as wallet_router
 from app.core.config import settings
@@ -132,6 +133,7 @@ app.include_router(onboarding_router)
 app.include_router(routine_router)
 app.include_router(sync_router)
 app.include_router(tools_router)
+app.include_router(tools_templates_router)
 app.include_router(store_router)
 app.include_router(wallet_router)
 app.include_router(recommendations_router)

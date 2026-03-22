@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { NativeSelect } from "@/components/ui/native-select";
 
 import {
   ApiError,
@@ -1300,14 +1301,14 @@ function AxionStudioPage() {
             <div className="rounded-2xl border border-[#C9D8EF] p-3">
               <div className="mb-3 flex flex-wrap gap-2">
                 <input className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[220px] sm:flex-1" onChange={(e) => setPolicySearch(e.target.value)} placeholder="Buscar regra..." value={policySearch} />
-                <select className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[200px] sm:w-auto" onChange={(e) => setPolicyContext(e.target.value)} value={policyContext}>
+                <NativeSelect className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[200px] sm:w-auto" onChange={(e) => setPolicyContext(e.target.value)} value={policyContext}>
                   <option value="">Todos os contextos</option>
                   {CONTEXTS.map((ctx) => (
                     <option key={ctx} value={ctx}>
                       {contextLabel(ctx)}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
                 <button className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn px-3 py-2 text-sm text-white" onClick={() => void loadBase()} type="button">
                   Filtrar
                 </button>
@@ -1375,13 +1376,13 @@ function AxionStudioPage() {
             <div className="rounded-2xl border border-[#C9D8EF] p-3 xl:sticky xl:top-4 xl:self-start">
               <h3 className="mb-2 text-sm font-black text-[#1E3B65]">Editor de regra</h3>
               <input className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setPolicyDraft((d) => ({ ...d, name: e.target.value }))} placeholder="Nome" value={policyDraft.name} />
-              <select className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setPolicyDraft((d) => ({ ...d, context: e.target.value }))} value={policyDraft.context}>
+              <NativeSelect className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setPolicyDraft((d) => ({ ...d, context: e.target.value }))} value={policyDraft.context}>
                 {CONTEXTS.map((ctx) => (
                   <option key={ctx} value={ctx}>
                     {contextLabel(ctx)}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
               <textarea className="mb-2 h-28 w-full rounded-xl border border-[#C9D8EF] p-2 text-xs font-mono" onChange={(e) => setPolicyDraft((d) => ({ ...d, conditionJson: e.target.value }))} value={policyDraft.conditionJson} />
               <textarea className="mb-2 h-28 w-full rounded-xl border border-[#C9D8EF] p-2 text-xs font-mono" onChange={(e) => setPolicyDraft((d) => ({ ...d, actionsJson: e.target.value }))} value={policyDraft.actionsJson} />
               <input className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setPolicyDraft((d) => ({ ...d, priority: Number(e.target.value) || 100 }))} type="number" value={policyDraft.priority} />
@@ -1469,20 +1470,20 @@ function AxionStudioPage() {
             </div>
             <div className="rounded-2xl border border-[#C9D8EF] p-3 xl:sticky xl:top-4 xl:self-start">
               <h3 className="mb-2 text-sm font-black text-[#1E3B65]">Editor de template</h3>
-              <select className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setTemplateDraft((d) => ({ ...d, context: e.target.value }))} value={templateDraft.context}>
+              <NativeSelect className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setTemplateDraft((d) => ({ ...d, context: e.target.value }))} value={templateDraft.context}>
                 {CONTEXTS.map((ctx) => (
                   <option key={ctx} value={ctx}>
                     {contextLabel(ctx)}
                   </option>
                 ))}
-              </select>
-              <select className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setTemplateDraft((d) => ({ ...d, tone: e.target.value }))} value={templateDraft.tone}>
+              </NativeSelect>
+              <NativeSelect className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setTemplateDraft((d) => ({ ...d, tone: e.target.value }))} value={templateDraft.tone}>
                 {TONES.map((tone) => (
                   <option key={tone} value={tone}>
                     {toneLabel(tone)}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
               <input className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm" onChange={(e) => setTemplateDraft((d) => ({ ...d, tagsCsv: e.target.value }))} placeholder="tags, separadas por vírgula" value={templateDraft.tagsCsv} />
               <textarea className="mb-2 h-24 w-full rounded-xl border border-[#C9D8EF] p-2 text-xs font-mono" onChange={(e) => setTemplateDraft((d) => ({ ...d, conditionsJson: e.target.value }))} value={templateDraft.conditionsJson} />
               <textarea className="mb-1 h-28 w-full rounded-xl border border-[#C9D8EF] p-2 text-sm" onChange={(e) => setTemplateDraft((d) => ({ ...d, text: e.target.value }))} value={templateDraft.text} />
@@ -1503,20 +1504,20 @@ function AxionStudioPage() {
         {tab === "preview" ? (
           <section className="mt-5 rounded-2xl border border-[#C9D8EF] p-4">
             <div className="mb-3 flex flex-wrap gap-2">
-              <select className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[260px] sm:flex-1" onChange={(e) => setPreviewUserId(Number(e.target.value))} value={previewUserId ?? ""}>
+              <NativeSelect className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[260px] sm:flex-1" onChange={(e) => setPreviewUserId(Number(e.target.value))} value={previewUserId ?? ""}>
                 {users.map((u) => (
                   <option key={u.userId} value={u.userId}>
                     {u.name} (#{u.userId})
                   </option>
                 ))}
-              </select>
-              <select className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[200px] sm:w-auto" onChange={(e) => setPreviewContext(e.target.value)} value={previewContext}>
+              </NativeSelect>
+              <NativeSelect className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[200px] sm:w-auto" onChange={(e) => setPreviewContext(e.target.value)} value={previewContext}>
                 {CONTEXTS.map((ctx) => (
                   <option key={ctx} value={ctx}>
                     {contextLabel(ctx)}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
               <button className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn px-3 py-2 text-sm text-white" onClick={() => void runPreview()} type="button">
                 Executar prévia
               </button>
@@ -1585,18 +1586,18 @@ function AxionStudioPage() {
         {tab === "impact" ? (
           <section className="mt-5 rounded-2xl border border-[#C9D8EF] p-4">
             <div className="mb-3 flex flex-wrap gap-2">
-              <select className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[260px] sm:flex-1" onChange={(e) => setImpactUserId(Number(e.target.value))} value={impactUserId ?? ""}>
+              <NativeSelect className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[260px] sm:flex-1" onChange={(e) => setImpactUserId(Number(e.target.value))} value={impactUserId ?? ""}>
                 {users.map((u) => (
                   <option key={u.userId} value={u.userId}>
                     {u.name} (#{u.userId})
                   </option>
                 ))}
-              </select>
-              <select className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[140px] sm:w-auto" onChange={(e) => setImpactDays(Number(e.target.value) || 7)} value={impactDays}>
+              </NativeSelect>
+              <NativeSelect className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[140px] sm:w-auto" onChange={(e) => setImpactDays(Number(e.target.value) || 7)} value={impactDays}>
                 <option value={7}>7 dias</option>
                 <option value={14}>14 dias</option>
                 <option value={30}>30 dias</option>
-              </select>
+              </NativeSelect>
               <button className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn px-3 py-2 text-sm text-white" onClick={() => void runImpact()} type="button">
                 Calcular impacto
               </button>
@@ -1715,7 +1716,7 @@ function AxionStudioPage() {
                   placeholder="Buscar conta por descrição, categoria ou observação..."
                   value={financeSearch}
                 />
-                <select
+                <NativeSelect
                   className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[200px] sm:w-auto"
                   onChange={(e) => setFinanceFilterStatus(e.target.value as FinanceFilterStatus)}
                   value={financeFilterStatus}
@@ -1724,8 +1725,8 @@ function AxionStudioPage() {
                   <option value="PENDING">Pendentes</option>
                   <option value="OVERDUE">Atrasadas</option>
                   <option value="PAID">Pagas</option>
-                </select>
-                <select
+                </NativeSelect>
+                <NativeSelect
                   className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[140px] sm:w-auto"
                   onChange={(e) => setFinanceRowsPerPage(Number(e.target.value))}
                   value={financeRowsPerPage}
@@ -1734,7 +1735,7 @@ function AxionStudioPage() {
                   <option value={20}>20 linhas</option>
                   <option value={50}>50 linhas</option>
                   <option value={100}>100 linhas</option>
-                </select>
+                </NativeSelect>
               </div>
               <div className="max-h-[560px] overflow-auto rounded-xl border border-[#D7E2F4]">
                 <div className="overflow-x-auto">
@@ -1851,7 +1852,7 @@ function AxionStudioPage() {
                 placeholder="Descrição da conta *"
                 value={financeDraft.description}
               />
-              <select
+              <NativeSelect
                 className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
                 onChange={(e) => setFinanceDraft((prev) => ({ ...prev, category: e.target.value }))}
                 value={financeDraft.category}
@@ -1861,7 +1862,7 @@ function AxionStudioPage() {
                     {category}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
               <input
                 className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
                 onChange={(e) => setFinanceDraft((prev) => ({ ...prev, amount: e.target.value }))}
@@ -1877,7 +1878,7 @@ function AxionStudioPage() {
                 type="date"
                 value={financeDraft.dueDate}
               />
-              <select
+              <NativeSelect
                 className="mb-2 w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm"
                 onChange={(e) => setFinanceDraft((prev) => ({ ...prev, recurrence: e.target.value as FinanceRecurrence }))}
                 value={financeDraft.recurrence}
@@ -1887,7 +1888,7 @@ function AxionStudioPage() {
                     {FINANCE_RECURRENCE_LABELS[recurrence]}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
               <textarea
                 className="mb-3 h-24 w-full rounded-xl border border-[#C9D8EF] p-2 text-sm"
                 onChange={(e) => setFinanceDraft((prev) => ({ ...prev, notes: e.target.value }))}
@@ -1935,7 +1936,7 @@ function AxionStudioPage() {
                   placeholder="Buscar organização por nome ou slug..."
                   value={tenantSearch}
                 />
-                <select
+                <NativeSelect
                   className="w-full rounded-xl border border-[#C9D8EF] px-3 py-2 text-sm sm:min-w-[180px] sm:w-auto"
                   onChange={(e) => setTenantTypeFilter(e.target.value as "" | "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN")}
                   disabled={orgViewTab === "admin"}
@@ -1945,7 +1946,7 @@ function AxionStudioPage() {
                   <option value="FAMILY">Família</option>
                   <option value="SCHOOL">Escola</option>
                   <option value="SYSTEM_ADMIN">Sistema</option>
-                </select>
+                </NativeSelect>
                 <button className="axiora-chunky-btn axiora-chunky-btn--secondary axiora-admin-btn px-3 py-2 text-sm text-white" onClick={() => void loadBase()} type="button">
                   Filtrar
                 </button>
@@ -2134,7 +2135,7 @@ function AxionStudioPage() {
               ) : (
                 <p className="mb-2 text-xs font-semibold text-[#6B87AC]">Use apenas `a-z`, `0-9` e `-`.</p>
               )}
-              <select
+              <NativeSelect
                 className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${tenantFieldErrors.type ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
                 onChange={(e) => {
                   setTenantDraft((d) => ({ ...d, type: e.target.value as "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN" }));
@@ -2145,7 +2146,7 @@ function AxionStudioPage() {
                 <option value="FAMILY">Família (pais)</option>
                 <option value="SCHOOL">Escola</option>
                 <option value="SYSTEM_ADMIN">Sistema</option>
-              </select>
+              </NativeSelect>
               {tenantFieldErrors.type ? <p className="mb-2 text-xs font-semibold text-[#B54C47]">{tenantFieldErrors.type}</p> : <div className="mb-2" />}
               <input
                 className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${tenantFieldErrors.adminName ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
@@ -2301,7 +2302,7 @@ function AxionStudioPage() {
                     value={platformAdminUserDraft.slug}
                   />
                   {adminUserFieldErrors.slug ? <p className="mb-2 text-xs font-semibold text-[#B54C47]">{adminUserFieldErrors.slug}</p> : null}
-                  <select
+                  <NativeSelect
                     className={`mb-1 w-full rounded-xl border px-3 py-2 text-sm ${adminUserFieldErrors.type ? "border-[#E88983] bg-[#FFF7F6]" : "border-[#C9D8EF]"}`}
                     onChange={(e) => {
                       setPlatformAdminUserDraft((d) => ({ ...d, type: e.target.value as "FAMILY" | "SCHOOL" | "SYSTEM_ADMIN" }));
@@ -2312,7 +2313,7 @@ function AxionStudioPage() {
                     <option value="SYSTEM_ADMIN">Sistema</option>
                     <option value="SCHOOL">Escola</option>
                     <option value="FAMILY">Família</option>
-                  </select>
+                  </NativeSelect>
                   {adminUserFieldErrors.type ? (
                     <p className="mb-2 text-xs font-semibold text-[#B54C47]">{adminUserFieldErrors.type}</p>
                   ) : (
@@ -2555,5 +2556,6 @@ export default function AxionStudioPageWrapper() {
     </Suspense>
   );
 }
+
 
 

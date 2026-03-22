@@ -1,0 +1,146 @@
+[
+  {
+    "viewport": "desktop",
+    "route": "/child",
+    "consoleErrors": 10,
+    "consoleWarnings": 2
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/aprender",
+    "consoleErrors": 8,
+    "consoleWarnings": 2
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/axion",
+    "consoleErrors": 5,
+    "consoleWarnings": 2
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/games",
+    "consoleErrors": 10,
+    "consoleWarnings": 1
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/store",
+    "consoleErrors": 1,
+    "consoleWarnings": 2
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/stickers",
+    "consoleErrors": 1,
+    "consoleWarnings": 2
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/notifications",
+    "consoleErrors": 4,
+    "consoleWarnings": 1
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/help",
+    "consoleErrors": 4,
+    "consoleWarnings": 1
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/profile",
+    "consoleErrors": 4,
+    "consoleWarnings": 1
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/achievements",
+    "consoleErrors": 4,
+    "consoleWarnings": 1
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/settings",
+    "consoleErrors": 4,
+    "consoleWarnings": 1
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/games/quiz",
+    "consoleErrors": 1,
+    "consoleWarnings": 2
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child",
+    "consoleErrors": 10,
+    "consoleWarnings": 2
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/aprender",
+    "consoleErrors": 8,
+    "consoleWarnings": 1
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/axion",
+    "consoleErrors": 5,
+    "consoleWarnings": 1
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/games",
+    "consoleErrors": 10,
+    "consoleWarnings": 1
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/store",
+    "consoleErrors": 1,
+    "consoleWarnings": 1
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/stickers",
+    "consoleErrors": 5,
+    "consoleWarnings": 1
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/notifications",
+    "consoleErrors": 4,
+    "consoleWarnings": 1
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/help",
+    "consoleErrors": 4,
+    "consoleWarnings": 1
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/profile",
+    "consoleErrors": 4,
+    "consoleWarnings": 1
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/achievements",
+    "consoleErrors": 4,
+    "consoleWarnings": 1
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/settings",
+    "consoleErrors": 4,
+    "consoleWarnings": 1
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/games/quiz",
+    "consoleErrors": 1,
+    "consoleWarnings": 1
+  }
+]

@@ -2413,6 +2413,93 @@ export type ToolsCheckoutSessionResponse = {
   checkout_session_id: string;
 };
 
+export type ToolsCreditsResponse = {
+  credits: number;
+};
+
+export type ToolsTemplateRecord = {
+  id: string;
+  user_id: number;
+  name: string;
+  config: Record<string, unknown>;
+  blocks: unknown[];
+  is_public: boolean;
+  created_at: string;
+};
+
+export async function createToolsTemplate(payload: {
+  name: string;
+  config: Record<string, unknown>;
+  blocks: unknown[];
+  is_public?: boolean;
+}): Promise<ToolsTemplateRecord> {
+  return apiRequest<ToolsTemplateRecord>("/api/tools/templates", {
+    method: "POST",
+    body: payload,
+    requireAuth: true,
+    includeTenant: false,
+    suppressAuthRedirect: true,
+  });
+}
+
+export async function getToolsCredits(): Promise<ToolsCreditsResponse> {
+  return apiRequest<ToolsCreditsResponse>("/api/tools/credits", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: false,
+    suppressAuthRedirect: true,
+  });
+}
+
+export async function useToolsCredit(): Promise<ToolsCreditsResponse> {
+  return apiRequest<ToolsCreditsResponse>("/api/tools/use-credit", {
+    method: "POST",
+    requireAuth: true,
+    includeTenant: false,
+    suppressAuthRedirect: true,
+  });
+}
+
+export async function createToolsCheckout(payload?: {
+  plan_code?: "credits_30";
+  customer_email?: string;
+}): Promise<ToolsCheckoutSessionResponse> {
+  return apiRequest<ToolsCheckoutSessionResponse>("/api/tools/checkout", {
+    method: "POST",
+    body: payload ?? { plan_code: "credits_30" },
+    requireAuth: true,
+    includeTenant: false,
+    suppressAuthRedirect: true,
+  });
+}
+
+export async function getToolsTemplates(): Promise<ToolsTemplateRecord[]> {
+  return apiRequest<ToolsTemplateRecord[]>("/api/tools/templates", {
+    method: "GET",
+    requireAuth: true,
+    includeTenant: false,
+    suppressAuthRedirect: true,
+  });
+}
+
+export async function deleteToolsTemplate(templateId: string): Promise<void> {
+  await apiRequest<null>(`/api/tools/templates/${encodeURIComponent(templateId)}`, {
+    method: "DELETE",
+    requireAuth: true,
+    includeTenant: false,
+    suppressAuthRedirect: true,
+  });
+}
+
+export async function duplicateToolsTemplate(templateId: string): Promise<ToolsTemplateRecord> {
+  return apiRequest<ToolsTemplateRecord>(`/api/tools/templates/${encodeURIComponent(templateId)}/duplicate`, {
+    method: "POST",
+    requireAuth: true,
+    includeTenant: false,
+    suppressAuthRedirect: true,
+  });
+}
+
 export async function generateToolsExercises(payload: {
   subject: string;
   topic: string;

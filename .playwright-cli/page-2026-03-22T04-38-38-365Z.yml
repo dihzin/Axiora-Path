@@ -1,0 +1,32 @@
+- generic [ref=e5]:
+  - generic [ref=e9]:
+    - banner [ref=e10]:
+      - tablist "Selecionar materia" [ref=e20]:
+        - paragraph [ref=e21]: Sem materias
+    - main
+  - navigation [ref=e23]:
+    - generic [ref=e24]:
+      - link "Início" [ref=e25] [cursor=pointer]:
+        - /url: /child
+        - img [ref=e28]
+        - generic [ref=e32]: Início
+      - link "Aprender" [ref=e33] [cursor=pointer]:
+        - /url: /child/aprender
+        - img [ref=e36]
+        - generic [ref=e41]: Aprender
+      - link "Figurinhas" [ref=e43] [cursor=pointer]:
+        - /url: /child/stickers
+        - img [ref=e46]
+        - generic [ref=e50]: Figurinhas
+      - link "Jogos" [ref=e51] [cursor=pointer]:
+        - /url: /child/games
+        - img [ref=e54]
+        - generic [ref=e61]: Jogos
+      - link "Loja" [ref=e62] [cursor=pointer]:
+        - /url: /child/store
+        - img [ref=e65]
+        - generic [ref=e68]: Loja
+      - link "Axion" [ref=e69] [cursor=pointer]:
+        - /url: /child/axion
+        - img [ref=e72]
+        - generic [ref=e73]: Axion

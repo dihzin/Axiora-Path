@@ -1,0 +1,213 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e31]:
+    - complementary [ref=e32]:
+      - img "Axion" [ref=e38]
+      - link "Início" [ref=e39] [cursor=pointer]:
+        - /url: /child
+        - img [ref=e42]
+        - text: Início
+      - link "Aprender" [ref=e46] [cursor=pointer]:
+        - /url: /child/aprender
+        - img [ref=e49]
+        - text: Aprender
+      - link "Figurinhas" [ref=e54] [cursor=pointer]:
+        - /url: /child/stickers
+        - img [ref=e57]
+        - text: Figurinhas
+      - link "Jogos" [ref=e61] [cursor=pointer]:
+        - /url: /child/games
+        - img [ref=e64]
+        - text: Jogos
+      - link "Loja" [ref=e71] [cursor=pointer]:
+        - /url: /child/store
+        - img [ref=e74]
+        - text: Loja
+      - link "Axion" [ref=e77] [cursor=pointer]:
+        - /url: /child/axion
+        - img [ref=e80]
+        - text: Axion
+    - generic [ref=e81]:
+      - main [ref=e83]:
+        - generic [ref=e84]:
+          - paragraph [ref=e85]: "Perfil: Child 1"
+          - button "Abrir modo pais" [ref=e86] [cursor=pointer]:
+            - img [ref=e88]
+            - text: Modo pais
+        - generic [ref=e91]:
+          - heading "Missão do Dia" [level=3] [ref=e94]:
+            - img [ref=e95]
+            - text: Missão do Dia
+          - generic [ref=e98]:
+            - paragraph [ref=e99]: Missão indisponível no momento
+            - paragraph [ref=e100]: Não foi possível carregar a missão de hoje.
+        - generic [ref=e101]:
+          - generic [ref=e102]:
+            - heading "Axion" [level=3] [ref=e103]
+            - paragraph [ref=e104]: Seu parceiro de missão
+          - generic [ref=e105]:
+            - img "Axion" [ref=e110]
+            - generic [ref=e111]:
+              - generic [ref=e112]: Estágio 1
+              - generic [ref=e113]: Neutro
+        - generic [ref=e114]:
+          - generic [ref=e115]:
+            - generic [ref=e117]:
+              - heading "Ritmo do dia" [level=3] [ref=e118]
+              - generic [ref=e119]:
+                - button "Alternar som" [ref=e120] [cursor=pointer]:
+                  - img [ref=e121]
+                  - text: Som ligado
+                - button "Fechar boas-vindas" [ref=e125] [cursor=pointer]:
+                  - img [ref=e126]
+            - generic [ref=e129]:
+              - generic [ref=e130]:
+                - generic [ref=e131]: Sequência
+                - generic [ref=e132]: 0 dias
+              - generic [ref=e133]:
+                - generic [ref=e134]: Meta principal
+                - generic [ref=e135]: Definir meta
+              - generic [ref=e136]:
+                - paragraph [ref=e137]: Humor rápido
+                - generic [ref=e138]:
+                  - button "Selecionar humor Feliz" [ref=e139] [cursor=pointer]:
+                    - img "Axion Feliz" [ref=e141]:
+                      - img [ref=e142]
+                    - generic [ref=e182]: Feliz
+                  - button "Selecionar humor Neutro" [ref=e183] [cursor=pointer]:
+                    - img "Axion Neutro" [ref=e185]:
+                      - img [ref=e186]
+                    - generic [ref=e225]: Neutro
+                  - button "Selecionar humor Triste" [ref=e226] [cursor=pointer]:
+                    - img "Axion Triste" [ref=e228]:
+                      - img [ref=e229]
+                    - generic [ref=e273]: Triste
+                  - button "Selecionar humor Bravo" [ref=e274] [cursor=pointer]:
+                    - img "Axion Bravo" [ref=e276]:
+                      - img [ref=e277]
+                    - generic [ref=e320]: Bravo
+                  - button "Selecionar humor Cansado" [ref=e321] [cursor=pointer]:
+                    - img "Axion Cansado" [ref=e323]:
+                      - img [ref=e324]
+                    - generic [ref=e370]: Cansado
+          - generic [ref=e371]:
+            - heading "Progresso" [level=3] [ref=e373]
+            - generic [ref=e374]:
+              - generic [ref=e375]:
+                - generic [ref=e376]:
+                  - generic [ref=e377]:
+                    - generic [ref=e378]:
+                      - paragraph [ref=e379]: Pote SAVE
+                      - paragraph [ref=e380]: R$ 0,00
+                    - generic [ref=e381]:
+                      - paragraph [ref=e382]: Próxima meta
+                      - paragraph [ref=e383]: Sem meta
+                  - generic [ref=e385]:
+                    - generic [ref=e386]:
+                      - img [ref=e387]
+                      - generic [ref=e390]: 0%
+                    - generic [ref=e391]: 0%
+                - generic [ref=e392]:
+                  - paragraph [ref=e393]: Avatar
+                  - generic [ref=e394]:
+                    - img "Evolução do avatar estágio 1" [ref=e395]
+                    - paragraph [ref=e399]: Estágio do avatar 1
+              - generic [ref=e400]:
+                - generic [ref=e401]:
+                  - generic [ref=e402]: XP
+                  - generic [ref=e403]: Nível 1 • 0%
+                - progressbar [ref=e404]
+              - generic [ref=e405]:
+                - generic [ref=e406]:
+                  - paragraph [ref=e407]: Medidor de desafio semanal
+                  - paragraph [ref=e408]: 0%
+                - progressbar [ref=e409]
+          - generic [ref=e410]:
+            - heading "Tarefas" [level=3] [ref=e412]
+            - generic [ref=e413]:
+              - generic [ref=e415]:
+                - button "Lista" [ref=e416] [cursor=pointer]
+                - button "Jornada" [ref=e417] [cursor=pointer]
+              - generic [ref=e418]:
+                - img [ref=e420]
+                - generic [ref=e422]: "Sequência: 0 dias"
+              - generic [ref=e423]:
+                - generic [ref=e424]:
+                  - generic [ref=e425]:
+                    - generic [ref=e426]:
+                      - paragraph [ref=e427]: Arrumar a cama
+                      - paragraph [ref=e428]: Fácil • peso 5
+                      - paragraph [ref=e429]: +50 XP por aprovação
+                    - button "Marcar" [ref=e431] [cursor=pointer]
+                  - generic [ref=e432]:
+                    - generic [ref=e433]:
+                      - generic [ref=e434]: Progresso semanal
+                      - generic [ref=e435]: 0%
+                    - progressbar [ref=e436]
+                    - paragraph [ref=e437]: Sem marcações nesta semana
+                - generic [ref=e438]:
+                  - generic [ref=e439]:
+                    - generic [ref=e440]:
+                      - paragraph [ref=e441]: Escovar os dentes
+                      - paragraph [ref=e442]: Fácil • peso 5
+                      - paragraph [ref=e443]: +50 XP por aprovação
+                    - button "Marcar" [ref=e445] [cursor=pointer]
+                  - generic [ref=e446]:
+                    - generic [ref=e447]:
+                      - generic [ref=e448]: Progresso semanal
+                      - generic [ref=e449]: 0%
+                    - progressbar [ref=e450]
+                    - paragraph [ref=e451]: Sem marcações nesta semana
+                - generic [ref=e452]:
+                  - generic [ref=e453]:
+                    - generic [ref=e454]:
+                      - paragraph [ref=e455]: Organizar os brinquedos
+                      - paragraph [ref=e456]: Fácil • peso 10
+                      - paragraph [ref=e457]: +100 XP por aprovação
+                    - button "Marcar" [ref=e459] [cursor=pointer]
+                  - generic [ref=e460]:
+                    - generic [ref=e461]:
+                      - generic [ref=e462]: Progresso semanal
+                      - generic [ref=e463]: 0%
+                    - progressbar [ref=e464]
+                    - paragraph [ref=e465]: Sem marcações nesta semana
+                - generic [ref=e466]:
+                  - generic [ref=e467]:
+                    - generic [ref=e468]:
+                      - paragraph [ref=e469]: Fazer a licao de casa
+                      - paragraph [ref=e470]: Média • peso 15
+                      - paragraph [ref=e471]: +150 XP por aprovação
+                    - button "Marcar" [ref=e473] [cursor=pointer]
+                  - generic [ref=e474]:
+                    - generic [ref=e475]:
+                      - generic [ref=e476]: Progresso semanal
+                      - generic [ref=e477]: 0%
+                    - progressbar [ref=e478]
+                    - paragraph [ref=e479]: Sem marcações nesta semana
+              - paragraph [ref=e480]: Sem registros da semana ainda.
+          - group [ref=e481]:
+            - generic "Recomendações do Axion" [ref=e482] [cursor=pointer]
+      - complementary [ref=e483]:
+        - generic [ref=e484]:
+          - generic [ref=e486]:
+            - generic "Nenhuma sequência ativa — estude hoje!" [ref=e487]:
+              - img [ref=e488]
+              - generic [ref=e491]:
+                - generic [ref=e492]: "0"
+                - generic [ref=e493]: dias
+            - generic "Saldo disponível de moedas Axion" [ref=e494]:
+              - img [ref=e495]
+              - generic [ref=e498]:
+                - generic [ref=e499]: "0"
+                - generic [ref=e500]: gemas
+            - generic "0% do nível atual completo" [ref=e501]:
+              - img [ref=e502]
+              - generic [ref=e504]:
+                - generic [ref=e505]: 0%
+                - generic [ref=e506]: xp
+          - generic [ref=e507]:
+            - paragraph [ref=e509]: "? Progresso"
+            - paragraph [ref=e510]: Você está indo bem!
+            - paragraph [ref=e511]: Continue explorando para evoluir no Axiora.
+  - button "Open Next.js Dev Tools" [ref=e25] [cursor=pointer]:
+    - img [ref=e26]
+  - alert [ref=e29]

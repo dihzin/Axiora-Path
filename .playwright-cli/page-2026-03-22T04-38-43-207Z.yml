@@ -1,0 +1,57 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e5]:
+    - generic [ref=e9]:
+      - banner [ref=e10]:
+        - generic [ref=e12]:
+          - generic [ref=e15]:
+            - generic "Nenhuma sequência ativa — estude hoje!" [ref=e74]:
+              - img [ref=e75]
+              - generic [ref=e78]:
+                - generic [ref=e79]: "0"
+                - generic [ref=e80]: dias
+            - generic "Saldo disponível de moedas Axion" [ref=e81]:
+              - img [ref=e82]
+              - generic [ref=e85]:
+                - generic [ref=e86]: "0"
+                - generic [ref=e87]: gemas
+            - generic "0% do nível atual completo" [ref=e88]:
+              - img [ref=e89]
+              - generic [ref=e91]:
+                - generic [ref=e92]: 0%
+                - generic [ref=e93]: xp
+          - tablist "Selecionar materia" [ref=e20]:
+            - paragraph [ref=e21]: Sem materias
+      - main [ref=e94]:
+        - generic [ref=e22]: "Erro: Não foi possível carregar as matérias agora. Tente novamente em instantes."
+        - alert [ref=e95]:
+          - paragraph [ref=e96]: Não foi possível carregar as matérias agora. Tente novamente em instantes.
+          - button "Tentar novamente" [ref=e97] [cursor=pointer]
+    - navigation [ref=e23]:
+      - generic [ref=e24]:
+        - link "Início" [ref=e25] [cursor=pointer]:
+          - /url: /child
+          - img [ref=e28]
+          - generic [ref=e32]: Início
+        - link "Aprender" [ref=e33] [cursor=pointer]:
+          - /url: /child/aprender
+          - img [ref=e36]
+          - generic [ref=e41]: Aprender
+        - link "Figurinhas" [ref=e43] [cursor=pointer]:
+          - /url: /child/stickers
+          - img [ref=e46]
+          - generic [ref=e50]: Figurinhas
+        - link "Jogos" [ref=e51] [cursor=pointer]:
+          - /url: /child/games
+          - img [ref=e54]
+          - generic [ref=e61]: Jogos
+        - link "Loja" [ref=e62] [cursor=pointer]:
+          - /url: /child/store
+          - img [ref=e65]
+          - generic [ref=e68]: Loja
+        - link "Axion" [ref=e69] [cursor=pointer]:
+          - /url: /child/axion
+          - img [ref=e72]
+          - generic [ref=e73]: Axion
+  - button "Open Next.js Dev Tools" [ref=e103] [cursor=pointer]:
+    - img [ref=e104]
+  - alert [ref=e107]

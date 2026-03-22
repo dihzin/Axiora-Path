@@ -213,7 +213,7 @@ export default function MemoryGamePage() {
   }, [finished, flipped.length, feedback]);
 
   return (
-    <ChildDesktopShell activeNav="jogos">
+    <ChildDesktopShell activeNav="jogos" menuSkin="trail">
       <PageShell tone="child" width="compact">
       <ConfettiBurst trigger={confettiTrigger} />
       <Card className="mb-3">

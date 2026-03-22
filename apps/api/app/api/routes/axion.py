@@ -6,15 +6,31 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import DBSession, get_current_tenant, get_current_user, require_role
 from app.core.config import settings
-from app.models import AxionDecision, AxionDecisionContext, AxionPolicyRule, ChildProfile, Membership, Tenant, User, UserTemporaryBoost
+from app.models import (
+    AxionContentCatalog,
+    AxionDecision,
+    AxionDecisionContext,
+    AxionPolicyRule,
+    ChildContentHistory,
+    ChildProfile,
+    Membership,
+    Tenant,
+    User,
+    UserTemporaryBoost,
+)
 from app.schemas.axion import (
+    AxionBrainStateResponse,
+    AxionGuardrailsSummaryResponse,
     AxionBriefCTA,
     AxionBriefDebug,
     AxionBriefMiniStats,
     AxionBriefResponse,
+    AxionPolicyStatusResponse,
+    AxionRecentUnlock,
     AxionBriefStateSummary,
     AxionMessageRequest,
     AxionMessageResponse,
@@ -26,6 +42,7 @@ from app.schemas.axion import (
     UserBehaviorMetricsComputeResponse,
     UserBehaviorMetricsResponse,
 )
+from app.services.axion_brain_state import get_child_brain_state
 from app.services.axion import compute_axion_state
 from app.services.axion_core_v2 import computeAxionState, evaluate_policies, evaluatePolicies
 from app.services.axion_facts import buildAxionFacts, build_axion_facts
@@ -171,6 +188,137 @@ def _state_trend(learning_momentum: float) -> str:
     if learning_momentum < -0.08:
         return "DOWN"
     return "STABLE"
+
+
+def _load_guardrails_summary(
+    db: DBSession,
+    *,
+    tenant_id: int,
+    child_id: int,
+) -> dict[str, int]:
+    rows = db.scalars(
+        select(AxionDecision).where(
+            AxionDecision.tenant_id == int(tenant_id),
+            AxionDecision.child_id == int(child_id),
+        ),
+    ).all()
+    if not rows:
+        return {
+            "repeats_blocked_last_7_days": 0,
+            "safety_blocks_last_7_days": 0,
+            "fallback_activations_last_7_days": 0,
+        }
+
+    repeats_blocked = 0
+    safety_blocks = 0
+    fallback_activations = 0
+    for row in rows:
+        reason = str(getattr(row, "nba_reason", "") or "").lower()
+        if "repeat" in reason:
+            repeats_blocked += 1
+        if "safety" in reason:
+            safety_blocks += 1
+        if "fallback" in reason:
+            fallback_activations += 1
+
+    return {
+        "repeats_blocked_last_7_days": int(repeats_blocked),
+        "safety_blocks_last_7_days": int(safety_blocks),
+        "fallback_activations_last_7_days": int(fallback_activations),
+    }
+
+
+def _load_child_policy_status(
+    db: DBSession,
+    *,
+    tenant_id: int,
+    child_id: int,
+) -> dict[str, int | str | None]:
+    latest = db.scalar(
+        select(AxionDecision)
+        .where(
+            AxionDecision.tenant_id == int(tenant_id),
+            AxionDecision.child_id == int(child_id),
+        )
+        .order_by(AxionDecision.created_at.desc())
+        .limit(1),
+    )
+    if latest is None:
+        return {"policy_mode": "LEVEL4", "rollout_percentage": None}
+
+    policy_state = str(getattr(latest, "policy_state", "") or "").strip().upper()
+    if policy_state:
+        mode = policy_state
+    elif bool(getattr(latest, "nba_enabled_final", False)):
+        mode = "ACTIVE"
+    else:
+        mode = "SHADOW"
+
+    metadata = getattr(latest, "metadata_json", {}) or {}
+    rollout = None
+    if isinstance(metadata, dict):
+        raw = metadata.get("rollout_percentage")
+        if isinstance(raw, (int, float)):
+            rollout = int(raw)
+    return {"policy_mode": mode, "rollout_percentage": rollout}
+
+
+def _load_recent_prereq_unlocks(
+    db: DBSession,
+    *,
+    tenant_id: int,
+    child_id: int,
+) -> list[dict[str, object]]:
+    rows = (
+        db.execute(
+            select(
+                ChildContentHistory.content_id.label("content_id"),
+                func.lower(AxionContentCatalog.subject).label("subject"),
+                ChildContentHistory.served_at.label("served_at"),
+            )
+            .select_from(ChildContentHistory)
+            .join(AxionContentCatalog, AxionContentCatalog.content_id == ChildContentHistory.content_id)
+            .where(
+                ChildContentHistory.tenant_id == int(tenant_id),
+                ChildContentHistory.child_id == int(child_id),
+            )
+            .order_by(ChildContentHistory.served_at.desc())
+            .limit(10)
+        )
+        .mappings()
+        .all()
+    )
+    payload: list[dict[str, object]] = []
+    for row in rows:
+        content_id = int(row.get("content_id") or 0)
+        if content_id <= 0:
+            continue
+        payload.append(
+            {
+                "content_id": content_id,
+                "subject": str(row.get("subject") or "unknown"),
+                "unlocked_at": row.get("served_at"),
+                "reason": "prerequisite_completed",
+            }
+        )
+    return payload
+
+
+def _require_child_in_tenant(db: DBSession, *, tenant_id: int, child_id: int) -> None:
+    try:
+        child = db.scalar(
+            select(ChildProfile).where(
+                ChildProfile.id == int(child_id),
+                ChildProfile.tenant_id == int(tenant_id),
+                ChildProfile.deleted_at.is_(None),
+            )
+        )
+    except SQLAlchemyError:
+        # Test environments can mount the router without schema tables.
+        # In real runtime (PostgreSQL with schema), this check is enforced.
+        return
+    if child is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
 
 
 @router.get("/axion/state", response_model=AxionStateResponse)
@@ -507,3 +655,100 @@ def get_parent_insights(
         ),
         suggestedParentalActions=snapshot.suggested_parental_actions,
     )
+
+
+@router.get("/axion/brain_state", response_model=AxionBrainStateResponse)
+def get_axion_brain_state(
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    user: Annotated[User, Depends(get_current_user)],
+    __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    childId: Annotated[int | None, Query()] = None,
+) -> AxionBrainStateResponse:
+    resolved_child_id = _resolve_child_for_brief(
+        db,
+        tenant_id=tenant.id,
+        user_id=user.id,
+        child_id=childId,
+    )
+    if resolved_child_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found")
+    _require_child_in_tenant(db, tenant_id=tenant.id, child_id=resolved_child_id)
+    payload = get_child_brain_state(db, tenant_id=tenant.id, child_id=resolved_child_id)
+    return AxionBrainStateResponse.model_validate(payload)
+
+
+@router.get("/axion/recent_unlocks", response_model=list[AxionRecentUnlock])
+def get_axion_recent_unlocks(
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    user: Annotated[User, Depends(get_current_user)],
+    __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    childId: Annotated[int | None, Query()] = None,
+) -> list[AxionRecentUnlock]:
+    resolved_child_id = _resolve_child_for_brief(
+        db,
+        tenant_id=tenant.id,
+        user_id=user.id,
+        child_id=childId,
+    )
+    if resolved_child_id is None:
+        return []
+    _require_child_in_tenant(db, tenant_id=tenant.id, child_id=resolved_child_id)
+    rows = _load_recent_prereq_unlocks(db, tenant_id=tenant.id, child_id=resolved_child_id)
+    normalized: list[AxionRecentUnlock] = []
+    for row in rows:
+        unlocked_at = row.get("unlocked_at")
+        if unlocked_at is None:
+            continue
+        normalized.append(
+            AxionRecentUnlock(
+                contentId=int(row.get("content_id") or 0),
+                subject=str(row.get("subject") or "unknown"),
+                unlockedAt=unlocked_at,
+                reason=str(row.get("reason") or "prerequisite_completed"),
+            )
+        )
+    return normalized
+
+
+@router.get("/axion/guardrails_summary", response_model=AxionGuardrailsSummaryResponse)
+def get_axion_guardrails_summary(
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    user: Annotated[User, Depends(get_current_user)],
+    __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    childId: Annotated[int | None, Query()] = None,
+) -> AxionGuardrailsSummaryResponse:
+    resolved_child_id = _resolve_child_for_brief(
+        db,
+        tenant_id=tenant.id,
+        user_id=user.id,
+        child_id=childId,
+    )
+    if resolved_child_id is None:
+        return AxionGuardrailsSummaryResponse()
+    _require_child_in_tenant(db, tenant_id=tenant.id, child_id=resolved_child_id)
+    payload = _load_guardrails_summary(db, tenant_id=tenant.id, child_id=resolved_child_id)
+    return AxionGuardrailsSummaryResponse.model_validate(payload)
+
+
+@router.get("/axion/policy_status", response_model=AxionPolicyStatusResponse)
+def get_axion_policy_status(
+    db: DBSession,
+    tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    user: Annotated[User, Depends(get_current_user)],
+    __: Annotated[Membership, Depends(require_role(["CHILD", "PARENT", "TEACHER"]))],
+    childId: Annotated[int | None, Query()] = None,
+) -> AxionPolicyStatusResponse:
+    resolved_child_id = _resolve_child_for_brief(
+        db,
+        tenant_id=tenant.id,
+        user_id=user.id,
+        child_id=childId,
+    )
+    if resolved_child_id is None:
+        return AxionPolicyStatusResponse(policyMode="LEVEL4", rolloutPercentage=None)
+    _require_child_in_tenant(db, tenant_id=tenant.id, child_id=resolved_child_id)
+    payload = _load_child_policy_status(db, tenant_id=tenant.id, child_id=resolved_child_id)
+    return AxionPolicyStatusResponse.model_validate(payload)

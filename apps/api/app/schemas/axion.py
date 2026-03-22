@@ -95,6 +95,46 @@ class AxionBriefResponse(BaseModel):
     debug: AxionBriefDebug | None = None
 
 
+class AxionBrainStateSubject(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    subject: str
+    mastery_score: float = Field(alias="masteryScore")
+    trend_last_7_days: float = Field(alias="trendLast7Days")
+    status: str
+
+
+class AxionBrainStateResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    subjects: list[AxionBrainStateSubject] = Field(default_factory=list)
+    weakest_subject: str | None = Field(default=None, alias="weakestSubject")
+    strongest_subject: str | None = Field(default=None, alias="strongestSubject")
+    average_mastery: float = Field(default=0.0, alias="averageMastery")
+
+
+class AxionRecentUnlock(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    content_id: int = Field(alias="contentId")
+    subject: str
+    unlocked_at: datetime = Field(alias="unlockedAt")
+    reason: str
+
+
+class AxionGuardrailsSummaryResponse(BaseModel):
+    repeats_blocked_last_7_days: int = 0
+    safety_blocks_last_7_days: int = 0
+    fallback_activations_last_7_days: int = 0
+
+
+class AxionPolicyStatusResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    policy_mode: str = Field(alias="policyMode")
+    rollout_percentage: int | None = Field(default=None, alias="rolloutPercentage")
+
+
 class ParentInsightCard(BaseModel):
     title: str
     summary: str

@@ -1,0 +1,34 @@
+- generic [ref=e6]:
+  - complementary [ref=e7]:
+    - img "Axion" [ref=e13]
+    - link "Início" [ref=e14] [cursor=pointer]:
+      - /url: /child
+      - img [ref=e17]
+      - text: Início
+    - link "Aprender" [ref=e21] [cursor=pointer]:
+      - /url: /child/aprender
+      - img [ref=e24]
+      - text: Aprender
+    - link "Figurinhas" [ref=e29] [cursor=pointer]:
+      - /url: /child/stickers
+      - img [ref=e32]
+      - text: Figurinhas
+    - link "Jogos" [ref=e36] [cursor=pointer]:
+      - /url: /child/games
+      - img [ref=e39]
+      - text: Jogos
+    - link "Loja" [ref=e46] [cursor=pointer]:
+      - /url: /child/store
+      - img [ref=e49]
+      - text: Loja
+    - link "Axion" [ref=e52] [cursor=pointer]:
+      - /url: /child/axion
+      - img [ref=e55]
+      - text: Axion
+  - generic [ref=e58]:
+    - banner [ref=e59]:
+      - generic [ref=e61]:
+        - generic "Carregando estatísticas..." [ref=e63]
+        - tablist "Selecionar materia" [ref=e74]:
+          - paragraph [ref=e75]: Sem materias
+    - main [ref=e76]

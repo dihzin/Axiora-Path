@@ -389,7 +389,7 @@ export default function QuizGamePage() {
   }
 
   return (
-    <ChildDesktopShell activeNav="jogos">
+    <ChildDesktopShell activeNav="jogos" menuSkin="trail">
       <PageShell tone="child" width="compact">
       <Card className="mb-3">
         <CardHeader className="pb-2">

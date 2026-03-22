@@ -342,6 +342,7 @@ export function useTrailData(): TrailData {
         if (active) {
           setSubjects([]);
           setSubjectsLoaded(true);
+          setError((prev) => prev ?? "Não foi possível carregar as matérias agora. Tente novamente em instantes.");
         }
       }
     })();
@@ -514,6 +515,9 @@ export function useTrailData(): TrailData {
       if (!active) return;
       if (insightsResult.status === "fulfilled") setInsights(insightsResult.value);
       if (missionsResult.status === "fulfilled") setMissions(missionsResult.value);
+      if (insightsResult.status === "rejected" && missionsResult.status === "rejected") {
+        setError((prev) => prev ?? "Não foi possível carregar insights e missões no momento.");
+      }
       setInsightsLoading(false);
       setMissionsLoading(false);
     })();

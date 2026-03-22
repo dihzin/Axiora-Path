@@ -1,0 +1,41 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e6]:
+    - main [ref=e7]:
+      - generic [ref=e8]:
+        - img [ref=e10]
+        - heading "Meu Perfil" [level=1] [ref=e13]
+        - paragraph [ref=e14]: Estamos organizando esta área para mostrar evolução, preferências e resumo da criança.
+        - generic [ref=e15]:
+          - link "Voltar ao início" [ref=e16] [cursor=pointer]:
+            - /url: /child
+          - link "Ir para aprender" [ref=e17] [cursor=pointer]:
+            - /url: /child/aprender
+    - navigation [ref=e18]:
+      - generic [ref=e19]:
+        - link "Início" [ref=e20] [cursor=pointer]:
+          - /url: /child
+          - img [ref=e23]
+          - generic [ref=e27]: Início
+        - link "Aprender" [ref=e28] [cursor=pointer]:
+          - /url: /child/aprender
+          - img [ref=e31]
+          - generic [ref=e36]: Aprender
+        - link "Figurinhas" [ref=e37] [cursor=pointer]:
+          - /url: /child/stickers
+          - img [ref=e40]
+          - generic [ref=e44]: Figurinhas
+        - link "Jogos" [ref=e45] [cursor=pointer]:
+          - /url: /child/games
+          - img [ref=e48]
+          - generic [ref=e55]: Jogos
+        - link "Loja" [ref=e56] [cursor=pointer]:
+          - /url: /child/store
+          - img [ref=e59]
+          - generic [ref=e62]: Loja
+        - link "Axion" [ref=e63] [cursor=pointer]:
+          - /url: /child/axion
+          - img [ref=e66]
+          - generic [ref=e67]: Axion
+  - button "Open Next.js Dev Tools" [ref=e73] [cursor=pointer]:
+    - img [ref=e74]
+  - alert [ref=e77]

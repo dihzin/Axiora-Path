@@ -61,7 +61,7 @@ export function ToolsCheckoutRedirect({ planCode }: ToolsCheckoutRedirectProps) 
               startedRef.current = false;
               setErrorMessage(null);
             }}
-            className="rounded-md bg-[linear-gradient(180deg,#ee8748,#db6728)] px-2.5 py-1.5 font-bold text-white"
+            className="axiora-chunky-btn axiora-chunky-btn--secondary px-2.5 py-1.5 text-xs font-black"
           >
             Tentar novamente
           </button>
@@ -70,4 +70,3 @@ export function ToolsCheckoutRedirect({ planCode }: ToolsCheckoutRedirectProps) 
     </div>
   );
 }
-

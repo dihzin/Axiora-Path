@@ -9,6 +9,16 @@ import {
   Sigma,
   type LucideIcon,
 } from "lucide-react";
+import {
+  createToolsCheckout,
+  createToolsTemplate,
+  deleteToolsTemplate as deleteToolsTemplateApi,
+  duplicateToolsTemplate as duplicateToolsTemplateApi,
+  getToolsCredits,
+  getToolsTemplates,
+  useToolsCredit,
+  type ToolsTemplateRecord,
+} from "@/lib/api/client";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -74,6 +84,30 @@ interface GlobalConfig {
   repeatHeader: boolean;
 }
 
+type LightConfig = Pick<GlobalConfig, "title" | "subtitle" | "turma" | "tempo">;
+type HeavyConfig = Omit<GlobalConfig, keyof LightConfig>;
+
+const DEFAULT_LIGHT_CONFIG: LightConfig = {
+  title: "Folha de Exercícios",
+  subtitle: "Resolva todos os exercícios.",
+  turma: "",
+  tempo: "",
+};
+
+const DEFAULT_HEAVY_CONFIG: HeavyConfig = {
+  cols: 2,
+  fontSize: "M",
+  gabarito: "proxima",
+  spacing: 8,
+  embaralhar: false,
+  showNome: true,
+  numerar: true,
+  showPontuacao: false,
+  repeatHeader: true,
+};
+
+const TITLE_SUBTITLE_DEBOUNCE_MS = 300;
+
 interface ExerciseItem {
   blockId: number;
   type: BlockType;
@@ -91,6 +125,13 @@ interface SavedTemplate {
 }
 
 const TEMPLATE_STORAGE_KEY = "axiora_templates";
+
+function generateTemplateId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `tpl_${Date.now()}_${Math.floor(Math.random() * 9999)}`;
+}
 
 function getTemplates(): SavedTemplate[] {
   if (typeof window === "undefined") return [];
@@ -114,12 +155,31 @@ function saveTemplate(template: SavedTemplate): SavedTemplate[] {
   return next;
 }
 
+function upsertTemplateLocal(template: SavedTemplate): SavedTemplate[] {
+  const all = getTemplates().filter((t) => t.id !== template.id);
+  const next = [template, ...all].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(next));
+  }
+  return next;
+}
+
 function deleteTemplate(id: string): SavedTemplate[] {
   const next = getTemplates().filter((t) => t.id !== id);
   if (typeof window !== "undefined") {
     window.localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(next));
   }
   return next;
+}
+
+function duplicateTemplateLocal(template: SavedTemplate): SavedTemplate[] {
+  const duplicated: SavedTemplate = {
+    ...JSON.parse(JSON.stringify(template)) as SavedTemplate,
+    id: generateTemplateId(),
+    name: `${template.name} (cópia)`,
+    createdAt: new Date().toISOString(),
+  };
+  return saveTemplate(duplicated);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -171,21 +231,30 @@ const BLOCK_META: Record<BlockType, { name: string; Icon: LucideIcon; color: str
   },
 };
 
-const DEFAULT_BLOCKS: Omit<Block, "id">[] = [
-  { type: "aritmetica", active: true, config: { ...BLOCK_META.aritmetica.defaults, operacao: "multiplicacao", quantidade: 6 } },
-  { type: "aritmetica", active: true, config: { ...BLOCK_META.aritmetica.defaults, operacao: "divisao", formato: "armada", quantidade: 4 } },
-  { type: "fracoes", active: true, config: { ...BLOCK_META.fracoes.defaults, quantidade: 4 } },
-  { type: "equacoes", active: true, config: { ...BLOCK_META.equacoes.defaults, quantidade: 4 } },
-  { type: "potenciacao", active: true, config: { ...BLOCK_META.potenciacao.defaults, quantidade: 4 } },
-  { type: "expressoes", active: false, config: { ...BLOCK_META.expressoes.defaults, quantidade: 4 } },
-];
+const DEFAULT_BLOCKS: Omit<Block, "id">[] = [];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EXERCISE GENERATORS (ported from FolhaMath v8)
 // ─────────────────────────────────────────────────────────────────────────────
 
+function seededRandom(seed: number): () => number {
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6D2B79F5;
+    let x = Math.imul(t ^ (t >>> 15), 1 | t);
+    x ^= x + Math.imul(x ^ (x >>> 7), 61 | x);
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+let activeRandom: () => number = Math.random;
+
+function rand(): number {
+  return activeRandom();
+}
+
 function rnd(min: number, max: number): number {
-  return min + Math.floor(Math.random() * (max - min + 1));
+  return min + Math.floor(rand() * (max - min + 1));
 }
 
 function nDigits(n: number): number {
@@ -290,7 +359,7 @@ function genFracoes(c: BlockConfig): { html: string; answer: string | number } {
   let n1 = rnd(1, Math.max(1, maxN1)), n2 = rnd(1, Math.max(1, maxN2));
 
   let op = c.operacao || "soma";
-  if (op === "misto") op = Math.random() < 0.5 ? "soma" : "subtracao";
+  if (op === "misto") op = rand() < 0.5 ? "soma" : "subtracao";
 
   if (op === "subtracao" && resultadoPositivo) {
     if (n1 * d2 < n2 * d1) { [n1, n2] = [n2, n1]; [d1, d2] = [d2, d1]; }
@@ -358,7 +427,7 @@ function genEquacoes(c: BlockConfig): { html: string; answer: string | number } 
 
 function genPotenciacao(c: BlockConfig): { html: string; answer: string | number } {
   let tipo = c.tipo ?? "misto";
-  if (tipo === "misto") tipo = Math.random() < 0.5 ? "potencia" : "raiz";
+  if (tipo === "misto") tipo = rand() < 0.5 ? "potencia" : "raiz";
 
   if (tipo === "raiz") {
     const expMax = Math.min(c.expMax ?? 3, 3);
@@ -509,7 +578,7 @@ function genExpressoes(c: BlockConfig): { html: string; answer: string | number 
 
   for (let attempt = 0; attempt < 20; attempt++) {
     function gerarAtomo(allowAtom: boolean): ASTNode {
-      if (allowAtom && atomOpsSet.size > 0 && Math.random() < 0.45) {
+      if (allowAtom && atomOpsSet.size > 0 && rand() < 0.45) {
         const atomTipos = [...atomOpsSet];
         const tipo = atomTipos[rnd(0, atomTipos.length - 1)];
         if (tipo === "potenciacao") { const base = rnd(2, maxVal <= 9 ? 4 : 9); const exp = rnd(2, maxVal <= 9 ? 2 : 3); return { type: "pot", base, exp }; }
@@ -556,31 +625,37 @@ const GENERATORS: Record<BlockType, (c: BlockConfig) => { html: string; answer: 
   expressoes: genExpressoes,
 };
 
-function generateAllExercises(blocks: Block[], shuffle: boolean): ExerciseItem[] {
-  const seen = new Set<string>();
-  const all: ExerciseItem[] = [];
-  for (const block of blocks) {
-    if (!block.active) continue;
-    const fn = GENERATORS[block.type];
-    if (!fn) continue;
-    let generated = 0, attempts = 0;
-    while (generated < block.config.quantidade && attempts < block.config.quantidade * 10) {
-      attempts++;
-      const r = fn(block.config);
-      const key = `${block.type}|${r.html}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      all.push({ blockId: block.id, type: block.type, html: r.html, answer: r.answer });
-      generated++;
+function generateAllExercises(blocks: Block[], shuffle: boolean, seed: number): ExerciseItem[] {
+  const prevRandom = activeRandom;
+  activeRandom = seededRandom(seed);
+  try {
+    const seen = new Set<string>();
+    const all: ExerciseItem[] = [];
+    for (const block of blocks) {
+      if (!block.active) continue;
+      const fn = GENERATORS[block.type];
+      if (!fn) continue;
+      let generated = 0, attempts = 0;
+      while (generated < block.config.quantidade && attempts < block.config.quantidade * 10) {
+        attempts++;
+        const r = fn(block.config);
+        const key = `${block.type}|${r.html}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        all.push({ blockId: block.id, type: block.type, html: r.html, answer: r.answer });
+        generated++;
+      }
     }
-  }
-  if (shuffle) {
-    for (let i = all.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [all[i], all[j]] = [all[j], all[i]];
+    if (shuffle) {
+      for (let i = all.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [all[i], all[j]] = [all[j], all[i]];
+      }
     }
+    return all;
+  } finally {
+    activeRandom = prevRandom;
   }
-  return all;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -610,21 +685,21 @@ function buildPrintHTML(
   const FONT = `Inter,system-ui,-apple-system,sans-serif`;
   const S = {
     // Título: tracking um pouco mais aberto, peso levemente reduzido — elegante sem ser pesado
-    title: `font-family:${FONT};font-size:18px;font-weight:500;text-align:center;letter-spacing:1.2px;color:#111827;margin-bottom:18px;`,
+    title: `font-family:${FONT};font-size:18px;font-weight:600;text-align:center;letter-spacing:1.2px;color:#0F172A;margin-bottom:10px;`,
     // Dupla linha substituída por uma linha única mais espessa — mais limpa
     rule2: `height:1.5px;background:#D1D5DB;margin:0 0 4px;`,
     rule1: `display:none;`,
     // Separador pós-campos: leve
-    ruleGray: `height:1px;background:#F3F4F6;margin:12px 0 16px;`,
+    ruleGray: `height:1px;background:#F3F4F6;margin:8px 0 10px;`,
     // Linha de info do aluno: text menor, mais ar
-    infoRow: `font-family:${FONT};font-size:12px;color:#1F2937;padding:6px 0;letter-spacing:0.04em;`,
+    infoRow: `font-family:${FONT};font-size:12px;color:#1F2937;padding:4px 0;letter-spacing:0.04em;`,
     // Seção: tracking mais generoso, margem superior maior para respirar
-    secHead: `font-family:${FONT};font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.14em;margin:36px 0 14px;padding-bottom:8px;border-bottom:1px solid #E5E7EB;`,
+    secHead: `font-family:${FONT};font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.14em;margin:16px 0 6px;padding-bottom:6px;border-bottom:1px solid #E5E7EB;`,
     // Número: discreto, não compete com o exercício
-    exNum: `font-family:${FONT};font-size:${fz};color:#9CA3AF;white-space:nowrap;flex-shrink:0;min-width:28px;line-height:1.8;`,
+    exNum: `font-family:${FONT};font-size:${fz};color:#9CA3AF;white-space:nowrap;flex-shrink:0;min-width:28px;line-height:1.3;`,
     // Conteúdo: levemente mais espaçado verticalmente
-    exBody: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.8;flex:1;min-width:0;`,
-    page: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.6;`,
+    exBody: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.3;flex:1;min-width:0;`,
+    page: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.3;`,
     footer: `font-family:${FONT};font-size:${fzSm};color:#9CA3AF;letter-spacing:0.04em;`,
   };
 
@@ -676,8 +751,7 @@ function buildPrintHTML(
   }
 
   // Build exercise grid
-  const rowGap = Math.max(cfg.spacing, 10);
-  const gridStyle = `display:grid;grid-template-columns:repeat(${cols},1fr);gap:${rowGap}px 48px;align-items:start;`;
+  const gridStyle = `display:grid;grid-template-columns:repeat(${cols},1fr);gap:12px 24px;align-items:start;`;
   let exRows = "";
   for (let i = 0; i < exercises.length; i++) {
     const ex = exercises[i];
@@ -689,9 +763,9 @@ function buildPrintHTML(
       exRows += `<div style="grid-column:1/-1;${S.secHead}">${sectionHeaders[i]}</div>`;
     }
     if (isArmada) {
-      exRows += `<div style="display:flex;align-items:flex-start;gap:6px;break-inside:avoid;page-break-inside:avoid;">${numSpan}<div style="${S.exBody}">${ex.html}</div></div>`;
+      exRows += `<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:10px;break-inside:avoid;page-break-inside:avoid;">${numSpan}<div style="${S.exBody}">${ex.html}</div></div>`;
     } else {
-      exRows += `<div style="display:flex;align-items:baseline;gap:6px;break-inside:avoid;page-break-inside:avoid;">${numSpan}<div style="${S.exBody}">${ex.html}</div></div>`;
+      exRows += `<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:10px;break-inside:avoid;page-break-inside:avoid;">${numSpan}<div style="${S.exBody}">${ex.html}</div></div>`;
     }
   }
 
@@ -703,9 +777,9 @@ function buildPrintHTML(
     const ansItems = exercises.map((ex, i) => {
       const num = numerar ? `${i + 1})` : "";
       const val = ex.answer !== undefined && ex.answer !== null ? String(ex.answer) : "—";
-      return `<div style="font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.8;">${num}&nbsp;${val}</div>`;
+      return `<div style="font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.3;">${num}&nbsp;${val}</div>`;
     });
-    const gabGrid = `display:grid;grid-template-columns:repeat(2,1fr);gap:2px 32px;`;
+    const gabGrid = `display:grid;grid-template-columns:repeat(2,1fr);gap:10px 24px;`;
     if (cfg.gabarito === "proxima") {
       gabSection = `
         <div style="page-break-before:always;break-before:page;${S.page}">
@@ -725,16 +799,16 @@ function buildPrintHTML(
     }
   }
 
-  const footerHtml = `<div style="margin-top:auto;padding-top:8mm;margin-top:24px;border-top:1px solid #ddd;display:flex;justify-content:space-between;${S.footer}"><span>Axiora Tools · axiora.com.br&nbsp;&nbsp;Seed: ${seed}</span><span>Reprodução livre para fins pedagógicos</span></div>`;
+  const footerHtml = `<div style="margin-top:auto;padding-top:6mm;border-top:1px solid #ddd;display:flex;justify-content:space-between;${S.footer}"><span>Axiora Tools · axiora.com.br&nbsp;&nbsp;Seed: ${seed}</span><span>Reprodução livre para fins pedagógicos</span></div>`;
 
-  const subtitleHtml = cfg.subtitle ? `<p style="font-family:${FONT};font-size:${fz};color:#6B7280;margin:0 0 20px;padding:8px 0;border-bottom:1px solid #E5E7EB;">${cfg.subtitle}</p>` : "";
+  const subtitleHtml = cfg.subtitle ? `<p style="font-family:${FONT};font-size:${fz};color:#6B7280;margin:0 0 10px;padding:4px 0;border-bottom:1px solid #E5E7EB;">${cfg.subtitle}</p>` : "";
 
   /* Monospace preservado apenas nas classes de alinhamento de cálculo armado */
   const MONO = `'Courier New',Courier,monospace`;
   const exStyles = `
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
-    html,body{background:#fff;font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.6;}
+    html,body{background:#fff;font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.3;}
     @page{size:A4 portrait;margin:18mm 20mm;}
     @media print{body{background:#fff;}.no-print{display:none!important;}}
     /* — Aritmética armada: monospace para alinhamento de colunas — */
@@ -954,7 +1028,132 @@ function paginateSimple(exercises: ExerciseItem[], blocks: Block[], cfg: GlobalC
   }
 
   if (pageExes.length > 0) slices.push({ exIndexes: pageExes, isFirstPage });
-  return slices;
+
+  // ── Post-balance: anti-orphan + visual fill equilibrium + section protection ──
+  const adjusted: PageSlice[] = slices.map((s) => ({ ...s, exIndexes: [...s.exIndexes] }));
+
+  const canMoveFromPrev = (prev: PageSlice, next: PageSlice): boolean => {
+    if (prev.exIndexes.length <= 2 || next.exIndexes.length === 0) return false;
+    const candidate = prev.exIndexes[prev.exIndexes.length - 1];
+    // Do not move the first exercise of a section (header anchor).
+    if (secHeaders[candidate]) return false;
+    return true;
+  };
+
+  const estimateSliceUsedH = (exIndexes: number[], first: boolean): number => {
+    let used = 0;
+    let pendingCount = 0;
+    let pendingH = 0;
+    let pendingStartsSec = false;
+    const flushRow = () => {
+      if (!pendingCount) return;
+      const secH = (used === 0 && pendingStartsSec) ? SEC_H_TOP : (pendingStartsSec ? SEC_H_MID : 0);
+      const rowGapNow = used > 0 ? rowGap : 0;
+      used += rowGapNow + secH + pendingH;
+      pendingCount = 0;
+      pendingH = 0;
+      pendingStartsSec = false;
+    };
+    for (const exIdx of exIndexes) {
+      if (secHeaders[exIdx]) {
+        flushRow();
+        pendingStartsSec = true;
+      }
+      pendingCount += 1;
+      pendingH = Math.max(pendingH, estimateExH(exercises[exIdx]));
+      if (pendingCount >= cols) flushRow();
+    }
+    flushRow();
+    return used + (first ? HEADER1_H + SUBTITLE1_H : 0) + FOOTER_H;
+  };
+
+  const sliceFill = (slice: PageSlice, first: boolean): number => {
+    const avail = first ? p1Avail : pnAvail;
+    if (avail <= 0) return 1;
+    // Remove non-content chrome from used height before ratio.
+    const usedContent = estimateSliceUsedH(slice.exIndexes, first) - (first ? HEADER1_H + SUBTITLE1_H : 0) - FOOTER_H;
+    return Math.max(0, usedContent / avail);
+  };
+
+  const moveOnePrevToNext = (pageIndex: number): boolean => {
+    if (pageIndex < 0 || pageIndex >= adjusted.length - 1) return false;
+    const prev = adjusted[pageIndex];
+    const next = adjusted[pageIndex + 1];
+    if (!canMoveFromPrev(prev, next)) return false;
+    const candidate = prev.exIndexes.pop();
+    if (candidate === undefined) return false;
+    next.exIndexes.unshift(candidate);
+    return true;
+  };
+
+  const moveOneNextToPrev = (pageIndex: number): boolean => {
+    if (pageIndex < 0 || pageIndex >= adjusted.length - 1) return false;
+    const prev = adjusted[pageIndex];
+    const next = adjusted[pageIndex + 1];
+    if (next.exIndexes.length <= 1) return false;
+    const candidate = next.exIndexes[0];
+    if (secHeaders[candidate]) return false;
+    next.exIndexes.shift();
+    prev.exIndexes.push(candidate);
+    return true;
+  };
+
+  // Rule 1 — anti-orphan on the last page.
+  if (adjusted.length >= 2) {
+    const last = adjusted[adjusted.length - 1];
+    if (last.exIndexes.length > 0 && last.exIndexes.length <= 2) {
+      moveOnePrevToNext(adjusted.length - 2);
+    }
+  }
+
+  // Rule 3 — avoid boundary where previous page starts a section and keeps only one item of it.
+  for (let i = 0; i < adjusted.length - 1; i++) {
+    const prev = adjusted[i];
+    const next = adjusted[i + 1];
+    if (prev.exIndexes.length < 1 || next.exIndexes.length < 2) continue;
+    const lastSectionStartPos = [...prev.exIndexes].reverse().findIndex((idx) => Boolean(secHeaders[idx]));
+    if (lastSectionStartPos < 0) continue;
+    const sectionStartPos = prev.exIndexes.length - 1 - lastSectionStartPos;
+    const itemsFromSectionStart = prev.exIndexes.length - sectionStartPos;
+    const nextFirst = next.exIndexes[0];
+    // If continuation page does not start a new section and previous page has only 1 item from this section, pull one more.
+    if (itemsFromSectionStart === 1 && !secHeaders[nextFirst]) {
+      moveOneNextToPrev(i);
+    }
+  }
+
+  // Rule 2 — rebalance adjacent pages to be within ~10% fill difference when possible.
+  const FILL_TOLERANCE = 0.10;
+  for (let pass = 0; pass < 3; pass++) {
+    for (let i = 0; i < adjusted.length - 1; i++) {
+      const left = adjusted[i];
+      const right = adjusted[i + 1];
+      if (left.exIndexes.length === 0 || right.exIndexes.length === 0) continue;
+      const leftFill = sliceFill(left, left.isFirstPage);
+      const rightFill = sliceFill(right, right.isFirstPage);
+      const diff = leftFill - rightFill;
+      if (Math.abs(diff) <= FILL_TOLERANCE) continue;
+      if (diff > FILL_TOLERANCE) {
+        const moved = moveOnePrevToNext(i);
+        if (!moved) continue;
+        const newDiff = sliceFill(adjusted[i], adjusted[i].isFirstPage) - sliceFill(adjusted[i + 1], adjusted[i + 1].isFirstPage);
+        // Revert if not improved
+        if (Math.abs(newDiff) >= Math.abs(diff)) {
+          moveOneNextToPrev(i);
+        }
+      } else {
+        const moved = moveOneNextToPrev(i);
+        if (!moved) continue;
+        const newDiff = sliceFill(adjusted[i], adjusted[i].isFirstPage) - sliceFill(adjusted[i + 1], adjusted[i + 1].isFirstPage);
+        if (Math.abs(newDiff) >= Math.abs(diff)) {
+          moveOnePrevToNext(i);
+        }
+      }
+    }
+  }
+
+  // Safety: remove accidental empties.
+  return adjusted.filter((s) => s.exIndexes.length > 0);
 }
 
 // ── Shared style builders ─────────────────────────────────────────────────────
@@ -981,11 +1180,11 @@ function buildDocCSS(cfg: GlobalConfig): string {
       overflow:hidden;
       display:flex;
       flex-direction:column;
-      justify-content:space-between;
+      justify-content:flex-start;
       font-family:${FONT};
       font-size:${fz};
       color:#1F2937;
-      line-height:1.25;
+      line-height:1.3;
     }
     .sheet-root .preview-page,.sheet-root .preview-page *,.sheet-root .preview-page *::before,.sheet-root .preview-page *::after{box-sizing:border-box;}
     .sheet-root .preview-page .ex-mult-armada{display:inline-flex;flex-direction:column;align-items:flex-end;font-family:${MONO};font-size:${fz};gap:2px;}
@@ -1030,14 +1229,14 @@ function buildDocStyles(cfg: GlobalConfig) {
   const fzSm = cfg.fontSize === "P" ? "10px" : cfg.fontSize === "G" ? "14px" : "11px";
   const FONT = `Inter,system-ui,-apple-system,sans-serif`;
   const S = {
-    title: `font-family:${FONT};font-size:18px;font-weight:500;text-align:center;letter-spacing:0.8px;color:#111827;margin-bottom:18px;`,
+    title: `font-family:${FONT};font-size:18px;font-weight:600;text-align:center;letter-spacing:0.8px;color:#0F172A;margin-bottom:10px;`,
     rule2: `height:1.5px;background:#D1D5DB;margin:0 0 4px;`,
-    ruleGray: `height:1px;background:#F3F4F6;margin:12px 0 16px;`,
-    infoRow: `font-family:${FONT};font-size:12px;color:#1F2937;padding:6px 0;letter-spacing:0.04em;`,
-    secHead: `font-family:${FONT};font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.12em;margin:10px 0 10px;padding-bottom:6px;border-bottom:1px solid #E5E7EB;`,
-    exNum: `font-family:${FONT};font-size:${fz};color:#9CA3AF;white-space:nowrap;flex-shrink:0;min-width:28px;line-height:1.8;`,
-    exBody: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.25;flex:1;min-width:0;`,
-    page: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.25;`,
+    ruleGray: `height:1px;background:#F3F4F6;margin:6px 0 8px;`,
+    infoRow: `font-family:${FONT};font-size:12px;color:#1F2937;padding:3px 0;letter-spacing:0.04em;`,
+    secHead: `font-family:${FONT};font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.12em;margin:16px 0 6px;padding-bottom:4px;border-bottom:1px solid #E5E7EB;`,
+    exNum: `font-family:${FONT};font-size:${fz};color:#9CA3AF;white-space:nowrap;flex-shrink:0;min-width:28px;line-height:1.3;`,
+    exBody: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.3;flex:1;min-width:0;`,
+    page: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.3;`,
     footer: `font-family:${FONT};font-size:${fzSm};color:#9CA3AF;letter-spacing:0.04em;`,
   };
   const lbl = `font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:#9CA3AF;white-space:nowrap;flex-shrink:0;`;
@@ -1089,7 +1288,8 @@ function buildMeasurementDoc(exercises: ExerciseItem[], blocks: Block[], cfg: Gl
   const { fz, FONT, S, lbl, ln } = buildDocStyles(cfg);
   const css = buildDocCSS(cfg);
   const sectionHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
-  const rowGap = Math.max(cfg.spacing, 10);
+  const rowGap = 12;
+  const colGap = 24;
   const nomeLine = buildStudentRowHTML(cfg, S, lbl, ln);
   const headerHTML = `
     <div style="${S.title}">${cfg.title || "Folha de Exercícios"}</div>
@@ -1098,7 +1298,7 @@ function buildMeasurementDoc(exercises: ExerciseItem[], blocks: Block[], cfg: Gl
     ${cfg.showNome ? `<div style="${S.ruleGray}"></div>` : ""}
   `;
   const subtitleHTML = cfg.subtitle
-    ? `<p style="font-family:${FONT};font-size:${fz};color:#6B7280;margin:0 0 20px;padding:8px 0;border-bottom:1px solid #E5E7EB;">${cfg.subtitle}</p>`
+    ? `<p style="font-family:${FONT};font-size:${fz};color:#6B7280;margin:0 0 10px;padding:4px 0;border-bottom:1px solid #E5E7EB;">${cfg.subtitle}</p>`
     : "";
 
   let gridItems = "";
@@ -1109,14 +1309,14 @@ function buildMeasurementDoc(exercises: ExerciseItem[], blocks: Block[], cfg: Gl
     }
     const numSpan = cfg.numerar ? `<span style="${S.exNum}">${i + 1})</span>` : "";
     const align = ex.type === "aritmetica" ? "flex-start" : "baseline";
-    gridItems += `<div id="sg-ex-${i}" style="display:flex;align-items:${align};gap:6px;">${numSpan}<div style="${S.exBody}">${ex.html}</div></div>`;
+    gridItems += `<div id="sg-ex-${i}" style="display:flex;align-items:${align};gap:6px;margin-bottom:10px;">${numSpan}<div style="${S.exBody}">${ex.html}</div></div>`;
   }
 
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><style>${css}</style></head>` +
     `<body style="margin:0;padding:${PAGE_PY}px ${PAGE_PX}px;box-sizing:border-box;width:${A4_W}px;">` +
     `<div id="sg-header">${headerHTML}</div>` +
     (subtitleHTML ? `<div id="sg-subtitle">${subtitleHTML}</div>` : "") +
-    `<div style="display:grid;grid-template-columns:repeat(${cfg.cols},1fr);gap:${rowGap}px 48px;align-items:start;">${gridItems}</div>` +
+    `<div style="display:grid;grid-template-columns:repeat(${cfg.cols},1fr);gap:${rowGap}px ${colGap}px;align-items:start;">${gridItems}</div>` +
     `<div id="sg-footer" style="${S.footer} padding-top:24px;border-top:1px solid #E5E7EB;display:flex;justify-content:space-between;">` +
     `<span>Axiora Tools</span><span>Reprodução livre para fins pedagógicos</span></div>` +
     `</body></html>`;
@@ -1132,7 +1332,8 @@ function buildOnePageHTML(
 ): string {
   const { fz, FONT, S, lbl, ln } = buildDocStyles(cfg);
   const css = buildDocCSS(cfg);
-  const rowGap = Math.max(cfg.spacing, 10);
+  const rowGap = 12;
+  const colGap = 24;
 
   const pageSections: Record<number, string> = {};
   for (const { index } of pageItems) {
@@ -1148,7 +1349,7 @@ function buildOnePageHTML(
     }
     const numSpan = cfg.numerar ? `<span style="${S.exNum}">${exIdx + 1})</span>` : "";
     const align = ex.type === "aritmetica" ? "flex-start" : "baseline";
-    gridItems += `<div style="display:flex;align-items:${align};gap:6px;">${numSpan}<div style="${S.exBody}">${ex.html}</div></div>`;
+    gridItems += `<div style="display:flex;align-items:${align};gap:6px;margin-bottom:10px;">${numSpan}<div style="${S.exBody}">${ex.html}</div></div>`;
   }
 
   let pageHeaderHTML = "";
@@ -1162,16 +1363,17 @@ function buildOnePageHTML(
     `;
   }
   const subtitleHTML = isFirstPage && cfg.subtitle
-    ? `<p style="font-family:${FONT};font-size:${fz};color:#6B7280;margin:0 0 20px;padding:8px 0;border-bottom:1px solid #E5E7EB;">${cfg.subtitle}</p>`
+    ? `<p style="font-family:${FONT};font-size:${fz};color:#6B7280;margin:0 0 10px;padding:4px 0;border-bottom:1px solid #E5E7EB;">${cfg.subtitle}</p>`
     : "";
-  const footerHTML = `<div style="${S.footer} margin-top:auto;padding-top:24px;border-top:1px solid #E5E7EB;display:flex;justify-content:space-between;">` +
+  const footerHTML = `<div style="${S.footer} margin-top:auto;padding-top:10px;border-top:1px solid #E5E7EB;display:flex;justify-content:space-between;">` +
     `<span>Axiora Tools · axiora.com.br&nbsp;&nbsp;Seed: ${seed}</span><span>Reprodução livre para fins pedagógicos</span></div>`;
 
   return `<style>${css}</style>` +
-    `<div class="sheet-root"><div class="preview-page" style="${S.page}">` +
+    `<div class="sheet-root"><div class="preview-page page" style="${S.page}height:100%;display:flex;flex-direction:column;">` +
     pageHeaderHTML + subtitleHTML +
-    `<div style="flex:1;display:grid;grid-template-columns:repeat(${cfg.cols},1fr);gap:${rowGap}px 48px;align-items:start;">` +
-    gridItems + `</div>` + footerHTML + `</div></div>`;
+    `<div class="main" style="flex:1;display:flex;flex-direction:column;justify-content:flex-start;min-height:0;">` +
+    `<div style="display:grid;grid-template-columns:repeat(${cfg.cols},1fr);gap:${rowGap}px ${colGap}px;align-items:start;align-content:start;overflow:hidden;">` +
+    gridItems + `</div></div>` + footerHTML + `</div></div>`;
 }
 
 /** Builds the gabarito (answer key) page. */
@@ -1183,12 +1385,13 @@ function buildAnswerPageHTML(exercises: ExerciseItem[], cfg: GlobalConfig, seed:
     const val = ex.answer !== undefined && ex.answer !== null ? String(ex.answer) : "—";
     return `<div style="font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.8;">${num}&nbsp;${val}</div>`;
   });
-  const footerHTML = `<div style="${S.footer} margin-top:auto;padding-top:24px;border-top:1px solid #E5E7EB;display:flex;justify-content:space-between;">` +
+  const footerHTML = `<div style="${S.footer} margin-top:auto;padding-top:10px;border-top:1px solid #E5E7EB;display:flex;justify-content:space-between;">` +
     `<span>Axiora Tools · axiora.com.br&nbsp;&nbsp;Seed: ${seed}</span><span>Reprodução livre para fins pedagógicos</span></div>`;
   return `<style>${css}</style>` +
-    `<div class="sheet-root"><div class="preview-page" style="${S.page}">` +
+    `<div class="sheet-root"><div class="preview-page page" style="${S.page}height:100%;display:flex;flex-direction:column;">` +
     `<div style="${S.title}">Gabarito</div><div style="${S.rule2}"></div>` +
-    `<div style="flex:1;margin-top:16px;display:grid;grid-template-columns:repeat(2,1fr);gap:2px 32px;">${ansItems.join("")}</div>` +
+    `<div class="main" style="flex:1;display:flex;flex-direction:column;justify-content:flex-start;min-height:0;">` +
+    `<div style="flex:1;margin-top:10px;display:grid;grid-template-columns:repeat(2,1fr);gap:12px 24px;align-content:start;">${ansItems.join("")}</div></div>` +
     footerHTML + `</div></div>`;
 }
 
@@ -1293,23 +1496,24 @@ export function SheetGeneratorTool() {
   const [selectedBlockId, setSelectedBlockId] = useState<number | null>(null);
   const [seed, setSeed] = useState<number>(10000);
   const [snapshot, setSnapshot] = useState<ExerciseItem[] | null>(null);
-  const [cfg, setCfg] = useState<GlobalConfig>({
-    title: "Folha de Exercícios",
-    subtitle: "Resolva todos os exercícios.",
-    turma: "",
-    tempo: "",
-    cols: 2,
-    fontSize: "M",
-    gabarito: "proxima",
-    spacing: 8,
-    embaralhar: false,
-    showNome: true,
-    numerar: true,
-    showPontuacao: false,
-    repeatHeader: true,
-  });
+  const [lightCfg, setLightCfg] = useState<LightConfig>(DEFAULT_LIGHT_CONFIG);
+  const [debouncedLightCfg, setDebouncedLightCfg] = useState<LightConfig>(DEFAULT_LIGHT_CONFIG);
+  const [heavyCfg, setHeavyCfg] = useState<HeavyConfig>(DEFAULT_HEAVY_CONFIG);
+  const cfg = useMemo<GlobalConfig>(() => ({
+    ...heavyCfg,
+    ...lightCfg,
+    title: debouncedLightCfg.title,
+    subtitle: debouncedLightCfg.subtitle,
+  }), [
+    heavyCfg,
+    lightCfg.turma,
+    lightCfg.tempo,
+    debouncedLightCfg.title,
+    debouncedLightCfg.subtitle,
+  ]);
   const [toast, setToast] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"config" | "blocks" | "detail">("blocks");
+  const [editorTab, setEditorTab] = useState<"config" | "blocos">("blocos");
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(["cabecalho"]));
   const toggleSection = useCallback((id: string) => setOpenSections(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }), []);
   const [presetModalOpen, setPresetModalOpen] = useState(false);
@@ -1321,6 +1525,12 @@ export function SheetGeneratorTool() {
   const [templateName, setTemplateName] = useState("");
   const [templates, setTemplates] = useState<SavedTemplate[]>([]);
   const [templateBusyId, setTemplateBusyId] = useState<string | null>(null);
+  const [credits, setCredits] = useState<number | null>(null);
+  const [creditsLoading, setCreditsLoading] = useState(true);
+  const [creditsFxTick, setCreditsFxTick] = useState(0);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   // ── Preview: auto-fit + zoom (Canva-like) ─────────────────────────────────
   const previewCanvasRef = useRef<HTMLDivElement>(null);
@@ -1335,40 +1545,114 @@ export function SheetGeneratorTool() {
       const usableHeight = Math.max(0, rect.height - 24);
       const availableW = Math.max(0, rect.width - canvasPaddingX);
       const fit = Math.min(availableW / A4_W, usableHeight / A4_H, 1);
-      setAutoFitScale(fit > 0 ? fit : 1);
+      const next = fit > 0 ? fit : 1;
+      setAutoFitScale((prev) => (Math.abs(prev - next) > 0.001 ? next : prev));
     };
-    update();
-    const obs = new ResizeObserver(update);
+    let raf1 = 0;
+    let raf2 = 0;
+    const scheduleUpdate = () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      raf1 = requestAnimationFrame(() => {
+        update();
+        raf2 = requestAnimationFrame(update);
+      });
+    };
+    scheduleUpdate();
+    const obs = new ResizeObserver(scheduleUpdate);
     obs.observe(el);
-    return () => obs.disconnect();
+    window.addEventListener("resize", scheduleUpdate);
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      window.removeEventListener("resize", scheduleUpdate);
+      obs.disconnect();
+    };
   }, []);
-  const previewScale = Math.min(autoFitScale, autoFitScale * zoom);
+  const clampedZoom = Math.min(1, Math.max(0.5, zoom));
+  const previewScale = Math.min(1, autoFitScale * clampedZoom);
 
   // ── Pagination state ────────────────────────────────────────────────────────
-  const [previewPages, setPreviewPages] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
+
   useEffect(() => {
-    setSeed(Math.floor(10000 + Math.random() * 90000));
+    const timer = window.setTimeout(() => {
+      setDebouncedLightCfg((prev) => ({
+        ...prev,
+        title: lightCfg.title,
+        subtitle: lightCfg.subtitle,
+      }));
+    }, TITLE_SUBTITLE_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [lightCfg.title, lightCfg.subtitle]);
+
+  const mapApiTemplate = useCallback((tpl: ToolsTemplateRecord): SavedTemplate => {
+    return {
+      id: tpl.id,
+      name: tpl.name,
+      config: tpl.config as unknown as GlobalConfig,
+      blocks: tpl.blocks as unknown as Block[],
+      createdAt: tpl.created_at,
+      previewHtml: "",
+    };
+  }, []);
+
+  const loadTemplates = useCallback(async () => {
+    try {
+      const remote = await getToolsTemplates();
+      const localCache = getTemplates();
+      const previewById = new Map(localCache.map((tpl) => [tpl.id, tpl.previewHtml ?? ""]));
+      setTemplates(
+        remote.map((tpl) => {
+          const mapped = mapApiTemplate(tpl);
+          return {
+            ...mapped,
+            previewHtml: previewById.get(mapped.id) ?? mapped.previewHtml,
+          };
+        }),
+      );
+      return;
+    } catch {
+      setTemplates(getTemplates());
+    }
+  }, [mapApiTemplate]);
+
+  useEffect(() => {
+    void loadTemplates();
+  }, [loadTemplates]);
+
+  const loadCredits = useCallback(async () => {
+    setCreditsLoading(true);
+    try {
+      const result = await getToolsCredits();
+      setCredits(Math.max(0, Number(result.credits) || 0));
+    } catch {
+      setCredits(null);
+    } finally {
+      setCreditsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    setTemplates(getTemplates());
-  }, []);
+    void loadCredits();
+  }, [loadCredits]);
 
-  // Rebuild pages synchronously whenever blocks / cfg / seed change
-  useEffect(() => {
-    const active = blocks.filter((b) => b.active);
-    if (active.length === 0) { setPreviewPages([]); setCurrentPage(0); return; }
-    const exercises = generateAllExercises(blocks, cfg.embaralhar);
-    if (exercises.length === 0) { setPreviewPages([]); setCurrentPage(0); return; }
+  const generatedExercises = useMemo<ExerciseItem[]>(() => {
+    if (!blocks.some((b) => b.active)) return [];
+    return generateAllExercises(blocks, cfg.embaralhar, seed);
+  }, [blocks, cfg.embaralhar, seed]);
 
-    const slices = paginateSimple(exercises, blocks, cfg);
-    if (!slices.length) { setPreviewPages([]); setCurrentPage(0); return; }
+  const pageSlices = useMemo<PageSlice[]>(() => {
+    if (!generatedExercises.length) return [];
+    return paginateSimple(generatedExercises, blocks, cfg);
+  }, [generatedExercises, blocks, cfg.cols, cfg.spacing, cfg.embaralhar, cfg.subtitle, cfg.showNome]);
 
-    const sectionHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
-    const pages = slices.map((slice) => ({
+  const previewPages = useMemo<string[]>(() => {
+    if (!pageSlices.length || !generatedExercises.length) return [];
+    const sectionHeaders = buildSectionHeaderMap(generatedExercises, blocks, cfg);
+    const pages = pageSlices.map((slice) => ({
       isFirstPage: slice.isFirstPage,
-      items: slice.exIndexes.map((index) => ({ index, item: exercises[index] })),
+      items: slice.exIndexes.map((index) => ({ index, item: generatedExercises[index] })),
     }));
 
     const htmlPages = pages.map((page) =>
@@ -1376,11 +1660,45 @@ export function SheetGeneratorTool() {
     );
 
     if (cfg.gabarito === "proxima") {
-      htmlPages.push(buildAnswerPageHTML(exercises, cfg, seed));
+      htmlPages.push(buildAnswerPageHTML(generatedExercises, cfg, seed));
     }
-    setPreviewPages(htmlPages);
+    return htmlPages;
+  }, [
+    pageSlices,
+    generatedExercises,
+    blocks,
+    seed,
+    cfg.title,
+    cfg.subtitle,
+    cfg.turma,
+    cfg.tempo,
+    cfg.cols,
+    cfg.fontSize,
+    cfg.gabarito,
+    cfg.spacing,
+    cfg.embaralhar,
+    cfg.showNome,
+    cfg.numerar,
+    cfg.showPontuacao,
+    cfg.repeatHeader,
+  ]);
+
+  useEffect(() => {
     setCurrentPage(0);
-  }, [blocks, cfg, seed]);
+  }, [previewPages]);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      window.dispatchEvent(new Event("resize"));
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [previewPages.length, currentPage, zoom, mobileTab]);
+
+  useEffect(() => {
+    if (blocks.length === 0 && editorTab !== "blocos") {
+      setEditorTab("blocos");
+    }
+  }, [blocks.length, editorTab]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -1388,13 +1706,17 @@ export function SheetGeneratorTool() {
   }, []);
 
   const refreshTemplates = useCallback(() => {
-    setTemplates(getTemplates());
-  }, []);
+    void loadTemplates();
+  }, [loadTemplates]);
 
   const invalidate = useCallback(() => setSnapshot(null), []);
 
-  const updateCfg = useCallback(<K extends keyof GlobalConfig>(key: K, val: GlobalConfig[K]) => {
-    setCfg((prev) => ({ ...prev, [key]: val }));
+  const updateCfg = useCallback((key: keyof GlobalConfig, val: GlobalConfig[keyof GlobalConfig]) => {
+    if (key === "title" || key === "subtitle" || key === "turma" || key === "tempo") {
+      setLightCfg((prev) => ({ ...prev, [key]: val } as LightConfig));
+    } else {
+      setHeavyCfg((prev) => ({ ...prev, [key]: val } as HeavyConfig));
+    }
     invalidate();
   }, [invalidate]);
 
@@ -1403,6 +1725,7 @@ export function SheetGeneratorTool() {
     const type = types[blocks.length % types.length];
     const newBlock: Block = { id: nextId.current++, type, active: true, config: { ...BLOCK_META[type].defaults } };
     setBlocks((prev) => [...prev, newBlock]);
+    setEditorTab("blocos");
     setSelectedBlockId(newBlock.id);
     showToast(`${BLOCK_META[type].name} adicionado`);
     invalidate();
@@ -1433,29 +1756,71 @@ export function SheetGeneratorTool() {
   const rerollSeed = useCallback(() => {
     setSeed(Math.floor(10000 + Math.random() * 90000));
     invalidate();
-    showToast("Novo seed gerado — clique em Imprimir para ver os novos exercícios");
+    showToast("Exercícios atualizados — clique em Imprimir para ver a nova versão");
   }, [invalidate, showToast]);
 
-  const handleSaveTemplate = useCallback(() => {
+  const handleSaveTemplate = useCallback(async () => {
     const trimmed = templateName.trim();
     if (!trimmed) { showToast("Informe um nome para o template"); return; }
-    const payload: SavedTemplate = {
-      id: `tpl_${Date.now()}_${Math.floor(Math.random() * 9999)}`,
-      name: trimmed,
-      config: JSON.parse(JSON.stringify(cfg)) as GlobalConfig,
-      blocks: JSON.parse(JSON.stringify(blocks)) as Block[],
-      createdAt: new Date().toISOString(),
-      previewHtml: previewPages[0] ?? "",
+    const currentCfg: GlobalConfig = {
+      ...heavyCfg,
+      ...lightCfg,
     };
-    setTemplates(saveTemplate(payload));
+    const config = JSON.parse(JSON.stringify(currentCfg)) as GlobalConfig;
+    const nextBlocks = JSON.parse(JSON.stringify(blocks)) as Block[];
+    try {
+      const saved = await createToolsTemplate({
+        name: trimmed,
+        config: config as unknown as Record<string, unknown>,
+        blocks: nextBlocks as unknown[],
+        is_public: false,
+      });
+      const mapped = mapApiTemplate(saved);
+      const withPreview = { ...mapped, previewHtml: previewPages[0] ?? "" };
+      upsertTemplateLocal(withPreview);
+      setTemplates((prev) => [withPreview, ...prev.filter((tpl) => tpl.id !== saved.id)]);
+    } catch {
+      const payload: SavedTemplate = {
+        id: generateTemplateId(),
+        name: trimmed,
+        config,
+        blocks: nextBlocks,
+        createdAt: new Date().toISOString(),
+        previewHtml: previewPages[0] ?? "",
+      };
+      setTemplates(saveTemplate(payload));
+    }
     setTemplateName("");
     setSaveTemplateModalOpen(false);
     showToast("Template salvo");
-  }, [templateName, cfg, blocks, previewPages, showToast]);
+  }, [templateName, heavyCfg, lightCfg, blocks, mapApiTemplate, previewPages, showToast]);
 
   const handleLoadTemplate = useCallback((tpl: SavedTemplate) => {
     setTemplateBusyId(tpl.id);
-    setCfg(JSON.parse(JSON.stringify(tpl.config)) as GlobalConfig);
+    const nextCfg = JSON.parse(JSON.stringify(tpl.config)) as GlobalConfig;
+    setLightCfg({
+      title: nextCfg.title,
+      subtitle: nextCfg.subtitle,
+      turma: nextCfg.turma,
+      tempo: nextCfg.tempo,
+    });
+    setDebouncedLightCfg({
+      title: nextCfg.title,
+      subtitle: nextCfg.subtitle,
+      turma: nextCfg.turma,
+      tempo: nextCfg.tempo,
+    });
+    setHeavyCfg({
+      cols: nextCfg.cols,
+      fontSize: nextCfg.fontSize,
+      gabarito: nextCfg.gabarito,
+      spacing: nextCfg.spacing,
+      embaralhar: nextCfg.embaralhar,
+      showNome: nextCfg.showNome,
+      numerar: nextCfg.numerar,
+      showPontuacao: nextCfg.showPontuacao,
+      repeatHeader: nextCfg.repeatHeader,
+    });
     const loadedBlocks = JSON.parse(JSON.stringify(tpl.blocks)) as Block[];
     setBlocks(loadedBlocks);
     const next = loadedBlocks.reduce((max, b) => Math.max(max, b.id), 0) + 1;
@@ -1467,29 +1832,62 @@ export function SheetGeneratorTool() {
     showToast(`Template "${tpl.name}" carregado`);
   }, [invalidate, showToast]);
 
-  const handleDeleteTemplate = useCallback((id: string) => {
+  const handleDeleteTemplate = useCallback(async (id: string) => {
     setTemplateBusyId(id);
-    setTemplates(deleteTemplate(id));
+    try {
+      await deleteToolsTemplateApi(id);
+      deleteTemplate(id);
+      setTemplates((prev) => prev.filter((tpl) => tpl.id !== id));
+    } catch {
+      setTemplates(deleteTemplate(id));
+    }
     setTemplateBusyId(null);
     showToast("Template excluído");
   }, [showToast]);
 
-  const handleDuplicateTemplate = useCallback((tpl: SavedTemplate) => {
+  const handleDuplicateTemplate = useCallback(async (tpl: SavedTemplate) => {
     setTemplateBusyId(tpl.id);
-    const duplicated: SavedTemplate = {
-      ...JSON.parse(JSON.stringify(tpl)) as SavedTemplate,
-      id: `tpl_${Date.now()}_${Math.floor(Math.random() * 9999)}`,
-      name: `${tpl.name} (cópia)`,
-      createdAt: new Date().toISOString(),
-    };
-    setTemplates(saveTemplate(duplicated));
+    try {
+      const duplicated = await duplicateToolsTemplateApi(tpl.id);
+      const mapped = mapApiTemplate(duplicated);
+      const withPreview = { ...mapped, previewHtml: tpl.previewHtml ?? "" };
+      upsertTemplateLocal(withPreview);
+      setTemplates((prev) => [withPreview, ...prev.filter((item) => item.id !== duplicated.id)]);
+    } catch {
+      setTemplates(duplicateTemplateLocal(tpl));
+    }
     setTemplateBusyId(null);
     showToast("Template duplicado");
+  }, [mapApiTemplate, showToast]);
+
+  const handleBuyCredits = useCallback(async () => {
+    setCheckoutBusy(true);
+    try {
+      const checkout = await createToolsCheckout({ plan_code: "credits_30" });
+      window.location.assign(checkout.checkout_url);
+      return;
+    } catch {
+      showToast("Não foi possível iniciar o checkout");
+    } finally {
+      setCheckoutBusy(false);
+    }
   }, [showToast]);
 
-  const handlePrint = useCallback(() => {
-    const win = window.open("", "_blank", "width=860,height=750");
-    if (!win) { showToast("Permita pop-ups para imprimir"); return; }
+  const handlePrint = useCallback(async () => {
+    if (isPrinting) return;
+    setIsPrinting(true);
+    if (credits === null) {
+      showToast("Não foi possível validar seus créditos. Tente novamente.");
+      setIsPrinting(false);
+      return;
+    }
+    if (credits <= 0) {
+      setPaywallOpen(true);
+      showToast("Sem créditos: compre para continuar");
+      setIsPrinting(false);
+      return;
+    }
+
     let html = "";
     if (previewPages.length > 0) {
       const pagesHtml = previewPages
@@ -1507,36 +1905,83 @@ export function SheetGeneratorTool() {
         </style>
       </head><body>${pagesHtml}</body></html>`;
     } else {
-      const exercises = generateAllExercises(blocks, cfg.embaralhar);
-      if (exercises.length === 0) { showToast("Nenhum exercício ativo — adicione blocos"); win.close(); return; }
+      const exercises = generateAllExercises(blocks, cfg.embaralhar, seed);
+      if (exercises.length === 0) {
+        showToast("Nenhum exercício ativo — adicione blocos");
+        setIsPrinting(false);
+        return;
+      }
       html = buildPrintHTML(exercises, blocks, cfg, seed);
     }
-    win.document.write(html);
-    win.document.close();
+
+    const win = window.open("", "_blank", "width=860,height=750");
+    if (!win) {
+      showToast("Permita popups para gerar o PDF");
+      setIsPrinting(false);
+      return;
+    }
+    try {
+      win.document.write(html);
+      win.document.close();
+    } catch {
+      win.close();
+      showToast("Permita popups para gerar o PDF");
+      setIsPrinting(false);
+      return;
+    }
+
+    try {
+      const result = await useToolsCredit();
+      setCredits(Math.max(0, Number(result.credits) || 0));
+      setCreditsFxTick((v) => v + 1);
+      showToast("1 geração usada");
+    } catch {
+      win.close();
+      setPaywallOpen(true);
+      showToast("Sem créditos: compre para continuar");
+      setIsPrinting(false);
+      return;
+    }
+
     win.focus();
-    setTimeout(() => win.print(), 300);
-  }, [previewPages, cfg, blocks, seed, showToast]);
+    setTimeout(() => {
+      win.print();
+      setIsPrinting(false);
+    }, 300);
+  }, [isPrinting, credits, previewPages, cfg, blocks, seed, showToast]);
 
   const totalExercises = useMemo(() => blocks.filter((b) => b.active).reduce((s, b) => s + b.config.quantidade, 0), [blocks]);
   const activeCount = useMemo(() => blocks.filter((b) => b.active).length, [blocks]);
+  const canRefreshExercises = activeCount > 0;
   const selectedBlock = useMemo(() => blocks.find((b) => b.id === selectedBlockId) ?? null, [blocks, selectedBlockId]);
 
   // Input / select class
-  const inputCls = "mt-1 w-full rounded-lg border border-[#d1d5db] bg-white px-3 py-2 text-[13px] text-[#0f172a] placeholder-[#94a3b8] outline-none transition focus:border-[#ee8748] focus:shadow-[0_0_0_3px_rgba(238,135,72,0.12)]";
+  const inputCls = "mt-1 w-full rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#0f172a] placeholder-[#94a3b8] outline-none transition focus:border-[#fb923c] focus:shadow-[0_0_0_3px_rgba(251,146,60,0.14)]";
   const segBtnCls = (active: boolean) =>
-    `flex-1 rounded-lg py-1.5 text-xs font-semibold transition ${active ? "bg-[#ee8748] text-white shadow-[0_2px_0_rgba(158,74,30,0.35)]" : "border border-[#d1d5db] bg-white text-[#64748b] hover:bg-[#f8fafc] hover:text-[#0f172a]"}`;
+    `flex-1 rounded-[var(--radius-md)] py-1.5 text-xs font-semibold transition-all duration-150 ${active ? "bg-[#fb923c] text-white shadow-[0_2px_10px_rgba(251,146,60,0.28)]" : "border border-[#e5e7eb] bg-white text-[#64748b] hover:scale-[1.01] hover:bg-[#f8fafc] hover:text-[#0f172a] hover:shadow-[0_4px_12px_rgba(15,23,42,0.08)]"}`;
+  const chunkyPrimaryBtn = "axiora-chunky-btn axiora-chunky-btn--secondary !rounded-[var(--radius-lg)] px-4 py-2 text-[12px] font-extrabold tracking-[0.01em]";
+  const chunkyOutlineBtn = "axiora-chunky-btn axiora-chunky-btn--outline !rounded-[var(--radius-lg)] px-3 py-2 text-[11px] font-bold tracking-[0.01em] text-[#2F527D]";
+  const chunkySmallOutlineBtn = "axiora-chunky-btn axiora-chunky-btn--outline !rounded-[var(--radius-md)] axiora-admin-btn-sm text-[#2F527D]";
+  const chunkySmallDestructiveBtn = "axiora-chunky-btn axiora-chunky-btn--destructive !rounded-[var(--radius-md)] axiora-admin-btn-sm text-white";
+  const chunkyChipBtn = (active: boolean) => `axiora-chunky-btn ${active ? "axiora-chunky-chip--active text-white" : "axiora-chunky-chip text-[#1f3d39]"} !rounded-[var(--radius-md)] px-3 py-1 text-[11px] font-black`;
+  const loginOrangeBtn = "rounded-[var(--radius-lg)] bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.25),0_3px_0_rgba(158,74,30,0.5),0_8px_16px_rgba(93,48,22,0.2)] transition hover:brightness-110 active:translate-y-[1px] active:shadow-[inset_0_1px_0_rgba(255,219,190,0.2),0_1px_0_rgba(158,74,30,0.45),0_4px_10px_rgba(93,48,22,0.2)]";
+  const refreshBtnCls = `whitespace-nowrap inline-flex items-center gap-2 rounded-[var(--radius-lg)] px-3 py-1.5 text-[11px] font-extrabold tracking-[0.01em] border transition disabled:cursor-not-allowed ${
+    canRefreshExercises
+      ? "border-[#cbd5e1] bg-[linear-gradient(180deg,#f8fafc_0%,#e2e8f0_100%)] text-[#475569] shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_2px_0_rgba(148,163,184,0.45),0_8px_16px_rgba(15,23,42,0.1)] hover:brightness-105"
+      : "border-[#dbe3ee] bg-[#e2e8f0] text-[#94a3b8] shadow-none"
+  }`;
 
   return (
     <div className="h-full flex-1 flex flex-col min-h-0 overflow-hidden md:grid md:min-h-0" style={{ background: "#ffffff", gridTemplateColumns: "minmax(280px,1fr) minmax(320px,1fr) minmax(560px,2fr)", gridTemplateRows: "1fr" }}>
 
       {/* ── MOBILE TAB BAR ──────────────────────────────────────────── */}
-      <div className="flex shrink-0 border-b border-[#e2e8f0] md:hidden" style={{ background: "#ffffff" }}>
+      <div className="flex shrink-0 border-b border-[#e5e7eb] md:hidden" style={{ background: "#ffffff" }}>
         {([["config", "Configurar"], ["blocks", "Blocos"], ["detail", "Detalhes"]] as const).map(([id, label]) => (
           <button
             key={id}
             type="button"
             onClick={() => setMobileTab(id)}
-            className={`flex-1 py-3 text-[12px] font-semibold transition-colors ${mobileTab === id ? "border-b-2 border-[#ee8748] text-[#ee8748]" : "text-[#94a3b8] hover:text-[#475569]"}`}
+            className={`m-1 flex-1 ${chunkyChipBtn(mobileTab === id)} py-2`}
           >
             {label}
           </button>
@@ -1544,22 +1989,77 @@ export function SheetGeneratorTool() {
       </div>
 
       {/* ── LEFT PANEL ──────────────────────────────────────────────── */}
-      <aside className={`${mobileTab === "config" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:min-w-0`} style={{ background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)", borderRight: "1px solid #e2e8f0" }}>
+      <aside
+        className={`${mobileTab === "config" ? "flex" : "hidden"} flex-col overflow-hidden transition-opacity duration-150 md:min-w-0 ${editorTab === "config" ? "md:flex md:col-span-2 md:opacity-100" : "md:hidden md:opacity-0"}`}
+        style={{ background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)", borderRight: "1px solid #e5e7eb" }}
+      >
         {/* Panel header */}
-        <div className="relative shrink-0 overflow-hidden px-5 py-3.5" style={{ borderBottom: "1px solid #e2e8f0", background: "linear-gradient(180deg, rgba(238,135,72,0.05) 0%, transparent 100%)" }}>
+        <div className="relative shrink-0 overflow-hidden px-5 py-3.5" style={{ borderBottom: "1px solid #e5e7eb", background: "linear-gradient(180deg, rgba(251,146,60,0.05) 0%, transparent 100%)" }}>
           <div className="absolute inset-x-0 top-0 h-[2px] bg-[linear-gradient(90deg,#ee8748,rgba(238,135,72,0.2),transparent)]" />
-          <div className="text-[13px] font-semibold tracking-[0.01em] text-[#1e293b]">Configurações</div>
-          <div className="mt-0.5 text-[11px] text-[#94a3b8]">Personalize sua folha</div>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-[13px] font-semibold tracking-[0.01em] text-[#1e293b]">Workspace do Gerador</div>
+              <div className="mt-0.5 text-[11px] text-[#64748b]">Edite em um fluxo único</div>
+            </div>
+            <div className="hidden items-center justify-end gap-2 md:flex md:flex-wrap lg:flex-nowrap">
+              <span className="whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#64748b] shadow-[0_2px_8px_rgba(15,23,42,0.06)]">{activeCount} ativos</span>
+              <span className="whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#64748b] shadow-[0_2px_8px_rgba(15,23,42,0.06)]">{totalExercises} exercícios</span>
+              <button
+                type="button"
+                onClick={rerollSeed}
+                disabled={!canRefreshExercises}
+                aria-label="Atualizar exercícios"
+                title="Atualizar exercícios"
+                className={refreshBtnCls}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg>
+                Atualizar
+              </button>
+              <button
+                onClick={() => void handlePrint()}
+                disabled={isPrinting}
+                className={`whitespace-nowrap flex items-center gap-2 rounded-[var(--radius-lg)] px-3 py-1.5 text-[11px] font-extrabold tracking-[0.01em] disabled:cursor-not-allowed disabled:opacity-70 ${credits === 0 || isPrinting ? "bg-[#cbd5e1] text-white shadow-none" : loginOrangeBtn}`}
+              >
+                {isPrinting ? "Gerando..." : "Imprimir / PDF"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditorTab("blocos")}
+                className={`whitespace-nowrap ${chunkyOutlineBtn}`}
+              >
+                Ir para Blocos
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-20">
+        <div className="hidden border-b border-[#e5e7eb] px-5 py-2 md:flex">
+          <div className="rounded-xl bg-white p-1">
+            <button
+              type="button"
+              onClick={() => setEditorTab("config")}
+              className={chunkyChipBtn(editorTab === "config")}
+            >
+              Configurações
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditorTab("blocos")}
+              className={chunkyChipBtn(editorTab === "blocos")}
+            >
+              Blocos
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto pb-6">
 
           {/* CABEÇALHO */}
           <div className="border-b border-[#f1f5f9] px-4">
             <button type="button" onClick={() => toggleSection("cabecalho")} className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70">
               <div className="flex items-center gap-2">
                 <span className="h-3 w-[3px] rounded-full bg-[#ee8748]" />
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#94a3b8]">Cabeçalho da Folha</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#64748b]">Cabeçalho da Folha</span>
               </div>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" className={`transition-transform duration-200 ${openSections.has("cabecalho") ? "rotate-180" : ""}`}><path d="M2 4l4 4 4-4"/></svg>
             </button>
@@ -1567,11 +2067,11 @@ export function SheetGeneratorTool() {
               <div className="space-y-2.5">
                 <label className="block text-[11px] font-medium text-[#475569]">
                   Título
-                  <input className={inputCls} value={cfg.title} onChange={(e) => updateCfg("title", e.target.value)} />
+                  <input className={inputCls} value={lightCfg.title} onChange={(e) => updateCfg("title", e.target.value)} />
                 </label>
                 <label className="block text-[11px] font-medium text-[#475569]">
                   Instruções
-                  <textarea className={`${inputCls} resize-none`} rows={2} value={cfg.subtitle} onChange={(e) => updateCfg("subtitle", e.target.value)} />
+                  <textarea className={`${inputCls} resize-none`} rows={2} value={lightCfg.subtitle} onChange={(e) => updateCfg("subtitle", e.target.value)} />
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <label className="block text-[11px] font-medium text-[#475569]">
@@ -1622,7 +2122,7 @@ export function SheetGeneratorTool() {
 
           {/* RESUMO */}
           <div className="border-t border-[#e2e8f0] px-5 py-4">
-            <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#94a3b8]">Resumo da Folha</div>
+            <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#64748b]">Resumo da Folha</div>
             <div className="space-y-1.5">
               {([
                 ["Colunas", String(cfg.cols)],
@@ -1633,7 +2133,7 @@ export function SheetGeneratorTool() {
                 ["Blocos ativos", `${activeCount} de ${blocks.length}`],
               ] as [string, string][]).map(([label, value]) => (
                 <div key={label} className="flex items-center justify-between py-0.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#94a3b8]">{label}</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#64748b]">{label}</span>
                   <span className="text-[11px] font-medium text-[#475569]">{value}</span>
                 </div>
               ))}
@@ -1644,36 +2144,79 @@ export function SheetGeneratorTool() {
       </aside>
 
       {/* ── CENTER PANEL ────────────────────────────────────────────── */}
-      <main className={`${mobileTab === "blocks" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:min-w-0 md:min-h-0`} style={{ background: "#ffffff", borderLeft: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0" }}>
+      <main
+        className={`${mobileTab === "blocks" ? "flex" : "hidden"} flex-col overflow-hidden transition-opacity duration-150 md:min-w-0 md:min-h-0 ${editorTab === "blocos" ? "md:flex md:col-span-2 md:opacity-100" : "md:hidden md:opacity-0"}`}
+        style={{ background: "#ffffff", borderLeft: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb" }}
+      >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between px-5 py-3.5" style={{ borderBottom: "1px solid #e2e8f0", background: "#ffffff" }}>
-          <div className="flex items-center gap-3">
+        <div className="flex shrink-0 flex-col gap-3 px-5 py-3.5 xl:flex-row xl:items-start xl:justify-between" style={{ borderBottom: "1px solid #e5e7eb", background: "#ffffff" }}>
+          <div className="flex min-w-0 flex-col gap-2">
             <div>
               <div className="text-[13px] font-semibold tracking-[0.01em] text-[#1e293b]">Blocos de Exercícios</div>
-              <div className="mt-0.5 text-[11px] text-[#94a3b8]">Clique em um bloco para configurar</div>
+              <div className="mt-0.5 text-[11px] text-[#94a3b8]">Monte sua lista, salve como template e reutilize quando quiser</div>
             </div>
-            {activeCount > 0 && (
-              <span className="rounded-full bg-[rgba(238,135,72,0.12)] px-2.5 py-0.5 text-[11px] font-bold text-[#ee8748]">{activeCount} ativo{activeCount === 1 ? "" : "s"}</span>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="hidden rounded-xl bg-white p-1 md:flex">
+                <button
+                  type="button"
+                  onClick={() => setEditorTab("config")}
+                  className={chunkyChipBtn(editorTab === "config")}
+                >
+                  Configurações
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditorTab("blocos")}
+                  className={chunkyChipBtn(editorTab === "blocos")}
+                >
+                  Blocos
+                </button>
+              </div>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${activeCount > 0 ? "bg-[rgba(238,135,72,0.12)] text-[#ee8748]" : "bg-[#f1f5f9] text-[#94a3b8]"}`}
+              >
+                {activeCount} ativo{activeCount === 1 ? "" : "s"}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+            <div
+              key={creditsFxTick}
+              className={`whitespace-nowrap rounded-lg border px-3 py-2 text-[11px] font-semibold transition ${credits !== null && credits <= 0 ? "border-[#fee2e2] bg-[#fff1f2] text-[#be123c]" : "border-[#e2e8f0] bg-white text-[#475569]"} ${creditsFxTick > 0 ? "animate-pulse" : ""}`}
+            >
+              {creditsLoading ? "Carregando créditos..." : credits === null ? "Créditos indisponíveis" : `Você tem ${credits} gerações`}
+            </div>
             <button
               type="button"
               onClick={() => { refreshTemplates(); setTemplatesModalOpen(true); }}
-              className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-[11px] font-semibold text-[#64748b] transition hover:bg-[#f8fafc] hover:text-[#334155]"
+              className={chunkyOutlineBtn}
             >
               Meus Templates
             </button>
             <button
               type="button"
-              onClick={() => { setTemplateName(cfg.title || "Template Axiora"); setSaveTemplateModalOpen(true); }}
-              className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-[11px] font-semibold text-[#64748b] transition hover:bg-[#f8fafc] hover:text-[#334155]"
+              onClick={() => { setTemplateName(lightCfg.title || "Template Axiora"); setSaveTemplateModalOpen(true); }}
+              className={chunkyOutlineBtn}
             >
               Salvar Template
             </button>
-            <button onClick={addBlock} className="flex items-center gap-2 rounded-xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-4 py-2 text-[12px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.25),0_3px_0_rgba(158,74,30,0.5),0_8px_16px_rgba(93,48,22,0.25)] transition hover:brightness-110 active:translate-y-[2px] active:shadow-none">
-              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="#fff" strokeWidth="2" strokeLinecap="round" /></svg>
-              Adicionar Bloco
+            <button
+              type="button"
+              onClick={rerollSeed}
+              disabled={!canRefreshExercises}
+              aria-label="Atualizar exercícios"
+              title="Atualizar exercícios"
+              className={refreshBtnCls}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg>
+              Atualizar
+            </button>
+            <button
+              onClick={() => void handlePrint()}
+              disabled={isPrinting}
+              className={`whitespace-nowrap flex items-center gap-2 rounded-[var(--radius-lg)] px-3 py-1.5 text-[11px] font-extrabold tracking-[0.01em] disabled:cursor-not-allowed disabled:opacity-70 ${credits === 0 || isPrinting ? "bg-[#cbd5e1] text-white shadow-none" : loginOrangeBtn}`}
+            >
+              {isPrinting ? "Gerando..." : "Imprimir / PDF"}
             </button>
           </div>
         </div>
@@ -1682,19 +2225,40 @@ export function SheetGeneratorTool() {
         <div className="flex-1 overflow-y-auto">
           {blocks.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-5 px-6 py-6 text-center">
+              <div className="w-full max-w-[560px] rounded-2xl border border-[#e5e7eb] bg-white p-2 shadow-[0_4px_12px_rgba(15,23,42,0.06)]">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={addBlock}
+                    className={`inline-flex items-center justify-center gap-2 ${chunkyPrimaryBtn}`}
+                  >
+                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="#fff" strokeWidth="2" strokeLinecap="round" /></svg>
+                    Adicionar bloco
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPresetModalOpen(true)}
+                    className={`inline-flex items-center justify-center gap-2 ${chunkyOutlineBtn}`}
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+                    Usar preset
+                  </button>
+                </div>
+              </div>
+
               {/* Illustration */}
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "linear-gradient(135deg, #fff7f0 0%, #ffe8d4 100%)", border: "1px solid rgba(238,135,72,0.2)" }}>
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ee8748" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12h6M12 9v6"/></svg>
               </div>
               <div>
                 <p className="text-[14px] font-bold text-[#1e293b]">Crie sua primeira atividade</p>
-                <p className="mt-1 text-[12px] leading-relaxed text-[#94a3b8]">Escolha um ponto de partida abaixo</p>
+                <p className="mt-1 text-[12px] leading-relaxed text-[#94a3b8]">Monte do zero ou use um preset, depois salve como template</p>
               </div>
               {/* Steps */}
               <div className="w-full space-y-2">
                 {([
-                  { step: "1", label: "Escolha o conteúdo", desc: "Adicione blocos de exercícios" },
-                  { step: "2", label: "Ajuste o layout", desc: "Colunas, fonte e espaçamento" },
+                  { step: "1", label: "Monte a lista", desc: "Adicione blocos de exercícios" },
+                  { step: "2", label: "Salve o template", desc: "Reutilize a mesma estrutura depois" },
                   { step: "3", label: "Exporte o PDF", desc: "Pronto para imprimir" },
                 ] as { step: string; label: string; desc: string }[]).map(({ step, label, desc }) => (
                   <div key={step} className="flex items-center gap-3 rounded-xl border border-[#f1f5f9] bg-white px-4 py-3 text-left">
@@ -1706,27 +2270,9 @@ export function SheetGeneratorTool() {
                   </div>
                 ))}
               </div>
-              {/* CTAs */}
-              <div className="flex w-full flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => { applyPreset("2ano", setBlocks, nextId); setSelectedBlockId(null); invalidate(); }}
-                  className="w-full cursor-pointer rounded-xl py-2.5 text-[13px] font-semibold text-white transition hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg, #ee8748 0%, #f97316 100%)" }}
-                >
-                  Usar preset →
-                </button>
-                <button
-                  type="button"
-                  onClick={addBlock}
-                  className="w-full cursor-pointer rounded-xl border border-[#e2e8f0] bg-white py-2.5 text-[13px] font-semibold text-[#475569] transition hover:border-[#d1d5db] hover:bg-[#f8fafc]"
-                >
-                  Começar do zero
-                </button>
-              </div>
             </div>
           ) : (
-            <div className="divide-y divide-[#f1f5f9]">
+            <div className="space-y-2.5 px-3 py-3">
               {blocks.map((block, idx) => {
                 const meta = BLOCK_META[block.type];
                 const isSelected = block.id === selectedBlockId;
@@ -1734,38 +2280,43 @@ export function SheetGeneratorTool() {
                   <div
                     key={block.id}
                     onClick={() => { setSelectedBlockId(block.id); setBlockDetailModalOpen(true); setMobileTab("detail"); }}
-                    className={`group relative cursor-pointer transition-colors duration-100 ${isSelected ? "bg-[rgba(238,135,72,0.05)]" : "hover:bg-[#f8fafc]"} ${!block.active ? "opacity-40" : ""}`}
+                    className={`group relative cursor-pointer rounded-2xl border p-3.5 transition-all duration-150 ease-linear hover:-translate-y-[1px] hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] ${isSelected ? "border-[#fb923c] bg-[#fff7ed] shadow-[0_8px_20px_rgba(251,146,60,0.14)]" : "border-[#eef2f7] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.04)]"} ${!block.active ? "opacity-55" : ""}`}
+                    style={{ transition: "all 160ms ease" }}
                   >
-                    {/* Selected left accent */}
-                    {isSelected && <div className="absolute inset-y-0 left-0 w-[2px]" style={{ background: "#ee8748" }} />}
-
-                    <div className="flex items-center gap-3 py-3 pl-5 pr-4">
+                    <div className="flex items-start gap-3">
                       {/* Icon */}
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: meta.color }}>
-                        <meta.Icon size={15} strokeWidth={1.75} style={{ color: meta.accent }} />
+                      <div
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                        style={{ background: isSelected ? "rgba(251,146,60,0.14)" : meta.color }}
+                      >
+                        <meta.Icon size={15} strokeWidth={1.9} style={{ color: isSelected ? "#ea580c" : meta.accent }} />
                       </div>
 
                       {/* Info */}
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="truncate text-[13px] font-semibold text-[#0f172a]">{meta.name}</span>
-                          <span className="shrink-0 text-[11px] text-[#cbd5e1]">#{idx + 1}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-[14px] font-semibold text-[#0f172a]">{meta.name}</span>
+                          {isSelected && (
+                            <span className="rounded-full bg-[#ffedd5] px-2 py-0.5 text-[10px] font-semibold text-[#c2410c]">Selecionado</span>
+                          )}
                         </div>
-                        <div className="truncate text-[11px] text-[#94a3b8]">{blockMetaText(block)}</div>
+                        <div className="mt-0.5 truncate text-[12px] text-[#64748b]">{blockMetaText(block)}</div>
+                        <div className="mt-1 flex items-center gap-2 text-[11px] text-[#94a3b8]">
+                          <span>Bloco #{idx + 1}</span>
+                          <span className="h-1 w-1 rounded-full bg-[#cbd5e1]" />
+                          <span>{block.active ? "Ativo" : "Inativo"}</span>
+                        </div>
                       </div>
 
-                      {/* Qty pill */}
-                      <div className="shrink-0 rounded-md px-2 py-0.5 text-[12px] font-bold" style={{ background: meta.color, color: meta.accent }}>
-                        {block.config.quantidade}
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex shrink-0 items-center gap-1.5 pl-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex shrink-0 items-start gap-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="rounded-full bg-[#f1f5f9] px-[10px] py-[4px] text-[12px] font-semibold text-[#334155]">
+                          {block.config.quantidade}
+                        </div>
                         <button
                           onClick={() => toggleBlock(block.id)}
                           aria-label={block.active ? "Desativar bloco" : "Ativar bloco"}
                           className="relative flex h-6 w-11 cursor-pointer items-center rounded-full transition-all duration-200"
-                          style={{ background: block.active ? "#ee8748" : "rgba(255,255,255,0.12)", boxShadow: block.active ? "0 0 10px rgba(238,135,72,0.35)" : "none" }}
+                          style={{ background: block.active ? "#ee8748" : "#e2e8f0", boxShadow: block.active ? "0 0 8px rgba(238,135,72,0.28)" : "none" }}
                         >
                           <div className={`absolute h-4 w-4 rounded-full bg-white shadow-md transition-all duration-200 ${block.active ? "left-6" : "left-1"}`} />
                         </button>
@@ -1777,53 +2328,46 @@ export function SheetGeneratorTool() {
                   </div>
                 );
               })}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={addBlock}
+                  className={`inline-flex items-center gap-2 ${chunkyPrimaryBtn}`}
+                >
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="#fff" strokeWidth="2" strokeLinecap="round" /></svg>
+                  Adicionar Bloco
+                </button>
+              </div>
             </div>
           )}
 
           {/* Total stats */}
           {blocks.length > 0 && (
             <div style={{ borderTop: "1px solid #f1f5f9" }}>
-              <div className="flex items-center justify-between px-5 py-4">
+              <div className="flex items-center justify-between px-5 py-3">
                 <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#94a3b8]">Total de exercícios</div>
-                  <div className="mt-0.5 text-[22px] font-black tracking-tight text-[#0f172a]">{totalExercises}</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#64748b]">Total de exercícios</div>
+                  <div className="mt-0.5 text-[18px] font-black tracking-tight text-[#0f172a]">{totalExercises}</div>
                 </div>
                 <div className="h-8 w-px bg-[#e2e8f0]" />
                 <div className="text-right">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#94a3b8]">Blocos ativos</div>
-                  <div className="mt-0.5 text-[22px] font-black tracking-tight text-[#ee8748]">{activeCount}</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#64748b]">Blocos ativos</div>
+                  <div className="mt-0.5 text-[18px] font-black tracking-tight text-[#ee8748]">{activeCount}</div>
                 </div>
                 <div className="h-8 w-px bg-[#e2e8f0]" />
                 <div className="text-right">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#94a3b8]">Colunas</div>
-                  <div className="mt-0.5 text-[22px] font-black tracking-tight text-[#64748b]">{cfg.cols}</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#64748b]">Colunas</div>
+                  <div className="mt-0.5 text-[18px] font-black tracking-tight text-[#64748b]">{cfg.cols}</div>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Bottom bar — Seed + Print */}
-        <div className="flex shrink-0 items-center gap-3 px-4 py-3" style={{ borderTop: "1px solid #e2e8f0", background: "#f8fafc" }}>
-          {/* Seed chip */}
-          <div className="flex items-center overflow-hidden rounded-lg" style={{ border: "1px solid #e2e8f0" }}>
-            <div className="flex items-center gap-1.5 px-3 py-2" style={{ background: "#ffffff" }}>
-              <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#94a3b8]">Seed</span>
-              <span className="font-mono text-[13px] font-bold text-[#475569]">{seed}</span>
-            </div>
-            <button onClick={rerollSeed} aria-label="Gerar novo seed" title="Novo seed" className="flex h-full cursor-pointer items-center px-2.5 text-[#94a3b8] transition hover:bg-[#f1f5f9] hover:text-[#475569]" style={{ borderLeft: "1px solid #e2e8f0" }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg>
-            </button>
-          </div>
-          <button onClick={handlePrint} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] py-2 text-[12px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.25),0_3px_0_rgba(158,74,30,0.5),0_8px_16px_rgba(93,48,22,0.25)] transition hover:brightness-110 active:translate-y-[2px] active:shadow-none">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            Imprimir / Salvar PDF
-          </button>
-        </div>
       </main>
 
       {/* ── RIGHT PANEL — PREVIEW ───────────────────────────────── */}
-      <aside className={`${mobileTab === "detail" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:min-w-0 md:min-h-0`} style={{ background: "#fff", borderLeft: "1px solid #e2e8f0" }}>
+      <aside className={`${mobileTab === "detail" ? "flex" : "hidden"} flex-col overflow-hidden md:flex md:min-w-0 md:min-h-0`} style={{ background: "#fff", borderLeft: "1px solid #e5e7eb" }}>
 
         <div className="preview-root" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden", background: "#f1f5f9" }}>
           <div className="preview-toolbar" style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, padding: "8px 16px", borderBottom: "1px solid #e5e7eb", background: "#fff" }}>
@@ -1837,8 +2381,7 @@ export function SheetGeneratorTool() {
                 key={z.label}
                 type="button"
                 onClick={() => setZoom(z.value)}
-                className={`rounded-[6px] px-[10px] py-1 text-[11px] font-semibold transition ${zoom === z.value ? "bg-[#f97316] text-white" : "bg-white text-[#64748b] hover:bg-gray-100"}`}
-                style={{ border: "1px solid #e2e8f0" }}
+                className={chunkyChipBtn(zoom === z.value)}
                 aria-label={`Zoom ${z.label}`}
               >
                 {z.label}
@@ -1855,25 +2398,30 @@ export function SheetGeneratorTool() {
               <div
                 className="page-wrapper"
                 style={{
-                  width: `${A4_W}px`,
-                  height: `${A4_H}px`,
-                  transform: `scale(${previewScale})`,
-                  transformOrigin: "top center",
-                  transition: "transform 0.2s ease, opacity 0.2s ease",
+                  width: `${Math.round(A4_W * previewScale)}px`,
+                  height: `${Math.round(A4_H * previewScale)}px`,
+                  transition: "width 0.2s ease, height 0.2s ease, opacity 0.2s ease",
                   borderRadius: 8,
                   boxShadow: "0 20px 40px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04)",
                   margin: "auto",
+                  overflow: "hidden",
+                  position: "relative",
                 }}
               >
                 <div
                   className="preview-container"
                   key={currentPage}
                   style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    width: `${A4_W}px`,
+                    height: `${A4_H}px`,
+                    transform: `scale(${previewScale})`,
+                    transformOrigin: "top left",
                     display: "flex",
                     justifyContent: "center",
                     alignItems: "flex-start",
-                    height: "100%",
-                    overflow: "hidden",
                     animation: "previewPageFade 200ms ease-out",
                   }}
                 >
@@ -1895,7 +2443,7 @@ export function SheetGeneratorTool() {
         </div>
 
         {/* Rodapé do preview: paginação */}
-        <div className="shrink-0 px-4 py-3" style={{ background: "#fff", borderTop: "1px solid #e2e8f0" }}>
+        <div className="shrink-0 px-4 py-3" style={{ background: "#fff", borderTop: "1px solid #e5e7eb" }}>
           <div
             className="pagination"
             style={{
@@ -1911,8 +2459,7 @@ export function SheetGeneratorTool() {
             <button
               onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
               disabled={currentPage === 0 || previewPages.length <= 1}
-              className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-[#f8fafc] disabled:opacity-35"
-              style={{ border: "1px solid #e2e8f0", transition: "all 180ms ease" }}
+              className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn} disabled:opacity-35`}
               aria-label="Página anterior"
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
@@ -1923,8 +2470,7 @@ export function SheetGeneratorTool() {
             <button
               onClick={() => setCurrentPage((p) => Math.min(previewPages.length - 1, p + 1))}
               disabled={currentPage === previewPages.length - 1 || previewPages.length <= 1}
-              className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-[#f8fafc] disabled:opacity-35"
-              style={{ border: "1px solid #e2e8f0", transition: "all 180ms ease" }}
+              className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn} disabled:opacity-35`}
               aria-label="Próxima página"
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
@@ -1942,7 +2488,7 @@ export function SheetGeneratorTool() {
                 <div className="text-[15px] font-bold text-[#0f172a]">{BLOCK_META[selectedBlock.type].name}</div>
                 <div className="text-[11px] text-[#94a3b8]">#{selectedBlock.id} · {selectedBlock.active ? <span className="text-emerald-500">Ativo</span> : <span className="text-[#94a3b8]">Inativo</span>}</div>
               </div>
-              <button onClick={() => setBlockDetailModalOpen(false)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#94a3b8] transition hover:bg-[#f1f5f9] hover:text-[#475569]">
+              <button onClick={() => setBlockDetailModalOpen(false)} className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn}`}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
@@ -1963,7 +2509,7 @@ export function SheetGeneratorTool() {
                 <div className="text-[15px] font-bold text-[#0f172a]">Layout Global</div>
                 <div className="text-[12px] text-[#94a3b8]">Configurações visuais da folha</div>
               </div>
-              <button onClick={() => setLayoutModalOpen(false)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#94a3b8] transition hover:bg-[#f1f5f9] hover:text-[#475569]">
+              <button onClick={() => setLayoutModalOpen(false)} className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn}`}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
@@ -2008,7 +2554,7 @@ export function SheetGeneratorTool() {
             </div>
             {/* Footer */}
             <div className="border-t border-[#f1f5f9] px-5 py-3">
-              <button onClick={() => setLayoutModalOpen(false)} className="w-full cursor-pointer rounded-lg bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] py-2.5 text-[13px] font-semibold text-white transition hover:brightness-110">
+              <button onClick={() => setLayoutModalOpen(false)} className={`w-full ${chunkyPrimaryBtn}`}>
                 Confirmar
               </button>
             </div>
@@ -2026,7 +2572,7 @@ export function SheetGeneratorTool() {
                 <div className="text-[15px] font-bold text-[#0f172a]">Opções</div>
                 <div className="text-[12px] text-[#94a3b8]">Personalização da folha</div>
               </div>
-              <button onClick={() => setOpcoesModalOpen(false)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#94a3b8] transition hover:bg-[#f1f5f9] hover:text-[#475569]">
+              <button onClick={() => setOpcoesModalOpen(false)} className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn}`}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
@@ -2044,7 +2590,7 @@ export function SheetGeneratorTool() {
                   role="switch"
                   aria-checked={!!cfg[key]}
                   onClick={() => updateCfg(key, !cfg[key] as never)}
-                  className="flex w-full cursor-pointer items-center gap-4 rounded-xl border border-[#e2e8f0] bg-white px-4 py-3 text-left transition hover:border-[#d1d5db] hover:bg-[#f8fafc]"
+                  className={`flex w-full cursor-pointer items-center gap-4 px-4 py-3 text-left ${chunkySmallOutlineBtn}`}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="text-[13px] font-semibold text-[#334155]">{label}</div>
@@ -2058,7 +2604,7 @@ export function SheetGeneratorTool() {
             </div>
             {/* Footer */}
             <div className="border-t border-[#f1f5f9] px-5 py-3">
-              <button onClick={() => setOpcoesModalOpen(false)} className="w-full cursor-pointer rounded-lg bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] py-2.5 text-[13px] font-semibold text-white transition hover:brightness-110">
+              <button onClick={() => setOpcoesModalOpen(false)} className={`w-full ${chunkyPrimaryBtn}`}>
                 Confirmar
               </button>
             </div>
@@ -2075,7 +2621,7 @@ export function SheetGeneratorTool() {
                 <div className="text-[15px] font-bold text-[#0f172a]">Salvar Template</div>
                 <div className="text-[12px] text-[#94a3b8]">Reutilize este layout depois</div>
               </div>
-              <button onClick={() => setSaveTemplateModalOpen(false)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#94a3b8] transition hover:bg-[#f1f5f9] hover:text-[#475569]">
+              <button onClick={() => setSaveTemplateModalOpen(false)} className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn}`}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
@@ -2092,13 +2638,44 @@ export function SheetGeneratorTool() {
               <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2 text-[11px] text-[#64748b]">
                 {totalExercises} exercícios · {blocks.filter((b) => b.active).length} blocos ativos
               </div>
+              <div className="text-[11px] text-[#94a3b8]">
+                Dica: salve versões por tema (ex.: Frações 7º ano) para montar atividades em segundos.
+              </div>
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-[#f1f5f9] px-5 py-3">
-              <button onClick={() => setSaveTemplateModalOpen(false)} className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-[12px] font-semibold text-[#64748b] transition hover:bg-[#f8fafc]">
+              <button onClick={() => setSaveTemplateModalOpen(false)} className={chunkyOutlineBtn}>
                 Cancelar
               </button>
-              <button onClick={handleSaveTemplate} className="rounded-lg bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-3 py-2 text-[12px] font-semibold text-white transition hover:brightness-110">
+              <button onClick={handleSaveTemplate} className={chunkyPrimaryBtn}>
                 Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {paywallOpen && (
+        <div className="fixed inset-0 z-[220] flex items-center justify-center" style={{ backdropFilter: "blur(6px)", background: "rgba(15,23,42,0.45)" }} onClick={() => setPaywallOpen(false)}>
+          <div className="relative mx-4 w-full max-w-[420px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-[#f1f5f9] px-5 py-4">
+              <div>
+                <div className="text-[15px] font-bold text-[#0f172a]">Gerações esgotadas</div>
+                <div className="text-[12px] text-[#94a3b8]">Compre mais créditos para continuar</div>
+              </div>
+              <button onClick={() => setPaywallOpen(false)} className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn}`}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div className="space-y-3 px-5 py-4">
+              <div className="rounded-lg border border-[#fee2e2] bg-[#fff1f2] px-3 py-2 text-[12px] text-[#9f1239]">
+                Você chegou a 0 gerações. Recarregue para liberar novas folhas.
+              </div>
+              <button
+                onClick={() => void handleBuyCredits()}
+                disabled={checkoutBusy}
+                className={`w-full ${chunkyPrimaryBtn} disabled:opacity-60`}
+              >
+                {checkoutBusy ? "Abrindo checkout..." : "Comprar créditos"}
               </button>
             </div>
           </div>
@@ -2114,14 +2691,15 @@ export function SheetGeneratorTool() {
                 <div className="text-[15px] font-bold text-[#0f172a]">Meus Templates</div>
                 <div className="text-[12px] text-[#94a3b8]">Carregue, duplique ou exclua templates</div>
               </div>
-              <button onClick={() => setTemplatesModalOpen(false)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#94a3b8] transition hover:bg-[#f1f5f9] hover:text-[#475569]">
+              <button onClick={() => setTemplatesModalOpen(false)} className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn}`}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4">
               {templates.length === 0 ? (
-                <div className="flex h-full min-h-[220px] items-center justify-center rounded-xl border border-dashed border-[#e2e8f0] bg-[#f8fafc] text-[12px] text-[#94a3b8]">
-                  Nenhum template salvo ainda
+                <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#e2e8f0] bg-[#f8fafc] px-4 text-center">
+                  <div className="text-[12px] font-semibold text-[#64748b]">Nenhum template salvo ainda</div>
+                  <div className="text-[11px] text-[#94a3b8]">Monte sua lista de exercícios e clique em “Salvar Template”.</div>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -2146,21 +2724,21 @@ export function SheetGeneratorTool() {
                               <button
                                 onClick={() => handleLoadTemplate(tpl)}
                                 disabled={templateBusyId === tpl.id}
-                                className="rounded-lg bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-3 py-1.5 text-[11px] font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
+                                className={`${chunkyPrimaryBtn} px-3 py-1.5 text-[11px] disabled:opacity-60`}
                               >
                                 {templateBusyId === tpl.id ? "Carregando..." : "Carregar"}
                               </button>
                               <button
                                 onClick={() => handleDuplicateTemplate(tpl)}
                                 disabled={templateBusyId === tpl.id}
-                                className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#64748b] transition hover:bg-[#f8fafc] disabled:opacity-60"
+                                className={`${chunkySmallOutlineBtn} disabled:opacity-60`}
                               >
                                 Duplicar
                               </button>
                               <button
                                 onClick={() => handleDeleteTemplate(tpl.id)}
                                 disabled={templateBusyId === tpl.id}
-                                className="rounded-lg border border-[#fee2e2] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#ef4444] transition hover:bg-[#fef2f2] disabled:opacity-60"
+                                className={`${chunkySmallDestructiveBtn} disabled:opacity-60`}
                               >
                                 Excluir
                               </button>
@@ -2195,7 +2773,7 @@ export function SheetGeneratorTool() {
                 <div className="text-[15px] font-bold text-[#0f172a]">Preset Pedagógico</div>
                 <div className="text-[12px] text-[#94a3b8]">Selecione um modelo para começar</div>
               </div>
-              <button onClick={() => setPresetModalOpen(false)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#94a3b8] transition hover:bg-[#f1f5f9] hover:text-[#475569]">
+              <button onClick={() => setPresetModalOpen(false)} className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn}`}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
@@ -2276,7 +2854,7 @@ export function SheetGeneratorTool() {
               <button
                 type="button"
                 onClick={() => { applyPreset("limpar", setBlocks, nextId); setSelectedBlockId(null); invalidate(); setPresetModalOpen(false); showToast("Blocos removidos"); }}
-                className="w-full cursor-pointer rounded-lg py-2 text-[12px] font-semibold text-[#94a3b8] transition hover:bg-red-50 hover:text-red-400"
+                className={`w-full ${chunkySmallDestructiveBtn}`}
               >
                 ↺ Limpar todos os blocos
               </button>
@@ -2305,13 +2883,107 @@ function BlockDetailPanel({ block, onUpdate, onChangeType }: {
   onUpdate: (id: number, key: keyof BlockConfig, val: unknown) => void;
   onChangeType: (id: number, type: BlockType) => void;
 }) {
+  const PremiumSelect = ({
+    value,
+    options,
+    onChange,
+  }: {
+    value: string;
+    options: Array<{ value: string; label: string }>;
+    onChange: (value: string) => void;
+  }) => {
+    const [open, setOpen] = useState(false);
+    const rootRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      const onPointerDown = (event: PointerEvent) => {
+        if (!rootRef.current) return;
+        if (!rootRef.current.contains(event.target as Node)) {
+          setOpen(false);
+        }
+      };
+      const onKeyDown = (event: KeyboardEvent) => {
+        if (event.key === "Escape") {
+          setOpen(false);
+        }
+      };
+      window.addEventListener("pointerdown", onPointerDown);
+      window.addEventListener("keydown", onKeyDown);
+      return () => {
+        window.removeEventListener("pointerdown", onPointerDown);
+        window.removeEventListener("keydown", onKeyDown);
+      };
+    }, []);
+
+    const selected = options.find((opt) => opt.value === value);
+
+    return (
+      <div ref={rootRef} className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen((prev) => !prev)}
+          className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[#d1d5db] bg-white px-3 py-2 text-left text-[13px] font-semibold text-[#0f172a] shadow-[0_2px_0_rgba(207,217,243,0.95)] outline-none transition hover:border-[#cbd5e1] focus:border-[#ee8748]"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+        >
+          <span>{selected?.label ?? "Selecionar"}</span>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            className={`text-[#64748b] transition-transform ${open ? "rotate-180" : ""}`}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+        {open && (
+          <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-[var(--radius-md)] border border-[#e2e8f0] bg-white shadow-[0_10px_24px_rgba(15,23,42,0.16)]">
+            <div role="listbox" className="max-h-52 overflow-y-auto py-1">
+              {options.map((opt) => {
+                const isSelected = opt.value === value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      onChange(opt.value);
+                      setOpen(false);
+                    }}
+                    className={`flex w-full items-center justify-between px-3 py-2 text-left text-[13px] transition ${
+                      isSelected
+                        ? "bg-[#fff7ed] font-semibold text-[#c2410c]"
+                        : "text-[#334155] hover:bg-[#f8fafc]"
+                    }`}
+                    role="option"
+                    aria-selected={isSelected}
+                  >
+                    <span>{opt.label}</span>
+                    {isSelected && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2410c" strokeWidth="2.4" strokeLinecap="round">
+                        <path d="M5 12l4 4 10-10" />
+                      </svg>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const meta = BLOCK_META[block.type];
   const c = block.config;
   const id = block.id;
   const up = (key: keyof BlockConfig, val: unknown) => onUpdate(id, key, val);
 
   const SegBtn = ({ val, cur, onSel, label }: { val: string; cur: string | undefined; onSel: (v: string) => void; label: string }) => (
-    <button onClick={() => onSel(val)} className={`rounded px-2.5 py-1 text-xs font-semibold transition ${cur === val ? "bg-[#ee8748] text-white" : "border border-[#d1d5db] text-[#64748b] hover:text-[#0f172a]"}`}>{label}</button>
+    <button onClick={() => onSel(val)} className={`rounded-[var(--radius-sm)] px-2.5 py-1 text-xs font-semibold transition ${cur === val ? "bg-[#ee8748] text-white" : "border border-[#d1d5db] text-[#64748b] hover:text-[#0f172a]"}`}>{label}</button>
   );
 
   const Toggle = ({ val, onSel, label }: { val: boolean; onSel: (v: boolean) => void; label: string }) => (
@@ -2345,9 +3017,11 @@ function BlockDetailPanel({ block, onUpdate, onChangeType }: {
         <div className="mb-1 text-[10px] font-bold uppercase tracking-[1.3px] text-[#94a3b8]">Tipo de Exercício</div>
         <div className="mb-4">
           <label className="mb-1 block text-xs text-[#475569]">Categoria</label>
-          <select className="w-full rounded-md border border-[#d1d5db] bg-white px-2.5 py-1.5 text-[13px] text-[#0f172a] outline-none focus:border-[#ee8748]" value={block.type} onChange={(e) => onChangeType(id, e.target.value as BlockType)}>
-            {Object.entries(BLOCK_META).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}
-          </select>
+          <PremiumSelect
+            value={block.type}
+            options={Object.entries(BLOCK_META).map(([k, v]) => ({ value: k, label: v.name }))}
+            onChange={(value) => onChangeType(id, value as BlockType)}
+          />
         </div>
 
         {/* Quantity */}
@@ -2362,12 +3036,16 @@ function BlockDetailPanel({ block, onUpdate, onChangeType }: {
           <>
             <div className="mb-3">
               <label className="mb-1 block text-xs text-[#475569]">Operação</label>
-              <select className="w-full rounded-md border border-[#d1d5db] bg-white px-2.5 py-1.5 text-[13px] text-[#0f172a] outline-none focus:border-[#ee8748]" value={c.operacao} onChange={(e) => up("operacao", e.target.value)}>
-                <option value="adicao">Adição</option>
-                <option value="subtracao">Subtração</option>
-                <option value="multiplicacao">Multiplicação</option>
-                <option value="divisao">Divisão</option>
-              </select>
+              <PremiumSelect
+                value={c.operacao ?? "multiplicacao"}
+                options={[
+                  { value: "adicao", label: "Adição" },
+                  { value: "subtracao", label: "Subtração" },
+                  { value: "multiplicacao", label: "Multiplicação" },
+                  { value: "divisao", label: "Divisão" },
+                ]}
+                onChange={(value) => up("operacao", value)}
+              />
             </div>
             <div className="mb-3 grid grid-cols-2 gap-2">
               <RangeRow label="Dígitos 1" value={c.digitos1 ?? 3} min={1} max={6} onSel={(v) => up("digitos1", v)} />
@@ -2413,7 +3091,7 @@ function BlockDetailPanel({ block, onUpdate, onChangeType }: {
               <label className="mb-1 block text-xs text-[#475569]">Tipo de Equação</label>
               <div className="grid grid-cols-2 gap-1">
                 {["misto", "ax+b=c", "ax-b=c", "x/a+b=c"].map((t) => (
-                  <button key={t} onClick={() => up("tipo", t)} className={`rounded py-1 font-mono text-xs font-semibold transition ${c.tipo === t ? "bg-[#ee8748] text-white" : "border border-[#d1d5db] text-[#64748b] hover:text-[#0f172a]"}`}>{t}</button>
+                  <button key={t} onClick={() => up("tipo", t)} className={`rounded-[var(--radius-sm)] py-1 font-mono text-xs font-semibold transition ${c.tipo === t ? "bg-[#ee8748] text-white" : "border border-[#d1d5db] text-[#64748b] hover:text-[#0f172a]"}`}>{t}</button>
                 ))}
               </div>
             </div>
@@ -2468,10 +3146,10 @@ function BlockDetailPanel({ block, onUpdate, onChangeType }: {
             <div className="mb-3">
               <label className="mb-1 block text-xs text-[#475569]">Agrupamento</label>
               <div className="flex flex-wrap gap-1">
-                <button onClick={() => { up("usarParenteses", false); up("nivelAgrupamento", 0); }} className={`rounded px-2.5 py-1 text-xs font-semibold transition ${!c.usarParenteses ? "bg-[#ee8748] text-white" : "border border-white/15 text-white/60 hover:text-white"}`}>Nenhum</button>
-                <button onClick={() => { up("usarParenteses", true); up("nivelAgrupamento", 1); }} className={`rounded px-2.5 py-1 text-xs font-semibold transition ${c.usarParenteses && (c.nivelAgrupamento ?? 1) === 1 ? "bg-[#ee8748] text-white" : "border border-white/15 text-white/60 hover:text-white"}`}>( )</button>
-                <button onClick={() => { up("usarParenteses", true); up("nivelAgrupamento", 2); }} className={`rounded px-2.5 py-1 text-xs font-semibold transition ${c.usarParenteses && c.nivelAgrupamento === 2 ? "bg-[#ee8748] text-white" : "border border-white/15 text-white/60 hover:text-white"}`}>[ ]</button>
-                <button onClick={() => { up("usarParenteses", true); up("nivelAgrupamento", 3); }} className={`rounded px-2.5 py-1 text-xs font-semibold transition ${c.usarParenteses && c.nivelAgrupamento === 3 ? "bg-[#ee8748] text-white" : "border border-white/15 text-white/60 hover:text-white"}`}>{"{ }"}</button>
+                <button onClick={() => { up("usarParenteses", false); up("nivelAgrupamento", 0); }} className={`rounded-[var(--radius-sm)] px-2.5 py-1 text-xs font-semibold transition ${!c.usarParenteses ? "bg-[#ee8748] text-white" : "border border-white/15 text-white/60 hover:text-white"}`}>Nenhum</button>
+                <button onClick={() => { up("usarParenteses", true); up("nivelAgrupamento", 1); }} className={`rounded-[var(--radius-sm)] px-2.5 py-1 text-xs font-semibold transition ${c.usarParenteses && (c.nivelAgrupamento ?? 1) === 1 ? "bg-[#ee8748] text-white" : "border border-white/15 text-white/60 hover:text-white"}`}>( )</button>
+                <button onClick={() => { up("usarParenteses", true); up("nivelAgrupamento", 2); }} className={`rounded-[var(--radius-sm)] px-2.5 py-1 text-xs font-semibold transition ${c.usarParenteses && c.nivelAgrupamento === 2 ? "bg-[#ee8748] text-white" : "border border-white/15 text-white/60 hover:text-white"}`}>[ ]</button>
+                <button onClick={() => { up("usarParenteses", true); up("nivelAgrupamento", 3); }} className={`rounded-[var(--radius-sm)] px-2.5 py-1 text-xs font-semibold transition ${c.usarParenteses && c.nivelAgrupamento === 3 ? "bg-[#ee8748] text-white" : "border border-white/15 text-white/60 hover:text-white"}`}>{"{ }"}</button>
               </div>
             </div>
           </>
@@ -2480,3 +3158,5 @@ function BlockDetailPanel({ block, onUpdate, onChangeType }: {
     </>
   );
 }
+
+

@@ -572,7 +572,7 @@ export default function TicTacToePage() {
   };
 
   return (
-    <ChildDesktopShell activeNav="jogos">
+    <ChildDesktopShell activeNav="jogos" menuSkin="trail">
       <ConfettiBurst trigger={confettiTrigger} />
       {levelUpLevel !== null ? (
         <LevelUpOverlay

@@ -8,15 +8,18 @@ logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from redis.asyncio import Redis
+from sqlalchemy import select
 
-from app.api.deps import get_current_tenant, get_current_user
-from app.models import Tenant, User
+from app.api.deps import DBSession, get_current_tenant, get_current_user
+from app.core.security import decode_token
+from app.models import Tenant, User, UserCredits
 from app.schemas.tools import (
     ToolsBillingStatusResponse,
     ToolsCatalogItemOut,
     ToolsCatalogResponse,
     ToolsCheckoutSessionRequest,
     ToolsCheckoutSessionResponse,
+    ToolsCreditsResponse,
     ToolsExerciseItemOut,
     ToolsGenerateExercisesRequest,
     ToolsGenerateExercisesResponse,
@@ -62,6 +65,49 @@ def _generation_scope_key(request: Request, session_token: str | None) -> str:
         return f"session:{session_token}"
     host = request.client.host if request.client is not None else "unknown"
     return f"ip:{host}"
+
+
+def _resolve_optional_user(request: Request, db: DBSession) -> User | None:
+    auth_header = request.headers.get("Authorization")
+    if not auth_header:
+        return None
+    scheme, _, token = auth_header.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        return None
+    try:
+        payload = decode_token(token)
+    except Exception:
+        return None
+    if payload.get("type") != "access":
+        return None
+    sub = payload.get("sub")
+    if not isinstance(sub, str) or not sub.isdigit():
+        return None
+    user = db.get(User, int(sub))
+    return user
+
+
+def _get_or_create_user_credits(db: DBSession, *, user_id: int) -> UserCredits:
+    row = db.scalar(select(UserCredits).where(UserCredits.user_id == user_id))
+    if row is not None:
+        return row
+    row = UserCredits(user_id=user_id, credits=0)
+    db.add(row)
+    db.flush()
+    return row
+
+
+def _consume_user_credit_or_raise(db: DBSession, *, user_id: int) -> int:
+    row = _get_or_create_user_credits(db, user_id=user_id)
+    if int(row.credits) <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail={"message": "Sem créditos disponíveis", "credits": 0},
+        )
+    row.credits = int(row.credits) - 1
+    db.add(row)
+    db.commit()
+    return int(row.credits)
 
 
 def _build_paywall_detail(
@@ -188,7 +234,59 @@ async def generate_exercises(
     payload: ToolsGenerateExercisesRequest,
     request: Request,
     service: Annotated[ToolsService, Depends(get_tools_service)],
+    db: DBSession,
 ) -> ToolsGenerateExercisesResponse:
+    auth_user = _resolve_optional_user(request, db)
+    if auth_user is not None:
+        paid_credits_remaining = _consume_user_credit_or_raise(db, user_id=auth_user.id)
+        generator = ToolsExerciseGeneratorService()
+        generated, llm_mode = generator.generate(
+            ExerciseGenerationInput(
+                subject=payload.subject,
+                topic=payload.topic,
+                age=payload.age,
+                difficulty=payload.difficulty,
+                exercise_count=payload.exercise_count,
+            )
+        )
+        raw_exercises = generated["exercises"]
+        exercises = [
+            ToolsExerciseItemOut(
+                number=int(item["number"]),
+                prompt=str(item["prompt"]),
+                answer=str(item["answer"]),
+            )
+            for item in raw_exercises
+        ]
+        answer_key = [
+            ToolsExerciseItemOut(
+                number=item.number,
+                prompt=item.prompt,
+                answer=item.answer,
+            )
+            for item in exercises
+        ]
+        pdf_html = build_axiora_pdf_html(
+            title=generated["title"],
+            instructions=generated["instructions"],
+            exercises=[item.model_dump() for item in exercises],
+            answer_key=[item.model_dump() for item in answer_key],
+        )
+        return ToolsGenerateExercisesResponse(
+            title=generated["title"],
+            instructions=generated["instructions"],
+            exercises=exercises,
+            answer_key=answer_key,
+            pdf_html=pdf_html,
+            free_limit=0,
+            free_used=0,
+            remaining_free_generations=0,
+            paywall_required=False,
+            upgrade_url=UPGRADE_URL,
+            llm_mode=llm_mode,
+            paid_credits_remaining=paid_credits_remaining,
+        )
+
     scope_key = _generation_scope_key(request, payload.session_token)
     free_used_before = await service.get_free_generation_usage(key_id=scope_key)
     paid_credits_before = await service.get_paid_generation_credits(key_id=scope_key)
@@ -293,10 +391,58 @@ async def create_tools_checkout_session(
     )
 
 
+@router.get("/credits", response_model=ToolsCreditsResponse)
+async def get_tools_credits(
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> ToolsCreditsResponse:
+    row = _get_or_create_user_credits(db, user_id=user.id)
+    db.commit()
+    return ToolsCreditsResponse(credits=int(row.credits))
+
+
+@router.post("/use-credit", response_model=ToolsCreditsResponse)
+async def use_tools_credit(
+    db: DBSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> ToolsCreditsResponse:
+    remaining = _consume_user_credit_or_raise(db, user_id=user.id)
+    return ToolsCreditsResponse(credits=remaining)
+
+
+@router.post("/checkout", response_model=ToolsCheckoutSessionResponse)
+async def create_tools_checkout(
+    payload: ToolsCheckoutSessionRequest,
+    user: Annotated[User, Depends(get_current_user)],
+) -> ToolsCheckoutSessionResponse:
+    billing = ToolsBillingService()
+    try:
+        checkout = billing.create_checkout_session(
+            plan_code=payload.plan_code,
+            session_scope_key=f"user:{user.id}",
+            customer_email=payload.customer_email or user.email,
+        )
+    except BillingConfigError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    except BillingGatewayError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+    return ToolsCheckoutSessionResponse(
+        checkout_url=checkout.url,
+        checkout_session_id=checkout.id,
+    )
+
+
 @router.post("/billing/stripe-webhook")
 async def handle_tools_stripe_webhook(
     request: Request,
     service: Annotated[ToolsService, Depends(get_tools_service)],
+    db: DBSession,
     stripe_signature: Annotated[str | None, Header(alias="Stripe-Signature")] = None,
 ) -> dict[str, bool]:
     raw_payload = await request.body()
@@ -331,6 +477,15 @@ async def handle_tools_stripe_webhook(
         logger.info("tools.webhook: event type=%s — no action taken", parsed.get("type", "unknown"))
         return {"ok": True}
     scope_key, credits = grant
+    if scope_key.startswith("user:"):
+        _, _, user_id_token = scope_key.partition(":")
+        if user_id_token.isdigit():
+            row = _get_or_create_user_credits(db, user_id=int(user_id_token))
+            row.credits = int(row.credits) + int(credits)
+            db.add(row)
+            db.commit()
+            logger.info("tools.webhook: granted %d credits to user_id=%s (total=%d)", credits, user_id_token, int(row.credits))
+            return {"ok": True}
     total = await service.grant_paid_generation_credits(key_id=scope_key, credits=credits)
     logger.info("tools.webhook: granted %d credits to scope=%s (total=%d)", credits, scope_key, total)
     return {"ok": True}

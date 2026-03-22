@@ -3,8 +3,43 @@
 @tailwind utilities;
 
 :root {
-  --app-bg-color: #2a211c;
-  --app-fg-color: #3a3028;
+  /* Axiora Design System v2 */
+  --axiora-bg-deep: #071427;
+  --axiora-bg-mid: #0d1f3a;
+  --axiora-bg-soft: #172e52;
+  --axiora-text-primary: #0f172a;
+  --axiora-text-secondary: #475569;
+  --axiora-accent: #fb923c;
+  --axiora-accent-soft: #ffedd5;
+  --axiora-line-soft: rgba(148, 163, 184, 0.26);
+  --axiora-surface-glass: rgba(255, 255, 255, 0.72);
+  --axiora-surface-glass-strong: rgba(255, 255, 255, 0.84);
+  --axiora-surface-contrast: rgba(248, 250, 252, 0.72);
+  --axiora-shadow-soft: 0 8px 22px rgba(15, 23, 42, 0.10);
+  --axiora-shadow-soft-lg: 0 14px 30px rgba(15, 23, 42, 0.13);
+  --axiora-space-1: 4px;
+  --axiora-space-2: 8px;
+  --axiora-space-3: 12px;
+  --axiora-space-4: 16px;
+  --axiora-space-5: 20px;
+  --axiora-space-6: 24px;
+  --axiora-space-7: 32px;
+  --axiora-space-8: 40px;
+  --axiora-space-9: 48px;
+  --axiora-radius-sm: 12px;
+  --axiora-radius-md: 16px;
+  --axiora-radius-lg: 20px;
+  --axiora-radius-xl: 24px;
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --axiora-radius-sm: var(--radius-sm);
+  --axiora-radius-md: var(--radius-md);
+  --axiora-radius-lg: var(--radius-lg);
+  --axiora-radius-xl: 14px;
+  --app-bg-color: #f3f7ff;
+  --app-fg-color: #0f172a;
   --app-bg-gradient: radial-gradient(circle at 50% -12%, rgba(255, 122, 47, 0.18) 0%, transparent 70%);
   --theme-primary-rgb: 255 107 61;
   --theme-secondary-rgb: 223 155 95;
@@ -83,7 +118,7 @@ html {
   max-width: 100%;
   overflow-x: hidden;
   width: 100%;
-  background-color: #18312e;
+  background-color: #f3f7ff;
 }
 
 
@@ -94,14 +129,14 @@ body::-webkit-scrollbar {
 
 html::-webkit-scrollbar-track,
 body::-webkit-scrollbar-track {
-  background: #2a211c;
+  background: #e6ecf5;
 }
 
 html::-webkit-scrollbar-thumb,
 body::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, rgba(241, 177, 118, 0.72), rgba(224, 107, 44, 0.62));
   border-radius: 9999px;
-  border: 2px solid #2a211c;
+  border: 2px solid #e6ecf5;
 }
 
 img,
@@ -132,6 +167,39 @@ h2 {
   line-height: 1.35;
   font-weight: 700;
   font-family: var(--font-display), var(--font-ui), ui-sans-serif, system-ui, sans-serif;
+}
+
+.axiora-core-bg {
+  background:
+    radial-gradient(1200px 540px at 8% -12%, rgba(56, 189, 248, 0.10), transparent 60%),
+    radial-gradient(980px 520px at 92% -10%, rgba(251, 146, 60, 0.12), transparent 58%),
+    linear-gradient(180deg, rgba(241, 245, 249, 0.92) 0%, rgba(226, 236, 250, 0.84) 100%);
+}
+
+.axiora-surface-glass {
+  border: 1px solid var(--axiora-line-soft);
+  border-radius: var(--axiora-radius-xl);
+  background: linear-gradient(160deg, var(--axiora-surface-glass-strong) 0%, var(--axiora-surface-glass) 100%);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--axiora-shadow-soft);
+}
+
+.axiora-surface-soft {
+  border: 1px solid var(--axiora-line-soft);
+  border-radius: var(--axiora-radius-lg);
+  background: var(--axiora-surface-contrast);
+  box-shadow: var(--axiora-shadow-soft);
+}
+
+.axiora-title {
+  color: var(--axiora-text-primary);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.axiora-subtitle {
+  color: var(--axiora-text-secondary);
+  font-weight: 600;
 }
 
 @layer base {
@@ -247,7 +315,7 @@ h2 {
   position: relative;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--axiora-btn-edge) 62%, white 16%);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: var(--axiora-btn-face);
   color: var(--axiora-btn-text);
   box-shadow:
@@ -267,7 +335,7 @@ h2 {
   position: absolute;
   inset: 1px 1px auto 1px;
   height: 48%;
-  border-radius: 16px 16px 12px 12px;
+  border-radius: var(--radius-md) var(--radius-md) var(--radius-sm) var(--radius-sm);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0));
   pointer-events: none;
 }
@@ -329,7 +397,7 @@ h2 {
 }
 
 .axiora-chunky-btn--compact {
-  border-radius: 9999px;
+  border-radius: var(--radius-lg);
 }
 
 .axiora-chunky-chip {
@@ -337,7 +405,7 @@ h2 {
   --axiora-btn-edge: rgba(201, 181, 153, 0.96);
   --axiora-btn-floor: rgba(73, 57, 40, 0.16);
   --axiora-btn-text: #1f3d39;
-  border-radius: 9999px;
+  border-radius: var(--radius-lg);
 }
 
 .axiora-chunky-chip--active {
@@ -348,14 +416,14 @@ h2 {
 }
 
 .axiora-admin-btn {
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   font-weight: 800;
   letter-spacing: 0.01em;
 }
 
 .axiora-admin-btn-sm {
   min-height: 2rem;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 0.45rem 0.7rem;
   font-size: 0.75rem;
   font-weight: 800;
@@ -367,7 +435,7 @@ h2 {
   --axiora-btn-edge: #cfbea4;
   --axiora-btn-floor: rgba(92, 76, 56, 0.18);
   --axiora-btn-text: #3d4f46;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   font-weight: 800;
 }
 

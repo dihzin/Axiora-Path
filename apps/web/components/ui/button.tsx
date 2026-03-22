@@ -19,9 +19,9 @@ const buttonVariants = cva(
           "axiora-chunky-btn--outline",
       },
       size: {
-        default: "min-h-11 rounded-[18px] px-5 py-2.5",
-        sm: "min-h-10 rounded-[16px] px-4 py-2 text-xs",
-        lg: "min-h-12 rounded-[20px] px-7 py-3 text-base",
+        default: "min-h-11 rounded-[var(--radius-lg)] px-5 py-2.5",
+        sm: "min-h-10 rounded-[var(--radius-md)] px-4 py-2 text-xs",
+        lg: "min-h-12 rounded-[var(--radius-lg)] px-7 py-3 text-base",
       },
     },
     defaultVariants: {

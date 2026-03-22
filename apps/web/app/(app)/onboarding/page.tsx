@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChildAvatar } from "@/components/child-avatar";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { ApiError, acceptLegal, completeOnboarding, getApiErrorMessage, getTasks, updateTask } from "@/lib/api/client";
 
 const TOTAL_STEPS = 6;
@@ -388,7 +389,7 @@ export default function OnboardingPage() {
                         <div className="space-y-2">
                           <Input value={editingTitle} onChange={(e) => setEditingTitle(e.target.value)} placeholder="Título da tarefa" />
                           <div className="grid grid-cols-2 gap-2">
-                            <select
+                            <NativeSelect
                               value={editingDifficulty}
                               onChange={(e) => setEditingDifficulty(e.target.value as "EASY" | "MEDIUM" | "HARD" | "LEGENDARY")}
                               className="axiora-auth-field h-9 rounded-md px-2 text-xs"
@@ -397,7 +398,7 @@ export default function OnboardingPage() {
                               <option value="MEDIUM">MEDIUM</option>
                               <option value="HARD">HARD</option>
                               <option value="LEGENDARY">LEGENDARY</option>
-                            </select>
+                            </NativeSelect>
                             <Input
                               type="number"
                               min={1}
@@ -534,3 +535,4 @@ export default function OnboardingPage() {
     </main>
   );
 }
+

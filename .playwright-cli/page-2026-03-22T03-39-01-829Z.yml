@@ -1,0 +1,86 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - main [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e7]:
+          - img "Mascote Axiora" [ref=e9]
+          - generic [ref=e10]:
+            - img [ref=e12]
+            - generic [ref=e18]:
+              - paragraph [ref=e19]: Missão concluída!
+              - generic [ref=e23]: +120 XP
+          - generic [ref=e24]:
+            - heading "Abrir caminhos. Cultivar conquistas." [level=1] [ref=e26]:
+              - generic [ref=e27]: Abrir
+              - generic [ref=e28]: caminhos.
+              - generic [ref=e29]: Cultivar
+              - generic [ref=e30]: conquistas.
+            - paragraph [ref=e31]: Seu filho aprende jogando, ganha XP e sobe de nível — enquanto você acompanha cada conquista em tempo real.
+          - generic [ref=e32]:
+            - generic [ref=e36]:
+              - paragraph [ref=e37]:
+                - img [ref=e38]
+                - text: Famílias
+              - paragraph [ref=e43]: Acompanhe o progresso do seu filho em tempo real.
+            - generic [ref=e47]:
+              - paragraph [ref=e48]:
+                - img [ref=e49]
+                - text: Crianças
+              - paragraph [ref=e51]: Missões, XP e trilha própria para cada criança.
+            - generic [ref=e55]:
+              - paragraph [ref=e56]:
+                - img [ref=e57]
+                - text: Escolas
+              - paragraph [ref=e60]: Turmas, relatórios e fluxos de aprendizado unificados.
+        - generic [ref=e62]:
+          - generic [ref=e66]:
+            - generic [ref=e70]: Acesso principal
+            - heading "Entrar no Axiora" [level=2] [ref=e71]
+            - paragraph [ref=e72]: Use email e senha ou continue com Google. Com mais de um perfil, escolheremos juntos qual usar.
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - generic [ref=e75]: Email
+              - generic [ref=e76]:
+                - img
+                - textbox "Email" [active] [ref=e77]:
+                  - /placeholder: voce@familia.com
+                  - text: parent@local.com
+            - generic [ref=e78]:
+              - generic [ref=e79]:
+                - generic [ref=e80]: Senha
+                - link "Esqueci minha senha" [ref=e81] [cursor=pointer]:
+                  - /url: /reset-password
+              - generic [ref=e82]:
+                - img
+                - textbox "Senha" [ref=e83]:
+                  - /placeholder: Sua senha
+                - button "Mostrar senha" [ref=e84] [cursor=pointer]:
+                  - img [ref=e85]
+            - button "Entrar com email" [ref=e88] [cursor=pointer]
+          - generic [ref=e91]: ou
+          - generic [ref=e93]:
+            - generic "Entrar com Google" [ref=e95]:
+              - generic [ref=e96]:
+                - button "Continuar com o Google. Abre em uma nova guia" [ref=e98] [cursor=pointer]:
+                  - generic [ref=e100]:
+                    - img [ref=e102]
+                    - generic [ref=e109]: Continuar com o Google
+                - iframe
+            - paragraph [ref=e110]: Primeira vez? Sua conta familiar é criada automaticamente.
+          - generic [ref=e111]:
+            - generic [ref=e114]: Novo aqui?
+            - link "Criar conta gratuita" [ref=e116] [cursor=pointer]:
+              - /url: /signup
+              - text: Criar conta gratuita
+              - img [ref=e117]
+    - contentinfo [ref=e119]:
+      - paragraph [ref=e120]:
+        - link "Privacidade" [ref=e121] [cursor=pointer]:
+          - /url: /privacidade
+        - text: ·
+        - link "Termos de uso" [ref=e122] [cursor=pointer]:
+          - /url: /termos
+        - text: ·© 2026 Axiora Educação Digital
+  - button "Open Next.js Dev Tools" [ref=e128] [cursor=pointer]:
+    - img [ref=e129]
+  - alert [ref=e132]

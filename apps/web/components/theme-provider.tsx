@@ -28,8 +28,8 @@ function applyTheme(theme: ThemeName): void {
   root.style.setProperty("--theme-secondary-rgb", definition.secondary);
   root.style.setProperty("--theme-accent-rgb", definition.accent);
   root.style.setProperty("--app-bg-gradient", "none");
-  root.style.setProperty("--app-bg-color", "rgb(246 246 243)");
-  root.style.setProperty("--app-fg-color", "rgb(30 42 56)");
+  root.style.setProperty("--app-bg-color", "rgb(243 247 255)");
+  root.style.setProperty("--app-fg-color", "rgb(15 23 42)");
 }
 
 type ThemeProviderProps = {

@@ -1,0 +1,72 @@
+- generic [active] [ref=e1]:
+  - main [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - img "Mascote Axiora" [ref=e10]
+        - generic [ref=e11]:
+          - generic [ref=e12]:
+            - heading "Criar presença. Cultivar caminhos." [level=1] [ref=e13]:
+              - generic [ref=e14]: Criar
+              - generic [ref=e15]: presença.
+              - generic [ref=e16]: Cultivar
+              - generic [ref=e17]: caminhos.
+            - paragraph [ref=e18]: Comece a jornada da sua família com consentimento, perfis e acompanhamento em uma experiência segura, clara e acolhedora.
+          - generic [ref=e19]:
+            - generic [ref=e23]:
+              - paragraph [ref=e24]: Famílias
+              - paragraph [ref=e25]: Cadastro inicial com base pronta para onboarding e consentimento.
+            - generic [ref=e29]:
+              - paragraph [ref=e30]: Crianças
+              - paragraph [ref=e31]: Perfis e trilhas organizados desde o primeiro acesso.
+            - generic [ref=e35]:
+              - paragraph [ref=e36]: Google
+              - paragraph [ref=e37]: Primeiro acesso com criação automática da conta familiar.
+          - generic [ref=e38]:
+            - generic [ref=e39]: Onboarding guiado
+            - generic [ref=e40]: Cadastro com Google
+      - generic [ref=e43]:
+        - generic [ref=e46]:
+          - paragraph [ref=e47]: Novo acesso
+          - heading "Criar conta no Axiora" [level=2] [ref=e48]
+          - paragraph [ref=e49]: Cadastre sua família com email e senha ou continue com Google para iniciar o onboarding com menos atrito.
+        - generic [ref=e50]:
+          - generic [ref=e51]:
+            - generic [ref=e52]: Nome
+            - textbox "Nome" [ref=e53]:
+              - /placeholder: Seu nome
+              - text: Playwright Child
+          - generic [ref=e54]:
+            - generic [ref=e55]:
+              - generic [ref=e56]: Email
+              - textbox "Email" [ref=e57]:
+                - /placeholder: voce@familia.com
+                - text: pwchild16776@axiora.local
+            - generic [ref=e58]:
+              - generic [ref=e59]: Família
+              - textbox "Família" [ref=e60]:
+                - /placeholder: "Ex: Família Silva"
+                - text: Familia Playwright
+          - generic [ref=e61]:
+            - generic [ref=e62]: Senha
+            - textbox "Senha" [ref=e63]:
+              - /placeholder: Crie uma senha
+              - text: Axion@1234
+          - button "Criar conta com email" [ref=e64] [cursor=pointer]
+        - generic [ref=e67]: ou
+        - generic [ref=e69]:
+          - generic "Criar conta com Google" [ref=e71]:
+            - generic [ref=e77]:
+              - button "Continuar com o Google. Abre em uma nova guia" [ref=e79] [cursor=pointer]:
+                - generic [ref=e81]:
+                  - img [ref=e83]
+                  - generic [ref=e90]: Continuar com o Google
+              - iframe
+          - paragraph [ref=e72]: No primeiro acesso com Google, criamos sua conta, sua organização familiar e iniciamos o onboarding automaticamente.
+        - generic [ref=e73]:
+          - paragraph [ref=e74]: Já tem conta?
+          - paragraph [ref=e75]: Entre com email ou Google para acessar sua família, perfis e próximos passos do onboarding.
+          - link "Entrar" [ref=e76] [cursor=pointer]:
+            - /url: /login
+  - button "Open Next.js Dev Tools" [ref=e96] [cursor=pointer]:
+    - img [ref=e97]
+  - alert [ref=e100]

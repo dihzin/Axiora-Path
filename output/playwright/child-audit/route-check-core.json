@@ -1,0 +1,194 @@
+[
+  {
+    "viewport": "desktop",
+    "route": "/child",
+    "finalUrl": "http://localhost:3000/child",
+    "hasMain": true,
+    "trailLike": true,
+    "brownLike": false
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/aprender",
+    "finalUrl": "http://localhost:3000/child/aprender",
+    "hasMain": true,
+    "trailLike": true,
+    "brownLike": false
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/axion",
+    "finalUrl": "http://localhost:3000/child/axion",
+    "hasMain": false,
+    "trailLike": false,
+    "brownLike": false
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/games",
+    "finalUrl": "http://localhost:3000/child/games",
+    "hasMain": true,
+    "trailLike": true,
+    "brownLike": false
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/store",
+    "finalUrl": "http://localhost:3000/child/store",
+    "hasMain": true,
+    "trailLike": true,
+    "brownLike": false
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/stickers",
+    "finalUrl": "http://localhost:3000/child/stickers",
+    "hasMain": true,
+    "trailLike": true,
+    "brownLike": false
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/notifications",
+    "finalUrl": "http://localhost:3000/child/notifications",
+    "hasMain": true,
+    "trailLike": true,
+    "brownLike": false
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/help",
+    "finalUrl": "http://localhost:3000/child/help",
+    "hasMain": true,
+    "trailLike": true,
+    "brownLike": false
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/profile",
+    "finalUrl": "http://localhost:3000/child/profile",
+    "hasMain": true,
+    "trailLike": true,
+    "brownLike": false
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/achievements",
+    "finalUrl": "http://localhost:3000/child/achievements",
+    "hasMain": true,
+    "trailLike": true,
+    "brownLike": false
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/settings",
+    "finalUrl": "http://localhost:3000/child/settings",
+    "hasMain": true,
+    "trailLike": true,
+    "brownLike": false
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/games/quiz",
+    "finalUrl": "http://localhost:3000/child/games/quiz",
+    "hasMain": true,
+    "trailLike": true,
+    "brownLike": false
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child",
+    "finalUrl": "http://localhost:3000/child",
+    "hasMain": true,
+    "trailLike": false,
+    "brownLike": false
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/aprender",
+    "finalUrl": "http://localhost:3000/child/aprender",
+    "hasMain": true,
+    "trailLike": false,
+    "brownLike": false
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/axion",
+    "finalUrl": "http://localhost:3000/child/axion",
+    "hasMain": true,
+    "trailLike": false,
+    "brownLike": false
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/games",
+    "finalUrl": "http://localhost:3000/child/games",
+    "hasMain": true,
+    "trailLike": false,
+    "brownLike": false
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/store",
+    "finalUrl": "http://localhost:3000/child/store",
+    "hasMain": true,
+    "trailLike": false,
+    "brownLike": false
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/stickers",
+    "finalUrl": "http://localhost:3000/child/stickers",
+    "hasMain": true,
+    "trailLike": false,
+    "brownLike": false
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/notifications",
+    "finalUrl": "http://localhost:3000/child/notifications",
+    "hasMain": true,
+    "trailLike": false,
+    "brownLike": false
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/help",
+    "finalUrl": "http://localhost:3000/child/help",
+    "hasMain": true,
+    "trailLike": false,
+    "brownLike": false
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/profile",
+    "finalUrl": "http://localhost:3000/child/profile",
+    "hasMain": true,
+    "trailLike": false,
+    "brownLike": false
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/achievements",
+    "finalUrl": "http://localhost:3000/child/achievements",
+    "hasMain": true,
+    "trailLike": false,
+    "brownLike": false
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/settings",
+    "finalUrl": "http://localhost:3000/child/settings",
+    "hasMain": true,
+    "trailLike": false,
+    "brownLike": false
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/games/quiz",
+    "finalUrl": "http://localhost:3000/child/games/quiz",
+    "hasMain": true,
+    "trailLike": false,
+    "brownLike": false
+  }
+]

@@ -150,7 +150,7 @@ export function TugOfWarGame() {
   };
 
   return (
-    <ChildDesktopShell activeNav="jogos">
+    <ChildDesktopShell activeNav="jogos" menuSkin="trail">
       <PageShell tone="child" width="content" className="pb-24">
         <div className="mb-3">
           <Link

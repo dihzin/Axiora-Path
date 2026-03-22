@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   ApiError,
   getAdminExperimentAccess,
@@ -263,7 +264,7 @@ export default function PlatformAdminExperimentsPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass}`}>Status: {normalizedStatus}</span>
-              <select
+              <NativeSelect
                 className="rounded-xl border border-[#C9D8EF] bg-white px-3 py-2 text-sm font-semibold text-[#264B79]"
                 value={destination}
                 onChange={(e) => setDestination(e.target.value as DestinationFilter)}
@@ -274,7 +275,7 @@ export default function PlatformAdminExperimentsPage() {
                 <option value="games">Games</option>
                 <option value="missions">Missions</option>
                 <option value="other">Other</option>
-              </select>
+              </NativeSelect>
               <button
                 type="button"
                 onClick={() => {
@@ -362,3 +363,4 @@ export default function PlatformAdminExperimentsPage() {
     </main>
   );
 }
+

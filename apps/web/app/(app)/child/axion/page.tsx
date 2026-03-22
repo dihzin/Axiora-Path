@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bot, Flame, HelpCircle, Sparkles, Target, Zap } from "lucide-react";
 
@@ -96,6 +96,7 @@ export default function ChildAxionPage() {
   const [guardrailsSummary, setGuardrailsSummary] = useState<AxionGuardrailsSummaryResponse | null>(null);
   const [policyStatus, setPolicyStatus] = useState<AxionPolicyStatusResponse | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -131,22 +132,26 @@ export default function ChildAxionPage() {
     };
   }, [activeChildId, debugRequested]);
 
-  useEffect(() => {
-    if (activeChildId === null) return;
+  const loadInsights = useCallback((childId: number) => {
     let mounted = true;
     setInsightsLoading(true);
+    setInsightsError(null);
     Promise.allSettled([
-      getAxionBrainState(activeChildId),
-      getAxionRecentUnlocks(activeChildId),
-      getAxionGuardrailsSummary(activeChildId),
-      getAxionPolicyStatus(activeChildId),
+      getAxionBrainState(childId),
+      getAxionRecentUnlocks(childId),
+      getAxionGuardrailsSummary(childId),
+      getAxionPolicyStatus(childId),
     ])
       .then(([brainResult, unlockResult, guardrailsResult, policyResult]) => {
         if (!mounted) return;
+        const hasAnyFailure = [brainResult, unlockResult, guardrailsResult, policyResult].some((item) => item.status === "rejected");
         setBrainState(brainResult.status === "fulfilled" ? brainResult.value : null);
         setRecentUnlocks(unlockResult.status === "fulfilled" ? unlockResult.value : []);
         setGuardrailsSummary(guardrailsResult.status === "fulfilled" ? guardrailsResult.value : null);
         setPolicyStatus(policyResult.status === "fulfilled" ? policyResult.value : null);
+        if (hasAnyFailure) {
+          setInsightsError("Alguns insights do Axion estão indisponíveis no momento.");
+        }
       })
       .finally(() => {
         if (!mounted) return;
@@ -155,7 +160,13 @@ export default function ChildAxionPage() {
     return () => {
       mounted = false;
     };
-  }, [activeChildId]);
+  }, []);
+
+  useEffect(() => {
+    if (activeChildId === null) return;
+    const cleanup = loadInsights(activeChildId);
+    return cleanup;
+  }, [activeChildId, loadInsights]);
 
   const toneBg = useMemo(() => {
     const tone = brief?.tone ?? "ENCOURAGE";
@@ -240,7 +251,7 @@ export default function ChildAxionPage() {
   };
 
   return (
-    <ChildDesktopShell activeNav="axion">
+    <ChildDesktopShell activeNav="axion" menuSkin="trail">
       <PageShell tone="child" width="content" className="pt-4">
         <section className={`rounded-[30px] border border-[#BFD3EE] bg-gradient-to-br p-5 shadow-[0_8px_24px_rgba(32,88,140,0.08)] ${toneBg}`}>
         <div className="mb-4 flex items-center justify-between">
@@ -270,6 +281,20 @@ export default function ChildAxionPage() {
         <h1 className="text-xl font-extrabold leading-tight text-[#1B365D]">
           {loading ? "Axion esta preparando seu proximo passo..." : brief?.message ?? "Vamos dar o proximo passo?"}
         </h1>
+        {insightsError ? (
+          <div className="mt-3 rounded-xl border border-[#F6C6C5] bg-[#FFF1F1] px-3 py-2">
+            <p className="text-xs font-semibold text-[#B94A48]">{insightsError}</p>
+            {activeChildId !== null ? (
+              <button
+                type="button"
+                className="mt-2 axiora-chunky-btn axiora-control-btn axiora-chunky-btn--compact px-3 py-1 text-[11px] font-bold text-[#2A456D]"
+                onClick={() => loadInsights(activeChildId)}
+              >
+                Tentar novamente
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="mt-5 grid grid-cols-3 gap-2 text-[#23436C]">
           <div className="rounded-2xl border border-[#BFD3EE] bg-white/80 px-3 py-2 text-center">

@@ -102,6 +102,10 @@ class ToolsBillingStatusResponse(BaseModel):
     paid_credits_remaining: int
 
 
+class ToolsCreditsResponse(BaseModel):
+    credits: int
+
+
 class ToolsPricingPackOut(BaseModel):
     code: str
     credits: int

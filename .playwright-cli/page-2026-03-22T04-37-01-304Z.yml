@@ -1,0 +1,85 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - complementary [ref=e5]:
+      - img "Axion" [ref=e11]
+      - link "Início" [ref=e12] [cursor=pointer]:
+        - /url: /child
+        - img [ref=e15]
+        - text: Início
+      - link "Aprender" [ref=e19] [cursor=pointer]:
+        - /url: /child/aprender
+        - img [ref=e22]
+        - text: Aprender
+      - link "Figurinhas" [ref=e27] [cursor=pointer]:
+        - /url: /child/stickers
+        - img [ref=e30]
+        - text: Figurinhas
+      - link "Jogos" [ref=e34] [cursor=pointer]:
+        - /url: /child/games
+        - img [ref=e37]
+        - text: Jogos
+      - link "Loja" [ref=e44] [cursor=pointer]:
+        - /url: /child/store
+        - img [ref=e47]
+        - text: Loja
+      - link "Axion" [ref=e50] [cursor=pointer]:
+        - /url: /child/axion
+        - img [ref=e53]
+        - text: Axion
+    - generic [ref=e54]:
+      - main [ref=e56]:
+        - generic [ref=e57]:
+          - link "Voltar" [ref=e58] [cursor=pointer]:
+            - /url: /child
+            - img [ref=e59]
+            - text: Voltar
+          - generic [ref=e61]:
+            - generic [ref=e62]:
+              - generic [ref=e63]:
+                - paragraph [ref=e64]: Colecao Axiora
+                - heading "Figurinhas" [level=1] [ref=e65]
+              - img [ref=e67]
+            - generic [ref=e73]:
+              - generic [ref=e74]:
+                - paragraph [ref=e75]: "0"
+                - paragraph [ref=e76]: Ativas
+              - generic [ref=e77]:
+                - paragraph [ref=e78]: "0"
+                - paragraph [ref=e79]: Bloqueadas
+              - generic [ref=e80]:
+                - paragraph [ref=e81]: "0"
+                - paragraph [ref=e82]: Novas
+            - generic [ref=e84]:
+              - generic [ref=e85]: Progresso
+              - generic [ref=e86]: 0%
+          - generic [ref=e88]:
+            - button "Todas" [ref=e89] [cursor=pointer]
+            - button "Ativas" [ref=e90] [cursor=pointer]
+            - button "Bloqueadas" [ref=e91] [cursor=pointer]
+            - button "Novas" [ref=e92] [cursor=pointer]
+        - generic [ref=e94]: Consentimento parental pendente. Peça para um responsável aceitar os termos para continuar.
+      - complementary [ref=e95]:
+        - generic [ref=e96]:
+          - generic [ref=e98]:
+            - generic "Nenhuma sequência ativa — estude hoje!" [ref=e99]:
+              - img [ref=e100]
+              - generic [ref=e103]:
+                - generic [ref=e104]: "0"
+                - generic [ref=e105]: dias
+            - generic "Saldo disponível de moedas Axion" [ref=e106]:
+              - img [ref=e107]
+              - generic [ref=e110]:
+                - generic [ref=e111]: "0"
+                - generic [ref=e112]: gemas
+            - generic "0% do nível atual completo" [ref=e113]:
+              - img [ref=e114]
+              - generic [ref=e116]:
+                - generic [ref=e117]: 0%
+                - generic [ref=e118]: xp
+          - generic [ref=e119]:
+            - paragraph [ref=e121]: "? Progresso"
+            - paragraph [ref=e122]: Você está indo bem!
+            - paragraph [ref=e123]: Continue explorando para evoluir no Axiora.
+  - button "Open Next.js Dev Tools" [ref=e130] [cursor=pointer]:
+    - img [ref=e131]
+  - alert [ref=e134]

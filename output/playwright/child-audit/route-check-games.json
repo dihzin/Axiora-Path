@@ -1,0 +1,72 @@
+[
+  {
+    "viewport": "desktop",
+    "route": "/child/games/memory",
+    "finalUrl": "http://localhost:3000/child/games/memory",
+    "hasMain": true,
+    "trailLike": true
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/games/finance-sim",
+    "finalUrl": "http://localhost:3000/child/games/finance-sim",
+    "hasMain": true,
+    "trailLike": true
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/games/tictactoe",
+    "finalUrl": "http://localhost:3000/child/games/tictactoe",
+    "hasMain": true,
+    "trailLike": true
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/games/wordsearch",
+    "finalUrl": "http://localhost:3000/child/games/wordsearch",
+    "hasMain": true,
+    "trailLike": true
+  },
+  {
+    "viewport": "desktop",
+    "route": "/child/games/tug-of-war",
+    "finalUrl": "http://localhost:3000/child/games/tug-of-war",
+    "hasMain": true,
+    "trailLike": true
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/games/memory",
+    "finalUrl": "http://localhost:3000/child/games/memory",
+    "hasMain": true,
+    "trailLike": false
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/games/finance-sim",
+    "finalUrl": "http://localhost:3000/child/games/finance-sim",
+    "hasMain": true,
+    "trailLike": false
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/games/tictactoe",
+    "finalUrl": "http://localhost:3000/child/games/tictactoe",
+    "hasMain": true,
+    "trailLike": false
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/games/wordsearch",
+    "finalUrl": "http://localhost:3000/child/games/wordsearch",
+    "hasMain": true,
+    "trailLike": false
+  },
+  {
+    "viewport": "mobile",
+    "route": "/child/games/tug-of-war",
+    "finalUrl": "http://localhost:3000/child/games/tug-of-war",
+    "hasMain": true,
+    "trailLike": false
+  }
+]

@@ -115,7 +115,7 @@ export default function ChildStorePage() {
   }, [coins, filter, items, typeFilter]);
 
   return (
-    <ChildDesktopShell activeNav="loja">
+    <ChildDesktopShell activeNav="loja" menuSkin="trail">
       <PageShell tone="child" width="content" className="relative overflow-hidden pb-32">
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute left-[-14%] top-16 h-64 w-64 rounded-full bg-[#6FD9CA]/10 blur-2xl" />

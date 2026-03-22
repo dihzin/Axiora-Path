@@ -2690,6 +2690,32 @@ class LLMCache(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
+class ToolTemplate(Base):
+    __tablename__ = "tool_templates"
+    __table_args__ = (
+        Index("ix_tool_templates_user_id", "user_id"),
+        Index("ix_tool_templates_is_public", "is_public"),
+    )
+
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    config: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
+    blocks: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, server_default="[]")
+    is_public: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class UserCredits(Base):
+    __tablename__ = "user_credits"
+    __table_args__ = (
+        Index("ix_user_credits_user_id", "user_id"),
+    )
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    credits: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+
+
 DEFAULT_FAMILY_TASKS: list[dict[str, str | int | TaskDifficulty]] = [
     {"title": "Arrumar a cama", "difficulty": TaskDifficulty.EASY, "weight": 5},
     {"title": "Escovar os dentes", "difficulty": TaskDifficulty.EASY, "weight": 5},
