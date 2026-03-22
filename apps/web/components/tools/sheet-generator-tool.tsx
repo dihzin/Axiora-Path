@@ -16,7 +16,7 @@ import {
   duplicateToolsTemplate as duplicateToolsTemplateApi,
   getToolsCredits,
   getToolsTemplates,
-  useToolsCredit,
+  useToolsCredit as consumeToolsCredit,
   type ToolsTemplateRecord,
 } from "@/lib/api/client";
 
@@ -1931,7 +1931,7 @@ export function SheetGeneratorTool() {
     }
 
     try {
-      const result = await useToolsCredit();
+      const result = await consumeToolsCredit();
       setCredits(Math.max(0, Number(result.credits) || 0));
       setCreditsFxTick((v) => v + 1);
       showToast("1 geração usada");
