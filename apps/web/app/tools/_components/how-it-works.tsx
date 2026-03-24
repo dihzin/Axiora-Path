@@ -1,21 +1,21 @@
 const STEPS = [
   {
     number: "01",
-    title: "Escolha matéria e tema",
+    title: "Escolha o tema",
     description:
-      "Selecione a disciplina (Matemática, Português, Ciências…) e escreva o tema específico que precisa trabalhar. Ex.: Frações, Pontuação, Fotossíntese.",
+      "Escolha o tópico de matemática: Frações, Equações, Potenciação, Aritmética ou Expressões Numéricas.",
   },
   {
     number: "02",
-    title: "Configure para o aluno",
+    title: "Ajuste para o seu aluno",
     description:
-      "Informe a idade e o nível de dificuldade. O gerador adapta o vocabulário, a complexidade e o estilo dos exercícios automaticamente.",
+      "Informe a idade e o nível de dificuldade. O vocabulário, a complexidade e o estilo dos exercícios são adaptados automaticamente.",
   },
   {
     number: "03",
-    title: "Baixe o PDF pronto",
+    title: "Receba o PDF em segundos",
     description:
-      "Em menos de 30 segundos você tem uma lista formatada com exercícios, instruções e gabarito — pronta para imprimir ou enviar.",
+      "Exercícios, instruções e gabarito formatados — prontos para imprimir ou compartilhar. Sem editar nada, sem montar nada.",
   },
 ];
 
@@ -24,9 +24,9 @@ export function HowItWorks() {
     <section className="mt-20">
       <div className="text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#fcd34d]">Como funciona</p>
-        <h2 className="mt-3 text-3xl font-extrabold md:text-4xl">Três passos. Trinta segundos.</h2>
+        <h2 className="mt-3 text-3xl font-extrabold md:text-4xl">Três informações. Trinta segundos. Uma lista pronta.</h2>
         <p className="mx-auto mt-3 max-w-xl text-sm text-white/70 md:text-base">
-          Sem templates engessados. Sem login. Você configura e o material sai pronto.
+          Sem templates engessados. Sem cadastro. Você informa e o material sai pronto.
         </p>
       </div>
 

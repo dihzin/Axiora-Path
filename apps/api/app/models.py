@@ -2716,6 +2716,105 @@ class UserCredits(Base):
     credits: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
 
 
+# ── Anonymous Tools Identity System ──────────────────────────────────────────
+# Substitui rastreamento Redis por identidades persistentes no PostgreSQL.
+# anonymous_id é um UUID v4 gerado e armazenado no localStorage do cliente.
+
+
+class AnonymousIdentity(Base):
+    """Um registro por visitante — criado no primeiro acesso a qualquer ferramenta."""
+
+    __tablename__ = "anonymous_identities"
+    __table_args__ = (
+        Index("ix_anon_identities_ip", "ip"),
+        Index("ix_anon_identities_fingerprint", "fingerprint"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)  # UUID v4
+    fingerprint: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ab_variants: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AnonymousUsage(Base):
+    """Contadores de uso gratuito e créditos pagos por (identidade, ferramenta)."""
+
+    __tablename__ = "anonymous_usage"
+    __table_args__ = (
+        UniqueConstraint("anon_id", "tool_slug", name="uq_anon_usage_anon_tool"),
+        Index("ix_anon_usage_anon_id", "anon_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    anon_id: Mapped[str] = mapped_column(String(36), ForeignKey("anonymous_identities.id", ondelete="CASCADE"), nullable=False)
+    tool_slug: Mapped[str] = mapped_column(String(80), nullable=False)
+    free_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    paid_credits: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    total_generations_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    last_generation_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class GenerationEvent(Base):
+    """Auditoria imutável de cada tentativa de geração (free, paid, blocked)."""
+
+    __tablename__ = "generation_events"
+    __table_args__ = (
+        Index("ix_gen_events_anon_id", "anon_id"),
+        Index("ix_gen_events_created_at", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    anon_id: Mapped[str] = mapped_column(String(36), ForeignKey("anonymous_identities.id", ondelete="CASCADE"), nullable=False)
+    tool_slug: Mapped[str] = mapped_column(String(80), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(20), nullable=False)  # 'free' | 'paid' | 'blocked'
+    request_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class ToolsCheckoutSession(Base):
+    """Sessão Stripe vinculada a anon_id (ou user_id para usuários autenticados)."""
+
+    __tablename__ = "tools_checkout_sessions"
+    __table_args__ = (
+        Index("ix_tcs_anon_id", "anon_id"),
+        Index("ix_tcs_user_id", "user_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(255), primary_key=True)  # Stripe session id
+    anon_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("anonymous_identities.id", ondelete="SET NULL"), nullable=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    plan_code: Mapped[str] = mapped_column(String(60), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="'pending'")  # 'created' | 'pending' | 'paid' | 'completed' | 'expired'
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    # Preenchido após confirmação de pagamento (webhook checkout.session.completed)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    amount_paid_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)  # ex: 2900 = R$ 29,00
+    currency: Mapped[str | None] = mapped_column(String(3), nullable=True)  # ISO 4217, ex: BRL
+    payment_intent_id: Mapped[str | None] = mapped_column(Text, nullable=True)  # PaymentIntent Stripe
+
+
+class CreditLedger(Base):
+    """Ledger imutável de concessão e consumo de créditos para auditoria e reconciliação."""
+
+    __tablename__ = "credit_ledger"
+    __table_args__ = (
+        Index("ix_credit_ledger_anon_id", "anon_id"),
+        Index("ix_credit_ledger_user_id", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    anon_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("anonymous_identities.id", ondelete="SET NULL"), nullable=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)  # positivo = crédito, negativo = débito
+    reason: Mapped[str] = mapped_column(String(60), nullable=False)  # 'stripe_purchase' | 'generation' | 'refund'
+    ref_id: Mapped[str | None] = mapped_column(Text, nullable=True)  # stripe session id ou generation event id
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 DEFAULT_FAMILY_TASKS: list[dict[str, str | int | TaskDifficulty]] = [
     {"title": "Arrumar a cama", "difficulty": TaskDifficulty.EASY, "weight": 5},
     {"title": "Escovar os dentes", "difficulty": TaskDifficulty.EASY, "weight": 5},

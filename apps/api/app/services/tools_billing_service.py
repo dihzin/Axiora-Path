@@ -4,7 +4,7 @@ import hashlib
 import hmac
 import json
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -52,6 +52,14 @@ class CheckoutSessionResult:
     url: str
 
 
+@dataclass(frozen=True)
+class PaymentInfo:
+    """Detalhes extraídos do evento checkout.session.completed."""
+    amount_paid_cents: int | None
+    currency: str | None  # ISO 4217 em maiúsculas, ex: "BRL"
+    payment_intent_id: str | None
+
+
 class ToolsBillingService:
     def __init__(self) -> None:
         self.secret_key = (settings.stripe_secret_key or "").strip()
@@ -74,7 +82,14 @@ class ToolsBillingService:
         plan_code: str,
         session_scope_key: str,
         customer_email: str | None,
+        extra_metadata: dict[str, str] | None = None,
     ) -> CheckoutSessionResult:
+        """Cria uma Checkout Session no Stripe.
+
+        extra_metadata — campos adicionais incluídos em metadata[]; permite
+        que novos endpoints embarcuem anonymous_id, fingerprint_id, etc. sem
+        quebrar o contrato do webhook legado (que lê session_scope_key).
+        """
         self.ensure_checkout_config()
         if plan_code != "credits_30":
             raise BillingConfigError("Unsupported plan code")
@@ -89,6 +104,10 @@ class ToolsBillingService:
             ("metadata[plan_code]", plan_code),
             ("metadata[session_scope_key]", session_scope_key),
         ]
+        # Metadados extras (anonymous_id, fingerprint_id, package_type, etc.)
+        if extra_metadata:
+            for key, value in extra_metadata.items():
+                form_fields.append((f"metadata[{key}]", value))
         if customer_email:
             form_fields.append(("customer_email", customer_email.strip().lower()))
 
@@ -176,6 +195,13 @@ class ToolsBillingService:
         self,
         event_payload: dict[str, Any],
     ) -> tuple[str, int] | None:
+        """Extrai (scope_key, credits) de um evento checkout.session.completed.
+
+        Suporta dois formatos de metadata:
+          - Legado: session_scope_key + plan_code
+          - Novo: anonymous_id + package_type (inclui session_scope_key para compat)
+        Em ambos os casos retorna (scope_key, credits) para o webhook legado.
+        """
         if event_payload.get("type") != "checkout.session.completed":
             return None
         data = event_payload.get("data")
@@ -195,3 +221,66 @@ class ToolsBillingService:
         if credits is None:
             return None
         return scope_key, credits
+
+    def parse_checkout_completed_event_v2(
+        self,
+        event_payload: dict[str, Any],
+    ) -> tuple[str | None, int] | None:
+        """Versão v2: extrai (anonymous_id | None, credits) para o novo webhook.
+
+        Tenta ler anonymous_id diretamente de metadata. Se ausente, faz fallback
+        parseando session_scope_key (formato legado anon:{id}).
+
+        Retorna None se o evento não for checkout.session.completed ou se os
+        metadados estiverem ausentes/malformados.
+        """
+        if event_payload.get("type") != "checkout.session.completed":
+            return None
+        data = event_payload.get("data")
+        if not isinstance(data, dict):
+            return None
+        obj = data.get("object")
+        if not isinstance(obj, dict):
+            return None
+        metadata = obj.get("metadata")
+        if not isinstance(metadata, dict):
+            return None
+
+        # ── Formato novo: anonymous_id direto ────────────────────────────────
+        anonymous_id = metadata.get("anonymous_id")
+        package_type = metadata.get("package_type")
+        credits_str = metadata.get("credits_to_add")
+        if isinstance(anonymous_id, str) and isinstance(package_type, str):
+            if isinstance(credits_str, str) and credits_str.isdigit():
+                return anonymous_id, int(credits_str)
+            # Fallback: resolve pelo package_type → plan_code → PAYMENT_PACKS
+            pack_map = {"pack_30": "credits_30"}
+            plan_code = pack_map.get(package_type, package_type)
+            credits = PAYMENT_PACKS.get(plan_code)
+            if credits is not None:
+                return anonymous_id, credits
+
+        # ── Formato legado: session_scope_key = anon:{id} ────────────────────
+        scope_key = metadata.get("session_scope_key")
+        plan_code = metadata.get("plan_code")
+        if isinstance(scope_key, str) and isinstance(plan_code, str) and scope_key.startswith("anon:"):
+            credits = PAYMENT_PACKS.get(plan_code)
+            if credits is not None:
+                anon_id_from_scope = scope_key.partition(":")[2]
+                return anon_id_from_scope, credits
+
+        return None
+
+    def extract_payment_info(self, event_payload: dict[str, Any]) -> PaymentInfo:
+        """Extrai informações de pagamento do objeto Stripe para persistência."""
+        obj = event_payload.get("data", {}).get("object", {})
+        if not isinstance(obj, dict):
+            return PaymentInfo(None, None, None)
+        amount = obj.get("amount_total")
+        currency = obj.get("currency")
+        payment_intent = obj.get("payment_intent")
+        return PaymentInfo(
+            amount_paid_cents=int(amount) if isinstance(amount, (int, float)) else None,
+            currency=str(currency).upper() if isinstance(currency, str) else None,
+            payment_intent_id=str(payment_intent) if isinstance(payment_intent, str) else None,
+        )

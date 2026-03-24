@@ -22,7 +22,7 @@ const TOOLS = [
     accent: "#ee8748",
     title: "Gerador de Exercícios",
     description:
-      "Crie listas personalizadas por matéria, tema e idade em segundos. Gabarito e PDF prontos para imprimir.",
+      "Crie listas de matemática por tema e idade em segundos. Gabarito e PDF prontos para imprimir.",
     badge: "Grátis para começar",
     href: "/tools/gerador-atividades",
   },
@@ -64,8 +64,8 @@ const COMING_SOON = [
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
 const STATS = [
-  { value: "+2.400", label: "listas geradas" },
-  { value: "5 matérias", label: "suportadas" },
+  { value: "+4.200", label: "listas geradas" },
+  { value: "Matemática", label: "foco total" },
   { value: "100%", label: "gratuito para começar" },
 ];
 
@@ -106,13 +106,9 @@ export default function HomePage() {
             >
               Tools
             </Link>
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-4 py-2 text-xs font-extrabold text-white shadow-[0_3px_0_rgba(158,74,30,0.5)] transition hover:brightness-110"
-            >
-              Entrar
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold text-white/40 cursor-default select-none">
+              App — em breve
+            </span>
           </div>
         </nav>
 
@@ -131,16 +127,16 @@ export default function HomePage() {
                 style={{ background: "radial-gradient(ellipse, rgba(238,135,72,0.18) 0%, rgba(238,135,72,0.06) 50%, transparent 75%)", filter: "blur(48px)" }}
               />
               <h1 className="mx-auto max-w-3xl text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl md:text-6xl">
-                Aprendizado que{" "}
+                Lista de matemática pronta{" "}
                 <span className="bg-[linear-gradient(180deg,#fde68a_0%,#f59e0b_50%,#ee8748_100%)] bg-clip-text text-transparent">
-                  realmente funciona.
+                  em 30 segundos.
                 </span>
               </h1>
             </div>
 
             <p className="mx-auto mt-5 max-w-2xl text-base text-white/75 md:text-lg">
-              Da criação de exercícios personalizados ao acompanhamento do progresso — a Axiora entrega
-              as ferramentas certas para cada etapa do aprendizado.
+              Crie exercícios de matemática com gabarito e PDF em 30 segundos —{" "}
+              sem conta, sem assinatura, sem domingo perdido.
             </p>
 
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
@@ -148,14 +144,8 @@ export default function HomePage() {
                 href="/tools"
                 className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-8 py-4 text-base font-extrabold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.3),0_6px_0_rgba(158,74,30,0.45),0_16px_28px_rgba(93,48,22,0.25)] transition hover:brightness-110 sm:w-auto"
               >
-                Explorar ferramentas grátis
+                Gerar lista de matemática grátis
                 <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/login"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/25 bg-[rgba(255,255,255,0.07)] px-8 py-4 text-base font-semibold text-white backdrop-blur-sm transition hover:border-white/35 hover:bg-[rgba(255,255,255,0.13)] sm:w-auto"
-              >
-                Acessar o app
               </Link>
             </div>
 
@@ -260,14 +250,8 @@ export default function HomePage() {
 
             <div className="mt-6 rounded-2xl border border-white/10 bg-[rgba(255,255,255,0.03)] px-6 py-5 text-center backdrop-blur-sm">
               <p className="text-sm text-white/65">
-                O Axiora Path está em acesso restrito.{" "}
-                <Link href="/login" className="font-semibold text-[#fde68a] transition hover:text-white">
-                  Faça login para acessar
-                </Link>{" "}
-                ou{" "}
-                <Link href="/login" className="font-semibold text-white/80 underline underline-offset-2 transition hover:text-white">
-                  solicite acesso antecipado.
-                </Link>
+                O Axiora Path está em desenvolvimento e será lançado em breve.{" "}
+                Acompanhe nossas redes sociais para ser avisado quando abrir.
               </p>
             </div>
           </section>
@@ -276,7 +260,7 @@ export default function HomePage() {
           <section className="mt-24">
             <div className="text-center">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#fcd34d]">Roadmap</p>
-              <h2 className="mt-3 text-2xl font-extrabold sm:text-3xl md:text-4xl">O que vem a seguir.</h2>
+              <h2 className="mt-3 text-2xl font-extrabold sm:text-3xl md:text-4xl">O que estamos construindo — e por quê você vai querer.</h2>
             </div>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -299,23 +283,17 @@ export default function HomePage() {
 
           {/* ── CTA FINAL ──────────────────────────────────────────────────────── */}
           <section className="mt-24 rounded-3xl border border-[rgba(238,135,72,0.25)] bg-[rgba(238,135,72,0.08)] px-5 py-10 text-center backdrop-blur-sm sm:px-8 sm:py-12">
-            <h2 className="text-2xl font-extrabold sm:text-3xl md:text-4xl">Comece agora — é grátis.</h2>
+            <h2 className="text-2xl font-extrabold sm:text-3xl md:text-4xl">Prepare sua primeira lista de matemática em 30 segundos — grátis.</h2>
             <p className="mx-auto mt-4 max-w-xl text-sm text-white/75 md:text-base">
-              Sem cadastro, sem cartão. Gere exercícios completos com gabarito e PDF em menos de 30 segundos.
+              Sem cadastro, sem cartão. Exercícios completos com gabarito e PDF prontos para imprimir.
             </p>
             <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <Link
                 href="/tools/gerador-atividades"
                 className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-10 py-4 text-base font-extrabold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.3),0_6px_0_rgba(158,74,30,0.45),0_16px_28px_rgba(93,48,22,0.25)] transition hover:brightness-110 sm:w-auto"
               >
-                Gerar exercícios grátis
+                Gerar lista de matemática grátis
                 <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/login"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/25 bg-[rgba(255,255,255,0.07)] px-8 py-4 text-base font-semibold text-white backdrop-blur-sm transition hover:border-white/35 hover:bg-[rgba(255,255,255,0.13)] sm:w-auto"
-              >
-                Acessar o app
               </Link>
             </div>
           </section>
@@ -388,7 +366,7 @@ export default function HomePage() {
                   <li><Link href="/tools/gerador-atividades" className="transition hover:text-white/80">Gerador de Exercícios</Link></li>
                   <li><Link href="/tools/planner-familiar" className="transition hover:text-white/80">Planner Familiar</Link></li>
                   <li><Link href="/tools/checkup-aprendizagem" className="transition hover:text-white/80">Checkup de Aprendizagem</Link></li>
-                  <li><Link href="/login" className="transition hover:text-white/80">Axiora Path (App)</Link></li>
+                  <li className="flex items-center gap-2 text-white/25">Axiora Path (App)<span className="rounded-full bg-white/8 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white/30">em breve</span></li>
                 </ul>
               </div>
 
@@ -467,7 +445,7 @@ export default function HomePage() {
             href="/tools/gerador-atividades"
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] py-3.5 text-sm font-extrabold text-white shadow-[0_4px_0_rgba(158,74,30,0.5)] transition hover:brightness-110"
           >
-            Gerar exercícios grátis
+            Gerar lista de matemática grátis
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>

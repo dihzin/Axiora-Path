@@ -20,7 +20,18 @@ class RateLimitRule:
 
 GLOBAL_RULE = RateLimitRule(key_prefix="global", limit=100, window_seconds=60)
 LOGIN_RULE = RateLimitRule(key_prefix="login", limit=10, window_seconds=300)
+# Tools: geração envolve chamada LLM — limita por IP. O rate limit fino fica no
+# anonymous_id (Redis, na rota), então o IP pode ser mais generoso para não
+# penalizar NAT escolar (muitos alunos no mesmo IP).
+TOOLS_GENERATE_RULE = RateLimitRule(key_prefix="tools_gen", limit=30, window_seconds=60)
+# Checkout: evita criação massiva de sessões Stripe.
+TOOLS_CHECKOUT_RULE = RateLimitRule(key_prefix="tools_checkout", limit=5, window_seconds=300)
+
 LOGIN_PATHS = {"/auth/login", "/auth/login-primary"}
+# Ambas as rotas de consumo de crédito anônimo são tratadas com o mesmo limite.
+# /generate = fluxo LLM; /anon-use = fluxo gerador local (sheet-generator)
+TOOLS_GENERATE_PATHS = {"/api/tools/generate", "/api/tools/anon-use"}
+TOOLS_CHECKOUT_PATH = "/api/tools/checkout/create"
 
 
 def _extract_ip(request: Request) -> str:
@@ -55,6 +66,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         ip = _extract_ip(request)
+        method = request.method.upper()
+        path = request.url.path
         try:
             allowed_global = await _increment_and_check(redis, rule=GLOBAL_RULE, ip=ip)
             if not allowed_global:
@@ -63,13 +76,30 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     content={"code": "RATE_LIMIT", "message": "Too many requests"},
                 )
 
-            if request.url.path in LOGIN_PATHS and request.method.upper() == "POST":
+            if path in LOGIN_PATHS and method == "POST":
                 allowed_login = await _increment_and_check(redis, rule=LOGIN_RULE, ip=ip)
                 if not allowed_login:
                     return JSONResponse(
                         status_code=429,
                         content={"code": "RATE_LIMIT", "message": "Too many requests"},
                     )
+
+            if path in TOOLS_GENERATE_PATHS and method == "POST":
+                allowed_gen = await _increment_and_check(redis, rule=TOOLS_GENERATE_RULE, ip=ip)
+                if not allowed_gen:
+                    return JSONResponse(
+                        status_code=429,
+                        content={"code": "RATE_LIMIT", "message": "Too many requests. Try again in a minute."},
+                    )
+
+            if path == TOOLS_CHECKOUT_PATH and method == "POST":
+                allowed_checkout = await _increment_and_check(redis, rule=TOOLS_CHECKOUT_RULE, ip=ip)
+                if not allowed_checkout:
+                    return JSONResponse(
+                        status_code=429,
+                        content={"code": "RATE_LIMIT", "message": "Too many checkout attempts. Try again later."},
+                    )
+
         except Exception:
             # Keep API available if Redis is temporarily unavailable.
             return await call_next(request)

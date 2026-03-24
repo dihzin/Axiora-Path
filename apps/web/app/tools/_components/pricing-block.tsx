@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Variant } from "@/lib/ab";
 import { BuyPackButton } from "./buy-pack-button";
 
 function CheckIcon() {
@@ -19,14 +20,16 @@ function CheckIcon() {
   );
 }
 
-export function PricingBlock() {
+type PricingBlockProps = { priceVariant?: Variant };
+
+export function PricingBlock({ priceVariant = "a" }: PricingBlockProps) {
   return (
     <section className="mt-20">
       <div className="text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#fcd34d]">Preço</p>
-        <h2 className="mt-3 text-3xl font-extrabold md:text-4xl">Simples. Sem surpresa.</h2>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#fcd34d]">Quanto custa</p>
+        <h2 className="mt-3 text-3xl font-extrabold md:text-4xl">Simples. Sem pegadinha.</h2>
         <p className="mx-auto mt-3 max-w-lg text-sm text-white/70">
-          Comece grátis. Se precisar de mais, compre um pacote — sem assinatura, sem renovação automática.
+          Comece grátis. Se precisar de mais, compre um pacote — pagamento único, sem assinatura, sem renovação automática.
         </p>
       </div>
 
@@ -38,11 +41,11 @@ export function PricingBlock() {
           <p className="mt-1 text-sm text-white/45">para sempre</p>
           <ul className="mt-5 space-y-2.5 text-sm text-white/80">
             <li className="flex items-center gap-2">
-              <CheckIcon />3 gerações por mês
+              <CheckIcon />3 listas com gabarito e PDF para começar
             </li>
             <li className="flex items-center gap-2">
               <CheckIcon />
-              Sem cadastro
+              Sem criar conta
             </li>
             <li className="flex items-center gap-2">
               <CheckIcon />
@@ -58,7 +61,7 @@ export function PricingBlock() {
               href="/tools/gerador-atividades"
               className="block w-full rounded-xl border border-white/20 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-white/10"
             >
-              Começar grátis
+              Começar grátis agora
             </Link>
           </div>
         </div>
@@ -71,17 +74,33 @@ export function PricingBlock() {
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(253,230,138,0.13),transparent_60%)]" aria-hidden="true" />
           {/* Badge */}
           <span className="absolute -top-px left-1/2 -translate-x-1/2 rounded-b-xl bg-[linear-gradient(180deg,#ee8748,#db6728)] px-4 py-1 text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-white shadow-[0_4px_12px_rgba(93,48,22,0.4)]">
-            Mais popular
+            Mais escolhido
           </span>
 
           <div className="relative pt-3">
             <p className="text-[0.68rem] font-black uppercase tracking-[0.2em] text-[#fcd34d]">Pacote</p>
-            <p className="mt-2 text-5xl font-black tracking-tight">R$ 29</p>
-            <p className="mt-1 text-sm text-white/60">compra única · 30 gerações</p>
+
+            {/* Exp 3 — A: preço total | B: custo por lista */}
+            {priceVariant === "b" ? (
+              <>
+                <p className="mt-2 text-5xl font-black tracking-tight">
+                  R$&nbsp;0<span className="text-3xl">,97</span>
+                </p>
+                <p className="mt-1 text-sm text-white/60">por lista · menos que uma xérox</p>
+                <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1 text-[11px] text-white/55">
+                  Pacote completo: R$ 29 · pagamento único
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-2 text-5xl font-black tracking-tight">R$ 29</p>
+                <p className="mt-1 text-sm text-white/60">pagamento único · 30 listas</p>
+              </>
+            )}
             <ul className="mt-5 space-y-2.5 text-sm text-white/85">
               <li className="flex items-center gap-2">
                 <CheckIcon />
-                30 gerações (nunca expiram)
+                30 listas (nunca expiram)
               </li>
               <li className="flex items-center gap-2">
                 <CheckIcon />
@@ -89,11 +108,11 @@ export function PricingBlock() {
               </li>
               <li className="flex items-center gap-2">
                 <CheckIcon />
-                Todos os recursos do grátis
+                Gabarito e PDF em todas
               </li>
               <li className="flex items-center gap-2">
                 <CheckIcon />
-                Use no seu ritmo
+                Use no seu ritmo, sem prazo
               </li>
             </ul>
             <div className="mt-auto pt-6">
@@ -104,7 +123,7 @@ export function PricingBlock() {
       </div>
 
       <p className="mt-5 text-center text-xs text-white/35">
-        Pagamento via Stripe · 100% seguro · Sem dados de cartão armazenados
+        Pagamento via Stripe · 100% seguro · Nenhum dado de cartão armazenado
       </p>
     </section>
   );

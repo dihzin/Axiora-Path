@@ -2529,10 +2529,149 @@ export async function createToolsCheckoutSession(payload: {
   plan_code?: "credits_30";
   session_token?: string;
   customer_email?: string;
+  anonymous_id?: string;
 }): Promise<ToolsCheckoutSessionResponse> {
   return apiRequest<ToolsCheckoutSessionResponse>("/api/tools/billing/checkout-session", {
     method: "POST",
     body: payload,
+    requireAuth: false,
+    includeTenant: false,
+  });
+}
+
+// ── Checkout canônico v2 ───────────────────────────────────────────────────
+
+export type ToolsCheckoutStatusResponse = {
+  ok: boolean;
+  payment_status: "created" | "pending" | "paid" | "completed" | "expired";
+  credits_added: number;
+  paid_generations_available: number;
+};
+
+/**
+ * POST /api/tools/checkout/create
+ * Endpoint canônico para compra de pacote por identidade anônima.
+ * Inclui fingerprint_id para melhor reconciliação.
+ */
+export async function createToolsCheckoutV2(payload: {
+  anonymous_id: string;
+  fingerprint_id?: string;
+  package_type?: "pack_30";
+}): Promise<ToolsCheckoutSessionResponse> {
+  return apiRequest<ToolsCheckoutSessionResponse>("/api/tools/checkout/create", {
+    method: "POST",
+    body: { package_type: "pack_30", ...payload },
+    requireAuth: false,
+    includeTenant: false,
+  });
+}
+
+/**
+ * GET /api/tools/checkout/status?session_id=...
+ * Consulta o status de uma sessão após retorno do Stripe.
+ */
+export async function getToolsCheckoutStatus(sessionId: string): Promise<ToolsCheckoutStatusResponse> {
+  return apiRequest<ToolsCheckoutStatusResponse>(
+    `/api/tools/checkout/status?session_id=${encodeURIComponent(sessionId)}`,
+    { method: "GET", requireAuth: false, includeTenant: false },
+  );
+}
+
+// ── Identidade anônima ─────────────────────────────────────────────────────
+
+export type ToolsAnonStatusResponse = {
+  anonymous_id: string;
+  free_limit: number;
+  free_used: number;
+  remaining_free_generations: number;
+  paid_credits_remaining: number;
+};
+
+/** Lê o anonymous_id do localStorage, criando um UUID v4 na primeira visita. */
+export function getOrCreateAnonId(): string {
+  const KEY = "ax_anon_id";
+  if (typeof window === "undefined") return "";
+  let id = window.localStorage.getItem(KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    window.localStorage.setItem(KEY, id);
+  }
+  return id;
+}
+
+/** Busca (e cria se necessário) o estado de uso anônimo no servidor. */
+export async function getAnonStatus(anonymousId: string): Promise<ToolsAnonStatusResponse> {
+  return apiRequest<ToolsAnonStatusResponse>(
+    `/api/tools/anon-status?anonymous_id=${encodeURIComponent(anonymousId)}`,
+    { method: "GET", requireAuth: false, includeTenant: false },
+  );
+}
+
+/** Consome 1 geração do saldo anônimo. Lança erro 402 se sem saldo. */
+export async function useAnonCredit(anonymousId: string): Promise<ToolsAnonStatusResponse> {
+  return apiRequest<ToolsAnonStatusResponse>("/api/tools/anon-use", {
+    method: "POST",
+    body: { anonymous_id: anonymousId, tool_slug: "exercise-generator" },
+    requireAuth: false,
+    includeTenant: false,
+  });
+}
+
+// ── Endpoints v2 (spec pública) ───────────────────────────────────────────────
+
+export type AnonIdentityOut = {
+  anonymous_id: string;
+  free_generations_used: number;
+  free_generations_remaining: number;
+  paid_generations_available: number;
+  can_generate: boolean;
+};
+
+export type AnonIdentifyResponse = {
+  ok: boolean;
+  identity: AnonIdentityOut;
+};
+
+export type AnonUsageStatusResponse = {
+  free_generations_used: number;
+  free_generations_remaining: number;
+  paid_generations_available: number;
+  can_generate: boolean;
+  paywall_required: boolean;
+};
+
+/**
+ * POST /api/tools/anonymous/identify
+ * Registra ou atualiza a identidade anônima. Deve ser chamado na montagem
+ * do componente gerador (substitui getAnonStatus quando fingerprint_id estiver
+ * disponível).
+ */
+export async function anonymousIdentify(payload: {
+  anonymous_id: string;
+  fingerprint_id?: string;
+  user_agent?: string;
+}): Promise<AnonIdentifyResponse> {
+  return apiRequest<AnonIdentifyResponse>("/api/tools/anonymous/identify", {
+    method: "POST",
+    body: payload,
+    requireAuth: false,
+    includeTenant: false,
+  });
+}
+
+/**
+ * GET /api/tools/usage-status
+ * Consulta o status atual sem criar nem consumir créditos.
+ * Usado para polling leve (ex: verificar créditos após retorno do Stripe).
+ */
+export async function getUsageStatus(params: {
+  anonymous_id: string;
+  fingerprint_id?: string;
+}): Promise<AnonUsageStatusResponse> {
+  const qs = new URLSearchParams({ anonymous_id: params.anonymous_id });
+  if (params.fingerprint_id) qs.set("fingerprint_id", params.fingerprint_id);
+  return apiRequest<AnonUsageStatusResponse>(`/api/tools/usage-status?${qs.toString()}`, {
+    method: "GET",
     requireAuth: false,
     includeTenant: false,
   });

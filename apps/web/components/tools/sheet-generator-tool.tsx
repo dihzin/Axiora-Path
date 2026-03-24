@@ -11,15 +11,20 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
+  ApiError,
   createToolsCheckout,
+  createToolsCheckoutV2,
   createToolsTemplate,
   deleteToolsTemplate as deleteToolsTemplateApi,
   duplicateToolsTemplate as duplicateToolsTemplateApi,
-  getToolsCredits,
   getToolsTemplates,
+  useAnonCredit,
   useToolsCredit as consumeToolsCredit,
   type ToolsTemplateRecord,
 } from "@/lib/api/client";
+import { useToolsIdentity } from "@/context/tools-identity-context";
+import { PaywallModal } from "@/components/tools/paywall-modal";
+import { track } from "@/lib/tools/analytics";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -1525,11 +1530,18 @@ export function SheetGeneratorTool() {
   const [templateName, setTemplateName] = useState("");
   const [templates, setTemplates] = useState<SavedTemplate[]>([]);
   const [templateBusyId, setTemplateBusyId] = useState<string | null>(null);
-  const [credits, setCredits] = useState<number | null>(null);
-  const [creditsLoading, setCreditsLoading] = useState(true);
+  // ── Identidade global (context) ───────────────────────────────────────────
+  const identity = useToolsIdentity();
+  const anonId = identity.anonymousId;
+  const isAnonUser = identity.isAnonUser;
+  const creditsLoading = identity.initializing;
+  // credits: soma de gerações grátis + créditos pagos; null enquanto inicializa
+  const credits = identity.initializing
+    ? null
+    : identity.freeGenerationsRemaining + identity.paidGenerationsAvailable;
+
   const [creditsFxTick, setCreditsFxTick] = useState(0);
   const [paywallOpen, setPaywallOpen] = useState(false);
-  const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
 
   // ── Preview: auto-fit + zoom (Canva-like) ─────────────────────────────────
@@ -1621,21 +1633,14 @@ export function SheetGeneratorTool() {
     void loadTemplates();
   }, [loadTemplates]);
 
-  const loadCredits = useCallback(async () => {
-    setCreditsLoading(true);
-    try {
-      const result = await getToolsCredits();
-      setCredits(Math.max(0, Number(result.credits) || 0));
-    } catch {
-      setCredits(null);
-    } finally {
-      setCreditsLoading(false);
-    }
-  }, []);
-
+  // Post-checkout: detecta retorno do Stripe e atualiza créditos
   useEffect(() => {
-    void loadCredits();
-  }, [loadCredits]);
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has("upgrade")) return;
+    const timer = window.setTimeout(() => { void identity.refresh(); }, 1500);
+    return () => window.clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const generatedExercises = useMemo<ExerciseItem[]>(() => {
     if (!blocks.some((b) => b.active)) return [];
@@ -1859,18 +1864,19 @@ export function SheetGeneratorTool() {
     showToast("Template duplicado");
   }, [mapApiTemplate, showToast]);
 
+  // handleBuyCredits é passado ao PaywallModal — lança em caso de erro
+  // para que o modal exiba a mensagem inline sem fechar.
   const handleBuyCredits = useCallback(async () => {
-    setCheckoutBusy(true);
-    try {
-      const checkout = await createToolsCheckout({ plan_code: "credits_30" });
-      window.location.assign(checkout.checkout_url);
-      return;
-    } catch {
-      showToast("Não foi possível iniciar o checkout");
-    } finally {
-      setCheckoutBusy(false);
-    }
-  }, [showToast]);
+    track("checkout_started");
+    const checkout = isAnonUser
+      ? await createToolsCheckoutV2({
+          anonymous_id: anonId,
+          fingerprint_id: identity.fingerprintId || undefined,
+          package_type: "pack_30",
+        })
+      : await createToolsCheckout({ plan_code: "credits_30" });
+    window.location.assign(checkout.checkout_url);
+  }, [isAnonUser, anonId, identity.fingerprintId]);
 
   const handlePrint = useCallback(async () => {
     if (isPrinting) return;
@@ -1881,11 +1887,16 @@ export function SheetGeneratorTool() {
       return;
     }
     if (credits <= 0) {
+      track("generation_blocked", { reason: "no_credits" });
       setPaywallOpen(true);
-      showToast("Sem créditos: compre para continuar");
       setIsPrinting(false);
       return;
     }
+
+    track("click_generate", {
+      active_blocks: blocks.filter((b) => b.active).length,
+      total_exercises: blocks.filter((b) => b.active).reduce((s, b) => s + b.config.quantidade, 0),
+    });
 
     let html = "";
     if (previewPages.length > 0) {
@@ -1930,14 +1941,36 @@ export function SheetGeneratorTool() {
     }
 
     try {
-      const result = await consumeToolsCredit();
-      setCredits(Math.max(0, Number(result.credits) || 0));
+      let remaining: number;
+      if (isAnonUser) {
+        const result = await useAnonCredit(anonId);
+        remaining = result.remaining_free_generations + result.paid_credits_remaining;
+      } else {
+        const result = await consumeToolsCredit();
+        remaining = Math.max(0, Number(result.credits) || 0);
+      }
+      void identity.refresh();
       setCreditsFxTick((v) => v + 1);
-      showToast("1 geração usada");
-    } catch {
+      track("generation_success", {
+        consumption_type: isAnonUser ? "free" : "paid",
+        remaining_after: remaining,
+      });
+      if (remaining === 0) {
+        showToast("Lista gerada! Você usou suas 3 gerações gratuitas.");
+      } else if (remaining === 1) {
+        showToast("Lista gerada · Última geração gratuita disponível");
+      } else {
+        showToast(`Lista gerada · ${remaining} gerações restantes`);
+      }
+    } catch (err) {
       win.close();
-      setPaywallOpen(true);
-      showToast("Sem créditos: compre para continuar");
+      // 402 = paywall — abre o modal de compra sem toast
+      if (err instanceof ApiError && err.status === 402) {
+        track("generation_blocked", { reason: "paywall_402" });
+        setPaywallOpen(true);
+      } else {
+        showToast("Ocorreu um erro ao gerar a lista. Tente novamente.");
+      }
       setIsPrinting(false);
       return;
     }
@@ -1947,7 +1980,7 @@ export function SheetGeneratorTool() {
       win.print();
       setIsPrinting(false);
     }, 300);
-  }, [isPrinting, credits, previewPages, cfg, blocks, seed, showToast]);
+  }, [isPrinting, credits, isAnonUser, anonId, identity, previewPages, cfg, blocks, seed, showToast]);
 
   const totalExercises = useMemo(() => blocks.filter((b) => b.active).reduce((s, b) => s + b.config.quantidade, 0), [blocks]);
   const activeCount = useMemo(() => blocks.filter((b) => b.active).length, [blocks]);
@@ -1975,7 +2008,7 @@ export function SheetGeneratorTool() {
 
       {/* ── MOBILE TAB BAR ──────────────────────────────────────────── */}
       <div className="flex shrink-0 border-b border-[#e5e7eb] md:hidden" style={{ background: "#ffffff" }}>
-        {([["config", "Configurar"], ["blocks", "Blocos"], ["detail", "Detalhes"]] as const).map(([id, label]) => (
+        {([["config", "Configurar"], ["blocks", "Blocos"], ["detail", "Preview"]] as const).map(([id, label]) => (
           <button
             key={id}
             type="button"
@@ -2017,9 +2050,9 @@ export function SheetGeneratorTool() {
               <button
                 onClick={() => void handlePrint()}
                 disabled={isPrinting}
-                className={`whitespace-nowrap flex items-center gap-2 rounded-[var(--radius-lg)] px-3 py-1.5 text-[11px] font-extrabold tracking-[0.01em] disabled:cursor-not-allowed disabled:opacity-70 ${credits === 0 || isPrinting ? "bg-[#cbd5e1] text-white shadow-none" : loginOrangeBtn}`}
+                className={`whitespace-nowrap flex items-center gap-2 rounded-[var(--radius-lg)] px-3 py-1.5 text-[11px] font-extrabold tracking-[0.01em] disabled:cursor-not-allowed disabled:opacity-70 ${isPrinting ? "bg-[#cbd5e1] text-white shadow-none" : loginOrangeBtn}`}
               >
-                {isPrinting ? "Gerando..." : "Imprimir / PDF"}
+                {isPrinting ? "Gerando..." : "Gerar PDF"}
               </button>
               <button
                 type="button"
@@ -2051,7 +2084,7 @@ export function SheetGeneratorTool() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-6">
+        <div className="flex-1 overflow-y-auto pb-24 md:pb-6">
 
           {/* CABEÇALHO */}
           <div className="border-b border-[#f1f5f9] px-4">
@@ -2181,9 +2214,36 @@ export function SheetGeneratorTool() {
           <div className="flex flex-wrap items-center gap-2 xl:justify-end">
             <div
               key={creditsFxTick}
-              className={`whitespace-nowrap rounded-lg border px-3 py-2 text-[11px] font-semibold transition ${credits !== null && credits <= 0 ? "border-[#fee2e2] bg-[#fff1f2] text-[#be123c]" : "border-[#e2e8f0] bg-white text-[#475569]"} ${creditsFxTick > 0 ? "animate-pulse" : ""}`}
+              className={`whitespace-nowrap rounded-lg border px-3 py-2 text-[11px] font-semibold transition-all ${
+                creditsLoading || credits === null
+                  ? "border-[#e2e8f0] bg-white text-[#94a3b8]"
+                  : credits === 0
+                    ? "border-[#fee2e2] bg-[#fff1f2] text-[#be123c]"
+                    : credits === 1
+                      ? "border-[#fef3c7] bg-[#fffbeb] text-[#b45309]"
+                      : "border-[#e2e8f0] bg-white text-[#475569]"
+              } ${creditsFxTick > 0 ? "animate-pulse" : ""}`}
             >
-              {creditsLoading ? "Carregando créditos..." : credits === null ? "Créditos indisponíveis" : `Você tem ${credits} gerações`}
+              {creditsLoading ? (
+                "Verificando créditos..."
+              ) : credits === null ? (
+                "Créditos indisponíveis"
+              ) : credits === 0 ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#be123c]" />
+                  Sem gerações — compre um pacote
+                </span>
+              ) : credits === 1 ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#f59e0b]" />
+                  Última geração gratuita
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
+                  {credits} gerações disponíveis
+                </span>
+              )}
             </div>
             <button
               type="button"
@@ -2213,15 +2273,15 @@ export function SheetGeneratorTool() {
             <button
               onClick={() => void handlePrint()}
               disabled={isPrinting}
-              className={`whitespace-nowrap flex items-center gap-2 rounded-[var(--radius-lg)] px-3 py-1.5 text-[11px] font-extrabold tracking-[0.01em] disabled:cursor-not-allowed disabled:opacity-70 ${credits === 0 || isPrinting ? "bg-[#cbd5e1] text-white shadow-none" : loginOrangeBtn}`}
+              className={`whitespace-nowrap flex items-center gap-2 rounded-[var(--radius-lg)] px-3 py-1.5 text-[11px] font-extrabold tracking-[0.01em] disabled:cursor-not-allowed disabled:opacity-70 ${isPrinting ? "bg-[#cbd5e1] text-white shadow-none" : loginOrangeBtn}`}
             >
-              {isPrinting ? "Gerando..." : "Imprimir / PDF"}
+              {isPrinting ? "Gerando..." : "Gerar PDF"}
             </button>
           </div>
         </div>
 
         {/* Blocks list */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto pb-20 md:pb-0">
           {blocks.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-5 px-6 py-6 text-center">
               <div className="w-full max-w-[560px] rounded-2xl border border-[#e5e7eb] bg-white p-2 shadow-[0_4px_12px_rgba(15,23,42,0.06)]">
@@ -2441,7 +2501,7 @@ export function SheetGeneratorTool() {
           </div>
         </div>
 
-        {/* Rodapé do preview: paginação */}
+        {/* Rodapé do preview: paginação + CTA */}
         <div className="shrink-0 px-4 py-3" style={{ background: "#fff", borderTop: "1px solid #e5e7eb" }}>
           <div
             className="pagination"
@@ -2450,7 +2510,6 @@ export function SheetGeneratorTool() {
               justifyContent: "center",
               alignItems: "center",
               gap: 12,
-              marginTop: 12,
               fontSize: 13,
               color: "#6b7280",
             }}
@@ -2474,6 +2533,22 @@ export function SheetGeneratorTool() {
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
             </button>
+          </div>
+          {/* CTA principal no preview — oculto em mobile (sticky bar cobre) */}
+          <div className="mt-3 hidden flex-col items-center gap-1 md:flex">
+            <button
+              onClick={() => void handlePrint()}
+              disabled={isPrinting || previewPages.length === 0}
+              className={`inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-lg)] px-4 py-2.5 text-[12px] font-extrabold tracking-[0.01em] disabled:cursor-not-allowed disabled:opacity-60 ${isPrinting || previewPages.length === 0 ? "bg-[#cbd5e1] text-white shadow-none" : loginOrangeBtn}`}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3m0 12-4-4m4 4 4-4M2 17l.621 2.485A2 2 0 004.56 21h14.878a2 2 0 001.94-1.515L22 17"/></svg>
+              {isPrinting ? "Gerando..." : "Gerar PDF"}
+            </button>
+            {credits !== null && credits > 0 && (
+              <p className="text-[10px] text-[#94a3b8]">
+                {credits === 1 ? "Última geração gratuita" : `${credits} gerações disponíveis`}
+              </p>
+            )}
           </div>
         </div>
       </aside>
@@ -2653,33 +2728,11 @@ export function SheetGeneratorTool() {
         </div>
       )}
 
-      {paywallOpen && (
-        <div className="fixed inset-0 z-[220] flex items-center justify-center" style={{ backdropFilter: "blur(6px)", background: "rgba(15,23,42,0.45)" }} onClick={() => setPaywallOpen(false)}>
-          <div className="relative mx-4 w-full max-w-[420px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-[#f1f5f9] px-5 py-4">
-              <div>
-                <div className="text-[15px] font-bold text-[#0f172a]">Gerações esgotadas</div>
-                <div className="text-[12px] text-[#94a3b8]">Compre mais créditos para continuar</div>
-              </div>
-              <button onClick={() => setPaywallOpen(false)} className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn}`}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-              </button>
-            </div>
-            <div className="space-y-3 px-5 py-4">
-              <div className="rounded-lg border border-[#fee2e2] bg-[#fff1f2] px-3 py-2 text-[12px] text-[#9f1239]">
-                Você chegou a 0 gerações. Recarregue para liberar novas folhas.
-              </div>
-              <button
-                onClick={() => void handleBuyCredits()}
-                disabled={checkoutBusy}
-                className={`w-full ${chunkyPrimaryBtn} disabled:opacity-60`}
-              >
-                {checkoutBusy ? "Abrindo checkout..." : "Comprar créditos"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PaywallModal
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        onBuy={handleBuyCredits}
+      />
 
       {/* ── TEMPLATES MODAL ──────────────────────────────────────── */}
       {templatesModalOpen && (
@@ -2863,6 +2916,30 @@ export function SheetGeneratorTool() {
       )}
 
 
+
+      {/* ── MOBILE STICKY CTA ─────────────────────────────────────────── */}
+      {/* Visível em qualquer tab no mobile — o CTA principal nunca se perde */}
+      <div className="fixed bottom-0 left-0 right-0 z-[50] flex items-center gap-3 border-t border-[#e5e7eb] bg-white/95 px-4 py-3 backdrop-blur-sm md:hidden">
+        <div className="min-w-0 flex-1">
+          {credits === 0 ? (
+            <p className="text-[11px] font-semibold text-[#be123c]">Sem gerações restantes</p>
+          ) : credits === 1 ? (
+            <p className="text-[11px] font-semibold text-[#b45309]">Última geração gratuita</p>
+          ) : credits !== null ? (
+            <p className="text-[11px] font-semibold text-[#475569]">{credits} gerações disponíveis</p>
+          ) : (
+            <p className="text-[11px] text-[#94a3b8]">Verificando créditos...</p>
+          )}
+          <p className="truncate text-[10px] text-[#94a3b8]">PDF com gabarito · pronto para imprimir</p>
+        </div>
+        <button
+          onClick={() => void handlePrint()}
+          disabled={isPrinting}
+          className={`whitespace-nowrap flex shrink-0 items-center gap-2 rounded-[var(--radius-lg)] px-4 py-2.5 text-[12px] font-extrabold tracking-[0.01em] disabled:cursor-not-allowed disabled:opacity-70 ${isPrinting ? "bg-[#cbd5e1] text-white shadow-none" : loginOrangeBtn}`}
+        >
+          {isPrinting ? "Gerando..." : "Gerar PDF"}
+        </button>
+      </div>
 
     </div>
   );

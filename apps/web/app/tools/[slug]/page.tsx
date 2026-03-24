@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { SheetGeneratorTool } from "@/components/tools/sheet-generator-tool";
+import { GenerationStatusBadge } from "@/components/tools/generation-status-badge";
 import { ArrowLeftIcon } from "../_components/icons";
 import { ToolsCheckoutRedirect } from "../_components/tools-checkout-redirect";
 
@@ -76,6 +77,9 @@ export default async function ToolsDetailPage({ params, searchParams }: ToolsDet
         {isExerciseGenerator ? (
           <>
             {shouldAutoCheckout ? <ToolsCheckoutRedirect planCode="credits_30" /> : null}
+            <div className="shrink-0 py-2">
+              <GenerationStatusBadge />
+            </div>
             <SheetGeneratorTool />
           </>
         ) : (
@@ -86,15 +90,19 @@ export default async function ToolsDetailPage({ params, searchParams }: ToolsDet
               <p className="text-white/70">{description}</p>
             </header>
             <section className="rounded-2xl border border-white/15 bg-[rgba(255,255,255,0.05)] p-4 backdrop-blur-sm sm:p-6">
-              <h2 className="text-lg font-bold sm:text-xl">Acesso antecipado</h2>
-              <p className="mt-2 text-sm text-white/75">
-                Cadastre-se para ser avisado quando essa ferramenta estiver disponível e receber acesso prioritário.
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(238,135,72,0.25)] bg-[rgba(238,135,72,0.08)] px-3 py-1 text-[11px] font-semibold text-[#fde68a]">
+                Em breve
+              </span>
+              <h2 className="mt-3 text-lg font-bold sm:text-xl">Esta ferramenta está em desenvolvimento</h2>
+              <p className="mt-2 text-sm text-white/65">
+                Enquanto isso, o Gerador de Exercícios já está funcionando — e é gratuito para começar.
               </p>
               <Link
-                href={`/beta?tool=${encodeURIComponent(slug)}`}
-                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-4 py-2 text-sm font-bold text-white shadow-[0_4px_0_rgba(158,74,30,0.45)] transition hover:brightness-110"
+                href="/tools/gerador-atividades"
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-4 py-2.5 text-sm font-extrabold text-white shadow-[0_4px_0_rgba(158,74,30,0.45),0_8px_16px_rgba(93,48,22,0.22)] transition hover:brightness-110"
               >
-                Quero acesso antecipado
+                Usar o Gerador de Exercícios — grátis
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
               </Link>
             </section>
           </>
