@@ -18,7 +18,7 @@ import {
   deleteToolsTemplate as deleteToolsTemplateApi,
   duplicateToolsTemplate as duplicateToolsTemplateApi,
   getToolsTemplates,
-  useAnonCredit,
+  useAnonCredit as consumeAnonCredit,
   useToolsCredit as consumeToolsCredit,
   type ToolsTemplateRecord,
 } from "@/lib/api/client";
@@ -1943,7 +1943,7 @@ export function SheetGeneratorTool() {
     try {
       let remaining: number;
       if (isAnonUser) {
-        const result = await useAnonCredit(anonId);
+        const result = await consumeAnonCredit(anonId);
         remaining = result.remaining_free_generations + result.paid_credits_remaining;
       } else {
         const result = await consumeToolsCredit();

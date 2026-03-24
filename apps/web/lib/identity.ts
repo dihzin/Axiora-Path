@@ -88,7 +88,7 @@ async function computeFingerprint(): Promise<string> {
     `${screen.width}x${screen.height}x${screen.colorDepth}x${screen.pixelDepth}`,
     Intl.DateTimeFormat().resolvedOptions().timeZone,
     String(navigator.hardwareConcurrency ?? ""),
-    String((navigator as Record<string, unknown>).deviceMemory ?? ""),
+    String((navigator as unknown as Record<string, unknown>).deviceMemory ?? ""),
     navigator.platform ?? "",
     navigator.vendor ?? "",
     String(navigator.maxTouchPoints ?? 0),
