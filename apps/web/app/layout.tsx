@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Baloo_2, Nunito } from "next/font/google";
 import { ReactNode } from "react";
+import { Analytics } from "@vercel/analytics/next";
 
 import { Toaster } from "sonner";
 
@@ -75,6 +76,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             }}
           />
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
