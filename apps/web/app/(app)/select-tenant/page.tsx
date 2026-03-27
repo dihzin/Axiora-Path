@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
+import { AxioraLogo } from "@/components/brand/axiora-logo";
 import { AuthWallpaper } from "@/components/layout/auth-wallpaper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,6 +90,7 @@ export default function SelectTenantPage() {
       <main className="axiora-brand-content safe-px safe-pb mx-auto flex min-h-screen w-full max-w-md items-center overflow-x-clip p-4 md:p-6">
         <Card className="axiora-auth-panel w-full">
           <CardHeader>
+            <AxioraLogo size="sm" className="mb-4 w-[150px] border-[rgba(223,204,183,0.88)] bg-[rgba(255,250,244,0.82)] shadow-[0_16px_32px_rgba(164,132,101,0.16)]" alt="Axiora Educação Digital" />
             <CardTitle className="text-[#22352f]">Selecionar organização</CardTitle>
             <CardDescription className="axiora-auth-muted">Confirme a organização ativa antes de escolher o perfil infantil.</CardDescription>
           </CardHeader>

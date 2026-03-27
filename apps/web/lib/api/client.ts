@@ -2570,9 +2570,13 @@ export async function createToolsCheckoutV2(payload: {
  * GET /api/tools/checkout/status?session_id=...
  * Consulta o status de uma sessão após retorno do Stripe.
  */
-export async function getToolsCheckoutStatus(sessionId: string): Promise<ToolsCheckoutStatusResponse> {
+export async function getToolsCheckoutStatus(sessionId: string, anonymousId?: string): Promise<ToolsCheckoutStatusResponse> {
+  const query = new URLSearchParams({ session_id: sessionId });
+  if (anonymousId) {
+    query.set("anonymous_id", anonymousId);
+  }
   return apiRequest<ToolsCheckoutStatusResponse>(
-    `/api/tools/checkout/status?session_id=${encodeURIComponent(sessionId)}`,
+    `/api/tools/checkout/status?${query.toString()}`,
     { method: "GET", requireAuth: false, includeTenant: false },
   );
 }

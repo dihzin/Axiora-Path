@@ -67,13 +67,20 @@ export function PricingBlock({ priceVariant = "a" }: PricingBlockProps) {
         </div>
 
         {/* Pacote pago */}
-        <div className="relative flex flex-col overflow-hidden rounded-2xl border border-[rgba(238,135,72,0.55)] bg-[linear-gradient(150deg,rgba(110,48,8,0.72)_0%,rgba(68,28,4,0.80)_100%)] p-6 shadow-[0_0_0_1px_rgba(238,135,72,0.15),0_24px_56px_rgba(93,48,22,0.45),0_0_80px_rgba(238,135,72,0.10)] backdrop-blur-sm">
+        <div className="relative flex flex-col overflow-hidden rounded-2xl border border-[rgba(238,135,72,0.28)] bg-[linear-gradient(180deg,rgba(238,135,72,0.11)_0%,rgba(238,135,72,0.07)_100%)] p-6 shadow-[0_0_0_1px_rgba(238,135,72,0.08),0_20px_44px_rgba(12,21,34,0.28)] backdrop-blur-sm">
           {/* Top accent bar */}
-          <div className="absolute inset-x-0 top-0 h-[3px] bg-[linear-gradient(90deg,#fde68a,#ee8748,#db6728)]" aria-hidden="true" />
+          <div className="absolute inset-x-0 top-0 h-[3px] bg-[linear-gradient(90deg,rgba(253,230,138,0.95),#ee8748,rgba(219,103,40,0.88))]" aria-hidden="true" />
           {/* Inner radial glow */}
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(253,230,138,0.13),transparent_60%)]" aria-hidden="true" />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(circle_at_18%_16%, rgba(255,224,154,0.16), transparent 28%), radial-gradient(circle_at_78%_20%, rgba(238,135,72,0.12), transparent 32%), linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))",
+            }}
+            aria-hidden="true"
+          />
           {/* Badge */}
-          <span className="absolute -top-px left-1/2 -translate-x-1/2 rounded-b-xl bg-[linear-gradient(180deg,#ee8748,#db6728)] px-4 py-1 text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-white shadow-[0_4px_12px_rgba(93,48,22,0.4)]">
+          <span className="absolute -top-px left-1/2 -translate-x-1/2 rounded-b-xl bg-[linear-gradient(180deg,#ee8748,#db6728)] px-4 py-1 text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-white shadow-[0_4px_12px_rgba(93,48,22,0.28)]">
             Mais escolhido
           </span>
 

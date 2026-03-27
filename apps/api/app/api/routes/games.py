@@ -54,6 +54,7 @@ from app.services.game_metagame import (
 from app.services.game_league import build_games_league_summary, claim_games_league_reward
 from app.services.game_ranking import get_personal_ranking_snapshot, get_weekly_ranking_snapshot
 from app.services.learning_retention import MissionDelta, track_mission_progress
+from app.services.child_context import resolve_child_context
 
 router = APIRouter(prefix="/api/games", tags=["games"])
 
@@ -284,56 +285,6 @@ _GAME_CATALOG: list[dict[str, object]] = [
         "tags": ["vocabulário", "foco"],
     },
 ]
-
-
-def _resolve_child_context(
-    db: DBSession,
-    *,
-    tenant_id: int,
-    user: User,
-    membership: Membership,
-    requested_child_id: int | None,
-) -> ChildProfile:
-    if requested_child_id is not None:
-        child = db.scalar(
-            select(ChildProfile).where(
-                ChildProfile.id == requested_child_id,
-                ChildProfile.tenant_id == tenant_id,
-                ChildProfile.deleted_at.is_(None),
-            ),
-        )
-        if child is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Child not found in this tenant")
-        membership_role = membership.role.value if hasattr(membership.role, "value") else str(membership.role)
-        if membership_role == "CHILD" and child.user_id != user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Child user cannot submit results for another child")
-        return child
-
-    direct_child = db.scalar(
-        select(ChildProfile).where(
-            ChildProfile.tenant_id == tenant_id,
-            ChildProfile.user_id == user.id,
-            ChildProfile.deleted_at.is_(None),
-        ),
-    )
-    if direct_child is not None:
-        return direct_child
-
-    children = db.scalars(
-        select(ChildProfile).where(
-            ChildProfile.tenant_id == tenant_id,
-            ChildProfile.deleted_at.is_(None),
-        ),
-    ).all()
-    if len(children) == 1:
-        return children[0]
-    if not children:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No child profile found for this tenant")
-    raise HTTPException(
-        status_code=status.HTTP_409_CONFLICT,
-        detail="Multiple children found. Provide childId explicitly.",
-    )
-
 
 def _resolve_game_settings(
     db: DBSession,

@@ -37,7 +37,10 @@ export function HowItWorks() {
             className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[rgba(255,255,255,0.05)] p-6 backdrop-blur-sm transition-transform duration-200 hover:-translate-y-1 hover:border-[rgba(238,135,72,0.3)] hover:bg-[rgba(255,255,255,0.08)]"
           >
             <div className="absolute inset-x-0 top-0 h-[2px] rounded-t-2xl bg-[linear-gradient(90deg,#fde68a,#ee8748,transparent)]" aria-hidden="true" />
-            <span className="text-5xl font-extrabold leading-none text-[rgba(238,135,72,0.18)] select-none">
+            <span
+              className="select-none text-5xl font-extrabold leading-none tracking-[-0.04em] text-[rgba(238,135,72,0.50)]"
+              style={{ textShadow: "0 1px 0 rgba(255,224,154,0.12), 0 8px 18px rgba(13,25,40,0.14)" }}
+            >
               {step.number}
             </span>
             <h3 className="mt-3 text-lg font-bold">{step.title}</h3>

@@ -1,11 +1,19 @@
+import Image from "next/image";
+
 export function AuthWallpaper() {
   return (
     <>
-      <div
-        className="pointer-events-none fixed inset-0 z-0 bg-cover bg-[58%_center] bg-no-repeat"
-        style={{ backgroundImage: "url('/axiora/auth/wallpaper.jpg')" }}
-        aria-hidden="true"
-      />
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+        <Image
+          src="/axiora/auth/wallpaper.jpg"
+          alt=""
+          fill
+          priority
+          quality={60}
+          sizes="100vw"
+          className="object-cover object-[58%_center]"
+        />
+      </div>
       <div
         className="pointer-events-none fixed inset-0 z-0 bg-[linear-gradient(90deg,rgba(6,14,22,0.82)_0%,rgba(10,22,32,0.52)_38%,rgba(16,28,32,0.18)_100%)]"
         aria-hidden="true"

@@ -168,6 +168,88 @@ def _build_paywall_detail(
     }
 
 
+def _assert_checkout_status_access(
+    *,
+    session: ToolsCheckoutSession,
+    request: Request,
+    db: DBSession,
+    anonymous_id: str | None,
+) -> None:
+    if session.user_id is not None:
+        auth_user = _resolve_optional_user(request, db)
+        if auth_user is None or int(auth_user.id) != int(session.user_id):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Checkout session not found")
+        return
+    if session.anon_id is not None:
+        if anonymous_id != session.anon_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Checkout session not found")
+        return
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Checkout session not found")
+
+
+def _resolve_checkout_scope_and_credits(
+    *,
+    db: DBSession,
+    stripe_session_id: str | None,
+    parsed_event: dict[str, object],
+) -> tuple[str, int, str | None]:
+    recorded_session = db.get(ToolsCheckoutSession, stripe_session_id) if stripe_session_id else None
+    if recorded_session is not None:
+        pack = PRICING_PACKS.get(recorded_session.plan_code)
+        if pack is None:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unknown checkout plan")
+        scope_key = (
+            f"user:{recorded_session.user_id}"
+            if recorded_session.user_id is not None
+            else f"anon:{recorded_session.anon_id}"
+            if recorded_session.anon_id is not None
+            else None
+        )
+        if not scope_key:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Checkout session owner is missing")
+        return scope_key, int(pack.credits), recorded_session.plan_code
+
+    billing = ToolsBillingService()
+    legacy_grant = billing.parse_checkout_completed_event(parsed_event)
+    if legacy_grant is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing checkout reconciliation data")
+    scope_key, credits = legacy_grant
+    return scope_key, int(credits), None
+
+
+def _validate_checkout_payment_details(
+    *,
+    plan_code: str | None,
+    parsed_event: dict[str, object],
+) -> None:
+    if parsed_event.get("type") != "checkout.session.completed":
+        return
+    data = parsed_event.get("data")
+    if not isinstance(data, dict):
+        return
+    obj = data.get("object")
+    if not isinstance(obj, dict):
+        return
+
+    payment_status = str(obj.get("payment_status") or "").strip().lower()
+    if payment_status and payment_status != "paid":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Checkout payment is not finalized")
+
+    if not plan_code:
+        return
+    pack = PRICING_PACKS.get(plan_code)
+    if pack is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unknown checkout plan")
+
+    amount_total = obj.get("amount_total")
+    if isinstance(amount_total, (int, float)) and int(amount_total) != int(pack.price_cents):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Checkout amount does not match server pricing")
+
+    currency = obj.get("currency")
+    if isinstance(currency, str) and currency.strip().upper() != pack.currency.upper():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Checkout currency does not match server pricing")
+
+
 @router.get("/catalog", response_model=ToolsCatalogResponse)
 async def get_catalog(
     service: Annotated[ToolsService, Depends(get_tools_service)],
@@ -574,7 +656,9 @@ async def create_tools_checkout_v2(
 @router.get("/checkout/status", response_model=ToolsCheckoutStatusResponse)
 async def get_checkout_status(
     session_id: str,
+    request: Request,
     db: DBSession,
+    anonymous_id: str | None = None,
 ) -> ToolsCheckoutStatusResponse:
     """Consulta o status de uma Checkout Session após retorno do Stripe.
 
@@ -584,6 +668,7 @@ async def get_checkout_status(
     session = db.get(ToolsCheckoutSession, session_id)
     if session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Checkout session not found")
+    _assert_checkout_status_access(session=session, request=request, db=db, anonymous_id=anonymous_id)
 
     pack = PRICING_PACKS.get(session.plan_code)
     credits_for_plan = pack.credits if pack else 0
@@ -632,6 +717,7 @@ async def use_tools_credit(
 @router.post("/checkout", response_model=ToolsCheckoutSessionResponse)
 async def create_tools_checkout(
     payload: ToolsCheckoutSessionRequest,
+    db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> ToolsCheckoutSessionResponse:
     billing = ToolsBillingService()
@@ -651,6 +737,19 @@ async def create_tools_checkout(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
         ) from exc
+    try:
+        anon_svc = AnonToolsService()
+        anon_svc.record_checkout_session(
+            db,
+            stripe_session_id=checkout.id,
+            anon_id=None,
+            user_id=user.id,
+            plan_code=payload.plan_code,
+            status="created",
+        )
+        db.commit()
+    except Exception:
+        logger.warning("checkout: failed to persist authenticated checkout session", exc_info=True)
     return ToolsCheckoutSessionResponse(
         checkout_url=checkout.url,
         checkout_session_id=checkout.id,
@@ -691,11 +790,21 @@ async def handle_tools_stripe_webhook(
             detail="Invalid webhook payload",
         )
 
-    grant = billing.parse_checkout_completed_event(parsed)
-    if grant is None:
-        logger.info("tools.webhook: event type=%s — no action taken", parsed.get("type", "unknown"))
+    if parsed.get("type") != "checkout.session.completed":
+        logger.info("tools.webhook: event type=%s - no action taken", parsed.get("type", "unknown"))
         return {"ok": True}
-    scope_key, credits = grant
+    stripe_session_id = parsed.get("data", {}).get("object", {}).get("id")
+    if stripe_session_id is not None and not isinstance(stripe_session_id, str):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid checkout session id",
+        )
+    scope_key, credits, plan_code = _resolve_checkout_scope_and_credits(
+        db=db,
+        stripe_session_id=stripe_session_id,
+        parsed_event=parsed,
+    )
+    _validate_checkout_payment_details(plan_code=plan_code, parsed_event=parsed)
 
     # ── Usuário autenticado ───────────────────────────────────────────────────
     if scope_key.startswith("user:"):

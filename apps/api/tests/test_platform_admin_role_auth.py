@@ -1300,7 +1300,7 @@ def test_create_platform_admin_user_creates_user_and_membership(monkeypatch: pyt
     monkeypatch.setattr(axion_studio, "validate_password_strength", lambda *_args, **_kwargs: None)
     platform_tenant = Tenant(id=20, type=TenantType.SYSTEM_ADMIN, name="Platform", slug="platform-admin")
     actor = User(id=1, email="admin@local.com", name="Admin", password_hash="hashed")
-    db = _FakeDB([platform_tenant, None, None])
+    db = _FakeDB([None, platform_tenant, None, None])
 
     result = axion_studio.create_platform_admin_user(
         axion_studio.AxionPlatformAdminUserCreateRequest(
@@ -1328,7 +1328,7 @@ def test_create_platform_admin_user_allows_platform_tenant_not_system_admin(monk
     monkeypatch.setattr(axion_studio, "validate_password_strength", lambda *_args, **_kwargs: None)
     platform_tenant = Tenant(id=20, type=TenantType.SCHOOL, name="Platform", slug="platform-admin")
     actor = User(id=1, email="admin@local.com", name="Admin", password_hash="hashed")
-    db = _FakeDB([platform_tenant, None, None])
+    db = _FakeDB([None, platform_tenant, None, None])
 
     result = axion_studio.create_platform_admin_user(
         axion_studio.AxionPlatformAdminUserCreateRequest(
@@ -1363,7 +1363,7 @@ def test_create_platform_admin_user_existing_user_resets_password_when_requested
         locked_until=datetime.now(UTC) + timedelta(minutes=3),
     )
     existing_membership = Membership(user_id=existing_user.id, tenant_id=platform_tenant.id, role=MembershipRole.PLATFORM_ADMIN)
-    db = _FakeDB([platform_tenant, existing_user, existing_membership])
+    db = _FakeDB([None, platform_tenant, existing_user, existing_membership])
 
     result = axion_studio.create_platform_admin_user(
         axion_studio.AxionPlatformAdminUserCreateRequest(

@@ -6,8 +6,10 @@ import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
+import { AxioraLogo } from "@/components/brand/axiora-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AuthWallpaper } from "@/components/layout/auth-wallpaper";
 import { getApiErrorMessage, getLegalStatus, googleLogin, listMemberships, type PrimaryLoginResponse, selectTenant, signup } from "@/lib/api/client";
 import { clearTenantSlug, clearTokens, setAccessToken, setTenantSlug } from "@/lib/api/session";
 import { signupSchema } from "@/lib/schemas";
@@ -204,19 +206,7 @@ export default function SignupPage() {
         />
       ) : null}
 
-      <div
-        className="pointer-events-none fixed inset-0 z-0 bg-cover bg-[58%_center] bg-no-repeat"
-        style={{ backgroundImage: "url('/axiora/auth/wallpaper.jpg')" }}
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none fixed inset-0 z-0 bg-[linear-gradient(90deg,rgba(8,18,27,0.7)_0%,rgba(10,24,35,0.46)_34%,rgba(16,30,34,0.22)_100%)]"
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_14%_20%,rgba(255,224,154,0.13),transparent_20%),radial-gradient(circle_at_82%_16%,rgba(150,234,221,0.1),transparent_22%),radial-gradient(circle_at_50%_100%,rgba(7,20,17,0.4),transparent_44%)]"
-        aria-hidden="true"
-      />
+      <AuthWallpaper />
 
       <main className="axiora-brand-content relative z-10 min-h-screen w-full overflow-hidden">
         <section className="relative z-10 mx-auto grid min-h-screen w-full max-w-[1480px] items-center gap-8 px-4 py-6 sm:px-6 lg:grid-cols-[1.08fr_0.92fr] lg:px-10 lg:py-10">
@@ -230,6 +220,7 @@ export default function SignupPage() {
 
             <div className="max-w-[37rem] space-y-6 pt-2 text-white lg:pt-8">
               <div className="space-y-4">
+                <AxioraLogo size="md" priority className="w-[170px] border-white/12 bg-[rgba(12,16,22,0.34)] shadow-[0_16px_36px_rgba(0,0,0,0.22)] sm:w-[205px]" alt="Axiora Educação Digital" />
                 <h1 className="max-w-[11ch] text-4xl font-black uppercase leading-[0.81] tracking-[-0.045em] sm:text-5xl lg:text-[5rem]">
                   <span className="block text-[#fffaf4] drop-shadow-[0_10px_22px_rgba(7,20,17,0.28)]">Criar</span>
                   <span className="block bg-[linear-gradient(180deg,#fff1cf_0%,#f4ca97_44%,#de9b79_100%)] bg-clip-text text-transparent drop-shadow-[0_10px_26px_rgba(87,40,24,0.18)]">
@@ -290,12 +281,14 @@ export default function SignupPage() {
                   <AxionMascot />
                 </div>
                 <div>
+                  <AxioraLogo size="sm" className="mb-3 w-[138px] border-[rgba(223,204,183,0.88)] bg-[rgba(255,250,244,0.82)] shadow-[0_16px_32px_rgba(164,132,101,0.16)]" alt="Axiora Educação Digital" />
                   <p className="text-[0.68rem] font-black uppercase tracking-[0.22em] text-[#8b755d]">Novo acesso</p>
                   <h2 className="mt-1 text-2xl font-black text-[#22352f]">Criar conta</h2>
                 </div>
               </div>
 
               <div className="relative hidden lg:block">
+                <AxioraLogo size="sm" className="mb-4 w-[148px] border-[rgba(223,204,183,0.88)] bg-[rgba(255,250,244,0.8)] shadow-[0_16px_32px_rgba(164,132,101,0.16)]" alt="Axiora Educação Digital" />
                 <p className="text-[0.7rem] font-black uppercase tracking-[0.24em] text-[#9c7c58]">Novo acesso</p>
                 <h2 className="mt-2 text-[2.05rem] font-black leading-tight tracking-[-0.025em] text-[#203846]">Criar conta no Axiora</h2>
                 <p className="mt-3 max-w-[23rem] text-sm font-semibold leading-6 text-[#5e605b]">

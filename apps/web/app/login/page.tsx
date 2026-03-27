@@ -9,8 +9,10 @@ import Image from "next/image";
 
 import { ArrowRight, Eye, EyeOff, GraduationCap, Loader2, Lock, Mail, Star, Trophy, Users, Zap } from "lucide-react";
 
+import { AxioraLogo } from "@/components/brand/axiora-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AuthWallpaper } from "@/components/layout/auth-wallpaper";
 import { getApiErrorMessage, getLegalStatus, googleLogin, listMemberships, loginPrimary, type PrimaryLoginResponse, selectTenant } from "@/lib/api/client";
 import { clearTenantSlug, clearTokens, setAccessToken, setTenantSlug } from "@/lib/api/session";
 import { loginSchema } from "@/lib/schemas";
@@ -214,19 +216,7 @@ export default function LoginPage() {
         />
       ) : null}
 
-      <div
-        className="pointer-events-none fixed inset-0 z-0 bg-cover bg-[58%_center] bg-no-repeat"
-        style={{ backgroundImage: "url('/axiora/auth/wallpaper.jpg')", backgroundColor: "#0b1420" }}
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none fixed inset-0 z-0 bg-[linear-gradient(90deg,rgba(6,14,22,0.82)_0%,rgba(10,22,32,0.52)_38%,rgba(16,28,32,0.18)_100%)]"
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_14%_20%,rgba(255,224,154,0.13),transparent_20%),radial-gradient(circle_at_82%_16%,rgba(150,234,221,0.1),transparent_22%),radial-gradient(circle_at_50%_100%,rgba(7,20,17,0.4),transparent_44%)]"
-        aria-hidden="true"
-      />
+      <AuthWallpaper />
 
       <main className="axiora-brand-content axiora-login-fullscreen relative z-10 flex min-h-[100svh] w-full items-center overflow-hidden">
         <section className={`axiora-login-grid relative z-10 mx-auto grid w-full max-w-[1480px] items-center overflow-x-clip px-4 py-4 sm:px-6 lg:max-h-[100svh] lg:overflow-hidden lg:grid-cols-[1.1fr_0.9fr] ${compactDesktop ? "gap-2 lg:gap-5 lg:px-8 lg:py-3" : "gap-2 lg:gap-6 lg:px-10 lg:py-6"}`}>
@@ -266,6 +256,7 @@ export default function LoginPage() {
               </div>
 
               <div className={compactDesktop ? "space-y-2" : "space-y-2"}>
+                <AxioraLogo size="md" priority className="w-[165px] border-white/12 bg-[rgba(12,16,22,0.34)] shadow-[0_16px_36px_rgba(0,0,0,0.22)] sm:w-[190px]" alt="Axiora Educação Digital" />
                 <div className="flex items-center gap-1 lg:block">
                   <h1 className={`flex-1 text-[2rem] font-black uppercase leading-[0.85] tracking-[-0.04em] sm:text-4xl ${shortDesktop ? "lg:text-[3.15rem]" : compactDesktop ? "lg:text-[3.45rem]" : "lg:text-[3.8rem]"} lg:max-w-[10ch] lg:leading-[0.81] lg:tracking-[-0.045em]`}>
                     <span className="block text-[#fffaf4] drop-shadow-[0_10px_22px_rgba(7,20,17,0.28)]">Abrir</span>
@@ -366,12 +357,13 @@ export default function LoginPage() {
               {/* Luz ambiente interior */}
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.94),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(255,220,170,0.10),transparent_44%)]" aria-hidden="true" />
               <div className={`text-center lg:hidden ${compactDesktop ? "mb-3" : "mb-4"}`}>
-                <p className="text-[0.68rem] font-black uppercase tracking-[0.22em] text-[#8b755d]">Axiora Path</p>
+                <AxioraLogo size="sm" className="mx-auto mb-3 w-[138px] border-[rgba(223,204,183,0.88)] bg-[rgba(255,250,244,0.82)] shadow-[0_16px_32px_rgba(164,132,101,0.16)]" alt="Axiora Educação Digital" />
                 <h2 className="mt-0.5 text-xl font-black leading-tight text-[#22352f]">Entrar <span className="font-normal">na sua</span> conta</h2>
               </div>
 
               <div className="relative hidden lg:block">
-                <div className={`${compactDesktop ? "mb-2" : "mb-3"}`}>
+                <div className={`${compactDesktop ? "mb-2" : "mb-3"} flex items-start justify-between gap-4`}>
+                  <AxioraLogo size="sm" className="w-[142px] border-[rgba(223,204,183,0.88)] bg-[rgba(255,250,244,0.8)] shadow-[0_16px_32px_rgba(164,132,101,0.16)]" alt="Axiora Educação Digital" />
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(238,135,72,0.28)] bg-[rgba(238,135,72,0.08)] px-3 py-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-[#ee8748]" aria-hidden="true" />
                     <span className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-[#b06030]">Acesso principal</span>

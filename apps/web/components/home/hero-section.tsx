@@ -53,7 +53,7 @@ export function HeroSection({
       {/* Glow central suave */}
       <div
         aria-hidden
-        className="pointer-events-none absolute left-1/3 top-1/2 h-32 w-64 -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse,rgba(168,85,247,0.06)_0%,rgba(168,85,247,0)_70%)] blur-2xl"
+        className="pointer-events-none absolute left-1/2 top-1/2 h-28 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse,rgba(168,85,247,0.06)_0%,rgba(168,85,247,0)_70%)] blur-2xl sm:left-1/3 sm:h-32 sm:w-64 sm:translate-x-0"
       />
 
       <div className="relative z-[1] flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">

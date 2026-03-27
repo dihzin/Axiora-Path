@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { AxioraLogo } from "@/components/brand/axiora-logo";
 import { AuthWallpaper } from "@/components/layout/auth-wallpaper";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage, platformLogin } from "@/lib/api/client";
@@ -50,6 +51,7 @@ export default function PlatformAdminLoginPage() {
     <main className="axiora-brand-page relative isolate mx-auto flex min-h-screen w-full items-center justify-center px-4 py-8">
       <AuthWallpaper />
       <div className="axiora-brand-content axiora-auth-panel w-full max-w-md rounded-3xl p-6">
+        <AxioraLogo size="sm" className="mb-4 w-[150px] border-[rgba(223,204,183,0.88)] bg-[rgba(255,250,244,0.82)] shadow-[0_16px_32px_rgba(164,132,101,0.16)]" alt="Axiora Educação Digital" />
         <h1 className="text-2xl font-black text-[#22352f]">Platform Admin</h1>
         <p className="axiora-auth-muted mt-1 text-sm font-semibold">Acesso administrativo do Axion Studio.</p>
 

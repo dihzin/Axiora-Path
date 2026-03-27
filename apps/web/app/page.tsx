@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
@@ -14,8 +14,11 @@ import {
   Clock,
   Users,
 } from "lucide-react";
+import { AxioraHeaderLogo } from "@/components/brand/axiora-header-logo";
+import { AxioraLogo } from "@/components/brand/axiora-logo";
+import { MarketingBackground } from "@/components/marketing-background";
 
-// ─── Tools cards ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Tools cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TOOLS = [
   {
     Icon: FileText,
@@ -46,7 +49,7 @@ const TOOLS = [
   },
 ];
 
-// ─── App features ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ App features â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const APP_FEATURES = [
   { Icon: BookOpen, accent: "#3b82f6", title: "Trilhas de aprendizado", description: "Caminho estruturado do básico ao avançado em cada disciplina." },
   { Icon: Gamepad2, accent: "#a855f7", title: "Aprendizado gamificado", description: "XP, conquistas e streaks que tornam o estudo diário um hábito." },
@@ -54,15 +57,15 @@ const APP_FEATURES = [
   { Icon: Map, accent: "#14b8a6", title: "Mapa de progresso", description: "Visualize o avanço e identifique onde focar o próximo estudo." },
 ];
 
-// ─── Coming soon ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Coming soon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const COMING_SOON = [
-  { Icon: Sparkles, title: "Correção automática com IA", description: "Envie a foto da folha respondida — a IA corrige e dá feedback." },
+  { Icon: Sparkles, title: "Correção automática com IA", description: "Envie a foto da folha respondida - a IA corrige e dá feedback." },
   { Icon: Users, title: "Modo turma", description: "Professores gerenciam alunos, atribuem listas e acompanham resultados." },
   { Icon: Clock, title: "Histórico de gerações", description: "Salve e reutilize listas antigas com um clique." },
   { Icon: Zap, title: "Banco de questões", description: "Mais de 10 mil questões categorizadas prontas para montar listas." },
 ];
 
-// ─── Stats ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const STATS = [
   { value: "+4.200", label: "listas geradas" },
   { value: "Matemática", label: "foco total" },
@@ -72,48 +75,34 @@ const STATS = [
 export default function HomePage() {
   return (
     <div className="relative isolate">
-      {/* ── Background ─────────────────────────────────────────────────────── */}
-      <div
-        className="pointer-events-none fixed inset-0 z-0 bg-cover bg-[58%_center] bg-no-repeat"
-        style={{ backgroundImage: "url('/axiora/auth/wallpaper.jpg')", backgroundColor: "#0b1420" }}
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none fixed inset-0 z-0 bg-[linear-gradient(90deg,rgba(6,14,22,0.80)_0%,rgba(10,22,32,0.56)_50%,rgba(10,22,32,0.66)_100%)]"
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_14%_20%,rgba(255,224,154,0.20),transparent_30%),radial-gradient(circle_at_82%_16%,rgba(150,234,221,0.12),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(7,20,17,0.45),transparent_50%)]"
-        aria-hidden="true"
-      />
+      {/* â”€â”€ Background â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <MarketingBackground priority />
 
       <div className="relative z-10 min-h-screen text-white">
-        {/* ── Nav ────────────────────────────────────────────────────────────── */}
-        <nav className="sticky top-0 z-30 flex items-center justify-between border-b border-white/10 bg-[rgba(6,14,22,0.88)] px-5 py-3 backdrop-blur-md">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[linear-gradient(180deg,#ee8748,#db6728)] shadow-[0_2px_0_rgba(158,74,30,0.5)]">
-              <span className="text-[0.65rem] font-black text-white">A</span>
-            </div>
-            <span className="text-sm font-extrabold tracking-tight text-white">
-              Axiora <span className="text-[#fcd34d]">Path</span>
-            </span>
-          </Link>
+        {/* â”€â”€ Nav â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <nav className="sticky top-0 z-30 border-b border-[rgba(238,135,72,0.14)] bg-[linear-gradient(180deg,rgba(8,20,31,0.72)_0%,rgba(9,24,36,0.62)_100%)] shadow-[0_10px_30px_rgba(4,12,20,0.16)] backdrop-blur-xl">
+          <div className="mx-auto flex h-[65px] max-w-5xl items-center justify-between gap-3 px-5">
+            <Link href="/" className="flex shrink-0 items-center">
+              <AxioraHeaderLogo priority />
+            </Link>
 
-          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
             <Link
               href="/tools"
-              className="hidden items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white/70 transition hover:text-white sm:inline-flex"
+              prefetch
+              className="hidden items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white/72 transition hover:bg-white/6 hover:text-white sm:inline-flex"
             >
               Tools
             </Link>
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold text-white/40 cursor-default select-none">
-              App — em breve
+            <span className="inline-flex cursor-default select-none items-center gap-1.5 rounded-lg border border-[rgba(238,135,72,0.18)] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] px-4 py-2 text-xs font-semibold text-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+              App - em breve
             </span>
+            </div>
           </div>
         </nav>
 
-        <div className="mx-auto w-full max-w-5xl px-5 pb-24">
-          {/* ── HERO ───────────────────────────────────────────────────────────── */}
+        <div className="mx-auto w-full max-w-5xl px-5 pb-36 md:pb-24">
+          {/* â”€â”€ HERO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <section className="overflow-hidden pt-16 text-center md:pt-24">
             <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(238,135,72,0.35)] bg-[rgba(238,135,72,0.12)] px-4 py-1.5 text-xs font-semibold text-[#fcd34d]">
               <Star className="h-3.5 w-3.5 text-[#ee8748]" />
@@ -123,7 +112,7 @@ export default function HomePage() {
             <div className="relative mt-5">
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[300px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+                className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[220px] w-[320px] -translate-x-1/2 -translate-y-1/2 rounded-full sm:h-[260px] sm:w-[520px] md:h-[300px] md:w-[700px]"
                 style={{ background: "radial-gradient(ellipse, rgba(238,135,72,0.18) 0%, rgba(238,135,72,0.06) 50%, transparent 75%)", filter: "blur(48px)" }}
               />
               <h1 className="mx-auto max-w-3xl text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl md:text-6xl">
@@ -135,13 +124,14 @@ export default function HomePage() {
             </div>
 
             <p className="mx-auto mt-5 max-w-2xl text-base text-white/75 md:text-lg">
-              Crie exercícios de matemática com gabarito e PDF em 30 segundos —{" "}
+              Crie exercícios de matemática com gabarito e PDF em 30 segundos -{" "}
               sem conta, sem assinatura, sem domingo perdido.
             </p>
 
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <Link
                 href="/tools"
+                prefetch
                 className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-8 py-4 text-base font-extrabold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.3),0_6px_0_rgba(158,74,30,0.45),0_16px_28px_rgba(93,48,22,0.25)] transition hover:brightness-110 sm:w-auto"
               >
                 Gerar lista de matemática grátis
@@ -160,7 +150,7 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* ── AXIORA TOOLS ───────────────────────────────────────────────────── */}
+          {/* â”€â”€ AXIORA TOOLS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <section className="mt-24">
             <div className="text-center">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#fcd34d]">Axiora Tools</p>
@@ -175,6 +165,7 @@ export default function HomePage() {
                 <Link
                   key={tool.title}
                   href={tool.href}
+                  prefetch={tool.badge === "Grátis para começar"}
                   className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[rgba(255,255,255,0.08)] p-5 backdrop-blur-sm transition hover:-translate-y-1 hover:border-white/20 hover:bg-[rgba(255,255,255,0.08)]"
                 >
                   <div
@@ -212,6 +203,7 @@ export default function HomePage() {
             <div className="mt-6 text-center">
               <Link
                 href="/tools"
+                prefetch
                 className="inline-flex items-center gap-1.5 text-sm font-semibold text-white/60 transition hover:text-white"
               >
                 Ver todas as ferramentas
@@ -220,7 +212,7 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* ── AXIORA PATH (APP) ───────────────────────────────────────────────── */}
+          {/* â”€â”€ AXIORA PATH (APP) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <section className="mt-24">
             <div className="text-center">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#fcd34d]">Axiora Path</p>
@@ -256,11 +248,11 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* ── COMING SOON ────────────────────────────────────────────────────── */}
+          {/* â”€â”€ COMING SOON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <section className="mt-24">
             <div className="text-center">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#fcd34d]">Roadmap</p>
-              <h2 className="mt-3 text-2xl font-extrabold sm:text-3xl md:text-4xl">O que estamos construindo — e por quê você vai querer.</h2>
+              <h2 className="mt-3 text-2xl font-extrabold sm:text-3xl md:text-4xl">O que estamos construindo - e por que você vai querer.</h2>
             </div>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -281,9 +273,9 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* ── CTA FINAL ──────────────────────────────────────────────────────── */}
+          {/* â”€â”€ CTA FINAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <section className="mt-24 rounded-3xl border border-[rgba(238,135,72,0.25)] bg-[rgba(238,135,72,0.08)] px-5 py-10 text-center backdrop-blur-sm sm:px-8 sm:py-12">
-            <h2 className="text-2xl font-extrabold sm:text-3xl md:text-4xl">Prepare sua primeira lista de matemática em 30 segundos — grátis.</h2>
+            <h2 className="text-2xl font-extrabold sm:text-3xl md:text-4xl">Prepare sua primeira lista de matemática em 30 segundos - grátis.</h2>
             <p className="mx-auto mt-4 max-w-xl text-sm text-white/75 md:text-base">
               Sem cadastro, sem cartão. Exercícios completos com gabarito e PDF prontos para imprimir.
             </p>
@@ -299,33 +291,34 @@ export default function HomePage() {
           </section>
         </div>
 
-        {/* ── Footer ─────────────────────────────────────────────────────────── */}
-        <footer className="border-t border-white/10 bg-[rgba(6,14,22,0.82)] backdrop-blur-md">
-          <div className="mx-auto max-w-5xl px-5 py-12">
-            {/* ── Grid principal ── */}
+        {/* â”€â”€ Footer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <footer className="relative border-t border-[rgba(238,135,72,0.12)] bg-[linear-gradient(180deg,rgba(8,18,29,0.76)_0%,rgba(7,16,27,0.84)_100%)] backdrop-blur-xl">
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(circle_at_12%_0%, rgba(255,224,154,0.08), transparent 24%), radial-gradient(circle_at_82%_12%, rgba(238,135,72,0.07), transparent 28%), linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0))",
+            }}
+            aria-hidden="true"
+          />
+          <div className="relative mx-auto max-w-5xl px-5 py-12">
+            {/* â”€â”€ Grid principal â”€â”€ */}
             <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
 
               {/* Marca */}
               <div className="lg:col-span-1">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[linear-gradient(180deg,#ee8748,#db6728)] shadow-[0_2px_0_rgba(158,74,30,0.5)]">
-                    <span className="text-[0.7rem] font-black text-white">A</span>
-                  </div>
-                  <span className="text-sm font-extrabold tracking-tight text-white">
-                    Axiora <span className="text-[#fcd34d]">Path</span>
-                  </span>
-                </div>
+                <AxioraLogo size="sm" className="border-[rgba(255,255,255,0.14)] bg-[rgba(12,16,22,0.42)]" alt="Axiora EducaÃ§Ã£o Digital" />
                 <p className="mt-3 text-xs leading-relaxed text-white/45">
-                  Aprendizado que realmente funciona — ferramentas educacionais para pais, professores e crianças.
+                  Aprendizado que realmente funciona - ferramentas educacionais para pais, professores e crianças.
                 </p>
                 {/* Redes sociais */}
                 <div className="mt-4 flex items-center gap-3">
                   <a
-                    href="https://instagram.com"
+                    href="https://www.instagram.com/axiorapath?igsh=MWhwdXQ2NWhjMmV1MQ=="
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Instagram da Axiora"
-                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/40 transition hover:border-white/20 hover:bg-white/10 hover:text-white/80"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/40 transition hover:border-[rgba(238,135,72,0.24)] hover:bg-[rgba(238,135,72,0.10)] hover:text-[#ffd7b2]"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
                       <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
@@ -334,25 +327,15 @@ export default function HomePage() {
                     </svg>
                   </a>
                   <a
-                    href="https://tiktok.com"
+                    href="https://wa.me/5511966305417"
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label="TikTok da Axiora"
-                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/40 transition hover:border-white/20 hover:bg-white/10 hover:text-white/80"
+                    aria-label="WhatsApp da Axiora"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/40 transition hover:border-[rgba(238,135,72,0.24)] hover:bg-[rgba(238,135,72,0.10)] hover:text-[#ffd7b2]"
                   >
                     <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden="true">
-                      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.29 6.29 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z" />
-                    </svg>
-                  </a>
-                  <a
-                    href="https://youtube.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="YouTube da Axiora"
-                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/40 transition hover:border-white/20 hover:bg-white/10 hover:text-white/80"
-                  >
-                    <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden="true">
-                      <path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19 31.6 31.6 0 0 0 0 12a31.6 31.6 0 0 0 .5 5.81 3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14A31.6 31.6 0 0 0 24 12a31.6 31.6 0 0 0-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z" />
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                      <path d="M12 2C6.477 2 2 6.484 2 12.017c0 1.99.518 3.86 1.42 5.488L2 22l4.633-1.364A9.953 9.953 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a7.946 7.946 0 0 1-4.291-1.254l-.308-.183-3.187.939.888-3.094-.2-.317A7.962 7.962 0 0 1 4 12c0-4.418 3.582-8 8-8s8 3.582 8 8-3.582 8-8 8z" />
                     </svg>
                   </a>
                 </div>
@@ -381,7 +364,7 @@ export default function HomePage() {
                   </li>
                   <li className="pt-1">
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(238,135,72,0.3)] bg-[rgba(238,135,72,0.1)] px-2.5 py-1 text-[10px] font-semibold text-[#fde68a]">
-                      Feito no Brasil 🇧🇷
+                      Feito no Brasil BR
                     </span>
                   </li>
                 </ul>
@@ -393,19 +376,19 @@ export default function HomePage() {
                 <ul className="space-y-2.5 text-xs">
                   <li>
                     <a
-                      href="mailto:oi@axiora.com.br"
+                      href="mailto:contato@axiorapath.com"
                       className="flex items-center gap-2 text-white/50 transition hover:text-white/80"
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0 text-white/30" aria-hidden="true">
                         <rect x="2" y="4" width="20" height="16" rx="2" />
                         <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                       </svg>
-                      oi@axiora.com.br
+                      contato@axiorapath.com
                     </a>
                   </li>
                   <li>
                     <a
-                      href="#"
+                      href="https://wa.me/5511966305417"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 text-white/50 transition hover:text-white/80"
@@ -418,13 +401,13 @@ export default function HomePage() {
                     </a>
                   </li>
                   <li className="pt-1">
-                    <p className="text-[10px] text-white/30">Seg–Sex, 9h–18h (BRT)</p>
+                    <p className="text-[10px] text-white/30">Seg-Sex, 9h-18h (BRT)</p>
                   </li>
                 </ul>
               </div>
             </div>
 
-            {/* ── Linha inferior ── */}
+            {/* â”€â”€ Linha inferior â”€â”€ */}
             <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/8 pt-6 sm:flex-row">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
                 <p className="text-[11px] text-white/25">© 2026 Axiora Educação Digital. Todos os direitos reservados.</p>
@@ -439,8 +422,8 @@ export default function HomePage() {
           </div>
         </footer>
 
-        {/* ── CTA fixo mobile ─────────────────────────────────────────────────── */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[rgba(6,14,22,0.95)] p-3 backdrop-blur-md md:hidden">
+        {/* â”€â”€ CTA fixo mobile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <div className="sticky bottom-0 z-40 border-t border-[rgba(238,135,72,0.14)] bg-[linear-gradient(180deg,rgba(8,20,31,0.84)_0%,rgba(7,18,29,0.92)_100%)] p-3 backdrop-blur-xl md:hidden">
           <Link
             href="/tools/gerador-atividades"
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] py-3.5 text-sm font-extrabold text-white shadow-[0_4px_0_rgba(158,74,30,0.5)] transition hover:brightness-110"
@@ -453,3 +436,4 @@ export default function HomePage() {
     </div>
   );
 }
+

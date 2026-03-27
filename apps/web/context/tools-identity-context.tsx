@@ -13,6 +13,7 @@ import {
   getToolsCredits,
   getUsageStatus,
 } from "@/lib/api/client";
+import { getAccessToken } from "@/lib/api/session";
 import {
   getOrCreateAnonId,
   getOrCreateFingerprintId,
@@ -67,11 +68,15 @@ export function ToolsIdentityProvider({
   const load = useCallback(async () => {
     const anonId = getOrCreateAnonId();
     const fpId = await getOrCreateFingerprintId();
+    const accessToken = getAccessToken();
 
     // Sync ids into state even before we know auth status
     setState((prev) => ({ ...prev, anonymousId: anonId, fingerprintId: fpId }));
 
     try {
+      if (!accessToken) {
+        throw new Error("NO_AUTH_SESSION");
+      }
       // Try authenticated first — throws if no valid session
       const result = await getToolsCredits();
       const credits = Math.max(0, Number(result.credits) || 0);

@@ -7,6 +7,7 @@ import { CheckCircle2 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { ChildAvatar } from "@/components/child-avatar";
 import { AuthWallpaper } from "@/components/layout/auth-wallpaper";
+import { AxioraLogo } from "@/components/brand/axiora-logo";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,6 +68,7 @@ export default function SelectChildPage() {
       <PageShell width="content" className="axiora-brand-content">
         <Card className="axiora-auth-panel">
           <CardHeader>
+            <AxioraLogo size="sm" className="mb-4 w-[150px] border-[rgba(223,204,183,0.88)] bg-[rgba(255,250,244,0.82)] shadow-[0_16px_32px_rgba(164,132,101,0.16)]" alt="Axiora Educação Digital" />
             <CardTitle className="text-[#22352f]">Selecionar perfil</CardTitle>
             <CardDescription className="axiora-auth-muted">Pais entram e escolhem qual perfil infantil acompanhar.</CardDescription>
           </CardHeader>

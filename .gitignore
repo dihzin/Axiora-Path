@@ -1,4 +1,4 @@
-.gitignore profissional (monorepo Python + Node + Docker)
+# .gitignore profissional (monorepo Python + Node + Docker)
 # =========================================================
 # OS FILES
 # =========================================================
@@ -160,3 +160,14 @@ apps/api/*.sqlite
 # Local schema comparison artifacts
 tmp_*schema.sql
 tmp_*schema*.sql
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+/output/playwright/
+
+# Next.js stale/local artifacts
+/apps/web/.next_stale_*/

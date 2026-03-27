@@ -5,7 +5,9 @@ import Link from "next/link";
 
 import { getToolsCheckoutStatus } from "@/lib/api/client";
 import { useToolsIdentity } from "@/context/tools-identity-context";
+import { getOrCreateAnonId } from "@/lib/identity";
 import { track } from "@/lib/tools/analytics";
+import { MarketingBackground } from "@/components/marketing-background";
 
 type Phase = "loading" | "success" | "pending" | "error";
 
@@ -80,7 +82,7 @@ export default function CheckoutSuccessPage() {
 
     async function poll(attempt: number) {
       try {
-        const result = await getToolsCheckoutStatus(sessionId!);
+        const result = await getToolsCheckoutStatus(sessionId!, identity.anonymousId || getOrCreateAnonId());
         const status = result.payment_status;
 
         if (status === "paid" || status === "completed") {
@@ -114,19 +116,7 @@ export default function CheckoutSuccessPage() {
   return (
     <div className="relative isolate flex min-h-dvh flex-col items-center justify-center px-4 py-16">
       {/* Background */}
-      <div
-        className="pointer-events-none fixed inset-0 z-0 bg-cover bg-[58%_center] bg-no-repeat"
-        style={{ backgroundImage: "url('/axiora/auth/wallpaper.jpg')", backgroundColor: "#0b1420" }}
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none fixed inset-0 z-0 bg-[linear-gradient(90deg,rgba(6,14,22,0.80)_0%,rgba(10,22,32,0.56)_50%,rgba(10,22,32,0.66)_100%)]"
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_14%_20%,rgba(255,224,154,0.20),transparent_30%),radial-gradient(circle_at_82%_16%,rgba(150,234,221,0.12),transparent_28%)]"
-        aria-hidden="true"
-      />
+      <MarketingBackground priority />
 
       {/* Card */}
       <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-[rgba(6,14,22,0.82)] p-8 shadow-2xl backdrop-blur-md text-white text-center">

@@ -5,7 +5,7 @@ from pathlib import Path
 
 def _page_source() -> str:
     repo_root = Path(__file__).resolve().parents[3]
-    return (repo_root / "apps" / "web" / "app" / "platform-admin" / "experiments" / "page.tsx").read_text(encoding="utf-8")
+    return (repo_root / "apps" / "web" / "app" / "(app)" / "platform-admin" / "experiments" / "page.tsx").read_text(encoding="utf-8")
 
 
 def test_blocks_when_response_tenant_mismatch() -> None:

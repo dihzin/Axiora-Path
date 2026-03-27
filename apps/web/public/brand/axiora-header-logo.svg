@@ -1,0 +1,68 @@
+<svg width="420" height="72" viewBox="0 0 420 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="420" height="72" fill="none"/>
+  <g transform="translate(6 4)">
+    <g transform="translate(0 2)">
+      <path
+        d="M22 13L18 40L30 36L35 15L50 21L46 40L58 36L63 14L46 8L22 13Z"
+        stroke="#F7F4EF"
+        stroke-width="3.2"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M18 41C24 39 31 39 39 44"
+        stroke="#F7F4EF"
+        stroke-width="3.2"
+        stroke-linecap="round"
+      />
+      <path
+        d="M46 10L63 15L79 11L95 38"
+        stroke="#F7F4EF"
+        stroke-width="3.2"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M60 41L77 14L93 38"
+        stroke="#F7F4EF"
+        stroke-width="3.2"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M86 42L101 56L111 56L95 38"
+        stroke="#F7F4EF"
+        stroke-width="3.2"
+        stroke-linejoin="round"
+      />
+
+      <path
+        d="M29 56C49 40 69 29 101 22"
+        stroke="#FF8D47"
+        stroke-width="7"
+        stroke-linecap="round"
+      />
+      <path
+        d="M39 59C60 45 79 37 112 29"
+        stroke="#FF8D47"
+        stroke-width="4.6"
+        stroke-linecap="round"
+      />
+      <path
+        d="M104 18L124 12L119 32"
+        stroke="#FF8D47"
+        stroke-width="5.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M116 3C112 8 111 12 112 16C114 21 120 23 120 29C120 34 116 37 112 40C114 36 110 33 107 29C103 24 104 19 108 15C110 11 112 7 116 3Z"
+        fill="#FF8D47"
+      />
+    </g>
+
+    <g transform="translate(132 6)">
+      <text x="0" y="33" fill="#F7F4EF" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="900" letter-spacing="0.3">A</text>
+      <text x="23" y="33" fill="#FF8D47" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="900" letter-spacing="0.3">X</text>
+      <text x="49" y="33" fill="#F7F4EF" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="900" letter-spacing="0.3">IORA</text>
+      <text x="1" y="51" fill="#D7DDE7" font-family="Arial, Helvetica, sans-serif" font-size="11.7" font-weight="700" letter-spacing="2.2">EDUCAÇÃO DIGITAL</text>
+    </g>
+  </g>
+</svg>

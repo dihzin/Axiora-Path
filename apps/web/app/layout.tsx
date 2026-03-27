@@ -15,12 +15,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 export const metadata: Metadata = {
   title: { default: "Axiora Path", template: "%s · Axiora Path" },
   description: "Aprendizagem gamificada para crianças — missões, XP e trilha personalizada.",
-  manifest: "/manifest.webmanifest",
-  icons: {
-    icon: "/icons/favicon-axion.svg",
-    shortcut: "/icons/favicon-axion.svg",
-    apple: "/axiora/mascot/axiora-mascot-icon.png",
-  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -51,6 +45,13 @@ const baloo = Baloo_2({
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="pt-BR" className="bg-[#F3F7FF]">
+      <head>
+        <link rel="icon" href="/favicon/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
+        <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
+        <link rel="manifest" href="/favicon/site.webmanifest" />
+      </head>
       <body
         suppressHydrationWarning
         className={`${nunito.variable} ${baloo.variable} relative min-h-screen overflow-x-hidden bg-[#F3F7FF] text-foreground font-sans [background-image:none]`}

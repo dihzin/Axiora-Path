@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 
+import { AxioraLogo } from "@/components/brand/axiora-logo";
 import { AuthWallpaper } from "@/components/layout/auth-wallpaper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,7 @@ export default function ResetPasswordPage() {
           </div>
           <Card className="axiora-auth-panel absolute left-1/2 top-[58%] w-full -translate-x-1/2 -translate-y-1/2">
             <CardHeader>
+              <AxioraLogo size="sm" className="mb-4 w-[150px] border-[rgba(223,204,183,0.88)] bg-[rgba(255,250,244,0.82)] shadow-[0_16px_32px_rgba(164,132,101,0.16)]" alt="Axiora Educação Digital" />
               <CardTitle className="text-[#22352f]">Redefinir senha</CardTitle>
               <CardDescription className="axiora-auth-muted">A recuperação automática ainda não está disponível neste MVP.</CardDescription>
             </CardHeader>

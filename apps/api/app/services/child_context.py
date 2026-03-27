@@ -4,7 +4,22 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import ChildProfile, Membership, User
+from app.models import ChildProfile, Membership, StudentFamilyLink, StudentProfile, TeacherStudent, User
+
+
+def _teacher_has_child_access(db: Session, *, teacher_user_id: int, child_id: int) -> bool:
+    linked_child = db.scalar(
+        select(StudentFamilyLink.child_profile_id)
+        .select_from(StudentFamilyLink)
+        .join(StudentProfile, StudentProfile.id == StudentFamilyLink.student_profile_id)
+        .join(TeacherStudent, TeacherStudent.student_profile_id == StudentProfile.id)
+        .where(
+            TeacherStudent.teacher_user_id == int(teacher_user_id),
+            StudentFamilyLink.child_profile_id == int(child_id),
+        )
+        .limit(1)
+    )
+    return linked_child is not None
 
 
 def resolve_child_context(
@@ -30,6 +45,11 @@ def resolve_child_context(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Child user cannot access another child profile",
+            )
+        if membership_role == "TEACHER" and not _teacher_has_child_access(db, teacher_user_id=int(user.id), child_id=int(child.id)):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Teacher cannot access a child outside their assigned roster",
             )
         return child
 
