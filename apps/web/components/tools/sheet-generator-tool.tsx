@@ -3,23 +3,18 @@
 import { useState, useCallback, useMemo, useRef, useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { Calculator, Divide, Scale, Zap, Sigma, type LucideIcon } from "lucide-react";
+import { Calculator, Divide, Home, Scale, Zap, Sigma, type LucideIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
   ApiError,
   createToolsCheckout,
   createToolsCheckoutV2,
-  createToolsTemplate,
-  deleteToolsTemplate as deleteToolsTemplateApi,
-  duplicateToolsTemplate as duplicateToolsTemplateApi,
-  getToolsTemplates,
   useAnonCredit as consumeAnonCredit,
   useToolsCredit as consumeToolsCredit,
-  type ToolsTemplateRecord,
 } from "@/lib/api/client";
 import { useToolsIdentity } from "@/context/tools-identity-context";
 import { PaywallModal } from "@/components/tools/paywall-modal";
 import { track } from "@/lib/tools/analytics";
-import { getAccessToken } from "@/lib/api/session";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -116,74 +111,6 @@ interface ExerciseItem {
   answer: string | number;
 }
 
-interface SavedTemplate {
-  id: string;
-  name: string;
-  config: GlobalConfig;
-  blocks: Block[];
-  createdAt: string;
-  previewHtml?: string;
-}
-
-const TEMPLATE_STORAGE_KEY = "axiora_templates";
-
-function generateTemplateId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `tpl_${Date.now()}_${Math.floor(Math.random() * 9999)}`;
-}
-
-function getTemplates(): SavedTemplate[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(TEMPLATE_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as SavedTemplate[];
-    if (!Array.isArray(parsed)) return [];
-    return parsed.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-  } catch {
-    return [];
-  }
-}
-
-function saveTemplate(template: SavedTemplate): SavedTemplate[] {
-  const all = getTemplates();
-  const next = [template, ...all].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(next));
-  }
-  return next;
-}
-
-function upsertTemplateLocal(template: SavedTemplate): SavedTemplate[] {
-  const all = getTemplates().filter((t) => t.id !== template.id);
-  const next = [template, ...all].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(next));
-  }
-  return next;
-}
-
-function deleteTemplate(id: string): SavedTemplate[] {
-  const next = getTemplates().filter((t) => t.id !== id);
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(next));
-  }
-  return next;
-}
-
-function duplicateTemplateLocal(template: SavedTemplate): SavedTemplate[] {
-  const duplicated: SavedTemplate = {
-    ...(JSON.parse(JSON.stringify(template)) as SavedTemplate),
-    id: generateTemplateId(),
-    name: `${template.name} (cópia)`,
-    createdAt: new Date().toISOString(),
-  };
-  return saveTemplate(duplicated);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // BLOCK TYPE DEFINITIONS
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -2071,107 +1998,32 @@ function buildAnswerPageHTML(
   );
 }
 
-async function measureAnswerPageContentDifference(
-  exercises: ExerciseItem[],
-  cfg: GlobalConfig,
-): Promise<number> {
-  if (typeof window === "undefined" || !exercises.length) return 0;
-
-  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"></head><body style="margin:0;">${buildAnswerPageHTML(
-    exercises,
-    cfg,
-    0,
-    0,
-    true,
-  )}</body></html>`;
-
-  return await new Promise<number>((resolve) => {
-    let settled = false;
-    const host = document.createElement("div");
-    host.setAttribute("aria-hidden", "true");
-    host.style.position = "fixed";
-    host.style.left = "-10000px";
-    host.style.top = "0";
-    host.style.width = `${A4_W}px`;
-    host.style.height = `${A4_H}px`;
-    host.style.opacity = "0";
-    host.style.pointerEvents = "none";
-    host.style.overflow = "hidden";
-
-    const cleanup = (differencePx: number) => {
-      if (settled) return;
-      settled = true;
-      host.remove();
-      resolve(differencePx);
-    };
-
-    const measure = async () => {
-      try {
-        if ("fonts" in document && document.fonts?.ready) {
-          await document.fonts.ready;
-        }
-
-        const main = host.querySelector("#sg-answer-main");
-        const items = host.querySelector("#sg-answer-items");
-        if (!(main instanceof HTMLElement) || !(items instanceof HTMLElement)) {
-          cleanup(0);
-          return;
-        }
-
-        const mainRect = main.getBoundingClientRect();
-        const itemsRect = items.getBoundingClientRect();
-        const mainStyles = window.getComputedStyle(main);
-        const mainPaddingTop = parseFloat(mainStyles.paddingTop || "0");
-        const mainPaddingBottom = parseFloat(mainStyles.paddingBottom || "0");
-        const usableMainHeight = mainRect.height - mainPaddingTop - mainPaddingBottom;
-        const contentHeight = itemsRect.height;
-        const difference = usableMainHeight - contentHeight;
-
-        cleanup(Number(difference.toFixed(2)));
-      } catch {
-        cleanup(0);
-      }
-    };
-
-    host.innerHTML = html;
-    document.body.appendChild(host);
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        void measure();
-      });
-    });
-
-    window.setTimeout(() => cleanup(0), 3000);
-  });
+function getAnswerPageCapacity(cfg: GlobalConfig): number {
+  switch (cfg.fontSize) {
+    case "P":
+      return 88;
+    case "G":
+      return 56;
+    case "M":
+    default:
+      return 72;
+  }
 }
 
-async function paginateAnswerPagesByMeasurement(
+function paginateAnswerPages(
   exercises: ExerciseItem[],
   cfg: GlobalConfig,
-): Promise<ExerciseItem[][]> {
+): ExerciseItem[][] {
   if (!exercises.length) return [];
 
-  const SAFE_ANSWER_BUFFER = 12;
-  const cols = 2;
+  const answersPerPage = Math.max(2, getAnswerPageCapacity(cfg));
   const pages: ExerciseItem[][] = [];
-  let currentPage: ExerciseItem[] = [];
 
-  for (let index = 0; index < exercises.length; index += cols) {
-    const rowItems = exercises.slice(index, index + cols);
-    const candidatePage = [...currentPage, ...rowItems];
-    const difference = await measureAnswerPageContentDifference(candidatePage, cfg);
-
-    if (currentPage.length > 0 && difference < SAFE_ANSWER_BUFFER) {
-      pages.push(currentPage);
-      currentPage = [...rowItems];
-      continue;
+  for (let index = 0; index < exercises.length; index += answersPerPage) {
+    const slice = exercises.slice(index, index + answersPerPage);
+    if (slice.length > 0) {
+      pages.push(slice);
     }
-
-    currentPage = candidatePage;
-  }
-
-  if (currentPage.length > 0) {
-    pages.push(currentPage);
   }
 
   return pages;
@@ -2552,6 +2404,7 @@ function blockMetaText(block: Block): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function SheetGeneratorTool() {
+  const router = useRouter();
   const nextId = useRef(1);
   const [blocks, setBlocks] = useState<Block[]>(() =>
     DEFAULT_BLOCKS.map((b) => ({ ...b, id: nextId.current++ })),
@@ -2585,6 +2438,7 @@ export function SheetGeneratorTool() {
   );
   const [presetModalOpen, setPresetModalOpen] = useState(false);
   const [addBlockModalOpen, setAddBlockModalOpen] = useState(false);
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [guidedStageId, setGuidedStageId] = useState<string | null>(null);
   const [layoutModalOpen, setLayoutModalOpen] = useState(false);
   const [opcoesModalOpen, setOpcoesModalOpen] = useState(false);
@@ -2593,12 +2447,6 @@ export function SheetGeneratorTool() {
     "closed" | "normal" | "maximized" | "minimized"
   >("closed");
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
-  const [saveTemplateModalOpen, setSaveTemplateModalOpen] = useState(false);
-  const [templatesModalOpen, setTemplatesModalOpen] = useState(false);
-  const [blocksSpotlight, setBlocksSpotlight] = useState(false);
-  const [templateName, setTemplateName] = useState("");
-  const [templates, setTemplates] = useState<SavedTemplate[]>([]);
-  const [templateBusyId, setTemplateBusyId] = useState<string | null>(null);
   // ── Identidade global (context) ───────────────────────────────────────────
   const identity = useToolsIdentity();
   const anonId = identity.anonymousId;
@@ -2615,10 +2463,10 @@ export function SheetGeneratorTool() {
 
   // ── Preview: auto-fit + zoom (Canva-like) ─────────────────────────────────
   const previewCanvasRef = useRef<HTMLDivElement>(null);
-  const blocksSpotlightTimeoutRef = useRef<number | null>(null);
   const [autoFitScale, setAutoFitScale] = useState(1);
   const [zoom, setZoom] = useState(0.75);
   const [portalReady, setPortalReady] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const previewWindowOpen =
     previewWindowState === "normal" || previewWindowState === "maximized";
   const renderPortal = useCallback(
@@ -2629,18 +2477,21 @@ export function SheetGeneratorTool() {
     setPortalReady(true);
   }, []);
   useEffect(() => {
-    return () => {
-      if (blocksSpotlightTimeoutRef.current !== null) {
-        window.clearTimeout(blocksSpotlightTimeoutRef.current);
-      }
-    };
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const updateViewport = () => setIsMobileViewport(mediaQuery.matches);
+
+    updateViewport();
+    mediaQuery.addEventListener("change", updateViewport);
+    return () => mediaQuery.removeEventListener("change", updateViewport);
   }, []);
   useEffect(() => {
     const el = previewCanvasRef.current;
     if (!el) return;
     const update = () => {
       const rect = el.getBoundingClientRect();
-      const canvasPaddingX = previewWindowState === "maximized" ? 144 : 96;
+      const canvasPaddingX = isMobileViewport ? 0 : previewWindowState === "maximized" ? 144 : 96;
       const availableW = Math.max(0, rect.width - canvasPaddingX);
       const fit = Math.min(availableW / A4_W, 1);
       const next = fit > 0 ? fit : 1;
@@ -2666,9 +2517,9 @@ export function SheetGeneratorTool() {
       window.removeEventListener("resize", scheduleUpdate);
       obs.disconnect();
     };
-  }, [previewWindowOpen, previewWindowState]);
+  }, [isMobileViewport, previewWindowOpen, previewWindowState]);
   const clampedZoom = Math.min(1, Math.max(0.5, zoom));
-  const previewScale = Math.min(1, autoFitScale * clampedZoom);
+  const previewScale = isMobileViewport ? autoFitScale : Math.min(1, autoFitScale * clampedZoom);
 
   // ── Pagination state ────────────────────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(0);
@@ -2684,44 +2535,6 @@ export function SheetGeneratorTool() {
     return () => window.clearTimeout(timer);
   }, [lightCfg.title, lightCfg.subtitle]);
 
-  const mapApiTemplate = useCallback((tpl: ToolsTemplateRecord): SavedTemplate => {
-    return {
-      id: tpl.id,
-      name: tpl.name,
-      config: tpl.config as unknown as GlobalConfig,
-      blocks: tpl.blocks as unknown as Block[],
-      createdAt: tpl.created_at,
-      previewHtml: "",
-    };
-  }, []);
-
-  const loadTemplates = useCallback(async () => {
-    if (identity.initializing || identity.isAnonUser || !getAccessToken()) {
-      setTemplates(getTemplates());
-      return;
-    }
-    try {
-      const remote = await getToolsTemplates();
-      const localCache = getTemplates();
-      const previewById = new Map(localCache.map((tpl) => [tpl.id, tpl.previewHtml ?? ""]));
-      setTemplates(
-        remote.map((tpl) => {
-          const mapped = mapApiTemplate(tpl);
-          return {
-            ...mapped,
-            previewHtml: previewById.get(mapped.id) ?? mapped.previewHtml,
-          };
-        }),
-      );
-      return;
-    } catch {
-      setTemplates(getTemplates());
-    }
-  }, [identity.initializing, identity.isAnonUser, mapApiTemplate]);
-
-  useEffect(() => {
-    void loadTemplates();
-  }, [loadTemplates]);
 
   // Post-checkout: detecta retorno do Stripe e atualiza créditos
   useEffect(() => {
@@ -2762,7 +2575,7 @@ export function SheetGeneratorTool() {
       );
       const nextAnswerPageSlices =
         cfg.gabarito === "proxima"
-          ? await paginateAnswerPagesByMeasurement(generatedExercises, cfg)
+          ? paginateAnswerPages(generatedExercises, cfg)
           : [];
 
       if (!cancelled) {
@@ -2793,12 +2606,14 @@ export function SheetGeneratorTool() {
   const previewPages = useMemo<string[]>(() => {
     if (!pageSlices.length || !generatedExercises.length) return [];
     const sectionHeaders = buildSectionHeaderMap(generatedExercises, blocks, cfg);
-    const pages = pageSlices.map((slice) => ({
-      isFirstPage: slice.isFirstPage,
-      items: slice.exIndexes
-        .map((index) => ({ index, item: generatedExercises[index] }))
-        .filter((entry): entry is { index: number; item: ExerciseItem } => Boolean(entry.item)),
-    }));
+    const pages = pageSlices
+      .map((slice) => ({
+        isFirstPage: slice.isFirstPage,
+        items: slice.exIndexes
+          .map((index) => ({ index, item: generatedExercises[index] }))
+          .filter((entry): entry is { index: number; item: ExerciseItem } => Boolean(entry.item)),
+      }))
+      .filter((page) => page.items.length > 0);
 
     const htmlPages = pages.map((page) =>
         buildOnePageHTML(
@@ -2859,42 +2674,6 @@ export function SheetGeneratorTool() {
     toast(msg);
   }, []);
 
-  const refreshTemplates = useCallback(() => {
-    void loadTemplates();
-  }, [loadTemplates]);
-
-  const focusBlocksPanel = useCallback(() => {
-    setMobileTab("blocks");
-    setEditorTab("blocos");
-    setBlocksSpotlight(true);
-
-    if (blocksSpotlightTimeoutRef.current !== null) {
-      window.clearTimeout(blocksSpotlightTimeoutRef.current);
-    }
-    blocksSpotlightTimeoutRef.current = window.setTimeout(() => {
-      setBlocksSpotlight(false);
-      blocksSpotlightTimeoutRef.current = null;
-    }, 1400);
-
-    const targetBlockId = selectedBlockId ?? blocks[0]?.id ?? null;
-    if (targetBlockId !== null) {
-      setSelectedBlockId(targetBlockId);
-      setBlockDetailModalOpen(true);
-    }
-
-    window.requestAnimationFrame(() => {
-      const preferredTarget =
-        targetBlockId !== null
-          ? document.getElementById(`sheet-block-card-${targetBlockId}`)
-          : document.getElementById("sheet-blocks-entry");
-
-      (preferredTarget ?? document.getElementById("sheet-blocks-panel"))?.scrollIntoView({
-        behavior: "smooth",
-        block: targetBlockId !== null ? "nearest" : "center",
-      });
-    });
-  }, [blocks, selectedBlockId]);
-
   const invalidate = useCallback(() => setSnapshot(null), []);
 
   const updateCfg = useCallback(
@@ -2912,6 +2691,10 @@ export function SheetGeneratorTool() {
   const closeAddBlockModal = useCallback(() => {
     setAddBlockModalOpen(false);
     setGuidedStageId(null);
+  }, []);
+
+  const openCategoryModal = useCallback(() => {
+    setCategoryModalOpen(true);
   }, []);
 
   const openPreviewWindow = useCallback(() => {
@@ -2992,6 +2775,26 @@ export function SheetGeneratorTool() {
     invalidate();
   }, [invalidate]);
 
+  const handleSelectCategory = useCallback(
+    (type: BlockType) => {
+      const newBlock: Block = {
+        id: nextId.current++,
+        type,
+        active: true,
+        config: { ...BLOCK_META[type].defaults },
+      };
+
+      setBlocks((prev) => [...prev, newBlock]);
+      setEditorTab("blocos");
+      setMobileTab("blocks");
+      setSelectedBlockId(newBlock.id);
+      setCategoryModalOpen(false);
+      reseedExercises();
+      showToast(`${BLOCK_META[type].name} adicionado`);
+    },
+    [reseedExercises, showToast],
+  );
+
   const handleAddGuidedBlock = useCallback(
     (suggestionId: string) => {
       const suggestion = GUIDED_BLOCK_SUGGESTIONS.find((item) => item.id === suggestionId);
@@ -3003,7 +2806,6 @@ export function SheetGeneratorTool() {
       setEditorTab("blocos");
       setMobileTab("blocks");
       setSelectedBlockId(newBlock.id);
-      setBlockDetailModalOpen(true);
       closeAddBlockModal();
       reseedExercises();
       showToast(`${BLOCK_META[newBlock.type].name} sugerido para ${stageOption?.stage ?? "a fase selecionada"}`);
@@ -3011,118 +2813,6 @@ export function SheetGeneratorTool() {
     [closeAddBlockModal, reseedExercises, showToast],
   );
 
-  const handleSaveTemplate = useCallback(async () => {
-    const trimmed = templateName.trim();
-    if (!trimmed) {
-      showToast("Informe um nome para o template");
-      return;
-    }
-    const currentCfg: GlobalConfig = {
-      ...heavyCfg,
-      ...lightCfg,
-    };
-    const config = JSON.parse(JSON.stringify(currentCfg)) as GlobalConfig;
-    const nextBlocks = JSON.parse(JSON.stringify(blocks)) as Block[];
-    try {
-      const saved = await createToolsTemplate({
-        name: trimmed,
-        config: config as unknown as Record<string, unknown>,
-        blocks: nextBlocks as unknown[],
-        is_public: false,
-      });
-      const mapped = mapApiTemplate(saved);
-      const withPreview = { ...mapped, previewHtml: previewPages[0] ?? "" };
-      upsertTemplateLocal(withPreview);
-      setTemplates((prev) => [withPreview, ...prev.filter((tpl) => tpl.id !== saved.id)]);
-    } catch {
-      const payload: SavedTemplate = {
-        id: generateTemplateId(),
-        name: trimmed,
-        config,
-        blocks: nextBlocks,
-        createdAt: new Date().toISOString(),
-        previewHtml: previewPages[0] ?? "",
-      };
-      setTemplates(saveTemplate(payload));
-    }
-    setTemplateName("");
-    setSaveTemplateModalOpen(false);
-    showToast("Template salvo");
-  }, [templateName, heavyCfg, lightCfg, blocks, mapApiTemplate, previewPages, showToast]);
-
-  const handleLoadTemplate = useCallback(
-    (tpl: SavedTemplate) => {
-      setTemplateBusyId(tpl.id);
-      const nextCfg = JSON.parse(JSON.stringify(tpl.config)) as GlobalConfig;
-      setLightCfg({
-        title: nextCfg.title,
-        subtitle: nextCfg.subtitle,
-        turma: nextCfg.turma,
-        tempo: nextCfg.tempo,
-      });
-      setDebouncedLightCfg({
-        title: nextCfg.title,
-        subtitle: nextCfg.subtitle,
-        turma: nextCfg.turma,
-        tempo: nextCfg.tempo,
-      });
-      setHeavyCfg({
-        cols: nextCfg.cols,
-        fontSize: nextCfg.fontSize,
-        gabarito: nextCfg.gabarito,
-        spacing: nextCfg.spacing,
-        embaralhar: nextCfg.embaralhar,
-        showNome: nextCfg.showNome,
-        numerar: nextCfg.numerar,
-        showPontuacao: nextCfg.showPontuacao,
-        repeatHeader: nextCfg.repeatHeader,
-      });
-      const loadedBlocks = JSON.parse(JSON.stringify(tpl.blocks)) as Block[];
-      setBlocks(loadedBlocks);
-      const next = loadedBlocks.reduce((max, b) => Math.max(max, b.id), 0) + 1;
-      nextId.current = Math.max(next, 1);
-      setSelectedBlockId(null);
-      invalidate();
-      setTemplatesModalOpen(false);
-      setTemplateBusyId(null);
-      showToast(`Template "${tpl.name}" carregado`);
-    },
-    [invalidate, showToast],
-  );
-
-  const handleDeleteTemplate = useCallback(
-    async (id: string) => {
-      setTemplateBusyId(id);
-      try {
-        await deleteToolsTemplateApi(id);
-        deleteTemplate(id);
-        setTemplates((prev) => prev.filter((tpl) => tpl.id !== id));
-      } catch {
-        setTemplates(deleteTemplate(id));
-      }
-      setTemplateBusyId(null);
-      showToast("Template excluído");
-    },
-    [showToast],
-  );
-
-  const handleDuplicateTemplate = useCallback(
-    async (tpl: SavedTemplate) => {
-      setTemplateBusyId(tpl.id);
-      try {
-        const duplicated = await duplicateToolsTemplateApi(tpl.id);
-        const mapped = mapApiTemplate(duplicated);
-        const withPreview = { ...mapped, previewHtml: tpl.previewHtml ?? "" };
-        upsertTemplateLocal(withPreview);
-        setTemplates((prev) => [withPreview, ...prev.filter((item) => item.id !== duplicated.id)]);
-      } catch {
-        setTemplates(duplicateTemplateLocal(tpl));
-      }
-      setTemplateBusyId(null);
-      showToast("Template duplicado");
-    },
-    [mapApiTemplate, showToast],
-  );
 
   // handleBuyCredits é passado ao PaywallModal — lança em caso de erro
   // para que o modal exiba a mensagem inline sem fechar.
@@ -3351,21 +3041,13 @@ export function SheetGeneratorTool() {
         className="flex shrink-0 border-b border-[#e5e7eb] md:hidden"
         style={{ background: "#ffffff" }}
       >
-        {(
-          [
-            ["config", "Configurar"],
-            ["blocks", "Blocos"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setMobileTab(id)}
-            className={`m-1 flex-1 ${chunkyChipBtn(mobileTab === id)} py-2`}
-          >
-            {label}
-          </button>
-        ))}
+        <button
+          type="button"
+          onClick={() => setMobileTab((prev) => (prev === "config" ? "blocks" : "config"))}
+          className={`m-1 flex-1 ${chunkyChipBtn(mobileTab === "config")} py-2`}
+        >
+          {mobileTab === "config" ? "Voltar aos exercícios" : "Configurar"}
+        </button>
       </div>
 
       {/* ── LEFT PANEL ──────────────────────────────────────────────── */}
@@ -3385,35 +3067,34 @@ export function SheetGeneratorTool() {
             </span>
           </div>
 
-          <div className="ml-auto flex shrink-0 items-center gap-2">
+          <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              aria-label="Voltar para home"
+              onClick={() => router.push("/tools")}
+              className={`${desktopTopActionBtnCls} !flex !w-8 !items-center !justify-center !px-0 text-[#ee8748]`}
+            >
+              <Home size={15} strokeWidth={2} />
+            </button>
+
+            <button type="button" onClick={openCategoryModal} className={desktopPreviewBtnCls}>
+              Adicionar exerc&iacute;cios
+            </button>
+
+            <button
+              type="button"
+              onClick={addBlock}
+              className={desktopTopActionBtnCls}
+            >
+              Modelo pronto
+            </button>
+
             <button
               type="button"
               onClick={() => setSettingsModalOpen(true)}
               className={desktopTopActionBtnCls}
             >
               Configurações
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                refreshTemplates();
-                setTemplatesModalOpen(true);
-              }}
-              className={desktopTopActionBtnCls}
-            >
-              Meus Templates
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setTemplateName(lightCfg.title || "Template Axiora");
-                setSaveTemplateModalOpen(true);
-              }}
-              className={desktopTopActionBtnCls}
-            >
-              Salvar Template
             </button>
 
             <button
@@ -3441,14 +3122,6 @@ export function SheetGeneratorTool() {
                 <path d="M21 12a9 9 0 01-15 6.7L3 16" />
               </svg>
               Atualizar
-            </button>
-
-            <button
-              type="button"
-              onClick={focusBlocksPanel}
-              className={desktopSecondaryBtnCls}
-            >
-              Blocos
             </button>
 
             <button type="button" onClick={openPreviewWindow} className={desktopPreviewBtnCls}>
@@ -3485,25 +3158,6 @@ export function SheetGeneratorTool() {
                   Ajuste cabeçalho, layout global e opções da folha.
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div className="border-b border-[#e5e7eb] px-5 py-2 md:hidden">
-            <div className="rounded-xl bg-white p-1">
-              <button
-                type="button"
-                onClick={() => setEditorTab("config")}
-                className={chunkyChipBtn(editorTab === "config")}
-              >
-                Configurações
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditorTab("blocos")}
-                className={chunkyChipBtn(editorTab === "blocos")}
-              >
-                Blocos
-              </button>
             </div>
           </div>
 
@@ -3713,22 +3367,6 @@ export function SheetGeneratorTool() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <div className="rounded-xl bg-white p-1 md:hidden">
-                  <button
-                    type="button"
-                    onClick={() => setEditorTab("config")}
-                    className={chunkyChipBtn(editorTab === "config")}
-                  >
-                    Configurações
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditorTab("blocos")}
-                    className={chunkyChipBtn(editorTab === "blocos")}
-                  >
-                    Blocos
-                  </button>
-                </div>
                 <span
                   className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${activeCount > 0 ? "bg-[rgba(238,135,72,0.12)] text-[#ee8748]" : "bg-[#f1f5f9] text-[#94a3b8]"}`}
                 >
@@ -3772,23 +3410,25 @@ export function SheetGeneratorTool() {
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  refreshTemplates();
-                  setTemplatesModalOpen(true);
-                }}
-                className={`${chunkyOutlineBtn} !px-2.5 !py-1.5 !text-[10px]`}
+                aria-label="Voltar para home"
+                onClick={() => router.push("/tools")}
+                className={`${chunkyOutlineBtn} !flex !h-[34px] !w-[34px] !items-center !justify-center !px-0 !py-0 text-[#ee8748]`}
               >
-                Meus Templates
+                <Home size={15} strokeWidth={2} />
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setTemplateName(lightCfg.title || "Template Axiora");
-                  setSaveTemplateModalOpen(true);
-                }}
-                className={`${chunkyOutlineBtn} !px-2.5 !py-1.5 !text-[10px]`}
+                onClick={openCategoryModal}
+                className={`${chunkyPrimaryBtn} !px-2.5 !py-1.5 !text-[10px] whitespace-nowrap`}
               >
-                Salvar Template
+                Adicionar exerc&iacute;cios
+              </button>
+              <button
+                type="button"
+                onClick={addBlock}
+                className={`${chunkyOutlineBtn} !px-2.5 !py-1.5 !text-[10px] whitespace-nowrap`}
+              >
+                Modelo pronto
               </button>
               <button
                 type="button"
@@ -3830,45 +3470,8 @@ export function SheetGeneratorTool() {
             {blocks.length === 0 ? (
               <div
                 id="sheet-blocks-entry"
-                className={`flex h-full flex-col items-center justify-start gap-4 px-6 py-4 text-center transition-all duration-300 ${
-                  blocksSpotlight ? "rounded-3xl bg-[#fffaf5] ring-2 ring-[#fdba74]/70 ring-offset-2" : ""
-                }`}
+                className="flex h-full flex-col items-center justify-start gap-4 px-6 py-4 text-center transition-all duration-300"
               >
-                <div className="grid w-full max-w-[560px] grid-cols-1 gap-2 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={addBlock}
-                    className={`inline-flex items-center justify-center gap-2 ${chunkyPrimaryBtn}`}
-                  >
-                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                      <path
-                        d="M5.5 1v9M1 5.5h9"
-                        stroke="#fff"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    Adicionar bloco
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPresetModalOpen(true)}
-                    className={`inline-flex items-center justify-center gap-2 ${chunkyOutlineBtn}`}
-                  >
-                    <svg
-                      width="11"
-                      height="11"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                    >
-                      <path d="M4 7h16M4 12h16M4 17h10" />
-                    </svg>
-                    Usar preset
-                  </button>
-                </div>
 
                 {/* Illustration */}
                 <div
@@ -3944,7 +3547,7 @@ export function SheetGeneratorTool() {
                         setBlockDetailModalOpen(true);
                         setMobileTab("blocks");
                       }}
-                      className={`group relative cursor-pointer rounded-2xl border p-3.5 transition-all duration-150 ease-linear hover:-translate-y-[1px] hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] ${isSelected ? "border-[#fb923c] bg-[#fff7ed] shadow-[0_8px_20px_rgba(251,146,60,0.14)]" : "border-[#eef2f7] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.04)]"} ${blocksSpotlight && isSelected ? "ring-2 ring-[#fdba74]/70 ring-offset-2" : ""} ${!block.active ? "opacity-55" : ""}`}
+                      className={`group relative cursor-pointer rounded-2xl border p-3.5 transition-all duration-150 ease-linear hover:-translate-y-[1px] hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] ${isSelected ? "border-[#fb923c] bg-[#fff7ed] shadow-[0_8px_20px_rgba(251,146,60,0.14)]" : "border-[#eef2f7] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.04)]"} ${!block.active ? "opacity-55" : ""}`}
                       style={{ transition: "all 160ms ease" }}
                     >
                       <div className="flex items-start gap-3">
@@ -4120,7 +3723,9 @@ export function SheetGeneratorTool() {
         previewWindowOpen &&
         createPortal(
         <div
-          className="fixed inset-0 z-[990] flex items-center justify-center"
+          className={`fixed inset-0 z-[990] flex ${
+            isMobileViewport ? "items-stretch justify-stretch" : "items-center justify-center"
+          }`}
           style={{ backdropFilter: "blur(8px)", background: "rgba(15,23,42,0.52)" }}
           onClick={closePreviewWindow}
         >
@@ -4129,7 +3734,7 @@ export function SheetGeneratorTool() {
             aria-modal="true"
             aria-label="Janela de preview da folha"
             className={`relative flex w-full flex-col overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] shadow-[0_28px_90px_rgba(15,23,42,0.28)] ${
-              previewWindowState === "maximized"
+              isMobileViewport || previewWindowState === "maximized"
                 ? "h-screen max-w-none rounded-none border-0"
                 : "mx-3 h-[min(90vh,940px)] max-w-[min(1240px,calc(100vw-24px))] rounded-[28px] border border-[rgba(255,255,255,0.45)]"
             }`}
@@ -4222,28 +3827,30 @@ export function SheetGeneratorTool() {
                   {activeCount} bloco{activeCount === 1 ? "" : "s"} ativo{activeCount === 1 ? "" : "s"}
                 </span>
               </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <span className="mr-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#94a3b8]">
-                  Zoom
-                </span>
-                {(
-                  [
-                    { label: "50%", value: 0.5 },
-                    { label: "75%", value: 0.75 },
-                    { label: "100%", value: 1 },
-                  ] as const
-                ).map((z) => (
-                  <button
-                    key={z.label}
-                    type="button"
-                    onClick={() => setZoom(z.value)}
-                    className={previewZoomBtnCls(zoom === z.value)}
-                    aria-label={`Zoom ${z.label}`}
-                  >
-                    {z.label}
-                  </button>
-                ))}
-              </div>
+              {!isMobileViewport ? (
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <span className="mr-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#94a3b8]">
+                    Zoom
+                  </span>
+                  {(
+                    [
+                      { label: "50%", value: 0.5 },
+                      { label: "75%", value: 0.75 },
+                      { label: "100%", value: 1 },
+                    ] as const
+                  ).map((z) => (
+                    <button
+                      key={z.label}
+                      type="button"
+                      onClick={() => setZoom(z.value)}
+                      className={previewZoomBtnCls(zoom === z.value)}
+                      aria-label={`Zoom ${z.label}`}
+                    >
+                      {z.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             <div
@@ -4255,10 +3862,13 @@ export function SheetGeneratorTool() {
                 overflow: "auto",
                 background:
                   "linear-gradient(180deg, rgba(53,65,84,0.98) 0%, rgba(41,50,65,0.99) 100%)",
-                padding:
-                  previewWindowState === "maximized" ? "18px 28px 22px" : "20px 32px 24px",
+                padding: isMobileViewport
+                  ? "0"
+                  : previewWindowState === "maximized"
+                    ? "18px 28px 22px"
+                    : "20px 32px 24px",
                 display: "flex",
-                justifyContent: "center",
+                justifyContent: isMobileViewport ? "flex-start" : "center",
                 alignItems: "flex-start",
               }}
             >
@@ -4266,12 +3876,14 @@ export function SheetGeneratorTool() {
                 <div
                   className="page-wrapper"
                   style={{
-                    width: `${Math.round(A4_W * previewScale)}px`,
+                    width: isMobileViewport ? "100%" : `${Math.round(A4_W * previewScale)}px`,
                     height: `${Math.round(A4_H * previewScale)}px`,
                     transition: "width 0.2s ease, height 0.2s ease, opacity 0.2s ease",
-                    borderRadius: 12,
-                    boxShadow: "0 26px 80px rgba(15,23,42,0.42), 0 10px 28px rgba(15,23,42,0.22)",
-                    margin: "0 auto",
+                    borderRadius: isMobileViewport ? 0 : 12,
+                    boxShadow: isMobileViewport
+                      ? "none"
+                      : "0 26px 80px rgba(15,23,42,0.42), 0 10px 28px rgba(15,23,42,0.22)",
+                    margin: isMobileViewport ? "0" : "0 auto",
                     overflow: "hidden",
                     position: "relative",
                   }}
@@ -4320,7 +3932,7 @@ export function SheetGeneratorTool() {
                 previewWindowState === "maximized" ? "px-4 py-2" : "px-4 py-2"
               }`}
             >
-              <div className="flex items-center gap-2">
+              <div className={`flex items-center gap-2 ${isMobileViewport ? "mx-auto" : ""}`}>
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
                   disabled={currentPage === 0 || previewPages.length <= 1}
@@ -4347,7 +3959,7 @@ export function SheetGeneratorTool() {
                   </svg>
                 </button>
               </div>
-              <div className="flex items-center gap-2 text-[9px] text-[#94a3b8]">
+              <div className={`flex items-center gap-2 text-[9px] text-[#94a3b8] ${isMobileViewport ? "hidden" : ""}`}>
                 <span className="hidden sm:inline">Revise no tamanho maior e exporte quando estiver pronto.</span>
               </div>
             </div>
@@ -4365,7 +3977,7 @@ export function SheetGeneratorTool() {
           onClick={() => setBlockDetailModalOpen(false)}
         >
           <div
-            className="relative mx-4 flex max-h-[85vh] w-full max-w-[420px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]"
+            className="relative mx-4 flex max-h-[85vh] w-full max-w-[420px] flex-col overflow-visible rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-[#f1f5f9] px-5 py-4">
@@ -4400,7 +4012,7 @@ export function SheetGeneratorTool() {
                 </svg>
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto overflow-x-visible">
               <BlockDetailPanel
                 block={selectedBlock}
                 onUpdate={updateBlockConfig}
@@ -4760,201 +4372,105 @@ export function SheetGeneratorTool() {
         </div>
         )}
 
-      {/* ── SAVE TEMPLATE MODAL ───────────────────────────────────── */}
-      {saveTemplateModalOpen &&
-        renderPortal(
-        <div
-          className="fixed inset-0 z-[200] flex items-center justify-center"
-          style={{ backdropFilter: "blur(6px)", background: "rgba(15,23,42,0.45)" }}
-          onClick={() => setSaveTemplateModalOpen(false)}
-        >
-          <div
-            className="relative mx-4 w-full max-w-[460px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-[#f1f5f9] px-5 py-4">
-              <div>
-                <div className="text-[15px] font-bold text-[#0f172a]">Salvar Template</div>
-                <div className="text-[12px] text-[#94a3b8]">Reutilize este layout depois</div>
-              </div>
-              <button
-                onClick={() => setSaveTemplateModalOpen(false)}
-                className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn}`}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                >
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="space-y-3 px-5 py-4">
-              <label className="block text-[11px] font-medium text-[#475569]">
-                Nome do template
-                <input
-                  className={inputCls}
-                  value={templateName}
-                  onChange={(e) => setTemplateName(e.target.value)}
-                  placeholder="Ex.: Prova Trimestral 7º ano"
-                />
-              </label>
-              <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2 text-[11px] text-[#64748b]">
-                {totalExercises} exercícios · {blocks.filter((b) => b.active).length} blocos ativos
-              </div>
-              <div className="text-[11px] text-[#94a3b8]">
-                Dica: salve versões por tema (ex.: Frações 7º ano) para montar atividades em
-                segundos.
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2 border-t border-[#f1f5f9] px-5 py-3">
-              <button onClick={() => setSaveTemplateModalOpen(false)} className={chunkyOutlineBtn}>
-                Cancelar
-              </button>
-              <button onClick={handleSaveTemplate} className={chunkyPrimaryBtn}>
-                Salvar
-              </button>
-            </div>
-          </div>
-        </div>
-        )}
-
       <PaywallModal
         open={paywallOpen}
         onClose={() => setPaywallOpen(false)}
         onBuy={handleBuyCredits}
       />
 
-      {/* ── TEMPLATES MODAL ──────────────────────────────────────── */}
-      {templatesModalOpen &&
+      {categoryModalOpen &&
         renderPortal(
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center"
           style={{ backdropFilter: "blur(6px)", background: "rgba(15,23,42,0.45)" }}
-          onClick={() => setTemplatesModalOpen(false)}
+          onClick={() => setCategoryModalOpen(false)}
         >
           <div
-            className="relative mx-4 flex max-h-[85vh] w-full max-w-[780px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]"
+            className="relative mx-4 flex max-h-[80vh] w-full max-w-[560px] flex-col overflow-hidden rounded-3xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-[#f1f5f9] px-5 py-4">
-              <div>
-                <div className="text-[15px] font-bold text-[#0f172a]">Meus Templates</div>
-                <div className="text-[12px] text-[#94a3b8]">
-                  Carregue, duplique ou exclua templates
+            <div className="border-b border-[#f1f5f9] px-5 py-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-[16px] font-bold text-[#0f172a]">Adicionar exercícios</div>
+                  <div className="mt-1 max-w-[440px] text-[12px] leading-relaxed text-[#64748b]">
+                    Escolha uma categoria para criar um bloco novo com a configuração inicial da
+                    área selecionada.
+                  </div>
                 </div>
-              </div>
-              <button
-                onClick={() => setTemplatesModalOpen(false)}
-                className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn}`}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
+                <button
+                  onClick={() => setCategoryModalOpen(false)}
+                  className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn}`}
+                  aria-label="Fechar seleção de categorias"
                 >
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              {templates.length === 0 ? (
-                <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#e2e8f0] bg-[#f8fafc] px-4 text-center">
-                  <div className="text-[12px] font-semibold text-[#64748b]">
-                    Nenhum template salvo ainda
-                  </div>
-                  <div className="text-[11px] text-[#94a3b8]">
-                    Monte sua lista de exercícios e clique em “Salvar Template”.
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {templates.map((tpl) => {
-                    const total = tpl.blocks
-                      .filter((b) => b.active)
-                      .reduce((s, b) => s + b.config.quantidade, 0);
-                    return (
+
+            <div className="grid gap-3 overflow-y-auto px-5 py-5 sm:grid-cols-2">
+              {(Object.keys(BLOCK_META) as BlockType[]).map((type) => {
+                const meta = BLOCK_META[type];
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => handleSelectCategory(type)}
+                    className="group rounded-2xl border border-[#e2e8f0] bg-white p-4 text-left transition-all hover:-translate-y-[1px] hover:border-[rgba(238,135,72,0.35)] hover:shadow-[0_16px_30px_rgba(15,23,42,0.08)]"
+                  >
+                    <div className="flex items-start gap-3">
                       <div
-                        key={tpl.id}
-                        className="rounded-xl border border-[#e2e8f0] bg-white p-3 transition hover:shadow-sm"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
+                        style={{ background: meta.color }}
                       >
-                        <div className="flex items-start gap-3">
-                          <div className="h-[226px] w-[160px] shrink-0 overflow-hidden rounded-lg border border-[#e2e8f0] bg-[#f8fafc]">
-                            {tpl.previewHtml ? (
-                              <div
-                                style={{
-                                  width: `${A4_W}px`,
-                                  height: `${A4_H}px`,
-                                  transform: "scale(0.2)",
-                                  transformOrigin: "top left",
-                                  pointerEvents: "none",
-                                }}
-                                dangerouslySetInnerHTML={{ __html: tpl.previewHtml }}
-                              />
-                            ) : (
-                              <div className="flex h-full items-center justify-center text-[10px] text-[#94a3b8]">
-                                Sem preview
-                              </div>
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-[13px] font-semibold text-[#0f172a]">
-                              {tpl.name}
-                            </div>
-                            <div className="mt-1 text-[11px] text-[#94a3b8]">
-                              {total} exercícios ·{" "}
-                              {new Date(tpl.createdAt).toLocaleDateString("pt-BR")}{" "}
-                              {new Date(tpl.createdAt).toLocaleTimeString("pt-BR", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </div>
-                            <div className="mt-3 flex flex-wrap items-center gap-2">
-                              <button
-                                onClick={() => handleLoadTemplate(tpl)}
-                                disabled={templateBusyId === tpl.id}
-                                className={`${chunkyPrimaryBtn} px-3 py-1.5 text-[11px] disabled:opacity-60`}
-                              >
-                                {templateBusyId === tpl.id ? "Carregando..." : "Carregar"}
-                              </button>
-                              <button
-                                onClick={() => handleDuplicateTemplate(tpl)}
-                                disabled={templateBusyId === tpl.id}
-                                className={`${chunkySmallOutlineBtn} disabled:opacity-60`}
-                              >
-                                Duplicar
-                              </button>
-                              <button
-                                onClick={() => handleDeleteTemplate(tpl.id)}
-                                disabled={templateBusyId === tpl.id}
-                                className={`${chunkySmallDestructiveBtn} disabled:opacity-60`}
-                              >
-                                Excluir
-                              </button>
-                            </div>
-                          </div>
-                        </div>
+                        <meta.Icon size={18} strokeWidth={1.9} style={{ color: meta.accent }} />
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[14px] font-bold text-[#0f172a]">{meta.name}</div>
+                        <p className="mt-1 text-[12px] leading-relaxed text-[#64748b]">
+                          {blockMetaText({
+                            id: 0,
+                            type,
+                            active: true,
+                            config: { ...meta.defaults },
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-[#ee8748]">
+                        Criar bloco desta categoria
+                      </span>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#ee8748"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      >
+                        <path d="M9 18l6-6-6-6" />
+                      </svg>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
         )}
 
-      {/* ── TOAST ───────────────────────────────────────────────────── */}
-      {/* ── PRESET MODAL ──────────────────────────────────────────── */}
       {addBlockModalOpen &&
         renderPortal(
         <div
@@ -5570,6 +5086,101 @@ function BlockDetailPanel({
   const c = block.config;
   const id = block.id;
   const up = (key: keyof BlockConfig, val: unknown) => onUpdate(id, key, val);
+  const [openTooltip, setOpenTooltip] = useState<string | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!openTooltip) return;
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(event.target as Node)) {
+        setOpenTooltip(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [openTooltip]);
+
+  const fieldTooltips: Record<string, string> = {
+    categoria: "Define o tipo de exercício do bloco. Cada categoria abre configurações específicas.",
+    operacao: "Escolhe qual cálculo será praticado, como adição, subtração, multiplicação ou divisão.",
+    digitos: "Determina quantos algarismos aparecem nos números usados em cada conta.",
+    formato: "Armada organiza a conta na vertical. Linear mostra o cálculo em uma única linha.",
+    denominador: "Controla o maior denominador permitido nas frações geradas.",
+    tipoEquacao: "Define a estrutura da equação para variar o nível de desafio.",
+    tipoPotencia: "Escolhe se o bloco mistura potências e raízes ou trabalha só um tipo.",
+    complexidade: "Ajusta o nível de dificuldade e a combinação de operações na expressão.",
+    termos: "Indica quantos números ou partes aparecem em cada expressão.",
+    operacoesLista: "Seleciona quais operações podem aparecer dentro das expressões.",
+    agrupamento: "Controla se as expressões usam parênteses, colchetes ou chaves para organizar o cálculo.",
+  };
+
+  const TooltipInfo = ({
+    tooltipKey,
+    instanceKey,
+    align = "left",
+  }: {
+    tooltipKey: keyof typeof fieldTooltips;
+    instanceKey?: string;
+    align?: "left" | "right";
+  }) => {
+    const tooltipId = instanceKey ?? tooltipKey;
+    const isOpen = openTooltip === tooltipId;
+
+    return (
+      <div ref={isOpen ? tooltipRef : null} className="relative inline-flex">
+        <button
+          type="button"
+          aria-label={`Ajuda sobre ${tooltipKey}`}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setOpenTooltip((prev) => (prev === tooltipId ? null : tooltipId));
+          }}
+          className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#cbd5e1] bg-white text-[8px] font-bold leading-none text-[#64748b] transition hover:border-[#fb923c] hover:text-[#c2410c]"
+        >
+          i
+        </button>
+        {isOpen && (
+          <div
+            className={`absolute top-6 z-30 w-56 rounded-xl border border-[#e2e8f0] bg-white p-3 text-[11px] leading-relaxed text-[#475569] shadow-[0_12px_30px_rgba(15,23,42,0.14)] ${
+              align === "right" ? "right-0" : "left-0"
+            }`}
+          >
+            {fieldTooltips[tooltipKey]}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const FieldLabel = ({
+    label,
+    tooltipKey,
+    tooltipInstanceKey,
+    tooltipAlign,
+    className = "mb-1 block text-xs text-[#475569]",
+  }: {
+    label: string;
+    tooltipKey?: keyof typeof fieldTooltips;
+    tooltipInstanceKey?: string;
+    tooltipAlign?: "left" | "right";
+    className?: string;
+  }) => (
+    <label className={className}>
+      <span className="inline-flex items-center gap-1.5">
+        <span>{label}</span>
+        {tooltipKey ? (
+          <TooltipInfo
+            tooltipKey={tooltipKey}
+            instanceKey={tooltipInstanceKey}
+            align={tooltipAlign}
+          />
+        ) : null}
+      </span>
+    </label>
+  );
 
   const SegBtn = ({
     val,
@@ -5621,12 +5232,18 @@ function BlockDetailPanel({
 
   const RangeRow = ({
     label,
+    tooltipKey,
+    tooltipInstanceKey,
+    tooltipAlign,
     value,
     min,
     max,
     onSel,
   }: {
     label: string;
+    tooltipKey?: keyof typeof fieldTooltips;
+    tooltipInstanceKey?: string;
+    tooltipAlign?: "left" | "right";
     value: number;
     min: number;
     max: number;
@@ -5634,7 +5251,16 @@ function BlockDetailPanel({
   }) => (
     <div className="mb-3">
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs text-[#475569]">{label}</span>
+        <span className="inline-flex items-center gap-1.5 text-xs text-[#475569]">
+          <span>{label}</span>
+          {tooltipKey ? (
+            <TooltipInfo
+              tooltipKey={tooltipKey}
+              instanceKey={tooltipInstanceKey}
+              align={tooltipAlign}
+            />
+          ) : null}
+        </span>
         <span className="rounded bg-[rgba(238,135,72,0.12)] px-1.5 py-0.5 text-[11px] font-semibold text-[#ee8748]">
           {value}
         </span>
@@ -5652,13 +5278,13 @@ function BlockDetailPanel({
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto px-4 py-4 pb-20 ">
+      <div className="flex-1 overflow-y-auto overflow-x-visible px-4 py-4 pb-20 ">
         {/* Type selector */}
         <div className="mb-1 text-[10px] font-bold uppercase tracking-[1.3px] text-[#94a3b8]">
           Tipo de Exercício
         </div>
         <div className="mb-4">
-          <label className="mb-1 block text-xs text-[#475569]">Categoria</label>
+          <FieldLabel label="Categoria" tooltipKey="categoria" />
           <PremiumSelect
             value={block.type}
             options={Object.entries(BLOCK_META).map(([k, v]) => ({ value: k, label: v.name }))}
@@ -5681,13 +5307,16 @@ function BlockDetailPanel({
         {/* Type-specific params */}
         <div className="my-3 h-px bg-[#e2e8f0]" />
         <div className="mb-3 text-[10px] font-bold uppercase tracking-[1.3px] text-[#94a3b8]">
-          Parâmetros
+          <span className="inline-flex items-center gap-1.5">
+            <span>Par?metros</span>
+            {block.type === "fracoes" ? <TooltipInfo tooltipKey="operacao" /> : null}
+          </span>
         </div>
 
         {block.type === "aritmetica" && (
           <>
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-[#475569]">Operação</label>
+              <FieldLabel label="Operação" tooltipKey="operacao" />
               <PremiumSelect
                 value={c.operacao ?? "multiplicacao"}
                 options={[
@@ -5703,21 +5332,26 @@ function BlockDetailPanel({
             <div className="mb-3 grid grid-cols-2 gap-2">
               <RangeRow
                 label="Dígitos 1"
+                tooltipKey="digitos"
                 value={c.digitos1 ?? 3}
+                tooltipInstanceKey="digitos1"
                 min={1}
                 max={6}
                 onSel={(v) => up("digitos1", v)}
               />
               <RangeRow
                 label="Dígitos 2"
+                tooltipKey="digitos"
                 value={c.digitos2 ?? 3}
+                tooltipInstanceKey="digitos2"
+                tooltipAlign="right"
                 min={1}
                 max={6}
                 onSel={(v) => up("digitos2", v)}
               />
             </div>
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-[#475569]">Formato</label>
+              <FieldLabel label="Formato" tooltipKey="formato" />
               <div className="flex gap-1">
                 <SegBtn
                   val="armada"
@@ -5748,7 +5382,6 @@ function BlockDetailPanel({
         {block.type === "fracoes" && (
           <>
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-white/70">Operação</label>
               <div className="flex gap-1">
                 <SegBtn val="soma" cur={c.operacao} onSel={(v) => up("operacao", v)} label="Soma" />
                 <SegBtn
@@ -5767,6 +5400,7 @@ function BlockDetailPanel({
             </div>
             <RangeRow
               label="Denominador máx."
+              tooltipKey="denominador"
               value={c.denomMax ?? 10}
               min={2}
               max={20}
@@ -5795,7 +5429,7 @@ function BlockDetailPanel({
         {block.type === "equacoes" && (
           <>
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-[#475569]">Tipo de Equação</label>
+              <FieldLabel label="Tipo de Equação" tooltipKey="tipoEquacao" />
               <div className="grid grid-cols-2 gap-1">
                 {["misto", "ax+b=c", "ax-b=c", "x/a+b=c"].map((t) => (
                   <button
@@ -5828,7 +5462,7 @@ function BlockDetailPanel({
         {block.type === "potenciacao" && (
           <>
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-[#475569]">Tipo</label>
+              <FieldLabel label="Tipo" tooltipKey="tipoPotencia" />
               <div className="flex gap-1">
                 <SegBtn val="misto" cur={c.tipo} onSel={(v) => up("tipo", v)} label="Misto" />
                 <SegBtn val="potencia" cur={c.tipo} onSel={(v) => up("tipo", v)} label="Potência" />
@@ -5855,7 +5489,7 @@ function BlockDetailPanel({
         {block.type === "expressoes" && (
           <>
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-[#475569]">Complexidade</label>
+              <FieldLabel label="Complexidade" tooltipKey="complexidade" />
               <div className="flex gap-1">
                 <SegBtn
                   val="simples"
@@ -5879,13 +5513,14 @@ function BlockDetailPanel({
             </div>
             <RangeRow
               label="Nº de termos"
+              tooltipKey="termos"
               value={c.termos ?? 4}
               min={2}
               max={8}
               onSel={(v) => up("termos", v)}
             />
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-[#475569]">Operações</label>
+              <FieldLabel label="Operações" tooltipKey="operacoesLista" />
               <div className="space-y-1.5">
                 {[
                   ["adicao", "Adição"],
@@ -5914,7 +5549,7 @@ function BlockDetailPanel({
               </div>
             </div>
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-[#475569]">Agrupamento</label>
+              <FieldLabel label="Agrupamento" tooltipKey="agrupamento" />
               <div className="flex flex-wrap gap-1">
                 <button
                   onClick={() => {

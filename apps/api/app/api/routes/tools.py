@@ -69,6 +69,42 @@ FREE_GENERATION_LIMIT = 3
 UPGRADE_URL = "/tools/gerador-atividades?upgrade=credits_30"
 _ANON_RATE_LIMIT = 20          # gerações por hora por anonymous_id
 _ANON_RATE_WINDOW = 3600       # janela em segundos (1 hora)
+TEMP_UNLIMITED_GENERATION_CREDITS = 999_999
+TEMP_UNLIMITED_GENERATION_MODE = True
+
+
+def _temp_unlimited_auth_credits() -> ToolsCreditsResponse:
+    return ToolsCreditsResponse(credits=TEMP_UNLIMITED_GENERATION_CREDITS)
+
+
+def _temp_unlimited_anon_tools_status(*, anonymous_id: str) -> ToolsAnonStatusResponse:
+    return ToolsAnonStatusResponse(
+        anonymous_id=anonymous_id,
+        free_limit=TEMP_UNLIMITED_GENERATION_CREDITS,
+        free_used=0,
+        remaining_free_generations=TEMP_UNLIMITED_GENERATION_CREDITS,
+        paid_credits_remaining=0,
+    )
+
+
+def _temp_unlimited_anon_identity(*, anonymous_id: str) -> AnonIdentityOut:
+    return AnonIdentityOut(
+        anonymous_id=anonymous_id,
+        free_generations_used=0,
+        free_generations_remaining=TEMP_UNLIMITED_GENERATION_CREDITS,
+        paid_generations_available=0,
+        can_generate=True,
+    )
+
+
+def _temp_unlimited_anon_usage_status() -> AnonUsageStatusResponse:
+    return AnonUsageStatusResponse(
+        free_generations_used=0,
+        free_generations_remaining=TEMP_UNLIMITED_GENERATION_CREDITS,
+        paid_generations_available=0,
+        can_generate=True,
+        paywall_required=False,
+    )
 
 
 async def _check_anon_id_rate_limit(redis: Redis | None, anon_id: str) -> bool:
@@ -79,6 +115,8 @@ async def _check_anon_id_rate_limit(redis: Redis | None, anon_id: str) -> bool:
     Retorna True se permitido, False se bloqueado.
     Falha silenciosa: sem Redis → permite (API não fica indisponível).
     """
+    if TEMP_UNLIMITED_GENERATION_MODE:
+        return True
     if redis is None or not anon_id:
         return True
     key = f"rate:anon_gen:{anon_id}"
@@ -139,6 +177,8 @@ def _get_or_create_user_credits(db: DBSession, *, user_id: int) -> UserCredits:
 
 
 def _consume_user_credit_or_raise(db: DBSession, *, user_id: int) -> int:
+    if TEMP_UNLIMITED_GENERATION_MODE:
+        return TEMP_UNLIMITED_GENERATION_CREDITS
     row = _get_or_create_user_credits(db, user_id=user_id)
     if int(row.credits) <= 0:
         raise HTTPException(
@@ -411,6 +451,55 @@ async def generate_exercises(
         )
 
     # ── Rastreamento anônimo: DB (anonymous_id) ou Redis (session_token/IP) ──
+    if TEMP_UNLIMITED_GENERATION_MODE:
+        generator = ToolsExerciseGeneratorService()
+        generated, llm_mode = generator.generate(
+            ExerciseGenerationInput(
+                subject=payload.subject,
+                topic=payload.topic,
+                age=payload.age,
+                difficulty=payload.difficulty,
+                exercise_count=payload.exercise_count,
+            )
+        )
+        raw_exercises = generated["exercises"]
+        exercises = [
+            ToolsExerciseItemOut(
+                number=int(item["number"]),
+                prompt=str(item["prompt"]),
+                answer=str(item["answer"]),
+            )
+            for item in raw_exercises
+        ]
+        answer_key = [
+            ToolsExerciseItemOut(
+                number=item.number,
+                prompt=item.prompt,
+                answer=item.answer,
+            )
+            for item in exercises
+        ]
+        pdf_html = build_axiora_pdf_html(
+            title=generated["title"],
+            instructions=generated["instructions"],
+            exercises=[item.model_dump() for item in exercises],
+            answer_key=[item.model_dump() for item in answer_key],
+        )
+        return ToolsGenerateExercisesResponse(
+            title=generated["title"],
+            instructions=generated["instructions"],
+            exercises=exercises,
+            answer_key=answer_key,
+            pdf_html=pdf_html,
+            free_limit=TEMP_UNLIMITED_GENERATION_CREDITS,
+            free_used=0,
+            remaining_free_generations=TEMP_UNLIMITED_GENERATION_CREDITS,
+            paywall_required=False,
+            upgrade_url=UPGRADE_URL,
+            llm_mode=llm_mode,
+            paid_credits_remaining=0,
+        )
+
     if payload.anonymous_id:
         # Caminho principal — identidade persistente no PostgreSQL
         anon_svc = AnonToolsService()
@@ -700,6 +789,8 @@ async def get_tools_credits(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> ToolsCreditsResponse:
+    if TEMP_UNLIMITED_GENERATION_MODE:
+        return _temp_unlimited_auth_credits()
     row = _get_or_create_user_credits(db, user_id=user.id)
     db.commit()
     return ToolsCreditsResponse(credits=int(row.credits))
@@ -710,6 +801,8 @@ async def use_tools_credit(
     db: DBSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> ToolsCreditsResponse:
+    if TEMP_UNLIMITED_GENERATION_MODE:
+        return _temp_unlimited_auth_credits()
     remaining = _consume_user_credit_or_raise(db, user_id=user.id)
     return ToolsCreditsResponse(credits=remaining)
 
@@ -848,6 +941,13 @@ async def get_tools_billing_status(
     service: Annotated[ToolsService, Depends(get_tools_service)],
     session_token: str | None = None,
 ) -> ToolsBillingStatusResponse:
+    if TEMP_UNLIMITED_GENERATION_MODE:
+        return ToolsBillingStatusResponse(
+            free_limit=TEMP_UNLIMITED_GENERATION_CREDITS,
+            free_used=0,
+            remaining_free_generations=TEMP_UNLIMITED_GENERATION_CREDITS,
+            paid_credits_remaining=0,
+        )
     scope_key = _generation_scope_key(request, session_token)
     free_used = await service.get_free_generation_usage(key_id=scope_key)
     paid_credits = await service.get_paid_generation_credits(key_id=scope_key)
@@ -871,6 +971,9 @@ async def anon_use_generation(
     Deve ser chamado APÓS a geração local bem-sucedida no frontend.
     Retorna 402 se não houver saldo disponível (paywall).
     """
+    if TEMP_UNLIMITED_GENERATION_MODE:
+        return _temp_unlimited_anon_tools_status(anonymous_id=payload.anonymous_id)
+
     # Rate limit por anonymous_id — complementa o rate limit por IP do middleware
     redis = getattr(request.app.state, "redis", None)
     if not await _check_anon_id_rate_limit(redis, payload.anonymous_id):
@@ -943,6 +1046,9 @@ async def get_anon_tools_status(
 
     Cria a identidade se ainda não existir (primeira visita).
     """
+    if TEMP_UNLIMITED_GENERATION_MODE:
+        return _temp_unlimited_anon_tools_status(anonymous_id=anonymous_id)
+
     anon_svc = AnonToolsService()
     ip = request.client.host if request.client else None
     anon_svc.get_or_create_identity(db, anonymous_id=anonymous_id, ip=ip)
@@ -989,6 +1095,12 @@ async def anonymous_identify(
     mesmo anonymous_id (duas abas), o segundo INSERT sofre IntegrityError
     que é absorvido pelo service → retorna a identidade existente sem erro.
     """
+    if TEMP_UNLIMITED_GENERATION_MODE:
+        return AnonIdentifyResponse(
+            ok=True,
+            identity=_temp_unlimited_anon_identity(anonymous_id=payload.anonymous_id),
+        )
+
     ip = request.client.host if request.client else None
     user_agent = payload.user_agent or request.headers.get("User-Agent")
 
@@ -1036,6 +1148,9 @@ async def get_usage_status(
 
     Retorna paywall_required=True quando free_used >= 3 e paid_credits == 0.
     """
+    if TEMP_UNLIMITED_GENERATION_MODE:
+        return _temp_unlimited_anon_usage_status()
+
     ip = request.client.host if request.client else None
 
     anon_svc = AnonToolsService()
@@ -1140,6 +1255,26 @@ async def generate(
     )
     ip = request.client.host if request.client else None
     user_agent = request.headers.get("User-Agent")
+
+    if TEMP_UNLIMITED_GENERATION_MODE:
+        generated, llm_mode = _run_generation(payload)
+        preview = _build_preview_data(generated)
+        preview["llm_mode"] = llm_mode
+
+        if _resolve_optional_user(request, db) is not None:
+            return ToolsGenerateResponse(
+                consumption_type="auth",
+                free_generations_remaining=0,
+                paid_generations_available=TEMP_UNLIMITED_GENERATION_CREDITS,
+                preview_data=preview,
+            )
+
+        return ToolsGenerateResponse(
+            consumption_type="free",
+            free_generations_remaining=TEMP_UNLIMITED_GENERATION_CREDITS,
+            paid_generations_available=0,
+            preview_data=preview,
+        )
 
     # ── 1. Usuário autenticado ────────────────────────────────────────────────
     auth_user = _resolve_optional_user(request, db)

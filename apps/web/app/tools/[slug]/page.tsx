@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { ArrowLeftIcon } from "../_components/icons";
 import { ClientSheetGeneratorTool } from "../_components/client-sheet-generator-tool";
 import { ToolsCheckoutRedirect } from "../_components/tools-checkout-redirect";
 import { AxioraHeaderLogo } from "@/components/brand/axiora-header-logo";
@@ -40,20 +39,13 @@ export default async function ToolsDetailPage({ params, searchParams }: ToolsDet
 
       <nav className="sticky top-0 z-30 border-b border-[rgba(238,135,72,0.14)] bg-[linear-gradient(180deg,rgba(8,20,31,0.72)_0%,rgba(9,24,36,0.62)_100%)] shadow-[0_10px_30px_rgba(4,12,20,0.16)] backdrop-blur-xl">
         <div className="mx-auto flex h-[65px] w-full items-center justify-between gap-3 px-5">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-0">
             <Link href="/tools" className="flex shrink-0 items-center">
               <AxioraHeaderLogo className="w-[168px] sm:w-[196px]" priority />
             </Link>
-            <span className="text-white/20">·</span>
-            <span className="text-sm font-semibold text-white/60">{title}</span>
+            <span className="-ml-10 text-sm font-semibold text-white/60 sm:-ml-12">{title}</span>
           </div>
-          <Link
-            href="/tools"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/50 transition hover:text-white/80"
-          >
-            <ArrowLeftIcon className="h-3.5 w-3.5" />
-            Voltar
-          </Link>
+          <div />
         </div>
       </nav>
 
