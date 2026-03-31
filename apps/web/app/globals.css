@@ -147,6 +147,15 @@ canvas {
   height: auto;
 }
 
+.axiora-fixed-icon {
+  width: 15px !important;
+  height: 15px !important;
+  min-width: 15px;
+  min-height: 15px;
+  max-width: none !important;
+  flex: 0 0 15px;
+}
+
 h1 {
   font-size: 1.7rem;
   line-height: 1.2;

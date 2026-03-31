@@ -3074,7 +3074,7 @@ export function SheetGeneratorTool() {
               onClick={() => router.push("/tools")}
               className={`${desktopTopActionBtnCls} !flex !w-8 !items-center !justify-center !px-0 text-[#ee8748]`}
             >
-              <Home size={15} strokeWidth={2} />
+              <Home className="axiora-fixed-icon" size={15} strokeWidth={2} />
             </button>
 
             <button type="button" onClick={openCategoryModal} className={desktopPreviewBtnCls}>
@@ -3414,7 +3414,7 @@ export function SheetGeneratorTool() {
                 onClick={() => router.push("/tools")}
                 className={`${chunkyOutlineBtn} !flex !h-[34px] !w-[34px] !items-center !justify-center !px-0 !py-0 text-[#ee8748]`}
               >
-                <Home size={15} strokeWidth={2} />
+                <Home className="axiora-fixed-icon" size={15} strokeWidth={2} />
               </button>
               <button
                 type="button"
