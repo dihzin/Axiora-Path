@@ -64,6 +64,16 @@ interface Block {
   config: BlockConfig;
 }
 
+function cloneBlock(block: Block): Block {
+  return {
+    ...block,
+    config: {
+      ...block.config,
+      operacoes: block.config.operacoes ? [...block.config.operacoes] : undefined,
+    },
+  };
+}
+
 interface GlobalConfig {
   title: string;
   subtitle: string;
@@ -99,7 +109,7 @@ const DEFAULT_HEAVY_CONFIG: HeavyConfig = {
   showNome: true,
   numerar: true,
   showPontuacao: false,
-  repeatHeader: true,
+  repeatHeader: false,
 };
 
 const TITLE_SUBTITLE_DEBOUNCE_MS = 300;
@@ -1216,7 +1226,7 @@ function buildPrintHTML(
     : "";
 
   /* Monospace preservado apenas nas classes de alinhamento de cálculo armado */
-  const MONO = `'Courier New',Courier,monospace`;
+  const NUMBER_FONT = FONT;
   const exStyles = `
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
@@ -1224,11 +1234,11 @@ function buildPrintHTML(
     @page{size:A4 portrait;margin:18mm 20mm;}
     @media print{body{background:#fff;}.no-print{display:none!important;}}
     /* — Aritmética armada: monospace para alinhamento de colunas — */
-    .ex-mult-armada{display:inline-flex;flex-direction:column;align-items:flex-end;font-family:${MONO};font-size:${fz};gap:2px;}
+    .ex-mult-armada{display:inline-flex;flex-direction:column;align-items:flex-end;font-family:${NUMBER_FONT};font-size:${fz};font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;gap:2px;color:#0F172A;}
     .ex-mult-row{display:flex;align-items:center;gap:6px;white-space:nowrap;}
-    .ex-mult-op-symbol{min-width:16px;text-align:right;}
+    .ex-mult-op-symbol{min-width:16px;text-align:right;color:#0F172A;}
     .ex-mult-line{width:100%;height:0;border-top:1.5px solid #374151;margin:2px 0 0;}
-    .ex-divisao-armada{display:inline-flex;align-items:flex-start;font-family:${MONO};font-size:${fz};}
+    .ex-divisao-armada{display:inline-flex;align-items:flex-start;font-family:${NUMBER_FONT};font-size:${fz};font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;color:#0F172A;}
     .ex-divisao-dividendo{white-space:nowrap;padding-right:4px;line-height:1.5;}
     .ex-divisao-right{display:flex;flex-direction:column;}
     .ex-divisao-divisor{white-space:nowrap;padding:0 2px 3px 6px;border-left:1px solid #374151;border-bottom:1px solid #374151;}
@@ -1236,24 +1246,24 @@ function buildPrintHTML(
     /* — Exercícios lineares e expressões — */
     .ex-linear{font-family:${FONT};font-size:${fz};white-space:normal;word-break:break-word;}
     .ex-frac{display:inline-flex;flex-direction:column;align-items:center;line-height:1.1;}
-    .ex-frac-num{border-bottom:1.5px solid #374151;padding-bottom:2px;text-align:center;min-width:16px;font-size:${fz};}
-    .ex-frac-den{padding-top:2px;text-align:center;min-width:16px;font-size:${fz};}
-    .ex-frac-op{font-size:${fz};padding:0 2px;align-self:center;}
-    .ex-frac-result{align-self:center;font-size:${fz};}
+    .ex-frac-num{border-bottom:1.5px solid #374151;padding-bottom:2px;text-align:center;min-width:16px;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
+    .ex-frac-den{padding-top:2px;text-align:center;min-width:16px;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
+    .ex-frac-op{font-size:${fz};padding:0 2px;align-self:center;color:#0F172A;}
+    .ex-frac-result{align-self:center;font-size:${fz};color:#0F172A;}
     .ex-fracao-expr{display:inline-flex;align-items:center;gap:10px;font-family:${FONT};font-size:${fz};}
     .ex-equacao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;}
     .ex-eq-var{font-style:italic;font-size:${fz};color:#1F2937;}
-    .ex-eq-op,.ex-eq-equals,.ex-eq-num,.ex-eq-coef{font-size:${fz};}
+    .ex-eq-op,.ex-eq-equals,.ex-eq-num,.ex-eq-coef{font-size:${fz};color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .ex-eq-frac-wrap{display:inline-flex;flex-direction:column;align-items:center;line-height:1.1;vertical-align:middle;margin:0 2px;}
     .ex-eq-frac-top{font-style:italic;font-size:calc(${fz} * 0.85);border-bottom:1.5px solid #374151;padding-bottom:1px;min-width:14px;text-align:center;}
     .ex-eq-frac-bot{font-size:calc(${fz} * 0.85);padding-top:1px;text-align:center;}
     .ex-pot{font-family:${FONT};font-size:${fz};white-space:nowrap;display:inline;}
-    .ex-pot-base{font-size:${fz};}
+    .ex-pot-base{font-size:${fz};color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .ex-pot-exp{font-size:.6em;vertical-align:super;line-height:1;margin-left:1px;}
-    .ex-pot-result{font-size:${fz};margin-left:6px;}
+    .ex-pot-result{font-size:${fz};margin-left:6px;color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .ex-raiz{display:inline-flex;align-items:flex-end;font-family:${FONT};font-size:${fz};gap:0;vertical-align:middle;}
     .ex-raiz-svg{height:1.5em;width:auto;overflow:visible;flex-shrink:0;}
-    .ex-raiz-val{border-top:1.5px solid #374151;padding:0 4px 0 0;font-size:${fz};line-height:1.5;}
+    .ex-raiz-val{border-top:1.5px solid #374151;padding:0 4px 0 0;font-size:${fz};line-height:1.5;color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .ex-raiz-idx-wrap{position:relative;display:inline-block;line-height:0;}
     .ex-raiz-idx{position:absolute;top:0;left:1px;font-size:0.55em;line-height:1;font-family:${FONT};}
     .ex-expressao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;}
@@ -1324,8 +1334,9 @@ function paginateSimple(
     if (ex.html.includes("ex-mult-armada") || ex.html.includes("ex-divisao-armada"))
       return Math.round(90 * fontScale);
     if (ex.html.includes("ex-frac") || ex.html.includes("ex-raiz"))
-      return Math.round(46 * fontScale);
-    return Math.round(30 * fontScale); // equacoes, potenciacao, expressoes, linear aritmetica
+      return Math.round(58 * fontScale);
+    if (ex.html.includes("ex-equacao")) return Math.round(40 * fontScale);
+    return Math.round(34 * fontScale); // equacoes, potenciacao, expressoes, linear aritmetica
   }
 
   // Fixed UI chrome heights (px) — all over-estimated for safety
@@ -1333,6 +1344,10 @@ function paginateSimple(
   const HEADER1_H = Math.round((cfg.showNome ? 114 : 41) * fontScale);
   const SUBTITLE1_H = cfg.subtitle ? Math.round(26 * fontScale) : 0;
   const FOOTER_H = Math.round(22 * fontScale);
+  const REPEATED_HEADER_H = cfg.repeatHeader ? HEADER1_H + SUBTITLE1_H : 0;
+  // Mobile browsers can render the repeated header block a few pixels taller than desktop.
+  // Keep a much larger reserve only when repeatHeader is enabled so both previews stay stable.
+  const PAGE_SAFETY_BUFFER_H = Math.round((cfg.repeatHeader ? 132 : 26) * fontScale);
   // Section header: margin:36px 0 14px + content:27px + gap_after:18px = 95px
   // Use 100px as the safe value for mid-page.
   // At page-top for non-first pages suppressTopMargin removes the 36px, but we still
@@ -1341,8 +1356,14 @@ function paginateSimple(
   const SEC_H_TOP = Math.round(22 * fontScale);
   const BALANCE_THRESHOLD = 0;
 
-  const p1Avail = A4_H - 2 * PAGE_PY - HEADER1_H - SUBTITLE1_H - FOOTER_H;
-  const pnAvail = A4_H - 2 * PAGE_PY - FOOTER_H;
+  const p1Avail =
+    A4_H - 2 * PAGE_PY - HEADER1_H - SUBTITLE1_H - FOOTER_H - PAGE_SAFETY_BUFFER_H;
+  const pnAvail =
+    A4_H -
+    2 * PAGE_PY -
+    FOOTER_H -
+    REPEATED_HEADER_H -
+    PAGE_SAFETY_BUFFER_H;
 
   // Build logical grid rows: group exercises cols-at-a-time, split on section headers
   interface GridRow {
@@ -1546,7 +1567,7 @@ function buildDocCSS(cfg: GlobalConfig): string {
   const fzMap: Record<FontSize, string> = { P: "12px", M: "14px", G: "18px" };
   const fz = fzMap[cfg.fontSize];
   const FONT = `Inter,system-ui,-apple-system,sans-serif`;
-  const MONO = `'Courier New',Courier,monospace`;
+  const NUMBER_FONT = FONT;
   return `
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
     @keyframes previewPageFade {
@@ -1571,35 +1592,35 @@ function buildDocCSS(cfg: GlobalConfig): string {
       line-height:1.3;
     }
     .sheet-root .preview-page,.sheet-root .preview-page *,.sheet-root .preview-page *::before,.sheet-root .preview-page *::after{box-sizing:border-box;}
-    .sheet-root .preview-page .ex-mult-armada{display:inline-flex;flex-direction:column;align-items:flex-end;font-family:${MONO};font-size:${fz};gap:2px;}
+    .sheet-root .preview-page .ex-mult-armada{display:inline-flex;flex-direction:column;align-items:flex-end;font-family:${NUMBER_FONT};font-size:${fz};font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;gap:2px;color:#0F172A;}
     .sheet-root .preview-page .ex-mult-row{display:flex;align-items:center;gap:6px;white-space:nowrap;}
-    .sheet-root .preview-page .ex-mult-op-symbol{min-width:16px;text-align:right;}
+    .sheet-root .preview-page .ex-mult-op-symbol{min-width:16px;text-align:right;color:#0F172A;}
     .sheet-root .preview-page .ex-mult-line{width:100%;height:0;border-top:1.5px solid #374151;margin:2px 0 0;}
-    .sheet-root .preview-page .ex-divisao-armada{display:inline-flex;align-items:flex-start;font-family:${MONO};font-size:${fz};}
+    .sheet-root .preview-page .ex-divisao-armada{display:inline-flex;align-items:flex-start;font-family:${NUMBER_FONT};font-size:${fz};font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;color:#0F172A;}
     .sheet-root .preview-page .ex-divisao-dividendo{white-space:nowrap;padding-right:4px;line-height:1.5;}
     .sheet-root .preview-page .ex-divisao-right{display:flex;flex-direction:column;}
     .sheet-root .preview-page .ex-divisao-divisor{white-space:nowrap;padding:0 2px 3px 6px;border-left:1px solid #374151;border-bottom:1px solid #374151;}
     .sheet-root .preview-page .ex-divisao-quociente{min-height:1.8em;padding:2px 2px 0 6px;}
     .sheet-root .preview-page .ex-linear{font-family:${FONT};font-size:${fz};white-space:normal;word-break:break-word;}
     .sheet-root .preview-page .ex-frac{display:inline-flex;flex-direction:column;align-items:center;line-height:1.1;}
-    .sheet-root .preview-page .ex-frac-num{border-bottom:1.5px solid #374151;padding-bottom:2px;text-align:center;min-width:16px;font-size:${fz};}
-    .sheet-root .preview-page .ex-frac-den{padding-top:2px;text-align:center;min-width:16px;font-size:${fz};}
-    .sheet-root .preview-page .ex-frac-op{font-size:${fz};padding:0 2px;align-self:center;}
-    .sheet-root .preview-page .ex-frac-result{align-self:center;font-size:${fz};}
+    .sheet-root .preview-page .ex-frac-num{border-bottom:1.5px solid #374151;padding-bottom:2px;text-align:center;min-width:16px;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
+    .sheet-root .preview-page .ex-frac-den{padding-top:2px;text-align:center;min-width:16px;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
+    .sheet-root .preview-page .ex-frac-op{font-size:${fz};padding:0 2px;align-self:center;color:#0F172A;}
+    .sheet-root .preview-page .ex-frac-result{align-self:center;font-size:${fz};color:#0F172A;}
     .sheet-root .preview-page .ex-fracao-expr{display:inline-flex;align-items:center;gap:10px;font-family:${FONT};font-size:${fz};}
     .sheet-root .preview-page .ex-equacao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;}
     .sheet-root .preview-page .ex-eq-var{font-style:italic;font-size:${fz};color:#1F2937;}
-    .sheet-root .preview-page .ex-eq-op,.sheet-root .preview-page .ex-eq-equals,.sheet-root .preview-page .ex-eq-num,.sheet-root .preview-page .ex-eq-coef{font-size:${fz};}
+    .sheet-root .preview-page .ex-eq-op,.sheet-root .preview-page .ex-eq-equals,.sheet-root .preview-page .ex-eq-num,.sheet-root .preview-page .ex-eq-coef{font-size:${fz};color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .sheet-root .preview-page .ex-eq-frac-wrap{display:inline-flex;flex-direction:column;align-items:center;line-height:1.1;vertical-align:middle;margin:0 2px;}
     .sheet-root .preview-page .ex-eq-frac-top{font-style:italic;font-size:calc(${fz} * 0.85);border-bottom:1.5px solid #374151;padding-bottom:1px;min-width:14px;text-align:center;}
     .sheet-root .preview-page .ex-eq-frac-bot{font-size:calc(${fz} * 0.85);padding-top:1px;text-align:center;}
     .sheet-root .preview-page .ex-pot{font-family:${FONT};font-size:${fz};white-space:nowrap;display:inline;}
-    .sheet-root .preview-page .ex-pot-base{font-size:${fz};}
+    .sheet-root .preview-page .ex-pot-base{font-size:${fz};color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .sheet-root .preview-page .ex-pot-exp{font-size:.6em;vertical-align:super;line-height:1;margin-left:1px;}
-    .sheet-root .preview-page .ex-pot-result{font-size:${fz};margin-left:6px;}
+    .sheet-root .preview-page .ex-pot-result{font-size:${fz};margin-left:6px;color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .sheet-root .preview-page .ex-raiz{display:inline-flex;align-items:flex-end;font-family:${FONT};font-size:${fz};gap:0;vertical-align:middle;}
     .sheet-root .preview-page .ex-raiz-svg{height:1.5em;width:auto;overflow:visible;flex-shrink:0;}
-    .sheet-root .preview-page .ex-raiz-val{border-top:1.5px solid #374151;padding:0 4px 0 0;font-size:${fz};line-height:1.5;}
+    .sheet-root .preview-page .ex-raiz-val{border-top:1.5px solid #374151;padding:0 4px 0 0;font-size:${fz};line-height:1.5;color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .sheet-root .preview-page .ex-raiz-idx-wrap{position:relative;display:inline-block;line-height:0;}
     .sheet-root .preview-page .ex-raiz-idx{position:absolute;top:0;left:1px;font-size:0.55em;line-height:1;}
     .sheet-root .preview-page .ex-expressao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;}
@@ -1613,18 +1634,18 @@ function buildDocStyles(cfg: GlobalConfig) {
   const fzSm = cfg.fontSize === "P" ? "10px" : cfg.fontSize === "G" ? "14px" : "11px";
   const FONT = `Inter,system-ui,-apple-system,sans-serif`;
   const S = {
-    title: `font-family:${FONT};font-size:18px;font-weight:600;text-align:center;letter-spacing:0.8px;color:#0F172A;margin-bottom:10px;`,
+    title: `font-family:${FONT};font-size:18px;font-weight:700;text-align:center;letter-spacing:0.8px;color:#0F172A;margin-bottom:10px;`,
     rule2: `height:1.5px;background:#D1D5DB;margin:0 0 4px;`,
     ruleGray: `height:1px;background:#F3F4F6;margin:6px 0 8px;`,
-    infoRow: `font-family:${FONT};font-size:12px;color:#1F2937;padding:3px 0;letter-spacing:0.04em;`,
+    infoRow: `font-family:${FONT};font-size:12px;color:#0F172A;padding:3px 0;letter-spacing:0.04em;`,
     secHead: `font-family:${FONT};font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.12em;margin:12px 0 4px;padding-bottom:4px;border-bottom:1px solid #E5E7EB;`,
     exNum: `font-family:${FONT};font-size:${fz};color:#9CA3AF;white-space:nowrap;flex-shrink:0;min-width:28px;line-height:1.3;`,
     exBody: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.3;flex:1;min-width:0;`,
     page: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.3;`,
     footer: `font-family:${FONT};font-size:${fzSm};color:#9CA3AF;letter-spacing:0.04em;`,
   };
-  const lbl = `font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:#9CA3AF;white-space:nowrap;flex-shrink:0;`;
-  const ln = `border-bottom:1px solid #9CA3AF;display:inline-block;vertical-align:bottom;`;
+  const lbl = `font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:#0F172A;white-space:nowrap;flex-shrink:0;`;
+  const ln = `border-bottom:1px solid #0F172A;display:inline-block;vertical-align:bottom;`;
   return { fz, fzSm, FONT, S, lbl, ln };
 }
 
@@ -1741,6 +1762,7 @@ function buildOnePageHTML(
   const colGap = 24;
 
   const pageSections: Record<number, string> = {};
+  const shouldShowHeader = isFirstPage || cfg.repeatHeader;
   for (const { index } of pageItems) {
     if (sectionHeaders[index]) pageSections[index] = sectionHeaders[index];
   }
@@ -1765,7 +1787,7 @@ function buildOnePageHTML(
       pushSection();
       currentSection = {
         title: pageSections[exIdx] ?? null,
-        suppressTopMargin: !isFirstPage && exIdx === pageItems[0]?.index,
+        suppressTopMargin: !shouldShowHeader && !isFirstPage && exIdx === pageItems[0]?.index,
         items: [],
       };
     }
@@ -1788,7 +1810,7 @@ function buildOnePageHTML(
     .join("");
 
   let pageHeaderHTML = "";
-  if (isFirstPage) {
+  if (shouldShowHeader) {
     const nomeLine = buildStudentRowHTML(cfg, S, lbl, ln);
     pageHeaderHTML = `
       <div style="${S.title}">${cfg.title || "Folha de Exercícios"}</div>
@@ -1797,7 +1819,7 @@ function buildOnePageHTML(
     `;
   }
   const subtitleHTML =
-    isFirstPage && cfg.subtitle
+    shouldShowHeader && cfg.subtitle
       ? `<p style="font-family:${FONT};font-size:${fz};color:#6B7280;margin:0 0 10px;padding:4px 0;border-bottom:1px solid #E5E7EB;">${cfg.subtitle}</p>`
       : "";
   const footerHTML =
@@ -2443,6 +2465,15 @@ export function SheetGeneratorTool() {
   const [layoutModalOpen, setLayoutModalOpen] = useState(false);
   const [opcoesModalOpen, setOpcoesModalOpen] = useState(false);
   const [blockDetailModalOpen, setBlockDetailModalOpen] = useState(false);
+  const [blockDraft, setBlockDraft] = useState<Block | null>(null);
+  const [settingsLightDraft, setSettingsLightDraft] = useState<LightConfig | null>(null);
+  const [settingsHeavyDraft, setSettingsHeavyDraft] = useState<HeavyConfig | null>(null);
+  const [layoutDraft, setLayoutDraft] = useState<HeavyConfig | null>(null);
+  const [optionsDraft, setOptionsDraft] = useState<HeavyConfig | null>(null);
+  const [presetSelectionDraft, setPresetSelectionDraft] = useState<{
+    key: string;
+    label: string;
+  } | null>(null);
   const [previewWindowState, setPreviewWindowState] = useState<
     "closed" | "normal" | "maximized" | "minimized"
   >("closed");
@@ -2555,40 +2586,104 @@ export function SheetGeneratorTool() {
   const [pageSlices, setPageSlices] = useState<PageSlice[]>([]);
   const [answerPageSlices, setAnswerPageSlices] = useState<ExerciseItem[][]>([]);
 
-  useEffect(() => {
-    let cancelled = false;
+  const settingsDraftCfg = useMemo<GlobalConfig>(
+    () => ({
+      ...(settingsHeavyDraft ?? heavyCfg),
+      ...(settingsLightDraft ?? lightCfg),
+      title: (settingsLightDraft ?? lightCfg).title,
+      subtitle: (settingsLightDraft ?? lightCfg).subtitle,
+    }),
+    [settingsHeavyDraft, heavyCfg, settingsLightDraft, lightCfg],
+  );
 
-    const run = async () => {
-      if (!generatedExercises.length) {
-        setPageSlices([]);
-        setAnswerPageSlices([]);
+  const hasSettingsParentContext = settingsModalOpen || mobileTab === "config";
+
+  const resetSettingsDraftState = useCallback(() => {
+    setSettingsLightDraft(null);
+    setSettingsHeavyDraft(null);
+    setLayoutDraft(null);
+    setOptionsDraft(null);
+    setPresetSelectionDraft(null);
+  }, []);
+
+  const startSettingsEditing = useCallback(() => {
+    setSettingsLightDraft({ ...lightCfg });
+    setSettingsHeavyDraft({ ...heavyCfg });
+    setLayoutDraft(null);
+    setOptionsDraft(null);
+    setPresetSelectionDraft(null);
+  }, [heavyCfg, lightCfg]);
+
+  const closeSettingsFlow = useCallback(() => {
+    setSettingsModalOpen(false);
+    setMobileTab((prev) => (prev === "config" ? "blocks" : prev));
+    resetSettingsDraftState();
+  }, [resetSettingsDraftState]);
+
+  const confirmSettingsFlow = useCallback(() => {
+    if (settingsLightDraft) {
+      setLightCfg(settingsLightDraft);
+      setDebouncedLightCfg(settingsLightDraft);
+    }
+    if (settingsHeavyDraft) {
+      setHeavyCfg(settingsHeavyDraft);
+    }
+    setSnapshot(null);
+    setSettingsModalOpen(false);
+    setMobileTab((prev) => (prev === "config" ? "blocks" : prev));
+    resetSettingsDraftState();
+  }, [resetSettingsDraftState, settingsHeavyDraft, settingsLightDraft]);
+
+  const updateSettingsDraft = useCallback(
+    (key: keyof GlobalConfig, val: GlobalConfig[keyof GlobalConfig]) => {
+      if (key === "title" || key === "subtitle" || key === "turma" || key === "tempo") {
+        setSettingsLightDraft((prev) => ({ ...(prev ?? lightCfg), [key]: val }) as LightConfig);
         return;
       }
+      setSettingsHeavyDraft((prev) => ({ ...(prev ?? heavyCfg), [key]: val }) as HeavyConfig);
+    },
+    [heavyCfg, lightCfg],
+  );
 
-      const sectionHeaders = buildSectionHeaderMap(generatedExercises, blocks, cfg);
-      const initialSlices = paginateSimple(generatedExercises, blocks, cfg);
-      const rebalancedSlices = await rebalancePageSlicesByMeasurement(
-        initialSlices,
-        generatedExercises,
-        cfg,
-        sectionHeaders,
-      );
-      const nextAnswerPageSlices =
-        cfg.gabarito === "proxima"
-          ? paginateAnswerPages(generatedExercises, cfg)
-          : [];
+  const openDesktopSettings = useCallback(() => {
+    startSettingsEditing();
+    setSettingsModalOpen(true);
+  }, [startSettingsEditing]);
 
-      if (!cancelled) {
-        setPageSlices(rebalancedSlices);
-        setAnswerPageSlices(nextAnswerPageSlices);
+  const openMobileSettings = useCallback(() => {
+    startSettingsEditing();
+    setMobileTab("config");
+  }, [startSettingsEditing]);
+
+  const openSettingsSubview = useCallback(
+    (view: "preset" | "layout" | "options") => {
+      if (view === "preset") {
+        setPresetSelectionDraft(null);
+        setPresetModalOpen(true);
       }
-    };
+      if (view === "layout") {
+        setLayoutDraft({ ...(settingsHeavyDraft ?? heavyCfg) });
+        setLayoutModalOpen(true);
+      }
+      if (view === "options") {
+        setOptionsDraft({ ...(settingsHeavyDraft ?? heavyCfg) });
+        setOpcoesModalOpen(true);
+      }
+    },
+    [heavyCfg, settingsHeavyDraft],
+  );
 
-    void run();
+  useEffect(() => {
+    if (!generatedExercises.length) {
+      setPageSlices([]);
+      setAnswerPageSlices([]);
+      return;
+    }
 
-    return () => {
-      cancelled = true;
-    };
+    setPageSlices(paginateSimple(generatedExercises, blocks, cfg));
+    setAnswerPageSlices(
+      cfg.gabarito === "proxima" ? paginateAnswerPages(generatedExercises, cfg) : [],
+    );
   }, [
     generatedExercises,
     blocks,
@@ -2676,17 +2771,76 @@ export function SheetGeneratorTool() {
 
   const invalidate = useCallback(() => setSnapshot(null), []);
 
-  const updateCfg = useCallback(
-    (key: keyof GlobalConfig, val: GlobalConfig[keyof GlobalConfig]) => {
-      if (key === "title" || key === "subtitle" || key === "turma" || key === "tempo") {
-        setLightCfg((prev) => ({ ...prev, [key]: val }) as LightConfig);
+  const closeLayoutModal = useCallback(() => {
+    setLayoutDraft(null);
+    setLayoutModalOpen(false);
+  }, []);
+
+  const confirmLayoutModal = useCallback(() => {
+    if (layoutDraft) {
+      if (hasSettingsParentContext) {
+        setSettingsHeavyDraft(layoutDraft);
       } else {
-        setHeavyCfg((prev) => ({ ...prev, [key]: val }) as HeavyConfig);
+        setHeavyCfg(layoutDraft);
+        invalidate();
       }
-      invalidate();
+    }
+    closeLayoutModal();
+  }, [closeLayoutModal, hasSettingsParentContext, invalidate, layoutDraft]);
+
+  const updateLayoutDraft = useCallback(
+    (key: keyof HeavyConfig, val: HeavyConfig[keyof HeavyConfig]) => {
+      setLayoutDraft((prev) => ({ ...(prev ?? settingsHeavyDraft ?? heavyCfg), [key]: val }));
     },
-    [invalidate],
+    [heavyCfg, settingsHeavyDraft],
   );
+
+  const closeOptionsModal = useCallback(() => {
+    setOptionsDraft(null);
+    setOpcoesModalOpen(false);
+  }, []);
+
+  const confirmOptionsModal = useCallback(() => {
+    if (optionsDraft) {
+      if (hasSettingsParentContext) {
+        setSettingsHeavyDraft(optionsDraft);
+      } else {
+        setHeavyCfg(optionsDraft);
+        invalidate();
+      }
+    }
+    closeOptionsModal();
+  }, [closeOptionsModal, hasSettingsParentContext, invalidate, optionsDraft]);
+
+  const updateOptionsDraft = useCallback(
+    (key: keyof HeavyConfig, val: HeavyConfig[keyof HeavyConfig]) => {
+      setOptionsDraft((prev) => ({ ...(prev ?? settingsHeavyDraft ?? heavyCfg), [key]: val }));
+    },
+    [heavyCfg, settingsHeavyDraft],
+  );
+
+  const closePresetModal = useCallback(() => {
+    setPresetSelectionDraft(null);
+    setPresetModalOpen(false);
+  }, []);
+
+  const confirmPresetSelection = useCallback(() => {
+    if (!presetSelectionDraft) {
+      closePresetModal();
+      return;
+    }
+
+    applyPreset(presetSelectionDraft.key, setBlocks, nextId);
+    setSelectedBlockId(null);
+    setSeed(Math.floor(10000 + Math.random() * 90000));
+    setSnapshot(null);
+    closePresetModal();
+    showToast(
+      presetSelectionDraft.key === "limpar"
+        ? "Blocos removidos"
+        : `Preset "${presetSelectionDraft.label}" aplicado`,
+    );
+  }, [closePresetModal, presetSelectionDraft, showToast]);
 
   const closeAddBlockModal = useCallback(() => {
     setAddBlockModalOpen(false);
@@ -2855,8 +3009,9 @@ export function SheetGeneratorTool() {
         .join("");
       html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${cfg.title || "Folha de Exercícios"}</title>
         <style>
+          @page{size:A4 portrait;margin:0;}
           html,body{margin:0;padding:0;background:#fff;}
-          .print-page{break-after:page;page-break-after:always;}
+          .print-page{width:${A4_W}px;height:${A4_H}px;overflow:hidden;break-after:page;page-break-after:always;}
           .print-page:last-child{break-after:auto;page-break-after:auto;}
           @media print{
             .preview-container{transform:none !important;}
@@ -2953,6 +3108,44 @@ export function SheetGeneratorTool() {
     () => blocks.find((b) => b.id === selectedBlockId) ?? null,
     [blocks, selectedBlockId],
   );
+  useEffect(() => {
+    if (!blockDetailModalOpen || !selectedBlock) {
+      setBlockDraft(null);
+      return;
+    }
+
+    setBlockDraft(cloneBlock(selectedBlock));
+  }, [blockDetailModalOpen, selectedBlock]);
+
+  const closeBlockDetailModal = useCallback(() => {
+    setBlockDetailModalOpen(false);
+    setBlockDraft(null);
+  }, []);
+
+  const updateDraftBlockConfig = useCallback((key: keyof BlockConfig, val: unknown) => {
+    setBlockDraft((prev) =>
+      prev ? { ...prev, config: { ...prev.config, [key]: val } } : prev,
+    );
+  }, []);
+
+  const changeDraftBlockType = useCallback((type: BlockType) => {
+    setBlockDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            type,
+            config: { ...BLOCK_META[type].defaults, quantidade: prev.config.quantidade },
+          }
+        : prev,
+    );
+  }, []);
+
+  const confirmBlockDetailChanges = useCallback(() => {
+    if (!blockDraft) return;
+    setBlocks((prev) => prev.map((b) => (b.id === blockDraft.id ? cloneBlock(blockDraft) : b)));
+    invalidate();
+    closeBlockDetailModal();
+  }, [blockDraft, closeBlockDetailModal, invalidate]);
   const selectedGuidedStage = useMemo(
     () => GUIDED_STAGE_OPTIONS.find((item) => item.id === guidedStageId) ?? null,
     [guidedStageId],
@@ -3038,7 +3231,7 @@ export function SheetGeneratorTool() {
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white md:min-h-0">
       {/* ── MOBILE TAB BAR ──────────────────────────────────────────── */}
       <div
-        className="flex shrink-0 border-b border-[#e5e7eb] md:hidden"
+        className={`${mobileTab === "config" ? "flex" : "hidden"} shrink-0 border-b border-[#e5e7eb] md:hidden`}
         style={{ background: "#ffffff" }}
       >
         <button
@@ -3046,7 +3239,7 @@ export function SheetGeneratorTool() {
           onClick={() => setMobileTab((prev) => (prev === "config" ? "blocks" : "config"))}
           className={`m-1 flex-1 ${chunkyChipBtn(mobileTab === "config")} py-2`}
         >
-          {mobileTab === "config" ? "Voltar aos exercícios" : "Configurar"}
+          Voltar aos exercícios
         </button>
       </div>
 
@@ -3091,7 +3284,7 @@ export function SheetGeneratorTool() {
 
             <button
               type="button"
-              onClick={() => setSettingsModalOpen(true)}
+              onClick={openDesktopSettings}
               className={desktopTopActionBtnCls}
             >
               Configurações
@@ -3125,7 +3318,7 @@ export function SheetGeneratorTool() {
             </button>
 
             <button type="button" onClick={openPreviewWindow} className={desktopPreviewBtnCls}>
-              Preview
+              Pré-visualização
             </button>
 
           </div>
@@ -3196,8 +3389,8 @@ export function SheetGeneratorTool() {
                     Título
                     <input
                       className={inputCls}
-                      value={lightCfg.title}
-                      onChange={(e) => updateCfg("title", e.target.value)}
+                      value={settingsDraftCfg.title}
+                      onChange={(e) => updateSettingsDraft("title", e.target.value)}
                     />
                   </label>
                   <label className="block text-[11px] font-medium text-[#475569]">
@@ -3205,8 +3398,8 @@ export function SheetGeneratorTool() {
                     <textarea
                       className={`${inputCls} resize-none`}
                       rows={2}
-                      value={lightCfg.subtitle}
-                      onChange={(e) => updateCfg("subtitle", e.target.value)}
+                      value={settingsDraftCfg.subtitle}
+                      onChange={(e) => updateSettingsDraft("subtitle", e.target.value)}
                     />
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -3215,8 +3408,8 @@ export function SheetGeneratorTool() {
                       <input
                         className={inputCls}
                         placeholder="7º Ano A"
-                        value={cfg.turma}
-                        onChange={(e) => updateCfg("turma", e.target.value)}
+                        value={settingsDraftCfg.turma}
+                        onChange={(e) => updateSettingsDraft("turma", e.target.value)}
                       />
                     </label>
                     <label className="block text-[11px] font-medium text-[#475569]">
@@ -3224,8 +3417,8 @@ export function SheetGeneratorTool() {
                       <input
                         className={inputCls}
                         placeholder="30 min"
-                        value={cfg.tempo}
-                        onChange={(e) => updateCfg("tempo", e.target.value)}
+                        value={settingsDraftCfg.tempo}
+                        onChange={(e) => updateSettingsDraft("tempo", e.target.value)}
                       />
                     </label>
                   </div>
@@ -3237,7 +3430,7 @@ export function SheetGeneratorTool() {
             <div className="border-b border-[#f1f5f9] px-4">
               <button
                 type="button"
-                onClick={() => setPresetModalOpen(true)}
+                onClick={() => openSettingsSubview("preset")}
                 className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70"
               >
                 <div className="flex items-center gap-2">
@@ -3262,7 +3455,7 @@ export function SheetGeneratorTool() {
             <div className="border-b border-[#f1f5f9] px-4">
               <button
                 type="button"
-                onClick={() => setLayoutModalOpen(true)}
+                onClick={() => openSettingsSubview("layout")}
                 className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70"
               >
                 <div className="flex items-center gap-2">
@@ -3287,7 +3480,7 @@ export function SheetGeneratorTool() {
             <div className="px-4">
               <button
                 type="button"
-                onClick={() => setOpcoesModalOpen(true)}
+                onClick={() => openSettingsSubview("options")}
                 className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70"
               >
                 <div className="flex items-center gap-2">
@@ -3316,17 +3509,21 @@ export function SheetGeneratorTool() {
               <div className="space-y-1.5">
                 {(
                   [
-                    ["Colunas", String(cfg.cols)],
+                    ["Colunas", String(settingsDraftCfg.cols)],
                     [
                       "Fonte",
-                      cfg.fontSize === "P" ? "Pequena" : cfg.fontSize === "M" ? "Média" : "Grande",
+                      settingsDraftCfg.fontSize === "P"
+                        ? "Pequena"
+                        : settingsDraftCfg.fontSize === "M"
+                          ? "Média"
+                          : "Grande",
                     ],
-                    ["Espaçamento", `${cfg.spacing}px`],
+                    ["Espaçamento", `${settingsDraftCfg.spacing}px`],
                     [
                       "Gabarito",
-                      cfg.gabarito === "sem"
+                      settingsDraftCfg.gabarito === "sem"
                         ? "Sem gabarito"
-                        : cfg.gabarito === "mesma"
+                        : settingsDraftCfg.gabarito === "mesma"
                           ? "Mesma página"
                           : "Próxima página",
                     ],
@@ -3342,6 +3539,24 @@ export function SheetGeneratorTool() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+          <div className="shrink-0 border-t border-[#e2e8f0] bg-white px-4 py-3">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={closeSettingsFlow}
+                className={`flex-1 ${chunkyOutlineBtn}`}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmSettingsFlow}
+                className={`flex-1 ${chunkyPrimaryBtn}`}
+              >
+                Confirmar
+              </button>
             </div>
           </div>
         </aside>
@@ -3432,6 +3647,13 @@ export function SheetGeneratorTool() {
               </button>
               <button
                 type="button"
+                onClick={openMobileSettings}
+                className={`${chunkyOutlineBtn} !px-2.5 !py-1.5 !text-[10px] whitespace-nowrap`}
+              >
+                Configurações
+              </button>
+              <button
+                type="button"
                 onClick={rerollSeed}
                 disabled={!canRefreshExercises}
                 aria-label="Atualizar exercícios"
@@ -3454,13 +3676,6 @@ export function SheetGeneratorTool() {
                   <path d="M21 12a9 9 0 01-15 6.7L3 16" />
                 </svg>
                 Atualizar
-              </button>
-              <button
-                onClick={() => void handlePrint()}
-                disabled={isPrinting}
-                className={`whitespace-nowrap flex items-center gap-1.5 rounded-[var(--radius-lg)] px-2.5 py-1.5 text-[10px] font-extrabold tracking-[0.01em] disabled:cursor-not-allowed disabled:opacity-70 ${isPrinting ? "bg-[#cbd5e1] text-white shadow-none" : loginOrangeBtn}`}
-              >
-                {isPrinting ? "Gerando..." : "Gerar PDF"}
               </button>
             </div>
           </div>
@@ -3499,7 +3714,7 @@ export function SheetGeneratorTool() {
                     Crie sua primeira atividade
                   </p>
                   <p className="mt-1 text-[12px] leading-relaxed text-[#94a3b8]">
-                    Monte do zero ou use um preset, depois salve como template
+                    Monte do zero clicando em Adicionar exercícios ou use um Modelo pronto
                   </p>
                 </div>
                 {/* Steps */}
@@ -3509,8 +3724,8 @@ export function SheetGeneratorTool() {
                       { step: "1", label: "Monte a lista", desc: "Adicione blocos de exercícios" },
                       {
                         step: "2",
-                        label: "Salve o template",
-                        desc: "Reutilize a mesma estrutura depois",
+                        label: "Ajuste os exercicios",
+                        desc: "Defina categoria, quantidade e formato",
                       },
                       { step: "3", label: "Exporte o PDF", desc: "Pronto para imprimir" },
                     ] as { step: string; label: string; desc: string }[]
@@ -3627,23 +3842,6 @@ export function SheetGeneratorTool() {
                     </div>
                   );
                 })}
-                <div className="pt-1">
-                  <button
-                    type="button"
-                    onClick={addBlock}
-                    className={`inline-flex items-center gap-2 ${chunkyPrimaryBtn}`}
-                  >
-                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                      <path
-                        d="M5.5 1v9M1 5.5h9"
-                        stroke="#fff"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    Adicionar Bloco
-                  </button>
-                </div>
               </div>
             )}
 
@@ -3735,7 +3933,7 @@ export function SheetGeneratorTool() {
             aria-label="Janela de preview da folha"
             className={`relative flex w-full flex-col overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] shadow-[0_28px_90px_rgba(15,23,42,0.28)] ${
               isMobileViewport || previewWindowState === "maximized"
-                ? "h-screen max-w-none rounded-none border-0"
+                ? "h-[100dvh] max-w-none rounded-none border-0"
                 : "mx-3 h-[min(90vh,940px)] max-w-[min(1240px,calc(100vw-24px))] rounded-[28px] border border-[rgba(255,255,255,0.45)]"
             }`}
             onClick={(e) => e.stopPropagation()}
@@ -3777,28 +3975,30 @@ export function SheetGeneratorTool() {
                     <path d="M6 12h12" />
                   </svg>
                 </button>
-                <button
-                  type="button"
-                  onClick={togglePreviewWindowSize}
-                  className={previewToolbarIconBtnCls}
-                  aria-label={previewWindowState === "maximized" ? "Restaurar preview" : "Maximizar preview"}
-                >
-                  {previewWindowState === "maximized" ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M8 3H5a2 2 0 0 0-2 2v3" />
-                      <path d="M16 3h3a2 2 0 0 1 2 2v3" />
-                      <path d="M8 21H5a2 2 0 0 1-2-2v-3" />
-                      <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
-                    </svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M15 3h6v6" />
-                      <path d="M9 21H3v-6" />
-                      <path d="M21 3l-7 7" />
-                      <path d="M3 21l7-7" />
-                    </svg>
-                  )}
-                </button>
+                {!isMobileViewport ? (
+                  <button
+                    type="button"
+                    onClick={togglePreviewWindowSize}
+                    className={previewToolbarIconBtnCls}
+                    aria-label={previewWindowState === "maximized" ? "Restaurar preview" : "Maximizar preview"}
+                  >
+                    {previewWindowState === "maximized" ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                        <path d="M16 3h3a2 2 0 0 1 2 2v3" />
+                        <path d="M8 21H5a2 2 0 0 1-2-2v-3" />
+                        <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M15 3h6v6" />
+                        <path d="M9 21H3v-6" />
+                        <path d="M21 3l-7 7" />
+                        <path d="M3 21l7-7" />
+                      </svg>
+                    )}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={closePreviewWindow}
@@ -3857,11 +4057,14 @@ export function SheetGeneratorTool() {
               ref={previewCanvasRef}
               className="preview-canvas"
               style={{
-                flex: 1,
+                flex: isMobileViewport ? "0 1 auto" : 1,
                 minHeight: 0,
                 overflow: "auto",
                 background:
-                  "linear-gradient(180deg, rgba(53,65,84,0.98) 0%, rgba(41,50,65,0.99) 100%)",
+                  isMobileViewport
+                    ? "#ffffff"
+                    : "linear-gradient(180deg, rgba(53,65,84,0.98) 0%, rgba(41,50,65,0.99) 100%)",
+                maxHeight: isMobileViewport ? "calc(100dvh - 168px)" : undefined,
                 padding: isMobileViewport
                   ? "0"
                   : previewWindowState === "maximized"
@@ -3883,7 +4086,7 @@ export function SheetGeneratorTool() {
                     boxShadow: isMobileViewport
                       ? "none"
                       : "0 26px 80px rgba(15,23,42,0.42), 0 10px 28px rgba(15,23,42,0.22)",
-                    margin: isMobileViewport ? "0" : "0 auto",
+                    margin: isMobileViewport ? "0 auto" : "0 auto",
                     overflow: "hidden",
                     position: "relative",
                   }}
@@ -3928,11 +4131,13 @@ export function SheetGeneratorTool() {
             </div>
 
             <div
-              className={`flex flex-wrap items-center justify-between gap-2 border-t border-[rgba(226,232,240,0.72)] bg-[rgba(255,255,255,0.94)] ${
+              className={`border-t border-[rgba(226,232,240,0.72)] bg-[rgba(255,255,255,0.94)] ${
                 previewWindowState === "maximized" ? "px-4 py-2" : "px-4 py-2"
               }`}
             >
-              <div className={`flex items-center gap-2 ${isMobileViewport ? "mx-auto" : ""}`}>
+              <div className={`grid items-center gap-2 ${isMobileViewport ? "grid-cols-1" : "grid-cols-[1fr_auto_1fr]"}`}>
+              <div className={isMobileViewport ? "hidden" : ""} />
+              <div className={`flex items-center gap-2 ${isMobileViewport ? "mx-auto" : "justify-center"}`}>
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
                   disabled={currentPage === 0 || previewPages.length <= 1}
@@ -3959,8 +4164,9 @@ export function SheetGeneratorTool() {
                   </svg>
                 </button>
               </div>
-              <div className={`flex items-center gap-2 text-[9px] text-[#94a3b8] ${isMobileViewport ? "hidden" : ""}`}>
+              <div className={`flex items-center gap-2 text-[9px] text-[#94a3b8] ${isMobileViewport ? "hidden" : "justify-end"}`}>
                 <span className="hidden sm:inline">Revise no tamanho maior e exporte quando estiver pronto.</span>
+              </div>
               </div>
             </div>
           </div>
@@ -3969,12 +4175,12 @@ export function SheetGeneratorTool() {
 
       {/* ── BLOCK DETAIL MODAL ───────────────────────────────────────── */}
       {blockDetailModalOpen &&
-        selectedBlock &&
+        blockDraft &&
         renderPortal(
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center"
           style={{ backdropFilter: "blur(6px)", background: "rgba(15,23,42,0.45)" }}
-          onClick={() => setBlockDetailModalOpen(false)}
+          onClick={closeBlockDetailModal}
         >
           <div
             className="relative mx-4 flex max-h-[85vh] w-full max-w-[420px] flex-col overflow-visible rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]"
@@ -3983,11 +4189,11 @@ export function SheetGeneratorTool() {
             <div className="flex items-center justify-between border-b border-[#f1f5f9] px-5 py-4">
               <div>
                 <div className="text-[15px] font-bold text-[#0f172a]">
-                  {BLOCK_META[selectedBlock.type].name}
+                  {BLOCK_META[blockDraft.type].name}
                 </div>
                 <div className="text-[11px] text-[#94a3b8]">
-                  #{selectedBlock.id} ·{" "}
-                  {selectedBlock.active ? (
+                  #{blockDraft.id} ·{" "}
+                  {blockDraft.active ? (
                     <span className="text-emerald-500">Ativo</span>
                   ) : (
                     <span className="text-[#94a3b8]">Inativo</span>
@@ -3995,7 +4201,7 @@ export function SheetGeneratorTool() {
                 </div>
               </div>
               <button
-                onClick={() => setBlockDetailModalOpen(false)}
+                onClick={closeBlockDetailModal}
                 aria-label="Fechar detalhes do bloco"
                 className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn}`}
               >
@@ -4014,10 +4220,19 @@ export function SheetGeneratorTool() {
             </div>
             <div className="flex-1 overflow-y-auto overflow-x-visible">
               <BlockDetailPanel
-                block={selectedBlock}
-                onUpdate={updateBlockConfig}
-                onChangeType={changeBlockType}
+                block={blockDraft}
+                onUpdate={updateDraftBlockConfig}
+                onChangeType={changeDraftBlockType}
               />
+            </div>
+            <div className="border-t border-[#f1f5f9] px-5 py-3">
+              <button
+                type="button"
+                onClick={confirmBlockDetailChanges}
+                className={`w-full ${chunkyPrimaryBtn}`}
+              >
+                Confirmar
+              </button>
             </div>
           </div>
         </div>
@@ -4028,7 +4243,7 @@ export function SheetGeneratorTool() {
         <div
           className="fixed inset-0 z-[200] hidden items-center justify-center md:flex"
           style={{ backdropFilter: "blur(6px)", background: "rgba(15,23,42,0.45)" }}
-          onClick={() => setSettingsModalOpen(false)}
+          onClick={closeSettingsFlow}
         >
           <div
             className="relative mx-4 w-full max-w-[540px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]"
@@ -4042,7 +4257,7 @@ export function SheetGeneratorTool() {
                 </div>
               </div>
               <button
-                onClick={() => setSettingsModalOpen(false)}
+                onClick={closeSettingsFlow}
                 className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn}`}
               >
                 <svg
@@ -4063,8 +4278,8 @@ export function SheetGeneratorTool() {
                 Título
                 <input
                   className={inputCls}
-                  value={lightCfg.title}
-                  onChange={(e) => updateCfg("title", e.target.value)}
+                  value={settingsDraftCfg.title}
+                  onChange={(e) => updateSettingsDraft("title", e.target.value)}
                 />
               </label>
               <label className="block text-[11px] font-medium text-[#475569]">
@@ -4072,8 +4287,8 @@ export function SheetGeneratorTool() {
                 <textarea
                   className={`${inputCls} resize-none`}
                   rows={2}
-                  value={lightCfg.subtitle}
-                  onChange={(e) => updateCfg("subtitle", e.target.value)}
+                  value={settingsDraftCfg.subtitle}
+                  onChange={(e) => updateSettingsDraft("subtitle", e.target.value)}
                 />
               </label>
               <div className="grid grid-cols-2 gap-3">
@@ -4082,8 +4297,8 @@ export function SheetGeneratorTool() {
                   <input
                     className={inputCls}
                     placeholder="7º Ano A"
-                    value={cfg.turma}
-                    onChange={(e) => updateCfg("turma", e.target.value)}
+                    value={settingsDraftCfg.turma}
+                    onChange={(e) => updateSettingsDraft("turma", e.target.value)}
                   />
                 </label>
                 <label className="block text-[11px] font-medium text-[#475569]">
@@ -4091,8 +4306,8 @@ export function SheetGeneratorTool() {
                   <input
                     className={inputCls}
                     placeholder="30 min"
-                    value={cfg.tempo}
-                    onChange={(e) => updateCfg("tempo", e.target.value)}
+                    value={settingsDraftCfg.tempo}
+                    onChange={(e) => updateSettingsDraft("tempo", e.target.value)}
                   />
                 </label>
               </div>
@@ -4100,8 +4315,7 @@ export function SheetGeneratorTool() {
                 <button
                   type="button"
                   onClick={() => {
-                    setSettingsModalOpen(false);
-                    setPresetModalOpen(true);
+                    openSettingsSubview("preset");
                   }}
                   className={`${chunkyOutlineBtn} !h-10 !justify-center !px-3 !text-[10px]`}
                 >
@@ -4110,8 +4324,7 @@ export function SheetGeneratorTool() {
                 <button
                   type="button"
                   onClick={() => {
-                    setSettingsModalOpen(false);
-                    setLayoutModalOpen(true);
+                    openSettingsSubview("layout");
                   }}
                   className={`${chunkyOutlineBtn} !h-10 !justify-center !px-3 !text-[10px]`}
                 >
@@ -4120,8 +4333,7 @@ export function SheetGeneratorTool() {
                 <button
                   type="button"
                   onClick={() => {
-                    setSettingsModalOpen(false);
-                    setOpcoesModalOpen(true);
+                    openSettingsSubview("options");
                   }}
                   className={`${chunkyOutlineBtn} !h-10 !justify-center !px-3 !text-[10px]`}
                 >
@@ -4135,17 +4347,27 @@ export function SheetGeneratorTool() {
                 <div className="mt-2 flex items-center justify-between text-[11px] text-[#475569]">
                   <span>{activeCount} blocos ativos</span>
                   <span>{totalExercises} exercícios</span>
-                  <span>{cfg.cols} colunas</span>
+                  <span>{settingsDraftCfg.cols} colunas</span>
                 </div>
               </div>
             </div>
             <div className="border-t border-[#f1f5f9] px-5 py-3">
-              <button
-                onClick={() => setSettingsModalOpen(false)}
-                className={`w-full ${chunkyPrimaryBtn}`}
-              >
-                Fechar
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={closeSettingsFlow}
+                  className={`flex-1 ${chunkyOutlineBtn}`}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmSettingsFlow}
+                  className={`flex-1 ${chunkyPrimaryBtn}`}
+                >
+                  Confirmar
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -4157,7 +4379,7 @@ export function SheetGeneratorTool() {
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center"
           style={{ backdropFilter: "blur(6px)", background: "rgba(15,23,42,0.45)" }}
-          onClick={() => setLayoutModalOpen(false)}
+          onClick={closeLayoutModal}
         >
           <div
             className="relative mx-4 w-full max-w-[420px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]"
@@ -4165,12 +4387,14 @@ export function SheetGeneratorTool() {
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-[#f1f5f9] px-5 py-4">
-              <div>
+              <div className="flex items-center gap-3">
+                <div>
                 <div className="text-[15px] font-bold text-[#0f172a]">Layout Global</div>
                 <div className="text-[12px] text-[#94a3b8]">Configurações visuais da folha</div>
+                </div>
               </div>
               <button
-                onClick={() => setLayoutModalOpen(false)}
+                onClick={closeLayoutModal}
                 className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn}`}
               >
                 <svg
@@ -4196,8 +4420,8 @@ export function SheetGeneratorTool() {
                   {[1, 2, 3, 4].map((n) => (
                     <button
                       key={n}
-                      onClick={() => updateCfg("cols", n)}
-                      className={segBtnCls(cfg.cols === n)}
+                      onClick={() => updateLayoutDraft("cols", n)}
+                      className={segBtnCls((layoutDraft ?? settingsHeavyDraft ?? heavyCfg).cols === n)}
                     >
                       {n}
                     </button>
@@ -4212,8 +4436,8 @@ export function SheetGeneratorTool() {
                   {(["P", "M", "G"] as FontSize[]).map((s) => (
                     <button
                       key={s}
-                      onClick={() => updateCfg("fontSize", s)}
-                      className={segBtnCls(cfg.fontSize === s)}
+                      onClick={() => updateLayoutDraft("fontSize", s)}
+                      className={segBtnCls((layoutDraft ?? settingsHeavyDraft ?? heavyCfg).fontSize === s)}
                     >
                       {s === "P" ? "Pequena" : s === "M" ? "Média" : "Grande"}
                     </button>
@@ -4224,15 +4448,15 @@ export function SheetGeneratorTool() {
                 <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[1.5px] text-[#94a3b8]">
                   <span>Espaçamento</span>
                   <span className="rounded-md bg-[rgba(238,135,72,0.12)] px-2 py-0.5 text-[11px] font-bold normal-case tracking-normal text-[#ee8748]">
-                    {cfg.spacing}px
+                    {(layoutDraft ?? settingsHeavyDraft ?? heavyCfg).spacing}px
                   </span>
                 </div>
                 <input
                   type="range"
                   min={0}
                   max={40}
-                  value={cfg.spacing}
-                  onChange={(e) => updateCfg("spacing", Number(e.target.value))}
+                  value={(layoutDraft ?? settingsHeavyDraft ?? heavyCfg).spacing}
+                  onChange={(e) => updateLayoutDraft("spacing", Number(e.target.value))}
                   className="w-full accent-[#ee8748]"
                   style={{ height: "4px" }}
                 />
@@ -4249,21 +4473,21 @@ export function SheetGeneratorTool() {
                 <div className="flex flex-col gap-1.5">
                   <div className="flex gap-1.5">
                     <button
-                      onClick={() => updateCfg("gabarito", "sem")}
-                      className={segBtnCls(cfg.gabarito === "sem")}
+                      onClick={() => updateLayoutDraft("gabarito", "sem")}
+                      className={segBtnCls((layoutDraft ?? settingsHeavyDraft ?? heavyCfg).gabarito === "sem")}
                     >
                       Sem gabarito
                     </button>
                     <button
-                      onClick={() => updateCfg("gabarito", "mesma")}
-                      className={segBtnCls(cfg.gabarito === "mesma")}
+                      onClick={() => updateLayoutDraft("gabarito", "mesma")}
+                      className={segBtnCls((layoutDraft ?? settingsHeavyDraft ?? heavyCfg).gabarito === "mesma")}
                     >
                       Mesma página
                     </button>
                   </div>
                   <button
-                    onClick={() => updateCfg("gabarito", "proxima")}
-                    className={segBtnCls(cfg.gabarito === "proxima")}
+                    onClick={() => updateLayoutDraft("gabarito", "proxima")}
+                    className={segBtnCls((layoutDraft ?? settingsHeavyDraft ?? heavyCfg).gabarito === "proxima")}
                   >
                     Próxima página
                   </button>
@@ -4272,12 +4496,22 @@ export function SheetGeneratorTool() {
             </div>
             {/* Footer */}
             <div className="border-t border-[#f1f5f9] px-5 py-3">
-              <button
-                onClick={() => setLayoutModalOpen(false)}
-                className={`w-full ${chunkyPrimaryBtn}`}
-              >
-                Confirmar
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={closeLayoutModal}
+                  className={`flex-1 ${chunkyOutlineBtn}`}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmLayoutModal}
+                  className={`flex-1 ${chunkyPrimaryBtn}`}
+                >
+                  Confirmar
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -4289,7 +4523,7 @@ export function SheetGeneratorTool() {
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center"
           style={{ backdropFilter: "blur(6px)", background: "rgba(15,23,42,0.45)" }}
-          onClick={() => setOpcoesModalOpen(false)}
+          onClick={closeOptionsModal}
         >
           <div
             className="relative mx-4 w-full max-w-[420px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]"
@@ -4297,12 +4531,14 @@ export function SheetGeneratorTool() {
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-[#f1f5f9] px-5 py-4">
-              <div>
+              <div className="flex items-center gap-3">
+                <div>
                 <div className="text-[15px] font-bold text-[#0f172a]">Opções</div>
                 <div className="text-[12px] text-[#94a3b8]">Personalização da folha</div>
+                </div>
               </div>
               <button
-                onClick={() => setOpcoesModalOpen(false)}
+                onClick={closeOptionsModal}
                 className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn}`}
               >
                 <svg
@@ -4336,8 +4572,13 @@ export function SheetGeneratorTool() {
                   key={key}
                   type="button"
                   role="switch"
-                  aria-checked={!!cfg[key]}
-                  onClick={() => updateCfg(key, !cfg[key] as never)}
+                  aria-checked={!!(optionsDraft ?? settingsHeavyDraft ?? heavyCfg)[key as keyof HeavyConfig]}
+                  onClick={() =>
+                    updateOptionsDraft(
+                      key as keyof HeavyConfig,
+                      !(optionsDraft ?? settingsHeavyDraft ?? heavyCfg)[key as keyof HeavyConfig],
+                    )
+                  }
                   className={`flex w-full cursor-pointer items-center gap-4 px-4 py-3 text-left ${chunkySmallOutlineBtn}`}
                 >
                   <div className="min-w-0 flex-1">
@@ -4347,13 +4588,22 @@ export function SheetGeneratorTool() {
                   <div
                     className="relative h-5 w-9 shrink-0 rounded-full transition-all duration-200"
                     style={{
-                      background: cfg[key] ? "#ee8748" : "#cbd5e1",
-                      boxShadow: cfg[key] ? "0 0 8px rgba(238,135,72,0.35)" : "none",
+                      background: (optionsDraft ?? settingsHeavyDraft ?? heavyCfg)[key as keyof HeavyConfig]
+                        ? "#ee8748"
+                        : "#cbd5e1",
+                      boxShadow: (optionsDraft ?? settingsHeavyDraft ?? heavyCfg)[key as keyof HeavyConfig]
+                        ? "0 0 8px rgba(238,135,72,0.35)"
+                        : "none",
                     }}
                   >
                     <div
                       className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-md transition-all duration-200"
-                      style={{ left: cfg[key] ? "20px" : "2px" }}
+                      style={{
+                        left:
+                          (optionsDraft ?? settingsHeavyDraft ?? heavyCfg)[key as keyof HeavyConfig]
+                            ? "20px"
+                            : "2px",
+                      }}
                     />
                   </div>
                 </button>
@@ -4361,12 +4611,22 @@ export function SheetGeneratorTool() {
             </div>
             {/* Footer */}
             <div className="border-t border-[#f1f5f9] px-5 py-3">
-              <button
-                onClick={() => setOpcoesModalOpen(false)}
-                className={`w-full ${chunkyPrimaryBtn}`}
-              >
-                Confirmar
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={closeOptionsModal}
+                  className={`flex-1 ${chunkyOutlineBtn}`}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmOptionsModal}
+                  className={`flex-1 ${chunkyPrimaryBtn}`}
+                >
+                  Confirmar
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -4708,7 +4968,7 @@ export function SheetGeneratorTool() {
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center"
           style={{ backdropFilter: "blur(6px)", background: "rgba(15,23,42,0.45)" }}
-          onClick={() => setPresetModalOpen(false)}
+          onClick={closePresetModal}
         >
           <div
             className="relative mx-4 flex max-h-[80vh] w-full max-w-[520px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.18)]"
@@ -4716,12 +4976,14 @@ export function SheetGeneratorTool() {
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-[#f1f5f9] px-5 py-4">
-              <div>
+              <div className="flex items-center gap-3">
+                <div>
                 <div className="text-[15px] font-bold text-[#0f172a]">Preset Pedagógico</div>
                 <div className="text-[12px] text-[#94a3b8]">Selecione um modelo para começar</div>
+                </div>
               </div>
               <button
-                onClick={() => setPresetModalOpen(false)}
+                onClick={closePresetModal}
                 className={`flex h-8 w-8 items-center justify-center ${chunkySmallOutlineBtn}`}
               >
                 <svg
@@ -4872,14 +5134,10 @@ export function SheetGeneratorTool() {
                     <button
                       key={key}
                       type="button"
-                      onClick={() => {
-                        applyPreset(key, setBlocks, nextId);
-                        setSelectedBlockId(null);
-                        reseedExercises();
-                        setPresetModalOpen(false);
-                        showToast(`Preset "${label}" aplicado`);
-                      }}
-                      className="flex w-full cursor-pointer items-center gap-4 px-5 py-3 text-left transition-colors hover:bg-[#f8fafc]"
+                      onClick={() => setPresetSelectionDraft({ key, label })}
+                      className={`flex w-full cursor-pointer items-center gap-4 px-5 py-3 text-left transition-colors hover:bg-[#f8fafc] ${
+                        presetSelectionDraft?.key === key ? "bg-[#fff7ed]" : ""
+                      }`}
                       style={{ borderBottom: "1px solid #f8fafc" }}
                     >
                       <div
@@ -4911,19 +5169,25 @@ export function SheetGeneratorTool() {
 
             {/* Footer */}
             <div className="border-t border-[#f1f5f9] px-5 py-3">
-              <button
-                type="button"
-                onClick={() => {
-                  applyPreset("limpar", setBlocks, nextId);
-                  setSelectedBlockId(null);
-                  reseedExercises();
-                  setPresetModalOpen(false);
-                  showToast("Blocos removidos");
-                }}
-                className={`w-full ${chunkySmallDestructiveBtn}`}
-              >
-                ↺ Limpar todos os blocos
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={closePresetModal}
+                  className={`flex-1 ${chunkyOutlineBtn}`}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmPresetSelection}
+                  disabled={!presetSelectionDraft}
+                  className={`flex-1 ${chunkyPrimaryBtn} ${
+                    !presetSelectionDraft ? "cursor-not-allowed opacity-50" : ""
+                  }`}
+                >
+                  Confirmar
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -4931,7 +5195,7 @@ export function SheetGeneratorTool() {
 
       {/* ── MOBILE STICKY CTA ─────────────────────────────────────────── */}
       {/* Visível em qualquer tab no mobile — o CTA principal nunca se perde */}
-      <div className="fixed bottom-0 left-0 right-0 z-[50] flex items-center gap-3 border-t border-[#e5e7eb] bg-white/95 px-4 py-3 backdrop-blur-sm md:hidden">
+      <div className={`fixed bottom-0 left-0 right-0 z-[50] items-center gap-3 border-t border-[#e5e7eb] bg-white/95 px-4 py-3 backdrop-blur-sm md:hidden ${previewWindowOpen ? "hidden" : "flex"}`}>
         <div className="min-w-0 flex-1">
           {credits === 0 ? (
             <p className="text-[11px] font-semibold text-[#be123c]">Sem gerações restantes</p>
@@ -4953,14 +5217,7 @@ export function SheetGeneratorTool() {
           onClick={openPreviewWindow}
           className="flex shrink-0 items-center gap-2 rounded-[var(--radius-lg)] border border-[#cbd5e1] bg-[linear-gradient(180deg,#f8fafc_0%,#e2e8f0_100%)] px-3 py-2.5 text-[12px] font-extrabold tracking-[0.01em] text-[#2F527D] shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_2px_0_rgba(148,163,184,0.45)]"
         >
-          Preview
-        </button>
-        <button
-          onClick={() => void handlePrint()}
-          disabled={isPrinting}
-          className={`whitespace-nowrap flex shrink-0 items-center gap-2 rounded-[var(--radius-lg)] px-4 py-2.5 text-[12px] font-extrabold tracking-[0.01em] disabled:cursor-not-allowed disabled:opacity-70 ${isPrinting ? "bg-[#cbd5e1] text-white shadow-none" : loginOrangeBtn}`}
-        >
-          {isPrinting ? "Gerando..." : "Gerar PDF"}
+          Pré-visualização
         </button>
       </div>
     </div>
@@ -4977,8 +5234,8 @@ function BlockDetailPanel({
   onChangeType,
 }: {
   block: Block;
-  onUpdate: (id: number, key: keyof BlockConfig, val: unknown) => void;
-  onChangeType: (id: number, type: BlockType) => void;
+  onUpdate: (key: keyof BlockConfig, val: unknown) => void;
+  onChangeType: (type: BlockType) => void;
 }) {
   const PremiumSelect = ({
     value,
@@ -5084,8 +5341,7 @@ function BlockDetailPanel({
 
   const meta = BLOCK_META[block.type];
   const c = block.config;
-  const id = block.id;
-  const up = (key: keyof BlockConfig, val: unknown) => onUpdate(id, key, val);
+  const up = (key: keyof BlockConfig, val: unknown) => onUpdate(key, val);
   const [openTooltip, setOpenTooltip] = useState<string | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
 
@@ -5285,11 +5541,11 @@ function BlockDetailPanel({
         </div>
         <div className="mb-4">
           <FieldLabel label="Categoria" tooltipKey="categoria" />
-          <PremiumSelect
-            value={block.type}
-            options={Object.entries(BLOCK_META).map(([k, v]) => ({ value: k, label: v.name }))}
-            onChange={(value) => onChangeType(id, value as BlockType)}
-          />
+            <PremiumSelect
+              value={block.type}
+              options={Object.entries(BLOCK_META).map(([k, v]) => ({ value: k, label: v.name }))}
+              onChange={(value) => onChangeType(value as BlockType)}
+            />
         </div>
 
         {/* Quantity */}
@@ -5308,7 +5564,7 @@ function BlockDetailPanel({
         <div className="my-3 h-px bg-[#e2e8f0]" />
         <div className="mb-3 text-[10px] font-bold uppercase tracking-[1.3px] text-[#94a3b8]">
           <span className="inline-flex items-center gap-1.5">
-            <span>Par?metros</span>
+            <span>Parâmetros</span>
             {block.type === "fracoes" ? <TooltipInfo tooltipKey="operacao" /> : null}
           </span>
         </div>
