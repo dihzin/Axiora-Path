@@ -1405,20 +1405,19 @@ function buildPreviewPagesFromSlices(
 function buildPrintDocumentFromPages(
   pages: string[],
   cfg: GlobalConfig,
-  options?: { mobilePrint?: boolean },
 ): string {
-  const mobilePrint = options?.mobilePrint ?? false;
-  const printScale = mobilePrint ? 0.988 : 1;
-  const pageWidth = mobilePrint ? `calc(${A4_W_MM} / ${printScale})` : A4_W_MM;
-  const pageHeight = mobilePrint ? `calc(${A4_H_MM} / ${printScale})` : A4_H_MM;
-  const pagesHtml = pages.map((page) => `<div class="print-page">${page}</div>`).join("");
+  const sharedPrintCss = buildPrintCss(cfg);
+  const pagesHtml = pages
+    .map((page) => `<div class="print-page">${stripInlineDocStyle(page)}</div>`)
+    .join("");
 
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${
     cfg.title || "Folha de Exercícios"
   }</title>
         <style>
           @page{size:A4 portrait;margin:0;}
-          html,body{margin:0;padding:0;background:#fff;width:${A4_W_MM};-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;font-synthesis-weight:none;}
+          ${sharedPrintCss}
+          html,body{margin:0;padding:0;background:#fff;width:${A4_W_MM};-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
           .print-page{width:${A4_W_MM};height:${A4_H_MM};overflow:hidden;break-after:page;page-break-after:always;position:relative;}
           .print-page:last-child{break-after:auto;page-break-after:auto;}
           @media print{
@@ -1426,27 +1425,34 @@ function buildPrintDocumentFromPages(
             .preview-container{transform:none !important;}
             .sheet-root{width:100% !important;height:100% !important;}
             .sheet-root .preview-page{
-              width:${pageWidth} !important;
-              height:${pageHeight} !important;
-              min-height:${pageHeight} !important;
-              max-height:${pageHeight} !important;
+              width:${A4_W_MM} !important;
+              height:${A4_H_MM} !important;
+              min-height:${A4_H_MM} !important;
+              max-height:${A4_H_MM} !important;
               overflow:hidden !important;
               border-radius:0 !important;
               box-shadow:none !important;
               animation:none !important;
-              transform:${mobilePrint ? `scale(${printScale})` : "none"} !important;
+              transform:none !important;
               transform-origin:top left !important;
               break-inside:avoid !important;
               page-break-inside:avoid !important;
             }
-            ${
-              mobilePrint
-                ? `.sheet-root,.sheet-root *,.sheet-root *::before,.sheet-root *::after{-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;font-synthesis-weight:none!important;}`
-                : ""
-            }
+            .sheet-root,.sheet-root *,.sheet-root *::before,.sheet-root *::after{-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;}
           }
         </style>
       </head><body>${pagesHtml}</body></html>`;
+}
+
+function buildPrintCss(cfg: GlobalConfig): string {
+  return buildDocCSS(cfg)
+    .replace(/^\s*@import url\([^)]+\);\s*/m, "")
+    .replace(/font-synthesis-weight:none;?/g, "")
+    .trim();
+}
+
+function stripInlineDocStyle(page: string): string {
+  return page.replace(/^<style>[\s\S]*?<\/style>/, "");
 }
 
 /**
@@ -1661,9 +1667,9 @@ function analyzePageGapTargets(
   pageItems: Array<{ index: number; item: ExerciseItem }>,
   sectionHeaders: Record<number, string>,
   cols: number,
-): { rowGapCount: number; sectionGapCount: number } {
+): { rowGapCount: number; sectionGapCount: number; sectionCount: number; totalRowCount: number } {
   if (!pageItems.length) {
-    return { rowGapCount: 0, sectionGapCount: 0 };
+    return { rowGapCount: 0, sectionGapCount: 0, sectionCount: 0, totalRowCount: 0 };
   }
 
   const sectionItemCounts: number[] = [];
@@ -1685,10 +1691,17 @@ function analyzePageGapTargets(
     const rows = Math.ceil(itemCount / Math.max(1, cols));
     return total + Math.max(0, rows - 1);
   }, 0);
+  const totalRowCount = sectionItemCounts.reduce(
+    (total, itemCount) => total + Math.ceil(itemCount / Math.max(1, cols)),
+    0,
+  );
+  const sectionCount = sectionItemCounts.length;
 
   return {
     rowGapCount,
-    sectionGapCount: Math.max(0, sectionItemCounts.length - 1),
+    sectionGapCount: Math.max(0, sectionCount - 1),
+    sectionCount,
+    totalRowCount,
   };
 }
 
@@ -2387,24 +2400,43 @@ async function paginatePrecisely(
 
   const isMobileLayout =
     typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
-  const SAFE_MARGIN = isMobileLayout ? (cfg.repeatHeader ? 24 : 74) : 28;
-  const TARGET_MAX_GAP = isMobileLayout
-    ? cfg.repeatHeader
-      ? 28
-      : 60
-    : cfg.repeatHeader
-      ? 34
-      : 52;
-  const MAX_DONOR_GAP = isMobileLayout
-    ? cfg.repeatHeader
-      ? 220
-      : 96
-    : cfg.repeatHeader
-      ? 240
-      : 132;
+  const SAFE_MARGIN = isMobileLayout ? (cfg.repeatHeader ? 24 : 34) : 28;
   const MIN_ROWS_PER_PAGE = 2;
   const rows = buildExerciseRows(exercises, blocks, cfg);
   const sectionHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
+  const isSparseGap = (differencePx: number) => differencePx > (cfg.repeatHeader ? 150 : 210);
+  const getTargetMaxGap = (sparseGap: boolean) =>
+    isMobileLayout
+      ? cfg.repeatHeader
+        ? sparseGap
+          ? 22
+          : 28
+        : sparseGap
+          ? 42
+          : 60
+      : cfg.repeatHeader
+        ? sparseGap
+          ? 24
+          : 34
+        : sparseGap
+          ? 44
+          : 52;
+  const getMaxDonorGap = (sparseGap: boolean) =>
+    isMobileLayout
+      ? cfg.repeatHeader
+        ? sparseGap
+          ? 360
+          : 220
+        : sparseGap
+          ? 260
+          : 120
+      : cfg.repeatHeader
+        ? sparseGap
+          ? 360
+          : 240
+        : sparseGap
+          ? 280
+          : 132;
 
   const pageItemsFromRows = (rowSlice: number[][]) =>
     rowSlice
@@ -2468,7 +2500,7 @@ async function paginatePrecisely(
 
     while (
       currentMetrics.usableMainHeight > 0 &&
-      currentMetrics.differencePx > TARGET_MAX_GAP &&
+      currentMetrics.differencePx > getTargetMaxGap(isSparseGap(currentMetrics.differencePx)) &&
       next.endRow - next.startRow > MIN_ROWS_PER_PAGE
     ) {
       const nextMetricsCurrent = await measureRowRange(
@@ -2482,6 +2514,8 @@ async function paginatePrecisely(
       );
       const currentGapScore =
         currentMetrics.differencePx ** 2 + nextMetricsCurrent.differencePx ** 2;
+      const sparsePair =
+        isSparseGap(currentMetrics.differencePx) || isSparseGap(nextMetricsCurrent.differencePx);
 
       let bestCandidate:
         | {
@@ -2493,7 +2527,10 @@ async function paginatePrecisely(
           }
         | null = null;
 
-      const maxMoveCount = Math.min(6, next.endRow - next.startRow - MIN_ROWS_PER_PAGE + 1);
+      const maxMoveCount = Math.min(
+        sparsePair ? 18 : 6,
+        next.endRow - next.startRow - MIN_ROWS_PER_PAGE + 1,
+      );
       for (let moveCount = 1; moveCount <= maxMoveCount; moveCount += 1) {
         const currentMetricsCandidate = await measureRowRange(
           current.startRow,
@@ -2520,14 +2557,19 @@ async function paginatePrecisely(
         const candidateGapScore =
           currentMetricsCandidate.differencePx ** 2 + nextMetrics.differencePx ** 2;
 
-        const improvesWorstGap =
-          candidateWorstGap + (cfg.repeatHeader ? 0 : 2) < currentWorstGap;
-        const improvesPairScore =
-          candidateGapScore + (cfg.repeatHeader ? 8 : 16) < currentGapScore;
+        const improvesWorstGap = sparsePair
+          ? candidateWorstGap < currentWorstGap
+          : candidateWorstGap + (cfg.repeatHeader ? 0 : 2) < currentWorstGap;
+        const improvesPairScore = sparsePair
+          ? candidateGapScore < currentGapScore
+          : candidateGapScore + (cfg.repeatHeader ? 8 : 16) < currentGapScore;
         const improvesReceiver =
-          currentMetricsCandidate.differencePx + (cfg.repeatHeader ? 6 : 10) <
+          currentMetricsCandidate.differencePx +
+            (sparsePair ? (cfg.repeatHeader ? 0 : 2) : cfg.repeatHeader ? 6 : 10) <
             currentMetrics.differencePx &&
-          nextMetrics.differencePx <= MAX_DONOR_GAP + (cfg.repeatHeader ? 180 : 120);
+          nextMetrics.differencePx <=
+            getMaxDonorGap(sparsePair) +
+              (sparsePair ? (cfg.repeatHeader ? 160 : 120) : cfg.repeatHeader ? 180 : 120);
         if (!improvesWorstGap && !improvesPairScore && !improvesReceiver) {
           continue;
         }
@@ -2571,7 +2613,7 @@ async function paginatePrecisely(
 
     while (
       currentMetrics.usableMainHeight > 0 &&
-      currentMetrics.differencePx > TARGET_MAX_GAP &&
+      currentMetrics.differencePx > getTargetMaxGap(isSparseGap(currentMetrics.differencePx)) &&
       previous.endRow - previous.startRow > MIN_ROWS_PER_PAGE
     ) {
       const previousMetricsCurrent = await measureRowRange(
@@ -2585,6 +2627,8 @@ async function paginatePrecisely(
       );
       const currentGapScore =
         previousMetricsCurrent.differencePx ** 2 + currentMetrics.differencePx ** 2;
+      const sparsePair =
+        isSparseGap(currentMetrics.differencePx) || isSparseGap(previousMetricsCurrent.differencePx);
 
       let bestCandidate:
         | {
@@ -2596,7 +2640,10 @@ async function paginatePrecisely(
           }
         | null = null;
 
-      const maxMoveCount = Math.min(6, previous.endRow - previous.startRow - MIN_ROWS_PER_PAGE + 1);
+      const maxMoveCount = Math.min(
+        sparsePair ? 18 : 6,
+        previous.endRow - previous.startRow - MIN_ROWS_PER_PAGE + 1,
+      );
       for (let moveCount = 1; moveCount <= maxMoveCount; moveCount += 1) {
         const previousMetrics = await measureRowRange(
           previous.startRow,
@@ -2623,14 +2670,17 @@ async function paginatePrecisely(
         const candidateGapScore =
           previousMetrics.differencePx ** 2 + currentMetricsCandidate.differencePx ** 2;
 
-        const improvesWorstGap =
-          candidateWorstGap + (cfg.repeatHeader ? 0 : 2) < currentWorstGap;
-        const improvesPairScore =
-          candidateGapScore + (cfg.repeatHeader ? 8 : 16) < currentGapScore;
+        const improvesWorstGap = sparsePair
+          ? candidateWorstGap < currentWorstGap
+          : candidateWorstGap + (cfg.repeatHeader ? 0 : 2) < currentWorstGap;
+        const improvesPairScore = sparsePair
+          ? candidateGapScore < currentGapScore
+          : candidateGapScore + (cfg.repeatHeader ? 8 : 16) < currentGapScore;
         const improvesRecipient =
-          currentMetricsCandidate.differencePx + (cfg.repeatHeader ? 6 : 10) <
+          currentMetricsCandidate.differencePx +
+            (sparsePair ? (cfg.repeatHeader ? 0 : 2) : cfg.repeatHeader ? 6 : 10) <
             currentMetrics.differencePx &&
-          previousMetrics.differencePx <= MAX_DONOR_GAP;
+          previousMetrics.differencePx <= getMaxDonorGap(sparsePair);
         if (!improvesWorstGap && !improvesPairScore && !improvesRecipient) {
           continue;
         }
@@ -2707,7 +2757,7 @@ async function measurePageLayoutAdjustment(
     return { extraRowGap: 0, extraSectionGap: 0 };
   }
 
-  const { rowGapCount, sectionGapCount } = analyzePageGapTargets(
+  const { rowGapCount, sectionGapCount, sectionCount, totalRowCount } = analyzePageGapTargets(
     pageItems,
     sectionHeaders,
     cfg.cols,
@@ -2723,11 +2773,36 @@ async function measurePageLayoutAdjustment(
     return { extraRowGap: 0, extraSectionGap: 0 };
   }
 
+  const sparsePage = totalRowCount <= (cfg.repeatHeader ? 10 : 12);
+  const verySparsePage = totalRowCount <= (cfg.repeatHeader ? 7 : 9);
+  const multiSectionPage = sectionCount >= 2;
+  const rowGapWeight = verySparsePage
+    ? multiSectionPage
+      ? 1.7
+      : 1.5
+    : sparsePage
+      ? multiSectionPage
+        ? 1.45
+        : 1.25
+      : 1;
+  const sectionGapWeight = multiSectionPage
+    ? verySparsePage
+      ? 0.55
+      : sparsePage
+        ? 0.7
+        : 0.9
+    : 0.75;
+  const distributableUnits =
+    rowGapCount * rowGapWeight + sectionGapCount * sectionGapWeight;
+  if (distributableUnits <= 0) {
+    return { extraRowGap: 0, extraSectionGap: 0 };
+  }
+
   const buildAdjustment = (scale: number): PageLayoutAdjustment => {
-    const extraPerGap = (distributableSpace / distributableGapCount) * scale;
+    const extraPerUnit = (distributableSpace / distributableUnits) * scale;
     return {
-      extraRowGap: rowGapCount > 0 ? extraPerGap : 0,
-      extraSectionGap: sectionGapCount > 0 ? extraPerGap : 0,
+      extraRowGap: rowGapCount > 0 ? extraPerUnit * rowGapWeight : 0,
+      extraSectionGap: sectionGapCount > 0 ? extraPerUnit * sectionGapWeight : 0,
     };
   };
 
@@ -2768,8 +2843,8 @@ async function computePageLayoutAdjustments(
   }
 
   const sectionHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
-  const rowGapCap = cfg.repeatHeader ? 12 : 8;
-  const sectionGapCap = cfg.repeatHeader ? 16 : 10;
+  const baseRowGapCap = cfg.repeatHeader ? 12 : 8;
+  const baseSectionGapCap = cfg.repeatHeader ? 16 : 10;
 
   const adjustments = await Promise.all(
     pageSlices.map(async (slice) => {
@@ -2781,6 +2856,56 @@ async function computePageLayoutAdjustments(
         return { extraRowGap: 0, extraSectionGap: 0 };
       }
 
+      const gapTargets = analyzePageGapTargets(pageItems, sectionHeaders, cfg.cols);
+      const sparsePage = gapTargets.totalRowCount <= (cfg.repeatHeader ? 10 : 12);
+      const verySparsePage = gapTargets.totalRowCount <= (cfg.repeatHeader ? 7 : 9);
+      const ultraSparsePage = gapTargets.totalRowCount <= (cfg.repeatHeader ? 5 : 7);
+      const multiSectionPage = gapTargets.sectionCount >= 2;
+      const rowGapCap =
+        baseRowGapCap +
+        (ultraSparsePage
+          ? cfg.repeatHeader
+            ? 34
+            : 92
+          : verySparsePage
+            ? cfg.repeatHeader
+              ? 22
+              : 64
+            : sparsePage
+              ? cfg.repeatHeader
+                ? 12
+                : 40
+              : 0);
+      const sectionGapCap =
+        baseSectionGapCap +
+        (ultraSparsePage
+          ? multiSectionPage
+            ? cfg.repeatHeader
+              ? 30
+              : 88
+            : cfg.repeatHeader
+              ? 20
+              : 48
+          : verySparsePage
+            ? multiSectionPage
+              ? cfg.repeatHeader
+                ? 22
+                : 64
+              : cfg.repeatHeader
+                ? 14
+                : 30
+            : sparsePage
+              ? multiSectionPage
+                ? cfg.repeatHeader
+                  ? 16
+                  : 44
+                : cfg.repeatHeader
+                  ? 10
+                  : 22
+              : multiSectionPage
+                ? 2
+                : 0);
+
       const adjustment = await measurePageLayoutAdjustment(
         pageItems,
         cfg,
@@ -2788,9 +2913,23 @@ async function computePageLayoutAdjustments(
         sectionHeaders,
       );
 
+      let extraRowGap = Math.min(adjustment.extraRowGap, rowGapCap);
+      const extraSectionGap = Math.min(adjustment.extraSectionGap, sectionGapCap);
+      const clippedSectionSpace =
+        gapTargets.sectionGapCount > 0
+          ? Math.max(0, adjustment.extraSectionGap - extraSectionGap) * gapTargets.sectionGapCount
+          : 0;
+
+      if (clippedSectionSpace > 0 && gapTargets.rowGapCount > 0 && extraRowGap < rowGapCap) {
+        extraRowGap = Math.min(
+          rowGapCap,
+          extraRowGap + clippedSectionSpace / gapTargets.rowGapCount,
+        );
+      }
+
       return {
-        extraRowGap: Math.min(adjustment.extraRowGap, rowGapCap),
-        extraSectionGap: Math.min(adjustment.extraSectionGap, sectionGapCap),
+        extraRowGap,
+        extraSectionGap,
       };
     }),
   );
@@ -3396,6 +3535,7 @@ export function SheetGeneratorTool() {
   const [answerPageSlices, setAnswerPageSlices] = useState<ExerciseItem[][]>([]);
   const [pageLayoutAdjustments, setPageLayoutAdjustments] = useState<PageLayoutAdjustment[]>([]);
   const [isPaginating, setIsPaginating] = useState(false);
+  const [previewOpenPending, setPreviewOpenPending] = useState(false);
 
   const settingsDraftCfg = useMemo<GlobalConfig>(
     () => ({
@@ -3582,6 +3722,14 @@ export function SheetGeneratorTool() {
     return () => window.clearTimeout(id);
   }, [previewPages.length, zoom, mobileTab, previewWindowOpen, previewWindowState]);
 
+  useEffect(() => {
+    if (!previewOpenPending) return;
+    const hasActiveBlocks = blocks.some((b) => b.active);
+    if (hasActiveBlocks && (isPaginating || previewPages.length === 0)) return;
+    setPreviewWindowState((prev) => (prev === "maximized" ? "maximized" : "normal"));
+    setPreviewOpenPending(false);
+  }, [blocks, isPaginating, previewOpenPending, previewPages.length]);
+
   const showToast = useCallback((msg: string) => {
     toast(msg);
   }, []);
@@ -3695,14 +3843,22 @@ export function SheetGeneratorTool() {
   }, []);
 
   const openPreviewWindow = useCallback(() => {
+    const hasActiveBlocks = blocks.some((b) => b.active);
+    if (hasActiveBlocks && (isPaginating || previewPages.length === 0)) {
+      setPreviewOpenPending(true);
+      return;
+    }
+    setPreviewOpenPending(false);
     setPreviewWindowState((prev) => (prev === "maximized" ? "maximized" : "normal"));
-  }, []);
+  }, [blocks, isPaginating, previewPages.length]);
 
   const closePreviewWindow = useCallback(() => {
+    setPreviewOpenPending(false);
     setPreviewWindowState("closed");
   }, []);
 
   const minimizePreviewWindow = useCallback(() => {
+    setPreviewOpenPending(false);
     setPreviewWindowState("minimized");
   }, []);
 
@@ -3884,9 +4040,7 @@ export function SheetGeneratorTool() {
     }
 
     try {
-      const previewHtml = buildPrintDocumentFromPages(previewPages, cfg, {
-        mobilePrint: isMobileViewport,
-      });
+      const previewHtml = buildPrintDocumentFromPages(previewPages, cfg);
       win.document.open();
       win.document.write(previewHtml);
       win.document.close();
@@ -4377,7 +4531,7 @@ export function SheetGeneratorTool() {
             </button>
 
             <button type="button" onClick={openPreviewWindow} className={desktopPreviewBtnCls}>
-              Pré-visualização
+              {previewOpenPending ? "Preparando..." : "Pré-visualização"}
             </button>
 
           </div>
@@ -6238,7 +6392,7 @@ export function SheetGeneratorTool() {
           onClick={openPreviewWindow}
           className="flex shrink-0 items-center gap-2 rounded-[var(--radius-lg)] border border-[#cbd5e1] bg-[linear-gradient(180deg,#f8fafc_0%,#e2e8f0_100%)] px-3 py-2.5 text-[12px] font-extrabold tracking-[0.01em] text-[#2F527D] shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_2px_0_rgba(148,163,184,0.45)]"
         >
-          Pré-visualização
+          {previewOpenPending ? "Preparando..." : "Pré-visualização"}
         </button>
       </div>
     </div>
