@@ -3957,9 +3957,10 @@ export function SheetGeneratorTool() {
       } else {
         showToast(`Lista gerada Â· ${remaining} geraÃ§Ãµes restantes`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       win.close();
-      if (err instanceof ApiError && err.status === 402) {
+      const isPaywallError = err instanceof ApiError && (err as ApiError).status === 402;
+      if (isPaywallError) {
         track("generation_blocked", { reason: "paywall_402" });
         setPaywallOpen(true);
       } else {
@@ -4122,10 +4123,11 @@ export function SheetGeneratorTool() {
       } else {
         showToast(`Lista gerada · ${remaining} gerações restantes`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       win.close();
       // 402 = paywall — abre o modal de compra sem toast
-      if (err instanceof ApiError && err.status === 402) {
+      const isPaywallError = err instanceof ApiError && (err as ApiError).status === 402;
+      if (isPaywallError) {
         track("generation_blocked", { reason: "paywall_402" });
         setPaywallOpen(true);
       } else {
