@@ -173,6 +173,8 @@ async function addCategoryBlock(page, categoryName) {
 async function setRepeatHeader(page, enabled) {
   await clickVisibleButtonContaining(page, "Configuracoes");
   await page.waitForTimeout(350);
+  await clickVisibleButtonContaining(page, "Opcoes");
+  await page.waitForTimeout(350);
 
   const ok = await page.evaluate((enabledArg) => {
     const normalizeLocal = (value) =>
@@ -225,6 +227,8 @@ async function setRepeatHeader(page, enabled) {
     throw new Error("Nao foi possivel localizar o toggle 'Repetir cabecalho'.");
   }
 
+  await page.waitForTimeout(450);
+  await clickVisibleButtonContainingOptional(page, "Confirmar");
   await page.waitForTimeout(450);
   await clickVisibleButtonContainingOptional(page, "Confirmar");
   await page.waitForTimeout(450);
