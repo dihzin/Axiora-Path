@@ -114,6 +114,17 @@ body {
   margin: 0;
 }
 
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+[role="switch"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 html {
   max-width: 100%;
   overflow-x: hidden;
@@ -332,6 +343,7 @@ h2 {
   --axiora-btn-edge: #d85b20;
   --axiora-btn-floor: rgba(168, 72, 30, 0.26);
   --axiora-btn-text: #fff9f2;
+  cursor: pointer;
   position: relative;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--axiora-btn-edge) 62%, white 16%);
@@ -374,6 +386,7 @@ h2 {
 }
 
 .axiora-chunky-btn:disabled {
+  cursor: not-allowed;
   filter: saturate(0.72);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
