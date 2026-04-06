@@ -1219,7 +1219,7 @@ function buildPrintHTML(
     }
   }
 
-  const footerHtml = `<div style="margin-top:auto;padding-top:6mm;border-top:1px solid #ddd;display:flex;justify-content:center;${S.footer}"><span>Axiora Tools</span></div>`;
+const footerHtml = `<div style="margin-top:0;padding-top:6mm;border-top:1px solid #ddd;display:flex;justify-content:center;${S.footer}"><span>Axiora Tools</span></div>`;
 
   const subtitleHtml = cfg.subtitle
     ? `<p style="font-family:${FONT};font-size:${fz};color:#6B7280;margin:0 0 10px;padding:4px 0;border-bottom:1px solid #E5E7EB;">${cfg.subtitle}</p>`
@@ -1230,9 +1230,14 @@ function buildPrintHTML(
   const exStyles = `
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
-    html,body{background:#fff;font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.3;}
-    @page{size:A4 portrait;margin:18mm 20mm;}
-    @media print{body{background:#fff;}.no-print{display:none!important;}}
+    html,body{background:#fff;font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.3;-webkit-text-size-adjust:100%;text-size-adjust:100%;font-synthesis-weight:none;}
+    @page{size:A4 portrait;margin:0;}
+    @media print{
+      html,body{background:#fff;width:${A4_W_MM};height:auto;}
+      .no-print{display:none!important;}
+      .print-sheet{width:${A4_W_MM}!important;height:${A4_H_MM}!important;min-height:${A4_H_MM}!important;max-height:${A4_H_MM}!important;page-break-after:always;break-after:page;overflow:hidden;}
+      .print-sheet:last-child{page-break-after:auto;break-after:auto;}
+    }
     /* — Aritmética armada: monospace para alinhamento de colunas — */
     .ex-mult-armada{display:inline-flex;flex-direction:column;align-items:flex-end;font-family:${NUMBER_FONT};font-size:${fz};font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;gap:2px;color:#0F172A;}
     .ex-mult-row{display:flex;align-items:center;gap:6px;white-space:nowrap;}
@@ -1276,7 +1281,7 @@ function buildPrintHTML(
 <title>${cfg.title || "Folha de Exercícios"}</title>
 <style>${exStyles}</style>
 </head><body style="padding:0;margin:0;">
-<div style="${S.page} padding:24px 32px; box-sizing:border-box; display:flex; flex-direction:column; min-height:100vh;">
+<div class="print-sheet" style="${S.page} padding:${PAGE_PY}px ${PAGE_PX}px; box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden;">
   ${header}
   ${subtitleHtml}
   ${exSection}
@@ -1295,6 +1300,8 @@ ${cfg.gabarito === "proxima" ? gabSection : ""}
 
 const A4_W = 794;
 const A4_H = 1123;
+const A4_W_MM = "210mm";
+const A4_H_MM = "297mm";
 const PAGE_PX = 32; // horizontal padding (matches print margins)
 const PAGE_PY = 24; // vertical padding   (matches print margins)
 
@@ -1308,6 +1315,140 @@ interface PageLayoutAdjustment {
   extraSectionGap: number;
 }
 
+interface PageContentMetrics {
+  differencePx: number;
+  usableMainHeight: number;
+}
+
+function getPdfViewportTuning(cfg: GlobalConfig) {
+  if (typeof window === "undefined" || !window.matchMedia("(max-width: 767px)").matches) {
+    return {
+      docScale: 1,
+      lineHeight: 1.3,
+      rowGapBias: 0,
+      sectionGapBias: 0,
+    } as const;
+  }
+
+  if (cfg.repeatHeader) {
+    return {
+      docScale: 0.992,
+      lineHeight: 1.285,
+      rowGapBias: -1,
+      sectionGapBias: -1,
+    } as const;
+  }
+
+  return {
+    docScale: 0.974,
+    lineHeight: 1.275,
+    rowGapBias: -1,
+    sectionGapBias: -1,
+  } as const;
+}
+
+interface MeasuredExerciseLayout {
+  exerciseHeights: Record<number, number>;
+  sectionHeights: Record<number, { mid: number; top: number }>;
+  headerHeight: number;
+  subtitleHeight: number;
+  footerHeight: number;
+}
+
+function buildPreviewPagesFromSlices(
+  pageSlices: PageSlice[],
+  answerPageSlices: ExerciseItem[][],
+  generatedExercises: ExerciseItem[],
+  blocks: Block[],
+  cfg: GlobalConfig,
+  seed: number,
+  pageLayoutAdjustments: PageLayoutAdjustment[] = [],
+): string[] {
+  if (!pageSlices.length || !generatedExercises.length) return [];
+
+  const sectionHeaders = buildSectionHeaderMap(generatedExercises, blocks, cfg);
+  const pages = pageSlices
+    .map((slice) => ({
+      isFirstPage: slice.isFirstPage,
+      items: slice.exIndexes
+        .map((index) => ({ index, item: generatedExercises[index] }))
+        .filter((entry): entry is { index: number; item: ExerciseItem } => Boolean(entry.item)),
+    }))
+    .filter((page) => page.items.length > 0);
+
+  const htmlPages = pages.map((page, index) =>
+    buildOnePageHTML(
+      page.items,
+      cfg,
+      seed,
+      page.isFirstPage,
+      sectionHeaders,
+      pageLayoutAdjustments[index] ?? { extraRowGap: 0, extraSectionGap: 0 },
+    ),
+  );
+
+  if (cfg.gabarito === "proxima") {
+    const answerPages = answerPageSlices.length > 0 ? answerPageSlices : [generatedExercises];
+    let answerOffset = 0;
+    htmlPages.push(
+      ...answerPages.map((pageExercises) => {
+        const html = buildAnswerPageHTML(pageExercises, cfg, seed, answerOffset);
+        answerOffset += pageExercises.length;
+        return html;
+      }),
+    );
+  }
+
+  return htmlPages;
+}
+
+function buildPrintDocumentFromPages(
+  pages: string[],
+  cfg: GlobalConfig,
+  options?: { mobilePrint?: boolean },
+): string {
+  const mobilePrint = options?.mobilePrint ?? false;
+  const printScale = mobilePrint ? 0.988 : 1;
+  const pageWidth = mobilePrint ? `calc(${A4_W_MM} / ${printScale})` : A4_W_MM;
+  const pageHeight = mobilePrint ? `calc(${A4_H_MM} / ${printScale})` : A4_H_MM;
+  const pagesHtml = pages.map((page) => `<div class="print-page">${page}</div>`).join("");
+
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${
+    cfg.title || "Folha de Exercícios"
+  }</title>
+        <style>
+          @page{size:A4 portrait;margin:0;}
+          html,body{margin:0;padding:0;background:#fff;width:${A4_W_MM};-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;font-synthesis-weight:none;}
+          .print-page{width:${A4_W_MM};height:${A4_H_MM};overflow:hidden;break-after:page;page-break-after:always;position:relative;}
+          .print-page:last-child{break-after:auto;page-break-after:auto;}
+          @media print{
+            html,body{width:${A4_W_MM};height:auto;background:#fff;}
+            .preview-container{transform:none !important;}
+            .sheet-root{width:100% !important;height:100% !important;}
+            .sheet-root .preview-page{
+              width:${pageWidth} !important;
+              height:${pageHeight} !important;
+              min-height:${pageHeight} !important;
+              max-height:${pageHeight} !important;
+              overflow:hidden !important;
+              border-radius:0 !important;
+              box-shadow:none !important;
+              animation:none !important;
+              transform:${mobilePrint ? `scale(${printScale})` : "none"} !important;
+              transform-origin:top left !important;
+              break-inside:avoid !important;
+              page-break-inside:avoid !important;
+            }
+            ${
+              mobilePrint
+                ? `.sheet-root,.sheet-root *,.sheet-root *::before,.sheet-root *::after{-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;font-synthesis-weight:none!important;}`
+                : ""
+            }
+          }
+        </style>
+      </head><body>${pagesHtml}</body></html>`;
+}
+
 /**
  * Splits exercises into A4 page slices using conservative estimated heights.
  * Fully synchronous — no DOM measurement, no hidden iframes, no setTimeout.
@@ -1319,7 +1460,7 @@ function paginateSimple(
 ): PageSlice[] {
   if (!exercises.length) return [];
 
-  const rowGap = Math.max(cfg.spacing, 10);
+  const rowGap = Math.max(cfg.spacing, 8);
   const cols = cfg.cols;
   const secHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
   const fontScale = cfg.fontSize === "P" ? 0.92 : cfg.fontSize === "G" ? 1.14 : 1;
@@ -1332,11 +1473,11 @@ function paginateSimple(
   //             linear = single text row ~50px
   function estimateExH(ex: ExerciseItem): number {
     if (ex.html.includes("ex-mult-armada") || ex.html.includes("ex-divisao-armada"))
-      return Math.round(90 * fontScale);
+      return Math.round(80 * fontScale);
     if (ex.html.includes("ex-frac") || ex.html.includes("ex-raiz"))
-      return Math.round(58 * fontScale);
-    if (ex.html.includes("ex-equacao")) return Math.round(40 * fontScale);
-    return Math.round(34 * fontScale); // equacoes, potenciacao, expressoes, linear aritmetica
+      return Math.round(50 * fontScale);
+    if (ex.html.includes("ex-equacao")) return Math.round(34 * fontScale);
+    return Math.round(28 * fontScale); // equacoes, potenciacao, expressoes, linear aritmetica
   }
 
   // Fixed UI chrome heights (px) — all over-estimated for safety
@@ -1345,23 +1486,23 @@ function paginateSimple(
   const SUBTITLE1_H = cfg.subtitle ? Math.round(26 * fontScale) : 0;
   const FOOTER_H = Math.round(22 * fontScale);
   const REPEATED_HEADER_H = cfg.repeatHeader ? HEADER1_H + SUBTITLE1_H : 0;
-  // Mobile browsers can render the repeated header block a few pixels taller than desktop.
-  // Keep a much larger reserve only when repeatHeader is enabled so both previews stay stable.
-  const PAGE_SAFETY_BUFFER_H = Math.round((cfg.repeatHeader ? 132 : 26) * fontScale);
+  const footerHeight = FOOTER_H;
+  const PAGE_SAFETY_BUFFER_H = Math.round((cfg.repeatHeader ? 48 : 24) * fontScale);
+  const SAFE_MARGIN = 28;
   // Section header: margin:36px 0 14px + content:27px + gap_after:18px = 95px
   // Use 100px as the safe value for mid-page.
   // At page-top for non-first pages suppressTopMargin removes the 36px, but we still
   // use 100px conservatively so we never accidentally put too many items on a page.
-  const SEC_H_MID = Math.round(32 * fontScale);
-  const SEC_H_TOP = Math.round(22 * fontScale);
+  const SEC_H_MID = Math.round(26 * fontScale);
+  const SEC_H_TOP = Math.round(16 * fontScale);
   const BALANCE_THRESHOLD = 0;
 
   const p1Avail =
-    A4_H - 2 * PAGE_PY - HEADER1_H - SUBTITLE1_H - FOOTER_H - PAGE_SAFETY_BUFFER_H;
+    A4_H - 2 * PAGE_PY - HEADER1_H - SUBTITLE1_H - footerHeight - PAGE_SAFETY_BUFFER_H;
   const pnAvail =
     A4_H -
     2 * PAGE_PY -
-    FOOTER_H -
+    footerHeight -
     REPEATED_HEADER_H -
     PAGE_SAFETY_BUFFER_H;
 
@@ -1426,7 +1567,7 @@ function paginateSimple(
 
     // Balance rule: if this row would leave a tiny tail and we still have more rows,
     // force a new page before placing it.
-    const remainingAfterRow = avail - (usedH + rowTotal);
+    const remainingAfterRow = avail - SAFE_MARGIN - (usedH + rowTotal);
     const singleExerciseRow = row.exIndexes.length === 1;
     if (
       pageExes.length > 0 &&
@@ -1460,9 +1601,11 @@ function paginateSimple(
 
     // Avoid single orphan exercise on page tail when more content exists.
     const wouldLeaveSingleOrphan =
-      pageExes.length === 1 && rowsLeftIncludingCurrent > 1 && usedH + rowTotal > avail;
+      pageExes.length === 1 &&
+      rowsLeftIncludingCurrent > 1 &&
+      usedH + rowTotal > avail - SAFE_MARGIN;
 
-    if ((usedH + rowTotal > avail && pageExes.length > 0) || wouldLeaveSingleOrphan) {
+    if ((usedH + rowTotal > avail - SAFE_MARGIN && pageExes.length > 0) || wouldLeaveSingleOrphan) {
       // This row doesn't fit — flush current page
       slices.push({ exIndexes: pageExes, isFirstPage });
       pageExes = [];
@@ -1482,6 +1625,36 @@ function paginateSimple(
   if (pageExes.length > 0) slices.push({ exIndexes: pageExes, isFirstPage });
 
   return slices.filter((s) => s.exIndexes.length > 0);
+}
+
+function buildExerciseRows(
+  exercises: ExerciseItem[],
+  blocks: Block[],
+  cfg: GlobalConfig,
+): number[][] {
+  const cols = Math.max(1, cfg.cols);
+  const sectionHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
+  const rows: number[][] = [];
+  let pending: number[] = [];
+
+  const flushPending = () => {
+    if (!pending.length) return;
+    rows.push([...pending]);
+    pending = [];
+  };
+
+  for (let index = 0; index < exercises.length; index += 1) {
+    if (sectionHeaders[index]) {
+      flushPending();
+    }
+    pending.push(index);
+    if (pending.length >= cols) {
+      flushPending();
+    }
+  }
+
+  flushPending();
+  return rows;
 }
 
 function analyzePageGapTargets(
@@ -1525,47 +1698,271 @@ async function rebalancePageSlicesByMeasurement(
   cfg: GlobalConfig,
   sectionHeaders: Record<number, string>,
 ): Promise<PageSlice[]> {
-  const SAFE_REBALANCE_BUFFER = 35;
+  const MIN_FILL_RATIO = 0.82;
+  const MIN_ROWS_PER_PAGE = 2;
+  const SAFE_REBALANCE_BUFFER = 14;
+  const cols = Math.max(1, cfg.cols);
   const nextSlices = slices.map((slice) => ({
     ...slice,
     exIndexes: [...slice.exIndexes],
   }));
 
+  const pageItemsFromIndexes = (indexes: number[]) =>
+    indexes
+      .map((index) => ({ index, item: exercises[index] }))
+      .filter((entry): entry is { index: number; item: ExerciseItem } => Boolean(entry.item));
+
+  const rowCountFromIndexes = (indexes: number[]) => Math.ceil(indexes.length / cols);
+
   for (let pageIndex = 0; pageIndex < nextSlices.length - 1; pageIndex++) {
     const current = nextSlices[pageIndex];
     const next = nextSlices[pageIndex + 1];
+    if (!current.exIndexes.length || !next.exIndexes.length) continue;
 
-    while (next.exIndexes.length > 0) {
-      const movedIndexes = next.exIndexes.slice(0, Math.min(Math.max(1, cfg.cols), next.exIndexes.length));
+    let currentMetrics = await measurePageContentMetrics(
+      pageItemsFromIndexes(current.exIndexes),
+      cfg,
+      current.isFirstPage,
+      sectionHeaders,
+    );
+    let currentFill =
+      currentMetrics.usableMainHeight > 0
+        ? 1 - currentMetrics.differencePx / currentMetrics.usableMainHeight
+        : 1;
+
+    while (
+      next.exIndexes.length > 0 &&
+      currentFill < MIN_FILL_RATIO &&
+      rowCountFromIndexes(current.exIndexes) >= MIN_ROWS_PER_PAGE
+    ) {
+      const movedIndexes = next.exIndexes.slice(0, Math.min(cols, next.exIndexes.length));
       const candidateIndexes = [...current.exIndexes, ...movedIndexes];
-      const candidateItems = candidateIndexes
-        .map((index) => ({ index, item: exercises[index] }))
-        .filter((entry): entry is { index: number; item: ExerciseItem } => Boolean(entry.item));
-
-      const difference = await measurePageContentDifference(
-        candidateItems,
+      const candidateMetrics = await measurePageContentMetrics(
+        pageItemsFromIndexes(candidateIndexes),
         cfg,
         current.isFirstPage,
         sectionHeaders,
       );
 
-      if (difference < SAFE_REBALANCE_BUFFER) {
+      if (candidateMetrics.differencePx < SAFE_REBALANCE_BUFFER) {
         break;
       }
 
       current.exIndexes.push(...movedIndexes);
       next.exIndexes.splice(0, movedIndexes.length);
+
+      currentMetrics = candidateMetrics;
+      currentFill =
+        currentMetrics.usableMainHeight > 0
+          ? 1 - currentMetrics.differencePx / currentMetrics.usableMainHeight
+          : 1;
     }
   }
 
   return nextSlices.filter((slice) => slice.exIndexes.length > 0);
 }
 
+async function measureExerciseLayout(
+  exercises: ExerciseItem[],
+  blocks: Block[],
+  cfg: GlobalConfig,
+): Promise<MeasuredExerciseLayout | null> {
+  if (typeof window === "undefined" || !exercises.length) return null;
+
+  const html = buildMeasurementDoc(exercises, blocks, cfg);
+
+  return await new Promise<MeasuredExerciseLayout | null>((resolve) => {
+    let settled = false;
+    const host = document.createElement("div");
+    host.setAttribute("aria-hidden", "true");
+    host.style.position = "fixed";
+    host.style.left = "-10000px";
+    host.style.top = "0";
+    host.style.width = `${A4_W}px`;
+    host.style.opacity = "0";
+    host.style.pointerEvents = "none";
+    host.style.overflow = "hidden";
+
+    const cleanup = (value: MeasuredExerciseLayout | null) => {
+      if (settled) return;
+      settled = true;
+      host.remove();
+      resolve(value);
+    };
+
+    const boxHeight = (element: HTMLElement) => {
+      const rect = element.getBoundingClientRect();
+      const styles = window.getComputedStyle(element);
+      const marginTop = parseFloat(styles.marginTop || "0");
+      const marginBottom = parseFloat(styles.marginBottom || "0");
+      return rect.height + marginTop + marginBottom;
+    };
+
+    const measure = async () => {
+      try {
+        if ("fonts" in document && document.fonts?.ready) {
+          await document.fonts.ready;
+        }
+
+        const exerciseHeights: Record<number, number> = {};
+        const sectionHeights: Record<number, { mid: number; top: number }> = {};
+
+        host.querySelectorAll<HTMLElement>('[id^="sg-ex-"]').forEach((element) => {
+          const match = element.id.match(/^sg-ex-(\d+)$/);
+          if (!match) return;
+          exerciseHeights[Number(match[1])] = boxHeight(element);
+        });
+
+        host.querySelectorAll<HTMLElement>('[id^="sg-sec-"]').forEach((element) => {
+          const match = element.id.match(/^sg-sec-(\d+)$/);
+          if (!match) return;
+          const styles = window.getComputedStyle(element);
+          const marginTop = parseFloat(styles.marginTop || "0");
+          const fullHeight = boxHeight(element);
+          sectionHeights[Number(match[1])] = {
+            mid: fullHeight,
+            top: Math.max(0, fullHeight - marginTop),
+          };
+        });
+
+        const header = host.querySelector<HTMLElement>("#sg-header");
+        const subtitle = host.querySelector<HTMLElement>("#sg-subtitle");
+        const footer = host.querySelector<HTMLElement>("#sg-footer");
+
+        cleanup({
+          exerciseHeights,
+          sectionHeights,
+          headerHeight: header ? boxHeight(header) : 0,
+          subtitleHeight: subtitle ? boxHeight(subtitle) : 0,
+          footerHeight: footer ? boxHeight(footer) : 0,
+        });
+      } catch {
+        cleanup(null);
+      }
+    };
+
+    host.innerHTML = html;
+    document.body.appendChild(host);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        void measure();
+      });
+    });
+
+    window.setTimeout(() => cleanup(null), 3000);
+  });
+}
+
+function paginateMeasured(
+  exercises: ExerciseItem[],
+  blocks: Block[],
+  cfg: GlobalConfig,
+  measured: MeasuredExerciseLayout,
+): PageSlice[] {
+  if (!exercises.length) return [];
+
+  const rowGap = Math.max(cfg.spacing, 8);
+  const cols = cfg.cols;
+  const sectionHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
+  const fontScale = cfg.fontSize === "P" ? 0.92 : cfg.fontSize === "G" ? 1.14 : 1;
+    const headerHeight = measured.headerHeight || Math.round((cfg.showNome ? 114 : 41) * fontScale);
+    const subtitleHeight = measured.subtitleHeight || (cfg.subtitle ? Math.round(26 * fontScale) : 0);
+    const footerHeight = measured.footerHeight || Math.round(22 * fontScale);
+    const repeatedHeaderHeight = cfg.repeatHeader ? headerHeight + subtitleHeight : 0;
+    const safetyBuffer = Math.round((cfg.repeatHeader ? 48 : 24) * fontScale);
+    const SAFE_MARGIN = 28;
+    const p1Avail =
+      A4_H -
+      2 * PAGE_PY -
+      headerHeight -
+      subtitleHeight -
+      footerHeight -
+      safetyBuffer;
+    const pnAvail = A4_H - 2 * PAGE_PY - footerHeight - repeatedHeaderHeight - safetyBuffer;
+
+  interface GridRow {
+    exIndexes: number[];
+    rowH: number;
+    startsWithSec: boolean;
+    secHMid: number;
+    secHTop: number;
+  }
+
+  const rows: GridRow[] = [];
+  let pending: number[] = [];
+  let pendingH = 0;
+  let pendingStartsSec = false;
+  let pendingSecHMid = 0;
+  let pendingSecHTop = 0;
+
+  const flushPending = () => {
+    if (!pending.length) return;
+    rows.push({
+      exIndexes: [...pending],
+      rowH: pendingH,
+      startsWithSec: pendingStartsSec,
+      secHMid: pendingSecHMid,
+      secHTop: pendingSecHTop,
+    });
+    pending = [];
+    pendingH = 0;
+    pendingStartsSec = false;
+    pendingSecHMid = 0;
+    pendingSecHTop = 0;
+  };
+
+  for (let index = 0; index < exercises.length; index += 1) {
+    if (sectionHeaders[index]) {
+      flushPending();
+      pendingStartsSec = true;
+      const sectionHeight = measured.sectionHeights[index] ?? { mid: 26, top: 16 };
+      pendingSecHMid = sectionHeight.mid;
+      pendingSecHTop = sectionHeight.top;
+    }
+    pending.push(index);
+    pendingH = Math.max(pendingH, measured.exerciseHeights[index] ?? 0);
+    if (pending.length >= cols) {
+      flushPending();
+    }
+  }
+  flushPending();
+
+  const slices: PageSlice[] = [];
+  let pageItems: number[] = [];
+  let usedH = 0;
+  let avail = p1Avail;
+  let isFirstPage = true;
+
+  for (const row of rows) {
+    const secH = usedH === 0 ? row.secHTop : row.secHMid;
+    const rowTotal = (usedH > 0 ? rowGap : 0) + (row.startsWithSec ? secH : 0) + row.rowH;
+
+    if (pageItems.length > 0 && usedH + rowTotal > avail - SAFE_MARGIN) {
+      slices.push({ exIndexes: pageItems, isFirstPage });
+      pageItems = [];
+      usedH = 0;
+      avail = pnAvail;
+      isFirstPage = false;
+    }
+
+    const freshSecH = pageItems.length === 0 && row.startsWithSec ? row.secHTop : row.startsWithSec ? row.secHMid : 0;
+    usedH += (pageItems.length > 0 ? rowGap : 0) + freshSecH + row.rowH;
+    pageItems.push(...row.exIndexes);
+  }
+
+  if (pageItems.length > 0) {
+    slices.push({ exIndexes: pageItems, isFirstPage });
+  }
+
+  return slices.filter((slice) => slice.exIndexes.length > 0);
+}
+
 // ── Shared style builders ─────────────────────────────────────────────────────
 
 function buildDocCSS(cfg: GlobalConfig): string {
-  const fzMap: Record<FontSize, string> = { P: "12px", M: "14px", G: "18px" };
-  const fz = fzMap[cfg.fontSize];
+  const baseFzMap: Record<FontSize, number> = { P: 12, M: 14, G: 18 };
+  const tuning = getPdfViewportTuning(cfg);
+  const fz = `${(baseFzMap[cfg.fontSize] * tuning.docScale).toFixed(2)}px`;
   const FONT = `Inter,system-ui,-apple-system,sans-serif`;
   const NUMBER_FONT = FONT;
   return `
@@ -1575,13 +1972,13 @@ function buildDocCSS(cfg: GlobalConfig): string {
       to { opacity: 1; transform: scale(1); }
     }
     .sheet-root .preview-page{
-      all:revert;
+      all:initial;
       width:${A4_W}px;
       height:${A4_H}px;
       background:#fff;
       margin:0 auto;
       box-shadow:none;
-      padding:28px 32px 16px;
+      padding:${PAGE_PY}px ${PAGE_PX}px;
       overflow:hidden;
       display:flex;
       flex-direction:column;
@@ -1589,7 +1986,10 @@ function buildDocCSS(cfg: GlobalConfig): string {
       font-family:${FONT};
       font-size:${fz};
       color:#1F2937;
-      line-height:1.3;
+      line-height:${tuning.lineHeight};
+      -webkit-text-size-adjust:100%;
+      text-size-adjust:100%;
+      font-synthesis-weight:none;
     }
     .sheet-root .preview-page,.sheet-root .preview-page *,.sheet-root .preview-page *::before,.sheet-root .preview-page *::after{box-sizing:border-box;}
     .sheet-root .preview-page .ex-mult-armada{display:inline-flex;flex-direction:column;align-items:flex-end;font-family:${NUMBER_FONT};font-size:${fz};font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;gap:2px;color:#0F172A;}
@@ -1629,22 +2029,25 @@ function buildDocCSS(cfg: GlobalConfig): string {
 }
 
 function buildDocStyles(cfg: GlobalConfig) {
-  const fzMap: Record<FontSize, string> = { P: "12px", M: "14px", G: "18px" };
-  const fz = fzMap[cfg.fontSize];
-  const fzSm = cfg.fontSize === "P" ? "10px" : cfg.fontSize === "G" ? "14px" : "11px";
+  const baseFzMap: Record<FontSize, number> = { P: 12, M: 14, G: 18 };
+  const baseFzSmMap: Record<FontSize, number> = { P: 10, M: 11, G: 14 };
+  const tuning = getPdfViewportTuning(cfg);
+  const toPx = (value: number) => `${(value * tuning.docScale).toFixed(2)}px`;
+  const fz = toPx(baseFzMap[cfg.fontSize]);
+  const fzSm = toPx(baseFzSmMap[cfg.fontSize]);
   const FONT = `Inter,system-ui,-apple-system,sans-serif`;
   const S = {
-    title: `font-family:${FONT};font-size:18px;font-weight:700;text-align:center;letter-spacing:0.8px;color:#0F172A;margin-bottom:10px;`,
+    title: `font-family:${FONT};font-size:${toPx(18)};font-weight:700;text-align:center;letter-spacing:0.8px;color:#0F172A;margin-bottom:${(10 * tuning.docScale).toFixed(2)}px;`,
     rule2: `height:1.5px;background:#D1D5DB;margin:0 0 4px;`,
     ruleGray: `height:1px;background:#F3F4F6;margin:6px 0 8px;`,
-    infoRow: `font-family:${FONT};font-size:12px;color:#0F172A;padding:3px 0;letter-spacing:0.04em;`,
-    secHead: `font-family:${FONT};font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.12em;margin:12px 0 4px;padding-bottom:4px;border-bottom:1px solid #E5E7EB;`,
-    exNum: `font-family:${FONT};font-size:${fz};color:#9CA3AF;white-space:nowrap;flex-shrink:0;min-width:28px;line-height:1.3;`,
-    exBody: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.3;flex:1;min-width:0;`,
-    page: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.3;`,
+    infoRow: `font-family:${FONT};font-size:${toPx(12)};color:#0F172A;padding:${(3 * tuning.docScale).toFixed(2)}px 0;letter-spacing:0.04em;`,
+    secHead: `font-family:${FONT};font-size:${toPx(11)};font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.12em;margin:${(8 * tuning.docScale).toFixed(2)}px 0 ${(3 * tuning.docScale).toFixed(2)}px;padding-bottom:${(3 * tuning.docScale).toFixed(2)}px;border-bottom:1px solid #E5E7EB;`,
+    exNum: `font-family:${FONT};font-size:${fz};color:#9CA3AF;white-space:nowrap;flex-shrink:0;min-width:${(28 * tuning.docScale).toFixed(2)}px;line-height:${tuning.lineHeight};`,
+    exBody: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:${tuning.lineHeight};flex:1;min-width:0;`,
+    page: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:${tuning.lineHeight};`,
     footer: `font-family:${FONT};font-size:${fzSm};color:#9CA3AF;letter-spacing:0.04em;`,
   };
-  const lbl = `font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:#0F172A;white-space:nowrap;flex-shrink:0;`;
+  const lbl = `font-size:${toPx(10)};font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:#0F172A;white-space:nowrap;flex-shrink:0;`;
   const ln = `border-bottom:1px solid #0F172A;display:inline-block;vertical-align:bottom;`;
   return { fz, fzSm, FONT, S, lbl, ln };
 }
@@ -1667,9 +2070,14 @@ function buildSectionHeaderMap(
     if (!byBlock.has(ex.blockId)) byBlock.set(ex.blockId, []);
     byBlock.get(ex.blockId)!.push(idx);
   });
+  let previousSectionTitle: string | null = null;
   active.forEach((b) => {
     const idxs = byBlock.get(b.id);
-    if (idxs?.length) map[idxs[0]] = nameMap[b.id] ?? b.type;
+    const sectionTitle = nameMap[b.id] ?? b.type;
+    if (idxs?.length && sectionTitle !== previousSectionTitle) {
+      map[idxs[0]] = sectionTitle;
+    }
+    previousSectionTitle = sectionTitle;
   });
   return map;
 }
@@ -1708,7 +2116,8 @@ function buildMeasurementDoc(
   const { fz, FONT, S, lbl, ln } = buildDocStyles(cfg);
   const css = buildDocCSS(cfg);
   const sectionHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
-  const rowGap = 12;
+  const tuning = getPdfViewportTuning(cfg);
+  const rowGap = Math.max(6, Math.max(cfg.spacing, 8) + tuning.rowGapBias);
   const colGap = 24;
   const nomeLine = buildStudentRowHTML(cfg, S, lbl, ln);
   const headerHTML = `
@@ -1728,7 +2137,7 @@ function buildMeasurementDoc(
     }
     const numSpan = cfg.numerar ? `<span style="${S.exNum}">${i + 1})</span>` : "";
     const align = ex.type === "aritmetica" ? "flex-start" : "baseline";
-    gridItems += `<div id="sg-ex-${i}" style="display:flex;align-items:${align};gap:6px;margin-bottom:6px;">${numSpan}<div style="${S.exBody}">${ex.html}</div></div>`;
+    gridItems += `<div id="sg-ex-${i}" style="display:flex;align-items:${align};gap:6px;margin-bottom:4px;">${numSpan}<div style="${S.exBody}">${ex.html}</div></div>`;
   }
 
   return (
@@ -1737,7 +2146,7 @@ function buildMeasurementDoc(
     `<div id="sg-header">${headerHTML}</div>` +
     (subtitleHTML ? `<div id="sg-subtitle">${subtitleHTML}</div>` : "") +
     `<div style="display:grid;grid-template-columns:repeat(${cfg.cols},1fr);gap:${rowGap}px ${colGap}px;align-items:start;">${gridItems}</div>` +
-    `<div id="sg-footer" style="${S.footer} padding-top:8px;border-top:1px solid #E5E7EB;display:flex;justify-content:center;">` +
+    `<div id="sg-footer" style="${S.footer} padding-top:10px;border-top:1px solid #E5E7EB;display:flex;justify-content:center;">` +
     `<span>Axiora Tools</span><span>Reprodução livre para fins pedagógicos</span></div>` +
     `</body></html>`
   );
@@ -1757,8 +2166,9 @@ function buildOnePageHTML(
 ): string {
   const { fz, FONT, S, lbl, ln } = buildDocStyles(cfg);
   const css = buildDocCSS(cfg);
-  const rowGap = 12 + layoutAdjustment.extraRowGap;
-  const sectionGap = 12 + layoutAdjustment.extraSectionGap;
+  const tuning = getPdfViewportTuning(cfg);
+  const rowGap = Math.max(6, Math.max(cfg.spacing, 8) + tuning.rowGapBias + layoutAdjustment.extraRowGap);
+  const sectionGap = Math.max(6, Math.max(cfg.spacing, 8) + tuning.sectionGapBias + layoutAdjustment.extraSectionGap);
   const colGap = 24;
 
   const pageSections: Record<number, string> = {};
@@ -1794,7 +2204,7 @@ function buildOnePageHTML(
     const numSpan = cfg.numerar ? `<span style="${S.exNum}">${exIdx + 1})</span>` : "";
     const align = ex.type === "aritmetica" ? "flex-start" : "baseline";
     currentSection.items.push(
-      `<div style="display:flex;align-items:${align};gap:6px;margin-bottom:6px;">${numSpan}<div style="${S.exBody}">${ex.html}</div></div>`,
+      `<div style="display:flex;align-items:${align};gap:6px;margin-bottom:4px;">${numSpan}<div style="${S.exBody}">${ex.html}</div></div>`,
     );
   }
   pushSection();
@@ -1823,7 +2233,7 @@ function buildOnePageHTML(
       ? `<p style="font-family:${FONT};font-size:${fz};color:#6B7280;margin:0 0 10px;padding:4px 0;border-bottom:1px solid #E5E7EB;">${cfg.subtitle}</p>`
       : "";
   const footerHTML =
-    `<div style="${S.footer} margin-top:auto;padding-top:4px;border-top:1px solid #E5E7EB;display:flex;justify-content:center;">` +
+    `<div style="${S.footer} margin-top:0;padding-top:10px;border-top:1px solid #E5E7EB;display:flex;justify-content:center;">` +
     `<span>Axiora Tools</span></div>`;
   const mainId = measurement ? ` id="sg-main"` : "";
   const sectionsId = measurement ? ` id="sg-sections"` : "";
@@ -1844,14 +2254,16 @@ function buildOnePageHTML(
 
 // Removed gap-redistribution measurement: page closing now uses exact bottom spacer measurement.
 
-async function measurePageContentDifference(
+async function measurePageContentMetrics(
   pageItems: Array<{ index: number; item: ExerciseItem }>,
   cfg: GlobalConfig,
   isFirstPage: boolean,
   sectionHeaders: Record<number, string>,
   layoutAdjustment: PageLayoutAdjustment = { extraRowGap: 0, extraSectionGap: 0 },
-): Promise<number> {
-  if (typeof window === "undefined" || !pageItems.length) return 0;
+): Promise<PageContentMetrics> {
+  if (typeof window === "undefined" || !pageItems.length) {
+    return { differencePx: 0, usableMainHeight: 0 };
+  }
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"></head><body style="margin:0;">${buildOnePageHTML(
     pageItems,
@@ -1863,63 +2275,419 @@ async function measurePageContentDifference(
     true,
   )}</body></html>`;
 
-  return await new Promise<number>((resolve) => {
+  return await new Promise<PageContentMetrics>((resolve) => {
     let settled = false;
-    const host = document.createElement("div");
-    host.setAttribute("aria-hidden", "true");
-    host.style.position = "fixed";
-    host.style.left = "-10000px";
-    host.style.top = "0";
-    host.style.width = `${A4_W}px`;
-    host.style.height = `${A4_H}px`;
-    host.style.opacity = "0";
-    host.style.pointerEvents = "none";
-    host.style.overflow = "hidden";
+    const frame = document.createElement("iframe");
+    frame.setAttribute("aria-hidden", "true");
+    frame.style.position = "fixed";
+    frame.style.left = "-10000px";
+    frame.style.top = "0";
+    frame.style.width = `${A4_W}px`;
+    frame.style.height = `${A4_H}px`;
+    frame.style.opacity = "0";
+    frame.style.pointerEvents = "none";
+    frame.style.overflow = "hidden";
+    frame.style.border = "0";
+    frame.style.background = "#fff";
 
-    const cleanup = (differencePx: number) => {
+    const cleanup = (metrics: PageContentMetrics) => {
       if (settled) return;
       settled = true;
-      host.remove();
-      resolve(differencePx);
+      frame.remove();
+      resolve(metrics);
     };
 
     const measure = async () => {
       try {
-        if ("fonts" in document && document.fonts?.ready) {
-          await document.fonts.ready;
-        }
-
-        const main = host.querySelector("#sg-main");
-        const sections = host.querySelector("#sg-sections");
-        if (!(main instanceof HTMLElement) || !(sections instanceof HTMLElement)) {
-          cleanup(0);
+        const frameWindow = frame.contentWindow;
+        const frameDocument = frame.contentDocument;
+        if (!frameWindow || !frameDocument) {
+          cleanup({ differencePx: 0, usableMainHeight: 0 });
           return;
         }
-        const mainRect = main.getBoundingClientRect();
-        const sectionsRect = sections.getBoundingClientRect();
-        const mainStyles = window.getComputedStyle(main);
+
+        if ("fonts" in frameDocument && frameDocument.fonts?.ready) {
+          await frameDocument.fonts.ready;
+        }
+
+        const main = frameDocument.querySelector<HTMLElement>("#sg-main");
+        const sections = frameDocument.querySelector<HTMLElement>("#sg-sections");
+        const HTMLElementCtor = (
+          frameWindow as Window & typeof globalThis & { HTMLElement?: typeof HTMLElement }
+        ).HTMLElement;
+        if (
+          !HTMLElementCtor ||
+          !(main instanceof HTMLElementCtor) ||
+          !(sections instanceof HTMLElementCtor)
+        ) {
+          cleanup({ differencePx: 0, usableMainHeight: 0 });
+          return;
+        }
+        const mainStyles = frameWindow.getComputedStyle(main);
         const mainPaddingTop = parseFloat(mainStyles.paddingTop || "0");
         const mainPaddingBottom = parseFloat(mainStyles.paddingBottom || "0");
-        const usableMainHeight = mainRect.height - mainPaddingTop - mainPaddingBottom;
-        const contentHeight = sectionsRect.height;
+        const usableMainHeight = main.clientHeight - mainPaddingTop - mainPaddingBottom;
+        const contentHeight = sections.scrollHeight;
         const difference = usableMainHeight - contentHeight;
 
-        cleanup(Number(difference.toFixed(2)));
+        cleanup({
+          differencePx: Number(difference.toFixed(2)),
+          usableMainHeight: Number(usableMainHeight.toFixed(2)),
+        });
       } catch {
-        cleanup(0);
+        cleanup({ differencePx: 0, usableMainHeight: 0 });
       }
     };
 
-    host.innerHTML = html;
-    document.body.appendChild(host);
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        void measure();
-      });
+    const handleLoad = () => {
+      if (settled) return;
+
+      const frameWindow = frame.contentWindow;
+      const frameDocument = frame.contentDocument;
+      if (!frameWindow || !frameDocument) {
+        cleanup({ differencePx: 0, usableMainHeight: 0 });
+        return;
+      }
+
+      const continueAfterFonts = async () => {
+        try {
+          if ("fonts" in frameDocument && frameDocument.fonts?.ready) {
+            await frameDocument.fonts.ready;
+          }
+        } catch {
+          // Keep going even if the iframe font promise is unavailable.
+        }
+
+        frameWindow.requestAnimationFrame(() => {
+          frameWindow.requestAnimationFrame(() => {
+            void measure();
+          });
+        });
+      };
+
+      void continueAfterFonts();
+    };
+
+    frame.srcdoc = html;
+    frame.addEventListener("load", handleLoad, { once: true });
+    document.body.appendChild(frame);
+
+    window.setTimeout(() => cleanup({ differencePx: 0, usableMainHeight: 0 }), 3000);
+  });
+}
+
+async function paginatePrecisely(
+  exercises: ExerciseItem[],
+  blocks: Block[],
+  cfg: GlobalConfig,
+): Promise<PageSlice[]> {
+  if (typeof window === "undefined" || !exercises.length) {
+    return paginateSimple(exercises, blocks, cfg);
+  }
+
+  const isMobileLayout =
+    typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
+  const SAFE_MARGIN = isMobileLayout ? (cfg.repeatHeader ? 24 : 74) : 28;
+  const TARGET_MAX_GAP = isMobileLayout
+    ? cfg.repeatHeader
+      ? 28
+      : 60
+    : cfg.repeatHeader
+      ? 34
+      : 52;
+  const MAX_DONOR_GAP = isMobileLayout
+    ? cfg.repeatHeader
+      ? 220
+      : 96
+    : cfg.repeatHeader
+      ? 240
+      : 132;
+  const MIN_ROWS_PER_PAGE = 2;
+  const rows = buildExerciseRows(exercises, blocks, cfg);
+  const sectionHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
+
+  const pageItemsFromRows = (rowSlice: number[][]) =>
+    rowSlice
+      .flat()
+      .map((index) => ({ index, item: exercises[index] }))
+      .filter((entry): entry is { index: number; item: ExerciseItem } => Boolean(entry.item));
+
+  const measureRowRange = async (
+    startRow: number,
+    endRow: number,
+    isFirstPage: boolean,
+  ) =>
+    measurePageContentMetrics(
+      pageItemsFromRows(rows.slice(startRow, endRow)),
+      cfg,
+      isFirstPage,
+      sectionHeaders,
+    );
+
+  const pageRanges: Array<{ startRow: number; endRow: number; isFirstPage: boolean }> = [];
+  let rowCursor = 0;
+  let isFirstPage = true;
+
+  while (rowCursor < rows.length) {
+    let low = 1;
+    let high = rows.length - rowCursor;
+    let bestCount = 1;
+
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      const metrics = await measureRowRange(rowCursor, rowCursor + mid, isFirstPage);
+
+      const fits = metrics.usableMainHeight > 0 && metrics.differencePx >= SAFE_MARGIN;
+
+      if (fits) {
+        bestCount = mid;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+
+    pageRanges.push({
+      startRow: rowCursor,
+      endRow: rowCursor + bestCount,
+      isFirstPage,
     });
 
-    window.setTimeout(() => cleanup(0), 3000);
-  });
+    rowCursor += bestCount;
+    isFirstPage = false;
+  }
+
+  for (let pageIndex = 0; pageIndex < pageRanges.length - 1; pageIndex += 1) {
+    let current = pageRanges[pageIndex];
+    let next = pageRanges[pageIndex + 1];
+    let currentMetrics = await measureRowRange(
+      current.startRow,
+      current.endRow,
+      current.isFirstPage,
+    );
+
+    while (
+      currentMetrics.usableMainHeight > 0 &&
+      currentMetrics.differencePx > TARGET_MAX_GAP &&
+      next.endRow - next.startRow > MIN_ROWS_PER_PAGE
+    ) {
+      const nextMetricsCurrent = await measureRowRange(
+        next.startRow,
+        next.endRow,
+        next.isFirstPage,
+      );
+      const currentWorstGap = Math.max(
+        currentMetrics.differencePx,
+        nextMetricsCurrent.differencePx,
+      );
+      const currentGapScore =
+        currentMetrics.differencePx ** 2 + nextMetricsCurrent.differencePx ** 2;
+
+      let bestCandidate:
+        | {
+            moveCount: number;
+            currentMetrics: PageContentMetrics;
+            nextMetrics: PageContentMetrics;
+            worstGap: number;
+            gapScore: number;
+          }
+        | null = null;
+
+      const maxMoveCount = Math.min(6, next.endRow - next.startRow - MIN_ROWS_PER_PAGE + 1);
+      for (let moveCount = 1; moveCount <= maxMoveCount; moveCount += 1) {
+        const currentMetricsCandidate = await measureRowRange(
+          current.startRow,
+          current.endRow + moveCount,
+          current.isFirstPage,
+        );
+        const nextMetrics = await measureRowRange(
+          next.startRow + moveCount,
+          next.endRow,
+          next.isFirstPage,
+        );
+
+        if (
+          currentMetricsCandidate.differencePx < SAFE_MARGIN ||
+          nextMetrics.differencePx < SAFE_MARGIN
+        ) {
+          break;
+        }
+
+        const candidateWorstGap = Math.max(
+          currentMetricsCandidate.differencePx,
+          nextMetrics.differencePx,
+        );
+        const candidateGapScore =
+          currentMetricsCandidate.differencePx ** 2 + nextMetrics.differencePx ** 2;
+
+        const improvesWorstGap =
+          candidateWorstGap + (cfg.repeatHeader ? 0 : 2) < currentWorstGap;
+        const improvesPairScore =
+          candidateGapScore + (cfg.repeatHeader ? 8 : 16) < currentGapScore;
+        const improvesReceiver =
+          currentMetricsCandidate.differencePx + (cfg.repeatHeader ? 6 : 10) <
+            currentMetrics.differencePx &&
+          nextMetrics.differencePx <= MAX_DONOR_GAP + (cfg.repeatHeader ? 180 : 120);
+        if (!improvesWorstGap && !improvesPairScore && !improvesReceiver) {
+          continue;
+        }
+
+        if (
+          !bestCandidate ||
+          candidateGapScore < bestCandidate.gapScore ||
+          (candidateGapScore === bestCandidate.gapScore &&
+            candidateWorstGap < bestCandidate.worstGap)
+        ) {
+          bestCandidate = {
+            moveCount,
+            currentMetrics: currentMetricsCandidate,
+            nextMetrics,
+            worstGap: candidateWorstGap,
+            gapScore: candidateGapScore,
+          };
+        }
+      }
+
+      if (!bestCandidate) {
+        break;
+      }
+
+      current = { ...current, endRow: current.endRow + bestCandidate.moveCount };
+      next = { ...next, startRow: next.startRow + bestCandidate.moveCount };
+      pageRanges[pageIndex] = current;
+      pageRanges[pageIndex + 1] = next;
+      currentMetrics = bestCandidate.currentMetrics;
+    }
+  }
+
+  for (let pageIndex = pageRanges.length - 1; pageIndex > 0; pageIndex -= 1) {
+    let current = pageRanges[pageIndex];
+    let previous = pageRanges[pageIndex - 1];
+    let currentMetrics = await measureRowRange(
+      current.startRow,
+      current.endRow,
+      current.isFirstPage,
+    );
+
+    while (
+      currentMetrics.usableMainHeight > 0 &&
+      currentMetrics.differencePx > TARGET_MAX_GAP &&
+      previous.endRow - previous.startRow > MIN_ROWS_PER_PAGE
+    ) {
+      const previousMetricsCurrent = await measureRowRange(
+        previous.startRow,
+        previous.endRow,
+        previous.isFirstPage,
+      );
+      const currentWorstGap = Math.max(
+        previousMetricsCurrent.differencePx,
+        currentMetrics.differencePx,
+      );
+      const currentGapScore =
+        previousMetricsCurrent.differencePx ** 2 + currentMetrics.differencePx ** 2;
+
+      let bestCandidate:
+        | {
+            moveCount: number;
+            previousMetrics: PageContentMetrics;
+            currentMetrics: PageContentMetrics;
+            worstGap: number;
+            gapScore: number;
+          }
+        | null = null;
+
+      const maxMoveCount = Math.min(6, previous.endRow - previous.startRow - MIN_ROWS_PER_PAGE + 1);
+      for (let moveCount = 1; moveCount <= maxMoveCount; moveCount += 1) {
+        const previousMetrics = await measureRowRange(
+          previous.startRow,
+          previous.endRow - moveCount,
+          previous.isFirstPage,
+        );
+        const currentMetricsCandidate = await measureRowRange(
+          current.startRow - moveCount,
+          current.endRow,
+          current.isFirstPage,
+        );
+
+        if (
+          previousMetrics.differencePx < SAFE_MARGIN ||
+          currentMetricsCandidate.differencePx < SAFE_MARGIN
+        ) {
+          break;
+        }
+
+        const candidateWorstGap = Math.max(
+          previousMetrics.differencePx,
+          currentMetricsCandidate.differencePx,
+        );
+        const candidateGapScore =
+          previousMetrics.differencePx ** 2 + currentMetricsCandidate.differencePx ** 2;
+
+        const improvesWorstGap =
+          candidateWorstGap + (cfg.repeatHeader ? 0 : 2) < currentWorstGap;
+        const improvesPairScore =
+          candidateGapScore + (cfg.repeatHeader ? 8 : 16) < currentGapScore;
+        const improvesRecipient =
+          currentMetricsCandidate.differencePx + (cfg.repeatHeader ? 6 : 10) <
+            currentMetrics.differencePx &&
+          previousMetrics.differencePx <= MAX_DONOR_GAP;
+        if (!improvesWorstGap && !improvesPairScore && !improvesRecipient) {
+          continue;
+        }
+
+        if (
+          !bestCandidate ||
+          candidateGapScore < bestCandidate.gapScore ||
+          (candidateGapScore === bestCandidate.gapScore &&
+            candidateWorstGap < bestCandidate.worstGap)
+        ) {
+          bestCandidate = {
+            moveCount,
+            previousMetrics,
+            currentMetrics: currentMetricsCandidate,
+            worstGap: candidateWorstGap,
+            gapScore: candidateGapScore,
+          };
+        }
+      }
+
+      if (!bestCandidate) {
+        break;
+      }
+
+      previous = { ...previous, endRow: previous.endRow - bestCandidate.moveCount };
+      current = { ...current, startRow: current.startRow - bestCandidate.moveCount };
+      pageRanges[pageIndex - 1] = previous;
+      pageRanges[pageIndex] = current;
+      currentMetrics = bestCandidate.currentMetrics;
+    }
+  }
+
+  const slices: PageSlice[] = pageRanges.map((range) => ({
+    exIndexes: pageItemsFromRows(rows.slice(range.startRow, range.endRow)).map(
+      ({ index }) => index,
+    ),
+    isFirstPage: range.isFirstPage,
+  }));
+
+  return slices.filter((slice) => slice.exIndexes.length > 0);
+}
+
+async function measurePageContentDifference(
+  pageItems: Array<{ index: number; item: ExerciseItem }>,
+  cfg: GlobalConfig,
+  isFirstPage: boolean,
+  sectionHeaders: Record<number, string>,
+  layoutAdjustment: PageLayoutAdjustment = { extraRowGap: 0, extraSectionGap: 0 },
+): Promise<number> {
+  const metrics = await measurePageContentMetrics(
+    pageItems,
+    cfg,
+    isFirstPage,
+    sectionHeaders,
+    layoutAdjustment,
+  );
+  return metrics.differencePx;
 }
 
 async function measurePageLayoutAdjustment(
@@ -1989,6 +2757,47 @@ async function measurePageLayoutAdjustment(
   return best;
 }
 
+async function computePageLayoutAdjustments(
+  pageSlices: PageSlice[],
+  exercises: ExerciseItem[],
+  blocks: Block[],
+  cfg: GlobalConfig,
+): Promise<PageLayoutAdjustment[]> {
+  if (typeof window === "undefined" || !pageSlices.length || !exercises.length) {
+    return pageSlices.map(() => ({ extraRowGap: 0, extraSectionGap: 0 }));
+  }
+
+  const sectionHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
+  const rowGapCap = cfg.repeatHeader ? 12 : 8;
+  const sectionGapCap = cfg.repeatHeader ? 16 : 10;
+
+  const adjustments = await Promise.all(
+    pageSlices.map(async (slice) => {
+      const pageItems = slice.exIndexes
+        .map((index) => ({ index, item: exercises[index] }))
+        .filter((entry): entry is { index: number; item: ExerciseItem } => Boolean(entry.item));
+
+      if (!pageItems.length) {
+        return { extraRowGap: 0, extraSectionGap: 0 };
+      }
+
+      const adjustment = await measurePageLayoutAdjustment(
+        pageItems,
+        cfg,
+        slice.isFirstPage,
+        sectionHeaders,
+      );
+
+      return {
+        extraRowGap: Math.min(adjustment.extraRowGap, rowGapCap),
+        extraSectionGap: Math.min(adjustment.extraSectionGap, sectionGapCap),
+      };
+    }),
+  );
+
+  return adjustments;
+}
+
 /** Builds the gabarito (answer key) page. */
 function buildAnswerPageHTML(
   exercises: ExerciseItem[],
@@ -2005,7 +2814,7 @@ function buildAnswerPageHTML(
     return `<div style="font-family:${FONT};font-size:13px;color:#1F2937;line-height:1.45;">${num}&nbsp;${val}</div>`;
   });
   const footerHTML =
-    `<div style="${S.footer} margin-top:auto;padding-top:4px;border-top:1px solid #E5E7EB;display:flex;justify-content:center;">` +
+    `<div style="${S.footer} margin-top:0;padding-top:10px;border-top:1px solid #E5E7EB;display:flex;justify-content:center;">` +
     `<span>Axiora Tools</span></div>`;
   const mainId = measurement ? ` id="sg-answer-main"` : "";
   const itemsId = measurement ? ` id="sg-answer-items"` : "";
@@ -2585,6 +3394,8 @@ export function SheetGeneratorTool() {
 
   const [pageSlices, setPageSlices] = useState<PageSlice[]>([]);
   const [answerPageSlices, setAnswerPageSlices] = useState<ExerciseItem[][]>([]);
+  const [pageLayoutAdjustments, setPageLayoutAdjustments] = useState<PageLayoutAdjustment[]>([]);
+  const [isPaginating, setIsPaginating] = useState(false);
 
   const settingsDraftCfg = useMemo<GlobalConfig>(
     () => ({
@@ -2674,16 +3485,44 @@ export function SheetGeneratorTool() {
   );
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!generatedExercises.length) {
       setPageSlices([]);
       setAnswerPageSlices([]);
-      return;
+      setPageLayoutAdjustments([]);
+      setIsPaginating(false);
+      return () => {
+        cancelled = true;
+      };
     }
 
-    setPageSlices(paginateSimple(generatedExercises, blocks, cfg));
-    setAnswerPageSlices(
-      cfg.gabarito === "proxima" ? paginateAnswerPages(generatedExercises, cfg) : [],
-    );
+    const run = async () => {
+      setIsPaginating(true);
+      const finalSlices =
+        typeof window === "undefined"
+          ? paginateSimple(generatedExercises, blocks, cfg)
+          : await paginatePrecisely(generatedExercises, blocks, cfg);
+      const finalAdjustments =
+        typeof window === "undefined"
+          ? finalSlices.map(() => ({ extraRowGap: 0, extraSectionGap: 0 }))
+          : await computePageLayoutAdjustments(finalSlices, generatedExercises, blocks, cfg);
+
+      if (cancelled) return;
+
+      setPageSlices(finalSlices);
+      setPageLayoutAdjustments(finalAdjustments);
+      setAnswerPageSlices(
+        cfg.gabarito === "proxima" ? paginateAnswerPages(generatedExercises, cfg) : [],
+      );
+      setIsPaginating(false);
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     generatedExercises,
     blocks,
@@ -2691,7 +3530,9 @@ export function SheetGeneratorTool() {
     cfg.fontSize,
     cfg.gabarito,
     cfg.numerar,
+    cfg.repeatHeader,
     cfg.showNome,
+    cfg.spacing,
     cfg.subtitle,
     cfg.title,
     cfg.turma,
@@ -2699,42 +3540,18 @@ export function SheetGeneratorTool() {
   ]);
 
   const previewPages = useMemo<string[]>(() => {
-    if (!pageSlices.length || !generatedExercises.length) return [];
-    const sectionHeaders = buildSectionHeaderMap(generatedExercises, blocks, cfg);
-    const pages = pageSlices
-      .map((slice) => ({
-        isFirstPage: slice.isFirstPage,
-        items: slice.exIndexes
-          .map((index) => ({ index, item: generatedExercises[index] }))
-          .filter((entry): entry is { index: number; item: ExerciseItem } => Boolean(entry.item)),
-      }))
-      .filter((page) => page.items.length > 0);
-
-    const htmlPages = pages.map((page) =>
-        buildOnePageHTML(
-          page.items,
-          cfg,
-          seed,
-          page.isFirstPage,
-          sectionHeaders,
-          { extraRowGap: 0, extraSectionGap: 0 },
-        ),
-      );
-
-    if (cfg.gabarito === "proxima") {
-      const answerPages = answerPageSlices.length > 0 ? answerPageSlices : [generatedExercises];
-      let answerOffset = 0;
-      htmlPages.push(
-        ...answerPages.map((pageExercises) => {
-          const html = buildAnswerPageHTML(pageExercises, cfg, seed, answerOffset);
-          answerOffset += pageExercises.length;
-          return html;
-        }),
-      );
-    }
-    return htmlPages;
+    return buildPreviewPagesFromSlices(
+      pageSlices,
+      answerPageSlices,
+      generatedExercises,
+      blocks,
+      cfg,
+      seed,
+      pageLayoutAdjustments,
+    );
   }, [
     pageSlices,
+    pageLayoutAdjustments,
     answerPageSlices,
     generatedExercises,
     blocks,
@@ -2768,6 +3585,15 @@ export function SheetGeneratorTool() {
   const showToast = useCallback((msg: string) => {
     toast(msg);
   }, []);
+
+  const showMobileAddToast = useCallback(
+    (msg: string) => {
+      toast(msg, {
+        position: isMobileViewport ? "top-center" : "bottom-center",
+      });
+    },
+    [isMobileViewport],
+  );
 
   const invalidate = useCallback(() => setSnapshot(null), []);
 
@@ -2846,6 +3672,23 @@ export function SheetGeneratorTool() {
     setAddBlockModalOpen(false);
     setGuidedStageId(null);
   }, []);
+
+  const focusNewMobileBlock = useCallback(
+    (blockId: number) => {
+      if (!isMobileViewport || typeof window === "undefined") return;
+
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          const blockCard = document.getElementById(`sheet-block-card-${blockId}`);
+          blockCard?.scrollIntoView({
+            block: "center",
+            behavior: "smooth",
+          });
+        });
+      });
+    },
+    [isMobileViewport],
+  );
 
   const openCategoryModal = useCallback(() => {
     setCategoryModalOpen(true);
@@ -2944,9 +3787,10 @@ export function SheetGeneratorTool() {
       setSelectedBlockId(newBlock.id);
       setCategoryModalOpen(false);
       reseedExercises();
-      showToast(`${BLOCK_META[type].name} adicionado`);
+      focusNewMobileBlock(newBlock.id);
+      showMobileAddToast(`${BLOCK_META[type].name} adicionado`);
     },
-    [reseedExercises, showToast],
+    [focusNewMobileBlock, reseedExercises, showMobileAddToast],
   );
 
   const handleAddGuidedBlock = useCallback(
@@ -2962,9 +3806,12 @@ export function SheetGeneratorTool() {
       setSelectedBlockId(newBlock.id);
       closeAddBlockModal();
       reseedExercises();
-      showToast(`${BLOCK_META[newBlock.type].name} sugerido para ${stageOption?.stage ?? "a fase selecionada"}`);
+      focusNewMobileBlock(newBlock.id);
+      showMobileAddToast(
+        `${BLOCK_META[newBlock.type].name} sugerido para ${stageOption?.stage ?? "a fase selecionada"}`,
+      );
     },
-    [closeAddBlockModal, reseedExercises, showToast],
+    [closeAddBlockModal, focusNewMobileBlock, reseedExercises, showMobileAddToast],
   );
 
 
@@ -3002,6 +3849,131 @@ export function SheetGeneratorTool() {
       total_exercises: blocks.filter((b) => b.active).reduce((s, b) => s + b.config.quantidade, 0),
     });
 
+    const sourceExercises = generatedExercises.length
+      ? generatedExercises
+      : generateAllExercises(blocks, cfg.embaralhar, seed);
+    if (!sourceExercises.length) {
+      showToast("Nenhum exercício ativo — adicione blocos");
+      setIsPrinting(false);
+      return;
+    }
+
+    const openedWindow = window.open("", "_blank", "width=860,height=750");
+    if (!openedWindow) {
+      showToast("Permita popups para gerar o PDF");
+      setIsPrinting(false);
+      return;
+    }
+    const win = openedWindow;
+
+    try {
+      win.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Gerando PDF</title><style>html,body{margin:0;padding:0;background:#fff;font-family:Inter,system-ui,-apple-system,sans-serif;color:#0f172a;}body{display:flex;min-height:100vh;align-items:center;justify-content:center;}.status{display:flex;flex-direction:column;align-items:center;gap:10px;font-size:14px;font-weight:600;}.spinner{width:24px;height:24px;border-radius:999px;border:3px solid #fde5d0;border-top-color:#ee8748;animation:spin .8s linear infinite;}@keyframes spin{to{transform:rotate(360deg);}}</style></head><body><div class="status"><div class="spinner"></div><div>Gerando PDF...</div></div></body></html>`);
+      win.document.close();
+    } catch {
+      win.close();
+      showToast("Permita popups para gerar o PDF");
+      setIsPrinting(false);
+      return;
+    }
+
+    if (isPaginating || previewPages.length === 0) {
+      win.close();
+      showToast("Aguarde a pré-visualização terminar de atualizar.");
+      setIsPrinting(false);
+      return;
+    }
+
+    try {
+      const previewHtml = buildPrintDocumentFromPages(previewPages, cfg, {
+        mobilePrint: isMobileViewport,
+      });
+      win.document.open();
+      win.document.write(previewHtml);
+      win.document.close();
+    } catch {
+      win.close();
+      showToast("Permita popups para gerar o PDF");
+      setIsPrinting(false);
+      return;
+    }
+
+    try {
+      await new Promise<void>((resolve) => {
+        let settled = false;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          resolve();
+        };
+        const waitForLayout = async () => {
+          try {
+            if ("fonts" in win.document && win.document.fonts?.ready) {
+              await win.document.fonts.ready;
+            }
+          } catch {}
+
+          win.requestAnimationFrame(() => {
+            win.requestAnimationFrame(() => {
+              finish();
+            });
+          });
+        };
+
+        if (win.document.readyState === "complete") {
+          void waitForLayout();
+        } else {
+          win.addEventListener(
+            "load",
+            () => {
+              void waitForLayout();
+            },
+            { once: true },
+          );
+        }
+
+        win.setTimeout(finish, 3000);
+      });
+    } catch {}
+
+    try {
+      let remaining: number;
+      if (isAnonUser) {
+        const result = await consumeAnonCredit(anonId);
+        remaining = result.remaining_free_generations + result.paid_credits_remaining;
+      } else {
+        const result = await consumeToolsCredit();
+        remaining = Math.max(0, Number(result.credits) || 0);
+      }
+      void identity.refresh();
+      setCreditsFxTick((v) => v + 1);
+      track("generation_success", {
+        consumption_type: isAnonUser ? "free" : "paid",
+        remaining_after: remaining,
+      });
+      if (remaining === 0) {
+        showToast("Lista gerada! VocÃª usou suas 3 geraÃ§Ãµes gratuitas.");
+      } else if (remaining === 1) {
+        showToast("Lista gerada Â· Ãšltima geraÃ§Ã£o gratuita disponÃ­vel");
+      } else {
+        showToast(`Lista gerada Â· ${remaining} geraÃ§Ãµes restantes`);
+      }
+    } catch (err: any) {
+      win.close();
+      if (err instanceof ApiError && err.status === 402) {
+        track("generation_blocked", { reason: "paywall_402" });
+        setPaywallOpen(true);
+      } else {
+        showToast("Ocorreu um erro ao gerar a lista. Tente novamente.");
+      }
+      setIsPrinting(false);
+      return;
+    }
+
+    win.focus();
+    win.print();
+    setIsPrinting(false);
+    return;
+
     let html = "";
     if (previewPages.length > 0) {
       const pagesHtml = previewPages
@@ -3010,12 +3982,26 @@ export function SheetGeneratorTool() {
       html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${cfg.title || "Folha de Exercícios"}</title>
         <style>
           @page{size:A4 portrait;margin:0;}
-          html,body{margin:0;padding:0;background:#fff;}
-          .print-page{width:${A4_W}px;height:${A4_H}px;overflow:hidden;break-after:page;page-break-after:always;}
+          html,body{margin:0;padding:0;background:#fff;width:${A4_W_MM};-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+          .print-page{width:${A4_W_MM};height:${A4_H_MM};overflow:hidden;break-after:page;page-break-after:always;position:relative;}
           .print-page:last-child{break-after:auto;page-break-after:auto;}
           @media print{
+            html,body{width:${A4_W_MM};height:auto;background:#fff;}
             .preview-container{transform:none !important;}
-            .sheet-root .preview-page{box-shadow:none !important;}
+            .sheet-root{width:100% !important;height:100% !important;}
+            .sheet-root .preview-page{
+              width:${A4_W_MM} !important;
+              height:${A4_H_MM} !important;
+              min-height:${A4_H_MM} !important;
+              max-height:${A4_H_MM} !important;
+              overflow:hidden !important;
+              border-radius:0 !important;
+              box-shadow:none !important;
+              animation:none !important;
+              transform:none !important;
+              break-inside:avoid !important;
+              page-break-inside:avoid !important;
+            }
           }
         </style>
       </head><body>${pagesHtml}</body></html>`;
@@ -3029,13 +4015,44 @@ export function SheetGeneratorTool() {
       html = buildPrintHTML(exercises, blocks, cfg, seed);
     }
 
-    const win = window.open("", "_blank", "width=860,height=750");
-    if (!win) {
-      showToast("Permita popups para gerar o PDF");
+    const printExercises = sourceExercises;
+    if (!printExercises.length) {
+      showToast("Nenhum exercÃ­cio ativo â€” adicione blocos");
       setIsPrinting(false);
       return;
     }
+
+    const printSlices =
+      typeof window === "undefined"
+        ? paginateSimple(printExercises, blocks, cfg)
+        : await paginatePrecisely(printExercises, blocks, cfg);
+    const printLayoutAdjustments =
+      typeof window === "undefined"
+        ? printSlices.map(() => ({ extraRowGap: 0, extraSectionGap: 0 }))
+        : await computePageLayoutAdjustments(printSlices, printExercises, blocks, cfg);
+    const printAnswerSlices =
+      cfg.gabarito === "proxima" ? paginateAnswerPages(printExercises, cfg) : [];
+    const printPages = buildPreviewPagesFromSlices(
+      printSlices,
+      printAnswerSlices,
+      printExercises,
+      blocks,
+      cfg,
+      seed,
+      printLayoutAdjustments,
+    );
+
+    if (!printPages.length) {
+      win.close();
+      showToast("NÃ£o foi possÃ­vel montar a prÃ©-visualizaÃ§Ã£o para impressÃ£o.");
+      setIsPrinting(false);
+      return;
+    }
+
+    html = buildPrintDocumentFromPages(printPages, cfg);
+
     try {
+      win.document.open();
       win.document.write(html);
       win.document.close();
     } catch {
@@ -3044,6 +4061,44 @@ export function SheetGeneratorTool() {
       setIsPrinting(false);
       return;
     }
+
+    try {
+      await new Promise<void>((resolve) => {
+        let settled = false;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          resolve();
+        };
+        const waitForLayout = async () => {
+          try {
+            if ("fonts" in win.document && win.document.fonts?.ready) {
+              await win.document.fonts.ready;
+            }
+          } catch {}
+
+          win.requestAnimationFrame(() => {
+            win.requestAnimationFrame(() => {
+              finish();
+            });
+          });
+        };
+
+        if (win.document.readyState === "complete") {
+          void waitForLayout();
+        } else {
+          win.addEventListener(
+            "load",
+            () => {
+              void waitForLayout();
+            },
+            { once: true },
+          );
+        }
+
+        win.setTimeout(finish, 3000);
+      });
+    } catch {}
 
     try {
       let remaining: number;
@@ -3067,7 +4122,7 @@ export function SheetGeneratorTool() {
       } else {
         showToast(`Lista gerada · ${remaining} gerações restantes`);
       }
-    } catch (err) {
+    } catch (err: any) {
       win.close();
       // 402 = paywall — abre o modal de compra sem toast
       if (err instanceof ApiError && err.status === 402) {
@@ -3081,10 +4136,8 @@ export function SheetGeneratorTool() {
     }
 
     win.focus();
-    setTimeout(() => {
-      win.print();
-      setIsPrinting(false);
-    }, 300);
+    win.print();
+    setIsPrinting(false);
   }, [
     isPrinting,
     credits,
@@ -3092,6 +4145,7 @@ export function SheetGeneratorTool() {
     anonId,
     identity,
     previewPages,
+    generatedExercises,
     cfg,
     blocks,
     seed,
@@ -3169,19 +4223,19 @@ export function SheetGeneratorTool() {
   const subtleDestructiveFx =
     "!shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-2px_0_rgba(155,34,34,0.55),0_3px_0_rgba(155,34,34,0.24),0_8px_14px_rgba(120,28,28,0.12)] active:translate-y-[1px] active:!shadow-[inset_0_1px_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(155,34,34,0.5),0_1px_0_rgba(155,34,34,0.22),0_4px_10px_rgba(120,28,28,0.1)]";
   const chunkyPrimaryBtn =
-    `axiora-chunky-btn axiora-chunky-btn--secondary !rounded-[var(--radius-lg)] px-4 py-2 text-[12px] font-extrabold tracking-[0.01em] ${subtlePrimaryFx}`;
+    `axiora-chunky-btn axiora-chunky-btn--secondary cursor-pointer disabled:cursor-not-allowed !rounded-[var(--radius-lg)] px-4 py-2 text-[12px] font-extrabold tracking-[0.01em] ${subtlePrimaryFx}`;
   const chunkyOutlineBtn =
-    `axiora-chunky-btn axiora-chunky-btn--outline !rounded-[var(--radius-lg)] px-3 py-2 text-[11px] font-bold tracking-[0.01em] text-[#2F527D] ${subtleOutlineFx}`;
+    `axiora-chunky-btn axiora-chunky-btn--outline cursor-pointer disabled:cursor-not-allowed !rounded-[var(--radius-lg)] px-3 py-2 text-[11px] font-bold tracking-[0.01em] text-[#2F527D] ${subtleOutlineFx}`;
   const chunkySmallOutlineBtn =
-    `axiora-chunky-btn axiora-chunky-btn--outline !rounded-[var(--radius-md)] axiora-admin-btn-sm text-[#2F527D] ${subtleOutlineFx}`;
+    `axiora-chunky-btn axiora-chunky-btn--outline cursor-pointer disabled:cursor-not-allowed !rounded-[var(--radius-md)] axiora-admin-btn-sm text-[#2F527D] ${subtleOutlineFx}`;
   const chunkySmallDestructiveBtn =
-    `axiora-chunky-btn axiora-chunky-btn--destructive !rounded-[var(--radius-md)] axiora-admin-btn-sm text-white ${subtleDestructiveFx}`;
+    `axiora-chunky-btn axiora-chunky-btn--destructive cursor-pointer disabled:cursor-not-allowed !rounded-[var(--radius-md)] axiora-admin-btn-sm text-white ${subtleDestructiveFx}`;
   const chunkyChipBtn = (active: boolean) =>
-    `axiora-chunky-btn ${active ? "axiora-chunky-chip--active text-white" : "axiora-chunky-chip text-[#1f3d39]"} !rounded-[var(--radius-md)] px-3 py-1 text-[11px] font-black`;
+    `axiora-chunky-btn cursor-pointer disabled:cursor-not-allowed ${active ? "axiora-chunky-chip--active text-white" : "axiora-chunky-chip text-[#1f3d39]"} !rounded-[var(--radius-md)] px-3 py-1 text-[11px] font-black`;
   const loginOrangeBtn =
-    "rounded-[var(--radius-lg)] bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.18),0_3px_0_rgba(158,74,30,0.28),0_8px_14px_rgba(93,48,22,0.14)] transition hover:brightness-105 active:translate-y-[1px] active:shadow-[inset_0_1px_0_rgba(255,219,190,0.14),0_1px_0_rgba(158,74,30,0.24),0_4px_10px_rgba(93,48,22,0.12)]";
+    "cursor-pointer rounded-[var(--radius-lg)] bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.18),0_3px_0_rgba(158,74,30,0.28),0_8px_14px_rgba(93,48,22,0.14)] transition hover:brightness-105 active:translate-y-[1px] active:shadow-[inset_0_1px_0_rgba(255,219,190,0.14),0_1px_0_rgba(158,74,30,0.24),0_4px_10px_rgba(93,48,22,0.12)] disabled:cursor-not-allowed";
   const desktopIconBtnCls =
-    "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[12px] border border-[#d7c3a9] bg-[linear-gradient(180deg,#fffaf3_0%,#f4e8d7_100%)] text-[#6b7280] shadow-[inset_0_1px_0_rgba(255,255,255,0.88),0_2px_0_rgba(203,173,135,0.2),0_6px_10px_rgba(33,49,46,0.06)] transition hover:brightness-102 disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-[12px] border border-[#d7c3a9] bg-[linear-gradient(180deg,#fffaf3_0%,#f4e8d7_100%)] text-[#6b7280] shadow-[inset_0_1px_0_rgba(255,255,255,0.88),0_2px_0_rgba(203,173,135,0.2),0_6px_10px_rgba(33,49,46,0.06)] transition hover:brightness-102 disabled:cursor-not-allowed disabled:opacity-60";
   const desktopSecondaryBtnCls = `${chunkyOutlineBtn} !h-8 !px-2.5 !py-0 !text-[10px]`;
   const desktopTopActionBtnCls = `${chunkyOutlineBtn} !h-8 !px-3 !py-0 !text-[10px] whitespace-nowrap`;
   const desktopPreviewBtnCls = `${chunkyPrimaryBtn} !h-8 !px-3 !py-0 !text-[10px] whitespace-nowrap`;
@@ -3190,16 +4244,16 @@ export function SheetGeneratorTool() {
       ? `${desktopTopActionBtnCls} text-[#2F527D]`
       : `${desktopTopActionBtnCls} text-[#94a3b8] opacity-70 shadow-none`
   }`;
-  const desktopPrimaryBtnCls = `inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[12px] px-3 text-[10px] font-extrabold tracking-[0.01em] disabled:cursor-not-allowed disabled:opacity-70 ${isPrinting ? "bg-[#cbd5e1] text-white shadow-none" : loginOrangeBtn}`;
+  const desktopPrimaryBtnCls = `inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-[12px] px-3 text-[10px] font-extrabold tracking-[0.01em] disabled:cursor-not-allowed disabled:opacity-70 ${isPrinting ? "bg-[#cbd5e1] text-white shadow-none" : loginOrangeBtn}`;
   const previewToolbarBtnCls =
-    "inline-flex h-8 shrink-0 items-center justify-center rounded-[10px] border border-[#d9e2ec] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-2.5 text-[10px] font-semibold text-[#526072] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-1px_0_rgba(217,226,236,0.88),0_2px_0_rgba(148,163,184,0.14),0_6px_10px_rgba(15,23,42,0.05)] transition hover:border-[#cbd5e1] hover:text-[#0f172a] disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border border-[#d9e2ec] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-2.5 text-[10px] font-semibold text-[#526072] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-1px_0_rgba(217,226,236,0.88),0_2px_0_rgba(148,163,184,0.14),0_6px_10px_rgba(15,23,42,0.05)] transition hover:border-[#cbd5e1] hover:text-[#0f172a] disabled:cursor-not-allowed disabled:opacity-60";
   const previewToolbarIconBtnCls = `${previewToolbarBtnCls} w-8 px-0`;
   const previewToolbarPrimaryBtnCls =
-    "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[10px] border border-[#f4b183] bg-[linear-gradient(180deg,#ffb06f_0%,#ff8d4a_100%)] px-3 text-[10px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.16),inset_0_-1px_0_rgba(176,86,38,0.5),0_2px_0_rgba(176,86,38,0.22),0_6px_10px_rgba(93,48,22,0.1)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-[10px] border border-[#f4b183] bg-[linear-gradient(180deg,#ffb06f_0%,#ff8d4a_100%)] px-3 text-[10px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.16),inset_0_-1px_0_rgba(176,86,38,0.5),0_2px_0_rgba(176,86,38,0.22),0_6px_10px_rgba(93,48,22,0.1)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60";
   const previewMetaPillCls =
     "inline-flex items-center rounded-full border border-[#dde6f0] bg-[rgba(255,255,255,0.92)] px-2.5 py-0.5 text-[10px] font-semibold text-[#607086] shadow-[0_1px_4px_rgba(15,23,42,0.04)]";
   const previewZoomBtnCls = (active: boolean) =>
-    `inline-flex h-7 items-center justify-center rounded-[9px] border px-2.5 text-[10px] font-semibold transition ${
+    `inline-flex h-7 cursor-pointer items-center justify-center rounded-[9px] border px-2.5 text-[10px] font-semibold transition ${
       active
         ? "border-[#f2a36e] bg-[linear-gradient(180deg,#ffb06f_0%,#ff8d4a_100%)] text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.14),inset_0_-1px_0_rgba(176,86,38,0.48),0_2px_0_rgba(176,86,38,0.2),0_5px_8px_rgba(93,48,22,0.1)]"
         : "border-[#d9e2ec] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] text-[#607086] shadow-[inset_0_1px_0_rgba(255,255,255,0.88),inset_0_-1px_0_rgba(217,226,236,0.84),0_2px_0_rgba(148,163,184,0.12),0_5px_8px_rgba(15,23,42,0.04)] hover:border-[#cbd5e1] hover:text-[#0f172a]"
@@ -3208,7 +4262,7 @@ export function SheetGeneratorTool() {
     `inline-flex h-7 w-7 items-center justify-center rounded-[9px] border transition ${
       disabled
         ? "cursor-not-allowed border-[#e2e8f0] bg-[#f8fafc] text-[#cbd5e1] opacity-70"
-        : "border-[#d9e2ec] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] text-[#607086] shadow-[0_2px_6px_rgba(15,23,42,0.05)] hover:border-[#cbd5e1] hover:text-[#0f172a]"
+        : "cursor-pointer border-[#d9e2ec] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] text-[#607086] shadow-[0_2px_6px_rgba(15,23,42,0.05)] hover:border-[#cbd5e1] hover:text-[#0f172a]"
     }`;
   const creditsBadgeTone =
     creditsLoading || credits === null
@@ -3228,7 +4282,10 @@ export function SheetGeneratorTool() {
           : `${credits} gerações disponíveis`;
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white md:min-h-0">
+    <div
+      className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white md:min-h-0"
+      data-paginating={isPaginating ? "true" : "false"}
+    >
       {/* ── MOBILE TAB BAR ──────────────────────────────────────────── */}
       <div
         className={`${mobileTab === "config" ? "flex" : "hidden"} shrink-0 border-b border-[#e5e7eb] md:hidden`}
@@ -3424,31 +4481,6 @@ export function SheetGeneratorTool() {
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* PRESET */}
-            <div className="border-b border-[#f1f5f9] px-4">
-              <button
-                type="button"
-                onClick={() => openSettingsSubview("preset")}
-                className="flex w-full items-center justify-between py-3 text-left transition-opacity hover:opacity-70"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="h-3 w-[3px] rounded-full bg-[#ee8748]" />
-                  <span className="text-[12px] font-medium text-[#475569]">Preset Pedagógico</span>
-                </div>
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#94a3b8"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                >
-                  <path d="M9 18l6-6-6-6" />
-                </svg>
-              </button>
             </div>
 
             {/* LAYOUT */}
@@ -3689,8 +4721,11 @@ export function SheetGeneratorTool() {
               >
 
                 {/* Illustration */}
-                <div
-                  className="flex h-14 w-14 items-center justify-center rounded-2xl"
+                <button
+                  type="button"
+                  onClick={openCategoryModal}
+                  aria-label="Adicionar exercícios"
+                  className="flex h-14 w-14 cursor-pointer items-center justify-center rounded-2xl transition hover:brightness-105"
                   style={{
                     background: "linear-gradient(135deg, #fff7f0 0%, #ffe8d4 100%)",
                     border: "1px solid rgba(238,135,72,0.2)",
@@ -3708,7 +4743,7 @@ export function SheetGeneratorTool() {
                     <rect x="3" y="3" width="18" height="18" rx="3" />
                     <path d="M9 12h6M12 9v6" />
                   </svg>
-                </div>
+                </button>
                 <div>
                   <p className="text-[14px] font-bold text-[#1e293b]">
                     Crie sua primeira atividade
@@ -3762,7 +4797,7 @@ export function SheetGeneratorTool() {
                         setBlockDetailModalOpen(true);
                         setMobileTab("blocks");
                       }}
-                      className={`group relative cursor-pointer rounded-2xl border p-3.5 transition-all duration-150 ease-linear hover:-translate-y-[1px] hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] ${isSelected ? "border-[#fb923c] bg-[#fff7ed] shadow-[0_8px_20px_rgba(251,146,60,0.14)]" : "border-[#eef2f7] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.04)]"} ${!block.active ? "opacity-55" : ""}`}
+                      className={`group relative cursor-pointer rounded-2xl border p-3.5 transition-all duration-150 ease-linear hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] ${isSelected ? "border-[#fb923c] bg-[#fff7ed] shadow-[0_8px_20px_rgba(251,146,60,0.14)]" : "border-[#eef2f7] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.04)]"} ${!block.active ? "opacity-55" : ""}`}
                       style={{ transition: "all 160ms ease" }}
                     >
                       <div className="flex items-start gap-3">
@@ -3888,7 +4923,7 @@ export function SheetGeneratorTool() {
         <button
           type="button"
           onClick={openPreviewWindow}
-          className="fixed bottom-[84px] right-4 z-[980] flex items-center gap-3 rounded-2xl border border-[#dbe4f0] bg-white px-3 py-2 text-left shadow-[0_18px_34px_rgba(15,23,42,0.18)] transition hover:-translate-y-[1px] hover:shadow-[0_20px_40px_rgba(15,23,42,0.22)] md:bottom-5"
+          className="fixed bottom-[84px] right-4 z-[980] flex items-center gap-3 rounded-2xl border border-[#dbe4f0] bg-white px-3 py-2 text-left shadow-[0_18px_34px_rgba(15,23,42,0.18)] transition hover:shadow-[0_20px_40px_rgba(15,23,42,0.22)] md:bottom-5"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#fff7ed_0%,#ffe7cf_100%)] text-[#ee8748]">
             <svg
@@ -3947,7 +4982,7 @@ export function SheetGeneratorTool() {
                 <button
                   type="button"
                   onClick={() => void handlePrint()}
-                  disabled={isPrinting}
+                  disabled={isPrinting || isPaginating || previewPages.length === 0}
                   className={previewToolbarPrimaryBtnCls}
                 >
                   <svg
@@ -3963,7 +4998,7 @@ export function SheetGeneratorTool() {
                   >
                     <path d="M12 15V3m0 12-4-4m4 4 4-4M2 17l.621 2.485A2 2 0 004.56 21h14.878a2 2 0 001.94-1.515L22 17" />
                   </svg>
-                  {isPrinting ? "Gerando..." : "Gerar PDF"}
+                  {isPrinting ? "Gerando..." : isPaginating ? "Preparando..." : "Gerar PDF"}
                 </button>
                 <button
                   type="button"
@@ -4107,6 +5142,21 @@ export function SheetGeneratorTool() {
                     }}
                   >
                     <div dangerouslySetInnerHTML={{ __html: previewPages[currentPage] }} />
+                  </div>
+                </div>
+              ) : activeCount > 0 || isPaginating ? (
+                <div className="mx-auto flex max-w-[380px] flex-col items-center justify-center gap-4 rounded-[28px] border border-[rgba(238,135,72,0.18)] bg-white/88 px-8 py-10 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-[linear-gradient(135deg,#fff7f0_0%,#ffe8d4_100%)] text-[#ee8748]">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                      <path d="M21 12a9 9 0 1 1-3.15-6.87" />
+                      <path d="M21 3v6h-6" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-[15px] font-bold text-[#475569]">Preparando a pré-visualização</p>
+                    <p className="mt-1 text-[12px] leading-relaxed text-[#94a3b8]">
+                      Estamos organizando as páginas para manter o conteúdo próximo ao rodapé, sem cortar a folha.
+                    </p>
                   </div>
                 </div>
               ) : (
@@ -4311,16 +5361,7 @@ export function SheetGeneratorTool() {
                   />
                 </label>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    openSettingsSubview("preset");
-                  }}
-                  className={`${chunkyOutlineBtn} !h-10 !justify-center !px-3 !text-[10px]`}
-                >
-                  Preset
-                </button>
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -4442,28 +5483,6 @@ export function SheetGeneratorTool() {
                       {s === "P" ? "Pequena" : s === "M" ? "Média" : "Grande"}
                     </button>
                   ))}
-                </div>
-              </div>
-              <div>
-                <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[1.5px] text-[#94a3b8]">
-                  <span>Espaçamento</span>
-                  <span className="rounded-md bg-[rgba(238,135,72,0.12)] px-2 py-0.5 text-[11px] font-bold normal-case tracking-normal text-[#ee8748]">
-                    {(layoutDraft ?? settingsHeavyDraft ?? heavyCfg).spacing}px
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={40}
-                  value={(layoutDraft ?? settingsHeavyDraft ?? heavyCfg).spacing}
-                  onChange={(e) => updateLayoutDraft("spacing", Number(e.target.value))}
-                  className="w-full accent-[#ee8748]"
-                  style={{ height: "4px" }}
-                />
-                <div className="mt-1.5 flex justify-between text-[10px] text-[#94a3b8]">
-                  <span>Compacto</span>
-                  <span>Normal</span>
-                  <span>Amplo</span>
                 </div>
               </div>
               <div>
@@ -4686,7 +5705,7 @@ export function SheetGeneratorTool() {
                     key={type}
                     type="button"
                     onClick={() => handleSelectCategory(type)}
-                    className="group rounded-2xl border border-[#e2e8f0] bg-white p-4 text-left transition-all hover:-translate-y-[1px] hover:border-[rgba(238,135,72,0.35)] hover:shadow-[0_16px_30px_rgba(15,23,42,0.08)]"
+                    className="group rounded-2xl border border-[#e2e8f0] bg-white p-4 text-left transition-all hover:border-[rgba(238,135,72,0.35)] hover:shadow-[0_16px_30px_rgba(15,23,42,0.08)]"
                   >
                     <div className="flex items-start gap-3">
                       <div
@@ -4841,7 +5860,7 @@ export function SheetGeneratorTool() {
                         key={item.id}
                         type="button"
                         onClick={() => handleAddGuidedBlock(item.id)}
-                        className="group rounded-2xl border border-[#e2e8f0] bg-white p-4 text-left transition-all hover:-translate-y-[1px] hover:border-[rgba(238,135,72,0.35)] hover:shadow-[0_16px_30px_rgba(15,23,42,0.08)]"
+                        className="group rounded-2xl border border-[#e2e8f0] bg-white p-4 text-left transition-all hover:border-[rgba(238,135,72,0.35)] hover:shadow-[0_16px_30px_rgba(15,23,42,0.08)]"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="inline-flex rounded-full bg-[#fff7ed] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#c2410c]">
@@ -4901,7 +5920,7 @@ export function SheetGeneratorTool() {
                             key={item.id}
                             type="button"
                             onClick={() => setGuidedStageId(item.id)}
-                            className="group rounded-2xl border border-[#e2e8f0] bg-white p-4 text-left transition-all hover:-translate-y-[1px] hover:border-[rgba(238,135,72,0.35)] hover:shadow-[0_16px_30px_rgba(15,23,42,0.08)]"
+                            className="group rounded-2xl border border-[#e2e8f0] bg-white p-4 text-left transition-all hover:border-[rgba(238,135,72,0.35)] hover:shadow-[0_16px_30px_rgba(15,23,42,0.08)]"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div
