@@ -1411,34 +1411,45 @@ function buildPrintDocumentFromPages(
     .map((page) => `<div class="print-page">${stripInlineDocStyle(page)}</div>`)
     .join("");
 
+  // PAGE_PY/PAGE_PX in mm for @page margin (1px ≈ 0.2646mm at 96dpi)
+  const PAGE_PY_MM = `${(PAGE_PY * 0.2646).toFixed(2)}mm`;
+  const PAGE_PX_MM = `${(PAGE_PX * 0.2646).toFixed(2)}mm`;
+  // Content area height = 297mm − 2×PAGE_PY_MM
+  const CONTENT_H = `calc(297mm - ${PAGE_PY * 2 * 0.2646}mm)`;
+
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${
     cfg.title || "Folha de Exercícios"
   }</title>
         <style>
-          @page{size:A4 portrait;margin:0;}
+          /* Use @page margin for all spacing — avoids box-sizing ambiguity entirely.
+             height:CONTENT_H is shorter than the physical page, so break-after:page
+             does NOT cause a double break (the element doesn't reach the page edge).
+             This pattern works on Safari iOS, Chrome iOS, and desktop browsers. */
+          @page{size:A4 portrait;margin:${PAGE_PY_MM} ${PAGE_PX_MM};}
           ${sharedPrintCss}
-          html,body{margin:0;padding:0;background:#fff;width:${A4_W_MM};-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
-          /* No break-after — height-stacking (N×297mm divs) creates natural breaks. */
-          .print-page{width:${A4_W_MM};height:${A4_H_MM};overflow:hidden;}
+          html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+          .print-page{
+            width:100%;
+            height:${CONTENT_H};
+            overflow:hidden;
+            break-after:page;
+            page-break-after:always;
+          }
+          .print-page:last-child{break-after:auto;page-break-after:auto;}
           @media print{
-            html,body{width:${A4_W_MM};height:auto;background:#fff;}
+            html,body{height:auto;background:#fff;}
             .preview-container{transform:none !important;}
-            /* With all:initial stripped from buildPrintCss, @media print !important
-               overrides now work correctly in Safari iOS. The .preview-page in the
-               screen CSS had height:${A4_H}px which did NOT get overridden before
-               (due to all:initial Safari bug). Now it does. */
             .print-page{
-              box-sizing:border-box !important;
-              width:${A4_W_MM} !important;
-              height:${A4_H_MM} !important;
-              padding:${PAGE_PY}px ${PAGE_PX}px !important;
+              width:100% !important;
+              height:${CONTENT_H} !important;
               overflow:hidden !important;
-              break-after:auto !important;
-              page-break-after:auto !important;
+              break-after:page !important;
+              page-break-after:always !important;
             }
+            .print-page:last-child{break-after:auto !important;page-break-after:auto !important;}
             .sheet-root .preview-page{
               width:100% !important;
-              height:calc(${A4_H_MM} - ${2 * PAGE_PY}px) !important;
+              height:${CONTENT_H} !important;
               padding:0 !important;
               overflow:hidden !important;
               display:flex !important;
@@ -4887,7 +4898,7 @@ export function SheetGeneratorTool() {
           </div>
 
           {/* Blocks list */}
-          <div className="flex-1 overflow-y-auto pb-20 md:pb-0">
+          <div className="flex-1 overflow-y-auto pb-20 md:pb-0 bg-white">
             {blocks.length === 0 ? (
               <div
                 id="sheet-blocks-entry"
