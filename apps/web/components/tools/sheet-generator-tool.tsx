@@ -1432,7 +1432,6 @@ function buildPrintDocumentFromPages(
               overflow:hidden !important;
               display:flex !important;
               flex-direction:column !important;
-              position:relative !important;
               border-radius:0 !important;
               box-shadow:none !important;
               animation:none !important;
@@ -2248,19 +2247,18 @@ function buildOnePageHTML(
     shouldShowHeader && cfg.subtitle
       ? `<p style="font-family:${FONT};font-size:${fz};color:#6B7280;margin:0 0 10px;padding:4px 0;border-bottom:1px solid #E5E7EB;">${cfg.subtitle}</p>`
       : "";
-  const footerHTML = measurement
-    ? `<div style="${S.footer} margin-top:0;padding-top:10px;border-top:1px solid #E5E7EB;display:flex;justify-content:center;"><span>Axiora Tools</span></div>`
-    : `<div style="${S.footer} position:absolute;bottom:${PAGE_PY}px;left:${PAGE_PX}px;right:${PAGE_PX}px;padding-top:10px;border-top:1px solid #E5E7EB;display:flex;justify-content:center;"><span>Axiora Tools</span></div>`;
+  // Footer em fluxo normal com flex-shrink:0 — position:absolute cria camadas
+  // separadas em Safari/iOS que viram páginas em branco no PDF.
+  const footerHTML = `<div style="${S.footer} flex-shrink:0;padding-top:10px;border-top:1px solid #E5E7EB;display:flex;justify-content:center;"><span>Axiora Tools</span></div>`;
   const mainId = measurement ? ` id="sg-main"` : "";
   const sectionsId = measurement ? ` id="sg-sections"` : "";
-  const pagePositionStyle = measurement ? "" : "position:relative;";
 
   return (
     `<style>${css}</style>` +
-    `<div class="sheet-root"><div class="preview-page page" style="${S.page}${pagePositionStyle}display:flex;flex-direction:column;">` +
+    `<div class="sheet-root"><div class="preview-page page" style="${S.page}display:flex;flex-direction:column;">` +
     pageHeaderHTML +
     subtitleHTML +
-    `<div class="main"${mainId} style="flex:1;display:flex;flex-direction:column;min-height:0;">` +
+    `<div class="main"${mainId} style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;">` +
     `<div${sectionsId} style="display:flex;flex-direction:column;justify-content:flex-start;gap:${sectionGap}px;overflow:visible;">` +
     sectionsHTML +
     `</div></div>` +
@@ -2956,17 +2954,14 @@ function buildAnswerPageHTML(
     const val = ex.answer !== undefined && ex.answer !== null ? String(ex.answer) : "—";
     return `<div style="font-family:${FONT};font-size:13px;color:#1F2937;line-height:1.45;">${num}&nbsp;${val}</div>`;
   });
-  const footerHTML = measurement
-    ? `<div style="${S.footer} margin-top:0;padding-top:10px;border-top:1px solid #E5E7EB;display:flex;justify-content:center;"><span>Axiora Tools</span></div>`
-    : `<div style="${S.footer} position:absolute;bottom:${PAGE_PY}px;left:${PAGE_PX}px;right:${PAGE_PX}px;padding-top:10px;border-top:1px solid #E5E7EB;display:flex;justify-content:center;"><span>Axiora Tools</span></div>`;
+  const footerHTML = `<div style="${S.footer} flex-shrink:0;padding-top:10px;border-top:1px solid #E5E7EB;display:flex;justify-content:center;"><span>Axiora Tools</span></div>`;
   const mainId = measurement ? ` id="sg-answer-main"` : "";
   const itemsId = measurement ? ` id="sg-answer-items"` : "";
-  const pagePositionStyle = measurement ? "" : "position:relative;";
   return (
     `<style>${css}</style>` +
-    `<div class="sheet-root"><div class="preview-page page" style="${S.page}${pagePositionStyle}display:flex;flex-direction:column;">` +
+    `<div class="sheet-root"><div class="preview-page page" style="${S.page}display:flex;flex-direction:column;">` +
     `<div style="${S.title}">Gabarito</div>` +
-    `<div class="main"${mainId} style="flex:1;display:flex;flex-direction:column;justify-content:flex-start;min-height:0;">` +
+    `<div class="main"${mainId} style="flex:1;display:flex;flex-direction:column;justify-content:flex-start;min-height:0;overflow:hidden;">` +
     `<div${itemsId} style="margin-top:10px;display:grid;grid-template-columns:repeat(2,1fr);gap:8px 24px;align-content:start;">${ansItems.join("")}</div></div>` +
     footerHTML +
     `</div></div>`
