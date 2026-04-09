@@ -12,6 +12,7 @@
 
 export const ANON_ID_KEY = "ax_anon_id";
 export const FINGERPRINT_KEY = "ax_fp_id";
+const FINGERPRINT_SESSION_KEY = "ax_fp_sess";
 
 // ── anonymous_id ──────────────────────────────────────────────────────────────
 
@@ -128,11 +129,15 @@ async function computeFingerprint(): Promise<string> {
 
 export async function getOrCreateFingerprintId(): Promise<string> {
   if (typeof window === "undefined") return "";
-  // Sem cache em localStorage: Canvas+WebGL são hardware-bound e recalcular é rápido
-  // (~5ms). Não cachear garante que janela normal e incognito produzem o mesmo hash
-  // mesmo após mudanças de algoritmo — eliminando a janela de bypass por transição.
+  // Cache de sessão: evita recalcular canvas+WebGL a cada reload na mesma aba.
+  // sessionStorage é isolado por aba/janela, então incognito e normal produzem
+  // hashes independentes — mantendo a integridade da identidade por sessão.
   try {
-    return await computeFingerprint();
+    const cached = window.sessionStorage.getItem(FINGERPRINT_SESSION_KEY);
+    if (cached) return cached;
+    const fp = await computeFingerprint();
+    if (fp) window.sessionStorage.setItem(FINGERPRINT_SESSION_KEY, fp);
+    return fp;
   } catch {
     return "";
   }

@@ -67,18 +67,21 @@ export function ToolsIdentityProvider({
 
   const load = useCallback(async () => {
     const anonId = getOrCreateAnonId();
-    const fpId = await getOrCreateFingerprintId();
     const accessToken = getAccessToken();
 
-    // Sync ids into state even before we know auth status
-    setState((prev) => ({ ...prev, anonymousId: anonId, fingerprintId: fpId }));
+    // Inicia o fingerprint imediatamente em paralelo — não bloqueia o caminho auth.
+    // Para usuários autenticados, o fingerprint corre junto com getToolsCredits().
+    // Para anônimos, já está computando enquanto verificamos o accessToken.
+    const fpPromise = getOrCreateFingerprintId();
+
+    setState((prev) => ({ ...prev, anonymousId: anonId }));
 
     try {
       if (!accessToken) {
         throw new Error("NO_AUTH_SESSION");
       }
-      // Try authenticated first — throws if no valid session
-      const result = await getToolsCredits();
+      // Usuário autenticado: fingerprint e API em paralelo
+      const [result, fpId] = await Promise.all([getToolsCredits(), fpPromise]);
       const credits = Math.max(0, Number(result.credits) || 0);
       setState({
         anonymousId: anonId,
@@ -98,6 +101,9 @@ export function ToolsIdentityProvider({
         return;
       }
       try {
+        // Para anônimos o fingerprint já foi iniciado — aguarda o resultado
+        const fpId = await fpPromise;
+        setState((prev) => ({ ...prev, fingerprintId: fpId }));
         const res = await anonymousIdentify({
           anonymous_id: anonId,
           fingerprint_id: fpId || undefined,
