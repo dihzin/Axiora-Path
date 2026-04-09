@@ -1409,17 +1409,9 @@ function buildPrintDocumentFromPages(
   const sharedPrintCss = buildPrintCss(cfg);
 
   const pagesHtml = pages
-    .map((page) => {
+    .map((page, index) => {
       const noStyle = stripInlineDocStyle(page);
-      const noFooter = noStyle.replace(
-        /<div[^>]*border-top[^>]*>[\s\S]*?Axiora\s*Tools[\s\S]*?<\/div>/gi,
-        "",
-      );
-      const noFlexMain = noFooter.replace(
-        /<div class="main"([^>]*)style="[^"]*"/gi,
-        '<div class="main"$1 style="display:block;min-height:0;"',
-      );
-      return noFlexMain;
+      return `<div class="print-page${index > 0 ? " print-page--next" : ""}">${noStyle}</div>`;
     })
     .join("");
 
@@ -1430,9 +1422,19 @@ function buildPrintDocumentFromPages(
           @page{size:A4 portrait;margin:0;}
           ${sharedPrintCss}
           html,body{margin:0;padding:0;background:#fff;width:210mm;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
-          /* .preview-page fills the printable content area and keeps footer in normal flow.
-             This avoids iOS WebKit creating trailing near-blank pages with absolute footers. */
-          .sheet-root .preview-page{
+          .print-page{
+            width:210mm;
+            height:calc(297mm - 1px);
+            box-sizing:border-box;
+            overflow:hidden;
+            break-inside:avoid;
+            page-break-inside:avoid;
+          }
+          .print-page--next{
+            break-before:page;
+            page-break-before:always;
+          }
+          .print-page .sheet-root .preview-page{
             width:210mm !important;
             height:calc(297mm - 1px) !important;
             box-sizing:border-box;
@@ -1443,8 +1445,8 @@ function buildPrintDocumentFromPages(
             break-inside:avoid;
             page-break-inside:avoid;
           }
-          .sheet-root .main{
-            display:block !important;
+          .print-page .sheet-root .main{
+            display:flex !important;
             overflow:hidden !important;
             min-height:0 !important;
           }
