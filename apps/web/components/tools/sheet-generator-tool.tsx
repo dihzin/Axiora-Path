@@ -1423,13 +1423,30 @@ function buildPrintDocumentFromPages(
           @media print{
             html,body{width:${A4_W_MM};height:auto;background:#fff;}
             .preview-container{transform:none !important;}
-            .sheet-root{width:100% !important;height:100% !important;}
-            .sheet-root .preview-page{
+            /* Move padding to .print-page so height:297mm is the TOTAL height — avoids
+               Safari iOS box-sizing bug where height:297mm on .preview-page (which has
+               all:initial in screen CSS) could be interpreted as content-box, making
+               the element 297mm+48px tall and pushing the footer to the next page. */
+            .print-page{
               box-sizing:border-box !important;
-              width:${A4_W_MM} !important;
               height:${A4_H_MM} !important;
-              min-height:${A4_H_MM} !important;
-              max-height:${A4_H_MM} !important;
+              padding:${PAGE_PY}px ${PAGE_PX}px !important;
+              display:flex !important;
+              flex-direction:column !important;
+              overflow:hidden !important;
+            }
+            .sheet-root{
+              flex:1 !important;
+              min-height:0 !important;
+              width:100% !important;
+              height:100% !important;
+            }
+            .sheet-root .preview-page{
+              padding:0 !important;
+              width:100% !important;
+              height:100% !important;
+              min-height:0 !important;
+              max-height:none !important;
               overflow:hidden !important;
               display:flex !important;
               flex-direction:column !important;
@@ -1437,7 +1454,6 @@ function buildPrintDocumentFromPages(
               box-shadow:none !important;
               animation:none !important;
               transform:none !important;
-              transform-origin:top left !important;
               break-inside:avoid !important;
               page-break-inside:avoid !important;
             }
