@@ -6374,7 +6374,7 @@ export function SheetGeneratorTool() {
 
       {/* ── MOBILE STICKY CTA ─────────────────────────────────────────── */}
       {/* Visível em qualquer tab no mobile — o CTA principal nunca se perde */}
-      <div className={`fixed bottom-0 left-0 right-0 z-[50] items-center gap-3 border-t border-[#e5e7eb] bg-white/95 px-4 py-3 backdrop-blur-sm md:hidden ${previewWindowOpen ? "hidden" : "flex"}`}>
+      <div className={`fixed bottom-0 left-0 right-0 z-[50] items-center gap-3 border-t border-[#e5e7eb] bg-white px-4 py-3 md:hidden ${previewWindowOpen ? "hidden" : "flex"}`}>
         <div className="min-w-0 flex-1">
           {credits === 0 ? (
             <p className="text-[11px] font-semibold text-[#be123c]">Sem gerações restantes</p>
