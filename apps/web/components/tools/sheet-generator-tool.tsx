@@ -1421,13 +1421,22 @@ function buildPrintDocumentFromPages(
     cfg.title || "Folha de Exercícios"
   }</title>
         <style>
-          /* Use @page margin for all spacing — avoids box-sizing ambiguity entirely.
-             height:CONTENT_H is shorter than the physical page, so break-after:page
-             does NOT cause a double break (the element doesn't reach the page edge).
-             This pattern works on Safari iOS, Chrome iOS, and desktop browsers. */
+          /* @page margin handles all page whitespace — no element-level padding needed.
+             .preview-page block is REMOVED from sharedPrintCss (buildPrintCss strips it)
+             so there is zero conflict between screen px values and print mm/% values. */
           @page{size:A4 portrait;margin:${PAGE_PY_MM} ${PAGE_PX_MM};}
           ${sharedPrintCss}
           html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+          .sheet-root .preview-page{
+            width:100%;
+            height:${CONTENT_H};
+            padding:0;
+            margin:0;
+            overflow:hidden;
+            display:flex;
+            flex-direction:column;
+            background:#fff;
+          }
           .print-page{
             width:100%;
             height:${CONTENT_H};
@@ -1436,31 +1445,6 @@ function buildPrintDocumentFromPages(
             page-break-after:always;
           }
           .print-page:last-child{break-after:auto;page-break-after:auto;}
-          @media print{
-            html,body{height:auto;background:#fff;}
-            .preview-container{transform:none !important;}
-            .print-page{
-              width:100% !important;
-              height:${CONTENT_H} !important;
-              overflow:hidden !important;
-              break-after:page !important;
-              page-break-after:always !important;
-            }
-            .print-page:last-child{break-after:auto !important;page-break-after:auto !important;}
-            .sheet-root .preview-page{
-              width:100% !important;
-              height:${CONTENT_H} !important;
-              padding:0 !important;
-              overflow:hidden !important;
-              display:flex !important;
-              flex-direction:column !important;
-              animation:none !important;
-              transform:none !important;
-              box-shadow:none !important;
-              border-radius:0 !important;
-            }
-            .sheet-root,.sheet-root *,.sheet-root *::before,.sheet-root *::after{-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;}
-          }
         </style>
       </head><body>${pagesHtml}</body></html>`;
 }
@@ -1469,13 +1453,16 @@ function buildPrintCss(cfg: GlobalConfig): string {
   return buildDocCSS(cfg)
     .replace(/^\s*@import url\([^)]+\);\s*/m, "")
     .replace(/font-synthesis-weight:none;?/g, "")
-    // CRITICAL: remove all:initial from the print popup CSS.
-    // all:initial is needed on the main page to isolate .preview-page from Next.js
-    // global CSS. In the print popup there is no contaminating CSS, so all:initial
-    // is unnecessary — and it causes a Safari iOS bug where @media print !important
-    // overrides fail to apply, leaving height:1123px from screen CSS intact and
-    // making the element overflow the physical page → blank pages in the PDF.
-    .replace(/\ball\s*:\s*initial\s*;?/g, "")
+    // Remove the entire .sheet-root .preview-page{...} block from print CSS.
+    // That block sets width:794px, height:1123px, padding:24px 32px — screen-only
+    // values. In the print popup, @page margin + print-specific rules handle all
+    // sizing. Keeping this block forces iOS browsers to resolve a conflict between
+    // px-based screen values and mm/%-based print !important overrides, which they
+    // handle inconsistently. Removing it means the print rules are the ONLY source
+    // of truth — no conflict, no iOS-specific override failure.
+    .replace(/\.sheet-root\s+\.preview-page\s*\{[^}]*\}/gs, "")
+    // Also remove the box-sizing line that only applies to .preview-page
+    .replace(/\.sheet-root\s+\.preview-page\s*,\.sheet-root\s+\.preview-page[^{]*\{[^}]*box-sizing[^}]*\}/gs, "")
     .trim();
 }
 
