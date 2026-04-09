@@ -1411,7 +1411,15 @@ function buildPrintDocumentFromPages(
   const pagesHtml = pages
     .map((page) => {
       const noStyle = stripInlineDocStyle(page);
-      return `<div class="print-page">${noStyle}</div>`;
+      const noFooter = noStyle.replace(
+        /<div[^>]*border-top[^>]*>[\s\S]*?Axiora\s*Tools[\s\S]*?<\/div>/gi,
+        "",
+      );
+      const noFlexMain = noFooter.replace(
+        /<div class="main"([^>]*)style="[^"]*"/gi,
+        '<div class="main"$1 style="display:block;min-height:0;"',
+      );
+      return `<div class="print-page">${noFlexMain}</div>`;
     })
     .join("");
 
@@ -1433,6 +1441,8 @@ function buildPrintDocumentFromPages(
             overflow:hidden;
             break-after:page;
             page-break-after:always;
+            break-inside:avoid;
+            page-break-inside:avoid;
           }
           .print-page:last-child{break-after:auto;page-break-after:auto;}
           /* .preview-page fills the printable content area and keeps footer in normal flow.
@@ -1446,6 +1456,11 @@ function buildPrintDocumentFromPages(
             flex-direction:column;
             break-inside:avoid;
             page-break-inside:avoid;
+          }
+          .sheet-root .main{
+            display:block !important;
+            overflow:hidden !important;
+            min-height:0 !important;
           }
         </style>
       </head><body>${pagesHtml}</body></html>`;
