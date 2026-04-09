@@ -4479,7 +4479,7 @@ export function SheetGeneratorTool() {
 
   return (
     <div
-      className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white md:min-h-0"
+      className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white md:min-h-0"
       data-paginating={isPaginating ? "true" : "false"}
     >
       {/* ── MOBILE TAB BAR ──────────────────────────────────────────── */}
@@ -4909,7 +4909,7 @@ export function SheetGeneratorTool() {
           </div>
 
           {/* Blocks list */}
-          <div className="flex-1 overflow-y-auto pb-20 md:pb-0 bg-white">
+          <div className="flex-1 overflow-y-auto pb-28 md:pb-0 bg-white">
             {blocks.length === 0 ? (
               <div
                 id="sheet-blocks-entry"
@@ -6411,7 +6411,7 @@ export function SheetGeneratorTool() {
       {/* ── MOBILE FOOTER CTA ─────────────────────────────────────────── */}
       {/* Barra estrutural do layout (evita instabilidade de position:fixed no iOS). */}
       <div
-        className={`shrink-0 items-center gap-3 border-t border-[#e5e7eb] bg-white pt-3 md:hidden ${previewWindowOpen ? "hidden" : "flex"}`}
+        className={`absolute bottom-0 left-0 right-0 z-[70] items-center gap-3 border-t border-[#e5e7eb] bg-white pt-3 md:hidden ${previewWindowOpen ? "hidden" : "flex"}`}
         style={{
           paddingLeft: "max(1rem, env(safe-area-inset-left, 0px))",
           paddingRight: "max(1rem, env(safe-area-inset-right, 0px))",
