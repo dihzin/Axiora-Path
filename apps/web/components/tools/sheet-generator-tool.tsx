@@ -1419,7 +1419,7 @@ function buildPrintDocumentFromPages(
         /<div class="main"([^>]*)style="[^"]*"/gi,
         '<div class="main"$1 style="display:block;min-height:0;"',
       );
-      return `<div class="print-page">${noFlexMain}</div>`;
+      return noFlexMain;
     })
     .join("");
 
@@ -1430,27 +1430,15 @@ function buildPrintDocumentFromPages(
           @page{size:A4 portrait;margin:0;}
           ${sharedPrintCss}
           html,body{margin:0;padding:0;background:#fff;width:210mm;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
-          /* .print-page: full physical page, padding provides whitespace, position:relative
-             anchors the absolute footer. height:297mm-1px avoids Safari double-break. */
-          .print-page{
-            position:relative;
-            box-sizing:border-box;
-            width:210mm;
-            height:calc(297mm - 1px);
-            padding:${PAGE_PY}px ${PAGE_PX}px;
-            overflow:hidden;
-            break-after:page;
-            page-break-after:always;
-            break-inside:avoid;
-            page-break-inside:avoid;
-          }
-          .print-page:last-child{break-after:auto;page-break-after:auto;}
+          .sheet-root{page-break-after:always;}
+          .sheet-root:last-child{page-break-after:auto;}
           /* .preview-page fills the printable content area and keeps footer in normal flow.
              This avoids iOS WebKit creating trailing near-blank pages with absolute footers. */
           .sheet-root .preview-page{
-            width:100%;
-            height:100%;
-            padding:0;
+            width:210mm !important;
+            height:297mm !important;
+            box-sizing:border-box;
+            padding:${PAGE_PY}px ${PAGE_PX}px !important;
             overflow:hidden;
             display:flex;
             flex-direction:column;
