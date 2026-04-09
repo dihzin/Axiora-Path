@@ -69,7 +69,7 @@ FREE_GENERATION_LIMIT = 3
 UPGRADE_URL = "/tools/gerador-atividades?upgrade=credits_30"
 _ANON_RATE_LIMIT = 20          # gerações por hora por anonymous_id
 _ANON_RATE_WINDOW = 3600       # janela em segundos (1 hora)
-TEMP_UNLIMITED_GENERATION_CREDITS = 999_999
+TEMP_UNLIMITED_GENERATION_CREDITS = 9_999_999
 TEMP_UNLIMITED_GENERATION_MODE = True
 
 
