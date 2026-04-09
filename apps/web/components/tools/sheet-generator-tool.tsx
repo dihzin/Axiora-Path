@@ -6409,39 +6409,43 @@ export function SheetGeneratorTool() {
         )}
 
       {/* ── MOBILE STICKY CTA ─────────────────────────────────────────── */}
-      {/* Visível em qualquer tab no mobile — o CTA principal nunca se perde */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 z-[50] items-center gap-3 border-t border-[#e5e7eb] bg-white pt-3 md:hidden ${previewWindowOpen ? "hidden" : "flex"}`}
-        style={{
-          paddingLeft: "max(1rem, env(safe-area-inset-left, 0px))",
-          paddingRight: "max(1rem, env(safe-area-inset-right, 0px))",
-          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
-        }}
-      >
-        <div className="min-w-0 flex-1">
-          {credits === 0 ? (
-            <p className="text-[11px] font-semibold text-[#be123c]">Sem gerações restantes</p>
-          ) : credits === 1 ? (
-            <p className="text-[11px] font-semibold text-[#b45309]">Última geração gratuita</p>
-          ) : credits !== null ? (
-            <p className="text-[11px] font-semibold text-[#475569]">
-              {credits} gerações disponíveis
-            </p>
-          ) : (
-            <p className="text-[11px] text-[#94a3b8]">Verificando créditos...</p>
-          )}
-          <p className="truncate text-[10px] text-[#94a3b8]">
-            PDF com gabarito · pronto para imprimir
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={openPreviewWindow}
-          className="flex shrink-0 items-center gap-2 rounded-[var(--radius-lg)] border border-[#cbd5e1] bg-[linear-gradient(180deg,#f8fafc_0%,#e2e8f0_100%)] px-3 py-2.5 text-[12px] font-extrabold tracking-[0.01em] text-[#2F527D] shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_2px_0_rgba(148,163,184,0.45)]"
-        >
-          {previewOpenPending ? "Preparando..." : "Pré-visualização"}
-        </button>
-      </div>
+      {/* Renderizado em portal para evitar bugs de fixed dentro de containers roláveis no iOS */}
+      {portalReady &&
+        createPortal(
+          <div
+            className={`fixed bottom-0 left-0 right-0 z-[970] items-center gap-3 border-t border-[#e5e7eb] bg-white pt-3 md:hidden ${previewWindowOpen ? "hidden" : "flex"}`}
+            style={{
+              paddingLeft: "max(1rem, env(safe-area-inset-left, 0px))",
+              paddingRight: "max(1rem, env(safe-area-inset-right, 0px))",
+              paddingBottom: "max(12px, env(safe-area-inset-bottom, 0px))",
+            }}
+          >
+            <div className="min-w-0 flex-1">
+              {credits === 0 ? (
+                <p className="text-[11px] font-semibold text-[#be123c]">Sem gerações restantes</p>
+              ) : credits === 1 ? (
+                <p className="text-[11px] font-semibold text-[#b45309]">Última geração gratuita</p>
+              ) : credits !== null ? (
+                <p className="text-[11px] font-semibold text-[#475569]">
+                  {credits} gerações disponíveis
+                </p>
+              ) : (
+                <p className="text-[11px] text-[#94a3b8]">Verificando créditos...</p>
+              )}
+              <p className="truncate text-[10px] text-[#94a3b8]">
+                PDF com gabarito · pronto para imprimir
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={openPreviewWindow}
+              className="flex shrink-0 items-center gap-2 rounded-[var(--radius-lg)] border border-[#cbd5e1] bg-[linear-gradient(180deg,#f8fafc_0%,#e2e8f0_100%)] px-3 py-2.5 text-[12px] font-extrabold tracking-[0.01em] text-[#2F527D] shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_2px_0_rgba(148,163,184,0.45)]"
+            >
+              {previewOpenPending ? "Preparando..." : "Pré-visualização"}
+            </button>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
