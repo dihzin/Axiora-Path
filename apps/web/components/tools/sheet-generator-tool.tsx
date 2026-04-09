@@ -6410,7 +6410,14 @@ export function SheetGeneratorTool() {
 
       {/* ── MOBILE STICKY CTA ─────────────────────────────────────────── */}
       {/* Visível em qualquer tab no mobile — o CTA principal nunca se perde */}
-      <div className={`fixed bottom-0 left-0 right-0 z-[50] items-center gap-3 border-t border-[#e5e7eb] bg-white px-4 py-3 md:hidden ${previewWindowOpen ? "hidden" : "flex"}`}>
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-[50] items-center gap-3 border-t border-[#e5e7eb] bg-white pt-3 md:hidden ${previewWindowOpen ? "hidden" : "flex"}`}
+        style={{
+          paddingLeft: "max(1rem, env(safe-area-inset-left, 0px))",
+          paddingRight: "max(1rem, env(safe-area-inset-right, 0px))",
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+        }}
+      >
         <div className="min-w-0 flex-1">
           {credits === 0 ? (
             <p className="text-[11px] font-semibold text-[#be123c]">Sem gerações restantes</p>
