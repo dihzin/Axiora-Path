@@ -4479,7 +4479,7 @@ export function SheetGeneratorTool() {
 
   return (
     <div
-      className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white md:min-h-0"
+      className="relative flex min-h-0 flex-1 flex-col overflow-visible bg-white md:h-full md:overflow-hidden md:min-h-0"
       data-paginating={isPaginating ? "true" : "false"}
     >
       {/* ── MOBILE TAB BAR ──────────────────────────────────────────── */}
@@ -4578,7 +4578,7 @@ export function SheetGeneratorTool() {
         </div>
       </div>
 
-      <div className="flex flex-1 min-h-0 flex-col overflow-hidden bg-white">
+      <div className="flex flex-1 min-h-0 flex-col overflow-visible bg-white md:overflow-hidden">
         <aside
           className={`${mobileTab === "config" ? "flex" : "hidden"} flex-col overflow-hidden transition-opacity duration-150 md:hidden md:min-h-0 md:min-w-0`}
           style={{
@@ -4792,7 +4792,7 @@ export function SheetGeneratorTool() {
         {/* ── CENTER PANEL ────────────────────────────────────────────── */}
         <main
           id="sheet-blocks-panel"
-          className={`${mobileTab === "blocks" ? "flex" : "hidden"} flex-1 flex-col overflow-hidden border-t border-[#e5e7eb] transition-opacity duration-150 md:flex md:min-h-0 md:min-w-0 md:border-t-0`}
+          className={`${mobileTab === "blocks" ? "flex" : "hidden"} flex-col overflow-visible border-t border-[#e5e7eb] transition-opacity duration-150 md:flex md:min-h-0 md:min-w-0 md:flex-1 md:overflow-hidden md:border-t-0`}
           style={{ background: "#ffffff" }}
         >
           {/* Header */}
@@ -4916,7 +4916,7 @@ export function SheetGeneratorTool() {
           </div>
 
           {/* Blocks list */}
-          <div className="flex-1 overflow-y-auto pb-0 md:pb-0 bg-white">
+          <div className="overflow-visible bg-white pb-0 md:flex-1 md:overflow-y-auto md:pb-0">
             {blocks.length === 0 ? (
               <div
                 id="sheet-blocks-entry"
