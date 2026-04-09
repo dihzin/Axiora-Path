@@ -1407,44 +1407,68 @@ function buildPrintDocumentFromPages(
   cfg: GlobalConfig,
 ): string {
   const sharedPrintCss = buildPrintCss(cfg);
+
+  // Footer font matching buildDocStyles
+  const baseFzSmMap: Record<FontSize, number> = { P: 10, M: 11, G: 14 };
+  const tuning = getPdfViewportTuning(cfg);
+  const fzSm = `${(baseFzSmMap[cfg.fontSize] * tuning.docScale).toFixed(2)}px`;
+  const FONT = `Inter,system-ui,-apple-system,sans-serif`;
+
+  // Footer is re-added as position:absolute on .print-page (outside the flex flow of
+  // .preview-page). Root cause of all blank-page bugs: on iOS Safari and Chrome, the
+  // print engine does not honour overflow:hidden for pagination — flex content
+  // overflows across physical pages, and the last flex child (footer) lands on the
+  // next page as a near-blank page. Removing it from the flex flow entirely and
+  // anchoring it via position:absolute eliminates the overflow path completely.
+  const footerAbs = `<div style="position:absolute;bottom:${PAGE_PY}px;left:0;right:0;padding-top:8px;border-top:1px solid #E5E7EB;display:flex;justify-content:center;font-family:${FONT};font-size:${fzSm};color:#9CA3AF;letter-spacing:0.04em;"><span>Axiora Tools</span></div>`;
+
   const pagesHtml = pages
-    .map((page) => `<div class="print-page">${stripInlineDocStyle(page)}</div>`)
+    .map((page) => {
+      const noStyle = stripInlineDocStyle(page);
+      // Strip the in-flow footer (<div style="...flex-shrink:0...border-top...">Axiora Tools</div>)
+      // It will be re-added as position:absolute below.
+      const noFooter = noStyle.replace(
+        /<div[^>]*flex-shrink:0[^>]*border-top[^>]*>[\s\S]*?Axiora\s*Tools[\s\S]*?<\/div>/,
+        "",
+      );
+      return `<div class="print-page">${noFooter}${footerAbs}</div>`;
+    })
     .join("");
 
-  // PAGE_PY/PAGE_PX in mm for @page margin (1px ≈ 0.2646mm at 96dpi)
-  const PAGE_PY_MM = `${(PAGE_PY * 0.2646).toFixed(2)}mm`;
-  const PAGE_PX_MM = `${(PAGE_PX * 0.2646).toFixed(2)}mm`;
-  // Content area height = 297mm − 2×PAGE_PY_MM
-  const CONTENT_H = `calc(297mm - ${PAGE_PY * 2 * 0.2646}mm)`;
+  // Content height: 297mm - 1px safety buffer (prevents Safari double-break when
+  // element height equals physical page exactly) - top+bottom padding
+  const CONTENT_H = `calc(297mm - 1px - ${2 * PAGE_PY}px)`;
 
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${
     cfg.title || "Folha de Exercícios"
   }</title>
         <style>
-          /* @page margin handles all page whitespace — no element-level padding needed.
-             .preview-page block is REMOVED from sharedPrintCss (buildPrintCss strips it)
-             so there is zero conflict between screen px values and print mm/% values. */
-          @page{size:A4 portrait;margin:${PAGE_PY_MM} ${PAGE_PX_MM};}
+          @page{size:A4 portrait;margin:0;}
           ${sharedPrintCss}
-          html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
-          .sheet-root .preview-page{
-            width:100%;
-            height:${CONTENT_H};
-            padding:0;
-            margin:0;
-            overflow:hidden;
-            display:flex;
-            flex-direction:column;
-            background:#fff;
-          }
+          html,body{margin:0;padding:0;background:#fff;width:210mm;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+          /* .print-page: full physical page, padding provides whitespace, position:relative
+             anchors the absolute footer. height:297mm-1px avoids Safari double-break. */
           .print-page{
-            width:100%;
-            height:${CONTENT_H};
+            position:relative;
+            box-sizing:border-box;
+            width:210mm;
+            height:calc(297mm - 1px);
+            padding:${PAGE_PY}px ${PAGE_PX}px;
             overflow:hidden;
             break-after:page;
             page-break-after:always;
           }
           .print-page:last-child{break-after:auto;page-break-after:auto;}
+          /* .preview-page: fills content area of .print-page exactly, no padding.
+             No footer in flex flow = no iOS flex overflow = no blank pages. */
+          .sheet-root .preview-page{
+            width:100%;
+            height:${CONTENT_H};
+            padding:0;
+            overflow:hidden;
+            display:flex;
+            flex-direction:column;
+          }
         </style>
       </head><body>${pagesHtml}</body></html>`;
 }
