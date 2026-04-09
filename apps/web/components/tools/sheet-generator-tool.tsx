@@ -1425,6 +1425,7 @@ function buildPrintDocumentFromPages(
             .preview-container{transform:none !important;}
             .sheet-root{width:100% !important;height:100% !important;}
             .sheet-root .preview-page{
+              box-sizing:border-box !important;
               width:${A4_W_MM} !important;
               height:${A4_H_MM} !important;
               min-height:${A4_H_MM} !important;
@@ -4145,11 +4146,14 @@ export function SheetGeneratorTool() {
             .preview-container{transform:none !important;}
             .sheet-root{width:100% !important;height:100% !important;}
             .sheet-root .preview-page{
+              box-sizing:border-box !important;
               width:${A4_W_MM} !important;
               height:${A4_H_MM} !important;
               min-height:${A4_H_MM} !important;
               max-height:${A4_H_MM} !important;
               overflow:hidden !important;
+              display:flex !important;
+              flex-direction:column !important;
               border-radius:0 !important;
               box-shadow:none !important;
               animation:none !important;
