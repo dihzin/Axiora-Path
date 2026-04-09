@@ -1484,9 +1484,9 @@ function buildPrintCss(cfg: GlobalConfig): string {
     // px-based screen values and mm/%-based print !important overrides, which they
     // handle inconsistently. Removing it means the print rules are the ONLY source
     // of truth — no conflict, no iOS-specific override failure.
-    .replace(/\.sheet-root\s+\.preview-page\s*\{[^}]*\}/gs, "")
+    .replace(/\.sheet-root\s+\.preview-page\s*\{[^}]*\}/g, "")
     // Also remove the box-sizing line that only applies to .preview-page
-    .replace(/\.sheet-root\s+\.preview-page\s*,\.sheet-root\s+\.preview-page[^{]*\{[^}]*box-sizing[^}]*\}/gs, "")
+    .replace(/\.sheet-root\s+\.preview-page\s*,\.sheet-root\s+\.preview-page[^{]*\{[^}]*box-sizing[^}]*\}/g, "")
     .trim();
 }
 
