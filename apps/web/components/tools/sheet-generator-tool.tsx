@@ -1423,28 +1423,24 @@ function buildPrintDocumentFromPages(
           @media print{
             html,body{width:${A4_W_MM};height:auto;background:#fff;}
             .preview-container{transform:none !important;}
-            /* Move padding to .print-page so height:297mm is the TOTAL height — avoids
-               Safari iOS box-sizing bug where height:297mm on .preview-page (which has
-               all:initial in screen CSS) could be interpreted as content-box, making
-               the element 297mm+48px tall and pushing the footer to the next page. */
+            /* Padding lives on .print-page (border-box, no all:initial conflict).
+               .preview-page gets an explicit calc() height with no padding — zero
+               dependency on box-sizing, zero dependency on height:100% resolution.
+               Element height = calc(297mm-48px) + 0 padding = stays within page. */
             .print-page{
               box-sizing:border-box !important;
               height:${A4_H_MM} !important;
               padding:${PAGE_PY}px ${PAGE_PX}px !important;
-              display:flex !important;
-              flex-direction:column !important;
               overflow:hidden !important;
             }
             .sheet-root{
-              flex:1 !important;
-              min-height:0 !important;
               width:100% !important;
-              height:100% !important;
+              height:auto !important;
             }
             .sheet-root .preview-page{
               padding:0 !important;
               width:100% !important;
-              height:100% !important;
+              height:calc(${A4_H_MM} - ${2 * PAGE_PY}px) !important;
               min-height:0 !important;
               max-height:none !important;
               overflow:hidden !important;
@@ -4772,7 +4768,7 @@ export function SheetGeneratorTool() {
         {/* ── CENTER PANEL ────────────────────────────────────────────── */}
         <main
           id="sheet-blocks-panel"
-          className={`${mobileTab === "blocks" ? "flex" : "hidden"} flex-col overflow-hidden border-t border-[#e5e7eb] transition-opacity duration-150 md:flex md:min-h-0 md:min-w-0 md:border-t-0`}
+          className={`${mobileTab === "blocks" ? "flex" : "hidden"} flex-1 flex-col overflow-hidden border-t border-[#e5e7eb] transition-opacity duration-150 md:flex md:min-h-0 md:min-w-0 md:border-t-0`}
           style={{ background: "#ffffff" }}
         >
           {/* Header */}
