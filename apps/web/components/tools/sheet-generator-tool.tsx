@@ -1418,22 +1418,15 @@ function buildPrintDocumentFromPages(
           @page{size:A4 portrait;margin:0;}
           ${sharedPrintCss}
           html,body{margin:0;padding:0;background:#fff;width:${A4_W_MM};-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
-          /* NO break-after here — Safari iOS applies screen-CSS break-after during print
-             even when overridden with !important in @media print, causing a double page
-             break that inserts blank pages. Height-stacking (N×297mm divs) creates
-             natural page breaks without any explicit break-after. */
+          /* No break-after — height-stacking (N×297mm divs) creates natural breaks. */
           .print-page{width:${A4_W_MM};height:${A4_H_MM};overflow:hidden;}
           @media print{
             html,body{width:${A4_W_MM};height:auto;background:#fff;}
             .preview-container{transform:none !important;}
-            /* Safari iOS bug: break-after:page + height:297mm = double page break.
-               When a div of exactly 297mm ends at the physical page boundary,
-               Safari treats that as a natural break AND then fires break-after:page,
-               inserting a blank page between every content page.
-               Fix: remove break-after in print — height-based stacking (N×297mm divs)
-               creates natural page breaks without any explicit break-after needed.
-               Padding lives on .print-page (no all:initial conflict from screen CSS).
-               .preview-page height uses explicit calc() — no box-sizing ambiguity. */
+            /* With all:initial stripped from buildPrintCss, @media print !important
+               overrides now work correctly in Safari iOS. The .preview-page in the
+               screen CSS had height:${A4_H}px which did NOT get overridden before
+               (due to all:initial Safari bug). Now it does. */
             .print-page{
               box-sizing:border-box !important;
               width:${A4_W_MM} !important;
@@ -1442,28 +1435,18 @@ function buildPrintDocumentFromPages(
               overflow:hidden !important;
               break-after:auto !important;
               page-break-after:auto !important;
-              break-before:auto !important;
-              page-break-before:auto !important;
-            }
-            .sheet-root{
-              width:100% !important;
-              height:auto !important;
             }
             .sheet-root .preview-page{
-              padding:0 !important;
               width:100% !important;
               height:calc(${A4_H_MM} - ${2 * PAGE_PY}px) !important;
-              min-height:0 !important;
-              max-height:none !important;
+              padding:0 !important;
               overflow:hidden !important;
               display:flex !important;
               flex-direction:column !important;
-              border-radius:0 !important;
-              box-shadow:none !important;
               animation:none !important;
               transform:none !important;
-              break-inside:avoid !important;
-              page-break-inside:avoid !important;
+              box-shadow:none !important;
+              border-radius:0 !important;
             }
             .sheet-root,.sheet-root *,.sheet-root *::before,.sheet-root *::after{-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;}
           }
@@ -1475,6 +1458,13 @@ function buildPrintCss(cfg: GlobalConfig): string {
   return buildDocCSS(cfg)
     .replace(/^\s*@import url\([^)]+\);\s*/m, "")
     .replace(/font-synthesis-weight:none;?/g, "")
+    // CRITICAL: remove all:initial from the print popup CSS.
+    // all:initial is needed on the main page to isolate .preview-page from Next.js
+    // global CSS. In the print popup there is no contaminating CSS, so all:initial
+    // is unnecessary — and it causes a Safari iOS bug where @media print !important
+    // overrides fail to apply, leaving height:1123px from screen CSS intact and
+    // making the element overflow the physical page → blank pages in the PDF.
+    .replace(/\ball\s*:\s*initial\s*;?/g, "")
     .trim();
 }
 
@@ -4566,10 +4556,7 @@ export function SheetGeneratorTool() {
         </div>
       </div>
 
-      {/* display:contents is buggy on iOS Safari in flex context — children don't
-          properly participate in parent flex, causing flex-1 on main to not resolve.
-          Using explicit flex-1 flex-col container instead. */}
-      <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
+      <div className="flex flex-1 min-h-0 flex-col overflow-hidden bg-white">
         <aside
           className={`${mobileTab === "config" ? "flex" : "hidden"} flex-col overflow-hidden transition-opacity duration-150 md:hidden md:min-h-0 md:min-w-0`}
           style={{
