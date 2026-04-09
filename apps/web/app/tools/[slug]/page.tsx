@@ -34,7 +34,7 @@ export default async function ToolsDetailPage({ params, searchParams }: ToolsDet
   const description = TOOL_DESCRIPTIONS[slug] ?? "Ferramenta educacional Axiora.";
 
   return (
-    <div className={`relative isolate${isExerciseGenerator ? " flex min-h-[100svh] flex-col bg-white" : ""}`}>
+    <div className={`relative isolate${isExerciseGenerator ? " flex h-[100svh] flex-col overflow-hidden bg-white" : ""}`}>
       {!isExerciseGenerator ? <MarketingBackground priority /> : null}
 
       <nav className="sticky top-0 z-30 border-b border-[rgba(238,135,72,0.14)] bg-[linear-gradient(180deg,rgba(8,20,31,0.72)_0%,rgba(9,24,36,0.62)_100%)] shadow-[0_10px_30px_rgba(4,12,20,0.16)] backdrop-blur-xl">

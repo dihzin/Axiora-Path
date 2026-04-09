@@ -4905,11 +4905,18 @@ export function SheetGeneratorTool() {
                 </svg>
                 Atualizar
               </button>
+              <button
+                type="button"
+                onClick={openPreviewWindow}
+                className={`${chunkyOutlineBtn} !px-2.5 !py-1.5 !text-[10px] whitespace-nowrap`}
+              >
+                {previewOpenPending ? "Preparando..." : "Prévia"}
+              </button>
             </div>
           </div>
 
           {/* Blocks list */}
-          <div className="flex-1 overflow-y-auto pb-6 md:pb-0 bg-white">
+          <div className="flex-1 overflow-y-auto pb-0 md:pb-0 bg-white">
             {blocks.length === 0 ? (
               <div
                 id="sheet-blocks-entry"
