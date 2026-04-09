@@ -1430,13 +1430,11 @@ function buildPrintDocumentFromPages(
           @page{size:A4 portrait;margin:0;}
           ${sharedPrintCss}
           html,body{margin:0;padding:0;background:#fff;width:210mm;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
-          .sheet-root{page-break-after:always;}
-          .sheet-root:last-child{page-break-after:auto;}
           /* .preview-page fills the printable content area and keeps footer in normal flow.
              This avoids iOS WebKit creating trailing near-blank pages with absolute footers. */
           .sheet-root .preview-page{
             width:210mm !important;
-            height:297mm !important;
+            height:calc(297mm - 1px) !important;
             box-sizing:border-box;
             padding:${PAGE_PY}px ${PAGE_PX}px !important;
             overflow:hidden;
@@ -2273,7 +2271,7 @@ function buildOnePageHTML(
 
   return (
     `<style>${css}</style>` +
-    `<div class="sheet-root"><div class="preview-page page" style="${S.page}display:flex;flex-direction:column;">` +
+    `<div class="sheet-root"><div class="preview-page" style="${S.page}display:flex;flex-direction:column;">` +
     pageHeaderHTML +
     subtitleHTML +
     `<div class="main"${mainId} style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;">` +
@@ -2977,7 +2975,7 @@ function buildAnswerPageHTML(
   const itemsId = measurement ? ` id="sg-answer-items"` : "";
   return (
     `<style>${css}</style>` +
-    `<div class="sheet-root"><div class="preview-page page" style="${S.page}display:flex;flex-direction:column;">` +
+    `<div class="sheet-root"><div class="preview-page" style="${S.page}display:flex;flex-direction:column;">` +
     `<div style="${S.title}">Gabarito</div>` +
     `<div class="main"${mainId} style="flex:1;display:flex;flex-direction:column;justify-content:flex-start;min-height:0;overflow:hidden;">` +
     `<div${itemsId} style="margin-top:10px;display:grid;grid-template-columns:repeat(2,1fr);gap:8px 24px;align-content:start;">${ansItems.join("")}</div></div>` +
