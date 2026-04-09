@@ -1423,15 +1423,24 @@ function buildPrintDocumentFromPages(
           @media print{
             html,body{width:${A4_W_MM};height:auto;background:#fff;}
             .preview-container{transform:none !important;}
-            /* Padding lives on .print-page (border-box, no all:initial conflict).
-               .preview-page gets an explicit calc() height with no padding — zero
-               dependency on box-sizing, zero dependency on height:100% resolution.
-               Element height = calc(297mm-48px) + 0 padding = stays within page. */
+            /* Safari iOS bug: break-after:page + height:297mm = double page break.
+               When a div of exactly 297mm ends at the physical page boundary,
+               Safari treats that as a natural break AND then fires break-after:page,
+               inserting a blank page between every content page.
+               Fix: remove break-after in print — height-based stacking (N×297mm divs)
+               creates natural page breaks without any explicit break-after needed.
+               Padding lives on .print-page (no all:initial conflict from screen CSS).
+               .preview-page height uses explicit calc() — no box-sizing ambiguity. */
             .print-page{
               box-sizing:border-box !important;
+              width:${A4_W_MM} !important;
               height:${A4_H_MM} !important;
               padding:${PAGE_PY}px ${PAGE_PX}px !important;
               overflow:hidden !important;
+              break-after:auto !important;
+              page-break-after:auto !important;
+              break-before:auto !important;
+              page-break-before:auto !important;
             }
             .sheet-root{
               width:100% !important;
@@ -4554,7 +4563,10 @@ export function SheetGeneratorTool() {
         </div>
       </div>
 
-      <div className="contents">
+      {/* display:contents is buggy on iOS Safari in flex context — children don't
+          properly participate in parent flex, causing flex-1 on main to not resolve.
+          Using explicit flex-1 flex-col container instead. */}
+      <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
         <aside
           className={`${mobileTab === "config" ? "flex" : "hidden"} flex-col overflow-hidden transition-opacity duration-150 md:hidden md:min-h-0 md:min-w-0`}
           style={{
