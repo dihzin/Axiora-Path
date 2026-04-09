@@ -50,8 +50,10 @@ export default async function ToolsDetailPage({ params, searchParams }: ToolsDet
       </nav>
 
       <main
-        className={`relative z-10 flex w-full flex-col text-white ${
-          isExerciseGenerator ? "flex-1 overflow-hidden" : "mx-auto max-w-5xl gap-6 px-4 py-8 sm:px-6 sm:py-12"
+        className={`relative z-10 flex w-full flex-col ${
+          isExerciseGenerator
+            ? "flex-1 overflow-hidden bg-white"
+            : "text-white mx-auto max-w-5xl gap-6 px-4 py-8 sm:px-6 sm:py-12"
         }`}
       >
         {isExerciseGenerator ? (

@@ -1418,8 +1418,11 @@ function buildPrintDocumentFromPages(
           @page{size:A4 portrait;margin:0;}
           ${sharedPrintCss}
           html,body{margin:0;padding:0;background:#fff;width:${A4_W_MM};-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
-          .print-page{width:${A4_W_MM};height:${A4_H_MM};overflow:hidden;break-after:page;page-break-after:always;position:relative;}
-          .print-page:last-child{break-after:auto;page-break-after:auto;}
+          /* NO break-after here — Safari iOS applies screen-CSS break-after during print
+             even when overridden with !important in @media print, causing a double page
+             break that inserts blank pages. Height-stacking (N×297mm divs) creates
+             natural page breaks without any explicit break-after. */
+          .print-page{width:${A4_W_MM};height:${A4_H_MM};overflow:hidden;}
           @media print{
             html,body{width:${A4_W_MM};height:auto;background:#fff;}
             .preview-container{transform:none !important;}
