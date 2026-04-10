@@ -1424,11 +1424,16 @@ function buildPrintDocumentFromPages(
           @page{size:A4 portrait;margin:0;}
           ${sharedPrintCss}
           html,body{margin:0;padding:0;background:#fff;width:210mm;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
-          /* ── iOS WebKit fix: use a single break mechanism only.
-             Fixed heights + break-inside:avoid (nested) cause WebKit to generate
-             3 physical pages per logical page: content / footer-only / empty.
-             Solution: drop all fixed heights and break-inside:avoid from wrappers;
-             rely solely on break-before:page on .print-page--next. ── */
+          /* ── iOS WebKit fix: single break mechanism, no nested break-inside.
+             Root cause: nested break-inside:avoid on .print-page + .preview-page
+             caused WebKit to generate 3 physical pages per logical page
+             (content / footer-only / empty). overflow:hidden is ignored by iOS
+             during print fragmentation, so the flex-pinned footer leaked to page 2
+             and the fixed height on .print-page reserved an empty page 3.
+             Fix: .print-page has no height/break-inside — relies solely on
+             break-before:page. .preview-page keeps its height so flex:1 on .main
+             anchors the footer to the bottom, but has no break-inside:avoid and no
+             overflow:hidden so WebKit never generates phantom fragmentation pages. ── */
           .print-page{
             width:210mm;
             box-sizing:border-box;
@@ -1443,6 +1448,7 @@ function buildPrintDocumentFromPages(
           }
           .print-page .sheet-root .preview-page{
             width:100% !important;
+            height:calc(297mm - ${2 * PAGE_PY}px) !important;
             box-sizing:border-box;
             padding:0 !important;
             display:flex !important;
@@ -1453,6 +1459,7 @@ function buildPrintDocumentFromPages(
             flex-direction:column !important;
             overflow:visible !important;
             min-height:0 !important;
+            flex:1 1 auto !important;
           }
         </style>
       </head><body>${pagesHtml}</body></html>`;
