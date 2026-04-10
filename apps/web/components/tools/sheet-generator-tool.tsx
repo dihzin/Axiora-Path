@@ -2562,6 +2562,7 @@ async function paginatePrecisely(
   const isMobileLayout =
     typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
   const SAFE_MARGIN = isMobileLayout ? (cfg.repeatHeader ? 24 : 34) : 28;
+  const MERGE_SAFE_MARGIN = isMobileLayout ? 8 : 10;
   const MIN_ROWS_PER_PAGE = 2;
   const rows = buildExerciseRows(exercises, blocks, cfg);
   const sectionHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
@@ -2872,6 +2873,34 @@ async function paginatePrecisely(
       pageRanges[pageIndex] = current;
       currentMetrics = bestCandidate.currentMetrics;
     }
+  }
+
+  // Final squeeze pass: if two adjacent pages fit together by real measurement,
+  // merge them to avoid unnecessary sparse pages in preview/PDF.
+  let squeezeIndex = 0;
+  while (squeezeIndex < pageRanges.length - 1) {
+    const current = pageRanges[squeezeIndex];
+    const next = pageRanges[squeezeIndex + 1];
+    const mergedMetrics = await measureRowRange(
+      current.startRow,
+      next.endRow,
+      current.isFirstPage,
+    );
+
+    const canMerge =
+      mergedMetrics.usableMainHeight > 0 && mergedMetrics.differencePx >= MERGE_SAFE_MARGIN;
+
+    if (canMerge) {
+      pageRanges[squeezeIndex] = {
+        startRow: current.startRow,
+        endRow: next.endRow,
+        isFirstPage: current.isFirstPage,
+      };
+      pageRanges.splice(squeezeIndex + 1, 1);
+      continue;
+    }
+
+    squeezeIndex += 1;
   }
 
   const slices: PageSlice[] = pageRanges.map((range) => ({
