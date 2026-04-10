@@ -1506,6 +1506,116 @@ function hasMeaningfulPrintContent(pageHtml: string): boolean {
   return textOnly.length > 0;
 }
 
+function isIOSWebKitBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  const isIOS = /iP(hone|ad|od)/i.test(ua);
+  const isWebKit = /AppleWebKit/i.test(ua);
+  const isChromeOrSafari = /CriOS|Safari/i.test(ua);
+  return isIOS && isWebKit && isChromeOrSafari;
+}
+
+async function downloadPdfFromPreviewPages(
+  pages: string[],
+  cfg: GlobalConfig,
+): Promise<void> {
+  const printablePages = pages
+    .map((page) => normalizePrintPageHtml(stripInlineDocStyle(page)))
+    .filter((page) => hasMeaningfulPrintContent(page));
+
+  if (!printablePages.length) {
+    throw new Error("no_printable_pages");
+  }
+
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+    import("html2canvas"),
+    import("jspdf"),
+  ]);
+
+  const host = document.createElement("div");
+  host.style.position = "fixed";
+  host.style.left = "-100000px";
+  host.style.top = "0";
+  host.style.width = `${A4_W}px`;
+  host.style.pointerEvents = "none";
+  host.style.background = "#ffffff";
+  host.style.zIndex = "-1";
+
+  host.innerHTML = `
+    <style>
+      ${buildPrintCss(cfg)}
+      .export-page{
+        width:${A4_W}px;
+        min-height:${A4_H}px;
+        box-sizing:border-box;
+        padding:${PAGE_PY}px ${PAGE_PX}px;
+        background:#fff;
+      }
+      .export-page .sheet-root{width:100% !important;}
+      .export-page .sheet-root .preview-page{
+        width:100% !important;
+        min-height:${A4_H - 2 * PAGE_PY}px !important;
+        box-sizing:border-box;
+        padding:0 !important;
+        display:flex !important;
+        flex-direction:column !important;
+      }
+      .export-page .sheet-root .main{
+        display:block !important;
+        min-height:0 !important;
+        overflow:visible !important;
+      }
+    </style>
+    ${printablePages.map((page) => `<div class="export-page">${page}</div>`).join("")}
+  `;
+
+  document.body.appendChild(host);
+
+  try {
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+
+    const nodes = Array.from(host.querySelectorAll<HTMLElement>(".export-page"));
+    if (!nodes.length) {
+      throw new Error("no_export_nodes");
+    }
+
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+
+    for (let i = 0; i < nodes.length; i += 1) {
+      const canvas = await html2canvas(nodes[i], {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+      });
+      const image = canvas.toDataURL("image/jpeg", 0.96);
+      if (i > 0) doc.addPage("a4", "portrait");
+      doc.addImage(image, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+    }
+
+    const safeTitle =
+      (cfg.title || "Folha de Exercícios")
+        .replace(/[\\/:*?"<>|]+/g, "")
+        .trim()
+        .slice(0, 80) || "Folha de Exercícios";
+    const fileName = `${safeTitle}.pdf`;
+
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } finally {
+    host.remove();
+  }
+}
+
 /**
  * Splits exercises into A4 page slices using conservative estimated heights.
  * Fully synchronous — no DOM measurement, no hidden iframes, no setTimeout.
@@ -4063,6 +4173,59 @@ export function SheetGeneratorTool() {
       return;
     }
 
+    if (isPaginating || previewPages.length === 0) {
+      showToast("Aguarde a pré-visualização terminar de atualizar.");
+      setIsPrinting(false);
+      return;
+    }
+
+    if (isIOSWebKitBrowser()) {
+      try {
+        await downloadPdfFromPreviewPages(previewPages, cfg);
+      } catch {
+        showToast("Não foi possível gerar o PDF no iPhone. Tente novamente.");
+        setIsPrinting(false);
+        return;
+      }
+
+      try {
+        let remaining: number;
+        if (isAnonUser) {
+          const result = await consumeAnonCredit(anonId);
+          remaining = result.remaining_free_generations + result.paid_credits_remaining;
+        } else {
+          const result = await consumeToolsCredit();
+          remaining = Math.max(0, Number(result.credits) || 0);
+        }
+        void identity.refresh();
+        setCreditsFxTick((v) => v + 1);
+        track("generation_success", {
+          consumption_type: isAnonUser ? "free" : "paid",
+          remaining_after: remaining,
+        });
+        if (remaining === 0) {
+          showToast("Lista gerada! Você usou suas 3 gerações gratuitas.");
+        } else if (remaining === 1) {
+          showToast("Lista gerada · Última geração gratuita disponível");
+        } else {
+          showToast(`Lista gerada · ${remaining} gerações restantes`);
+        }
+      } catch (err: unknown) {
+        const isPaywallError = err instanceof ApiError && (err as ApiError).status === 402;
+        if (isPaywallError) {
+          track("generation_blocked", { reason: "paywall_402" });
+          setPaywallOpen(true);
+        } else {
+          showToast("Ocorreu um erro ao gerar a lista. Tente novamente.");
+        }
+        setIsPrinting(false);
+        return;
+      }
+
+      setIsPrinting(false);
+      return;
+    }
+
     const openedWindow = window.open("", "_blank", "width=860,height=750");
     if (!openedWindow) {
       showToast("Permita popups para gerar o PDF");
@@ -4077,13 +4240,6 @@ export function SheetGeneratorTool() {
     } catch {
       win.close();
       showToast("Permita popups para gerar o PDF");
-      setIsPrinting(false);
-      return;
-    }
-
-    if (isPaginating || previewPages.length === 0) {
-      win.close();
-      showToast("Aguarde a pré-visualização terminar de atualizar.");
       setIsPrinting(false);
       return;
     }
