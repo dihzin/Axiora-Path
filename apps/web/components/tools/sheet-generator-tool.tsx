@@ -1411,8 +1411,10 @@ function buildPrintDocumentFromPages(
   const pagesHtml = pages
     .map((page, index) => {
       const noStyle = stripInlineDocStyle(page);
+      if (!hasMeaningfulPrintContent(noStyle)) return "";
       return `<div class="print-page${index > 0 ? " print-page--next" : ""}">${noStyle}</div>`;
     })
+    .filter(Boolean)
     .join("");
 
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${
@@ -1476,6 +1478,19 @@ function buildPrintCss(cfg: GlobalConfig): string {
 
 function stripInlineDocStyle(page: string): string {
   return page.replace(/^<style>[\s\S]*?<\/style>/, "");
+}
+
+function hasMeaningfulPrintContent(pageHtml: string): boolean {
+  const withoutFooter = pageHtml.replace(
+    /<div[^>]*border-top[^>]*>[\s\S]*?Axiora\s*Tools[\s\S]*?<\/div>/gi,
+    "",
+  );
+  const textOnly = withoutFooter
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return textOnly.length > 0;
 }
 
 /**
