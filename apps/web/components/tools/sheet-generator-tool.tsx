@@ -1424,11 +1424,19 @@ function buildPrintDocumentFromPages(
           @page{size:A4 portrait;margin:0;}
           ${sharedPrintCss}
           html,body{margin:0;padding:0;background:#fff;width:210mm;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
-          /* ── iOS WebKit fix: use a single break mechanism only.
-             Fixed heights + break-inside:avoid (nested) cause WebKit to generate
-             3 physical pages per logical page: content / footer-only / empty.
-             Solution: drop all fixed heights and break-inside:avoid from wrappers;
-             rely solely on break-before:page on .print-page--next. ── */
+          /* ── iOS WebKit fix: single break mechanism + min-height for footer anchor.
+             Root cause of original 14-page bug: nested break-inside:avoid on
+             .print-page AND .preview-page, both with height ≈ A4 size, caused
+             WebKit to emit 3 physical pages per logical page.
+             Root cause of 8-page regression: height (not min-height) on .preview-page
+             made .print-page exactly 297mm — break-before:page at that boundary
+             triggered an extra empty page per block.
+             Fix: .print-page has no height, no break-inside:avoid.
+             .preview-page uses min-height (not height) = A4_H − 2×PAGE_PY − 5px
+             (= ${A4_H - 2 * PAGE_PY - 5}px = ~295.9mm total block), keeping the
+             block safely under 297mm so break-before:page never fires at a boundary.
+             flex:1 on .main fills the gap between content and min-height so the
+             footer stays anchored at the bottom on every page, including short ones. ── */
           .print-page{
             width:210mm;
             box-sizing:border-box;
@@ -1443,6 +1451,7 @@ function buildPrintDocumentFromPages(
           }
           .print-page .sheet-root .preview-page{
             width:100% !important;
+            min-height:${A4_H - 2 * PAGE_PY - 5}px !important;
             box-sizing:border-box;
             padding:0 !important;
             display:flex !important;
@@ -1453,6 +1462,7 @@ function buildPrintDocumentFromPages(
             flex-direction:column !important;
             overflow:visible !important;
             min-height:0 !important;
+            flex:1 1 auto !important;
           }
         </style>
       </head><body>${pagesHtml}</body></html>`;
