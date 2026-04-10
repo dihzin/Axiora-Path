@@ -1407,12 +1407,13 @@ function buildPrintDocumentFromPages(
   cfg: GlobalConfig,
 ): string {
   const sharedPrintCss = buildPrintCss(cfg);
+  const printableMinHeightPx = A4_H - 2 * PAGE_PY;
 
   const pagesHtml = pages
     .map((page, index) => {
-      const noStyle = stripInlineDocStyle(page);
-      if (!hasMeaningfulPrintContent(noStyle)) return "";
-      return `<div class="print-page${index > 0 ? " print-page--next" : ""}">${noStyle}</div>`;
+      const normalized = normalizePrintPageHtml(stripInlineDocStyle(page));
+      if (!hasMeaningfulPrintContent(normalized)) return "";
+      return `<div class="print-page${index > 0 ? " print-page--next" : ""}">${normalized}</div>`;
     })
     .filter(Boolean)
     .join("");
@@ -1447,10 +1448,10 @@ function buildPrintDocumentFromPages(
             padding:0 !important;
             display:flex !important;
             flex-direction:column !important;
+            min-height:${printableMinHeightPx}px !important;
           }
           .print-page .sheet-root .main{
-            display:flex !important;
-            flex-direction:column !important;
+            display:block !important;
             overflow:visible !important;
             min-height:0 !important;
           }
@@ -1477,6 +1478,19 @@ function buildPrintCss(cfg: GlobalConfig): string {
 
 function stripInlineDocStyle(page: string): string {
   return page.replace(/^<style>[\s\S]*?<\/style>/, "");
+}
+
+function normalizePrintPageHtml(pageHtml: string): string {
+  const normalizedMain = pageHtml.replace(
+    /<div class="main"([^>]*)style="[^"]*"/gi,
+    '<div class="main"$1 style="display:block;min-height:0;overflow:visible;"',
+  );
+
+  return normalizedMain.replace(
+    /<div([^>]*)style="([^"]*border-top:[^"]*)">([\s\S]*?Axiora\s*Tools[\s\S]*?)<\/div>/gi,
+    (_match, attrs: string, style: string, body: string) =>
+      `<div${attrs} style="${style};margin-top:auto;">${body}</div>`,
+  );
 }
 
 function hasMeaningfulPrintContent(pageHtml: string): boolean {
