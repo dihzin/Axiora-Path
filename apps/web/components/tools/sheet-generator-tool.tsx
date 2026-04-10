@@ -2562,7 +2562,15 @@ async function paginatePrecisely(
   const isMobileLayout =
     typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
   const SAFE_MARGIN = isMobileLayout ? (cfg.repeatHeader ? 24 : 34) : 28;
-  const MERGE_SAFE_MARGIN = isMobileLayout ? 8 : 10;
+  // Merge pages only when there is a clearly large spare area.
+  // Fractions/roots have taller glyph boxes and can clip near the footer if we merge too aggressively.
+  const MERGE_SAFE_MARGIN = isMobileLayout
+    ? cfg.repeatHeader
+      ? 44
+      : 64
+    : cfg.repeatHeader
+      ? 52
+      : 72;
   const MIN_ROWS_PER_PAGE = 2;
   const rows = buildExerciseRows(exercises, blocks, cfg);
   const sectionHeaders = buildSectionHeaderMap(exercises, blocks, cfg);
