@@ -1120,7 +1120,7 @@ function buildPrintHTML(
     // Conteúdo: levemente mais espaçado verticalmente
     exBody: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.3;flex:1;min-width:0;`,
     page: `font-family:${FONT};font-size:${fz};color:#1F2937;line-height:1.3;`,
-    footer: `font-family:${FONT};font-size:${fzSm};color:#9CA3AF;letter-spacing:0.04em;`,
+    footer: `font-family:${FONT};font-size:${fzSm};color:#9CA3AF;letter-spacing:0.04em;line-height:1.25;`,
   };
 
   const labelStyle = `font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:#9CA3AF;white-space:nowrap;flex-shrink:0;`;
@@ -1219,7 +1219,7 @@ function buildPrintHTML(
     }
   }
 
-const footerHtml = `<div style="margin-top:0;padding-top:6mm;border-top:1px solid #ddd;display:flex;justify-content:center;${S.footer}"><span>Axiora Tools</span></div>`;
+const footerHtml = `<div style="margin-top:0;padding-top:6mm;padding-bottom:${PRINT_FOOTER_SAFE_PAD}px;line-height:1.25;border-top:1px solid #ddd;display:flex;justify-content:center;${S.footer}"><span>Axiora Tools</span></div>`;
 
   const subtitleHtml = cfg.subtitle
     ? `<p style="font-family:${FONT};font-size:${fz};color:#6B7280;margin:0 0 10px;padding:4px 0;border-bottom:1px solid #E5E7EB;">${cfg.subtitle}</p>`
@@ -1250,27 +1250,27 @@ const footerHtml = `<div style="margin-top:0;padding-top:6mm;border-top:1px soli
     .ex-divisao-quociente{min-height:1.8em;padding:2px 2px 0 6px;}
     /* — Exercícios lineares e expressões — */
     .ex-linear{font-family:${FONT};font-size:${fz};white-space:normal;word-break:break-word;}
-    .ex-frac{display:inline-flex;flex-direction:column;align-items:center;line-height:1.1;}
-    .ex-frac-num{border-bottom:1.5px solid #374151;padding-bottom:2px;text-align:center;min-width:16px;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
-    .ex-frac-den{padding-top:2px;text-align:center;min-width:16px;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
+    .ex-frac{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;vertical-align:middle;}
+    .ex-frac-num{display:block;border-bottom:1.5px solid #374151;padding:0 2px 2px;text-align:center;min-width:16px;line-height:1;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
+    .ex-frac-den{display:block;padding:2px 2px 0;text-align:center;min-width:16px;line-height:1;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .ex-frac-op{font-size:${fz};padding:0 2px;align-self:center;color:#0F172A;}
     .ex-frac-result{align-self:center;font-size:${fz};color:#0F172A;}
     .ex-fracao-expr{display:inline-flex;align-items:center;gap:10px;font-family:${FONT};font-size:${fz};}
     .ex-equacao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;}
     .ex-eq-var{font-style:italic;font-size:${fz};color:#1F2937;}
     .ex-eq-op,.ex-eq-equals,.ex-eq-num,.ex-eq-coef{font-size:${fz};color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
-    .ex-eq-frac-wrap{display:inline-flex;flex-direction:column;align-items:center;line-height:1.1;vertical-align:middle;margin:0 2px;}
-    .ex-eq-frac-top{font-style:italic;font-size:calc(${fz} * 0.85);border-bottom:1.5px solid #374151;padding-bottom:1px;min-width:14px;text-align:center;}
-    .ex-eq-frac-bot{font-size:calc(${fz} * 0.85);padding-top:1px;text-align:center;}
+    .ex-eq-frac-wrap{display:inline-flex;flex-direction:column;align-items:center;line-height:1;vertical-align:middle;margin:0 2px;}
+    .ex-eq-frac-top{display:block;font-style:italic;font-size:calc(${fz} * 0.85);border-bottom:1.5px solid #374151;padding:0 2px 1px;line-height:1;min-width:14px;text-align:center;}
+    .ex-eq-frac-bot{display:block;font-size:calc(${fz} * 0.85);padding:1px 2px 0;line-height:1;text-align:center;}
     .ex-pot{font-family:${FONT};font-size:${fz};white-space:nowrap;display:inline;}
     .ex-pot-base{font-size:${fz};color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .ex-pot-exp{font-size:.6em;vertical-align:super;line-height:1;margin-left:1px;}
     .ex-pot-result{font-size:${fz};margin-left:6px;color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
-    .ex-raiz{display:inline-flex;align-items:flex-end;font-family:${FONT};font-size:${fz};gap:0;vertical-align:middle;}
-    .ex-raiz-svg{height:1.5em;width:auto;overflow:visible;flex-shrink:0;}
-    .ex-raiz-val{border-top:1.5px solid #374151;padding:0 4px 0 0;font-size:${fz};line-height:1.5;color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
-    .ex-raiz-idx-wrap{position:relative;display:inline-block;line-height:0;}
-    .ex-raiz-idx{position:absolute;top:0;left:1px;font-size:0.55em;line-height:1;font-family:${FONT};}
+    .ex-raiz{display:inline-flex;align-items:flex-start;font-family:${FONT};font-size:${fz};gap:0;vertical-align:middle;line-height:1;}
+    .ex-raiz-svg{height:1.2em;width:auto;overflow:visible;flex-shrink:0;margin-top:0.06em;}
+    .ex-raiz-val{display:inline-block;border-top:1.5px solid #374151;padding:0.12em 4px 0 2px;font-size:${fz};line-height:1.15;color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
+    .ex-raiz-idx-wrap{position:relative;display:inline-flex;align-items:flex-start;line-height:1;}
+    .ex-raiz-idx{position:absolute;top:-0.45em;left:0;font-size:0.55em;line-height:1;font-family:${FONT};}
     .ex-expressao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;}
     .ex-expr-term,.ex-expr-op,.ex-expr-eq{font-size:${fz};}
   `;
@@ -1304,6 +1304,7 @@ const A4_W_MM = "210mm";
 const A4_H_MM = "297mm";
 const PAGE_PX = 32; // horizontal padding (matches print margins)
 const PAGE_PY = 24; // vertical padding   (matches print margins)
+const PRINT_FOOTER_SAFE_PAD = 3;
 
 interface PageSlice {
   exIndexes: number[]; // which exercise indices belong on this page
@@ -1407,7 +1408,7 @@ function buildPrintDocumentFromPages(
   cfg: GlobalConfig,
 ): string {
   const sharedPrintCss = buildPrintCss(cfg);
-  const printableMinHeightPx = A4_H - 2 * PAGE_PY;
+  const printableMinHeightPx = A4_H - 2 * PAGE_PY - PRINT_FOOTER_SAFE_PAD;
 
   const pagesHtml = pages
     .map((page, index) => {
@@ -1489,7 +1490,7 @@ function normalizePrintPageHtml(pageHtml: string): string {
   return normalizedMain.replace(
     /<div([^>]*)style="([^"]*border-top:[^"]*)">([\s\S]*?Axiora\s*Tools[\s\S]*?)<\/div>/gi,
     (_match, attrs: string, style: string, body: string) =>
-      `<div${attrs} style="${style};margin-top:auto;">${body}</div>`,
+      `<div${attrs} style="${style};margin-top:auto;padding-bottom:${PRINT_FOOTER_SAFE_PAD}px;line-height:1.25;">${body}</div>`,
   );
 }
 
@@ -1554,7 +1555,7 @@ async function downloadPdfFromPreviewPages(
       .export-page .sheet-root{width:100% !important;}
       .export-page .sheet-root .preview-page{
         width:100% !important;
-        min-height:${A4_H - 2 * PAGE_PY}px !important;
+        min-height:${A4_H - 2 * PAGE_PY - PRINT_FOOTER_SAFE_PAD}px !important;
         box-sizing:border-box;
         padding:0 !important;
         display:flex !important;
@@ -2176,27 +2177,27 @@ function buildDocCSS(cfg: GlobalConfig): string {
     .sheet-root .preview-page .ex-divisao-divisor{white-space:nowrap;padding:0 2px 3px 6px;border-left:1px solid #374151;border-bottom:1px solid #374151;}
     .sheet-root .preview-page .ex-divisao-quociente{min-height:1.8em;padding:2px 2px 0 6px;}
     .sheet-root .preview-page .ex-linear{font-family:${FONT};font-size:${fz};white-space:normal;word-break:break-word;}
-    .sheet-root .preview-page .ex-frac{display:inline-flex;flex-direction:column;align-items:center;line-height:1.1;}
-    .sheet-root .preview-page .ex-frac-num{border-bottom:1.5px solid #374151;padding-bottom:2px;text-align:center;min-width:16px;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
-    .sheet-root .preview-page .ex-frac-den{padding-top:2px;text-align:center;min-width:16px;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
+    .sheet-root .preview-page .ex-frac{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;vertical-align:middle;}
+    .sheet-root .preview-page .ex-frac-num{display:block;border-bottom:1.5px solid #374151;padding:0 2px 2px;text-align:center;min-width:16px;line-height:1;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
+    .sheet-root .preview-page .ex-frac-den{display:block;padding:2px 2px 0;text-align:center;min-width:16px;line-height:1;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .sheet-root .preview-page .ex-frac-op{font-size:${fz};padding:0 2px;align-self:center;color:#0F172A;}
     .sheet-root .preview-page .ex-frac-result{align-self:center;font-size:${fz};color:#0F172A;}
     .sheet-root .preview-page .ex-fracao-expr{display:inline-flex;align-items:center;gap:10px;font-family:${FONT};font-size:${fz};}
     .sheet-root .preview-page .ex-equacao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;}
     .sheet-root .preview-page .ex-eq-var{font-style:italic;font-size:${fz};color:#1F2937;}
     .sheet-root .preview-page .ex-eq-op,.sheet-root .preview-page .ex-eq-equals,.sheet-root .preview-page .ex-eq-num,.sheet-root .preview-page .ex-eq-coef{font-size:${fz};color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
-    .sheet-root .preview-page .ex-eq-frac-wrap{display:inline-flex;flex-direction:column;align-items:center;line-height:1.1;vertical-align:middle;margin:0 2px;}
-    .sheet-root .preview-page .ex-eq-frac-top{font-style:italic;font-size:calc(${fz} * 0.85);border-bottom:1.5px solid #374151;padding-bottom:1px;min-width:14px;text-align:center;}
-    .sheet-root .preview-page .ex-eq-frac-bot{font-size:calc(${fz} * 0.85);padding-top:1px;text-align:center;}
+    .sheet-root .preview-page .ex-eq-frac-wrap{display:inline-flex;flex-direction:column;align-items:center;line-height:1;vertical-align:middle;margin:0 2px;}
+    .sheet-root .preview-page .ex-eq-frac-top{display:block;font-style:italic;font-size:calc(${fz} * 0.85);border-bottom:1.5px solid #374151;padding:0 2px 1px;line-height:1;min-width:14px;text-align:center;}
+    .sheet-root .preview-page .ex-eq-frac-bot{display:block;font-size:calc(${fz} * 0.85);padding:1px 2px 0;line-height:1;text-align:center;}
     .sheet-root .preview-page .ex-pot{font-family:${FONT};font-size:${fz};white-space:nowrap;display:inline;}
     .sheet-root .preview-page .ex-pot-base{font-size:${fz};color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .sheet-root .preview-page .ex-pot-exp{font-size:.6em;vertical-align:super;line-height:1;margin-left:1px;}
     .sheet-root .preview-page .ex-pot-result{font-size:${fz};margin-left:6px;color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
-    .sheet-root .preview-page .ex-raiz{display:inline-flex;align-items:flex-end;font-family:${FONT};font-size:${fz};gap:0;vertical-align:middle;}
-    .sheet-root .preview-page .ex-raiz-svg{height:1.5em;width:auto;overflow:visible;flex-shrink:0;}
-    .sheet-root .preview-page .ex-raiz-val{border-top:1.5px solid #374151;padding:0 4px 0 0;font-size:${fz};line-height:1.5;color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
-    .sheet-root .preview-page .ex-raiz-idx-wrap{position:relative;display:inline-block;line-height:0;}
-    .sheet-root .preview-page .ex-raiz-idx{position:absolute;top:0;left:1px;font-size:0.55em;line-height:1;}
+    .sheet-root .preview-page .ex-raiz{display:inline-flex;align-items:flex-start;font-family:${FONT};font-size:${fz};gap:0;vertical-align:middle;line-height:1;}
+    .sheet-root .preview-page .ex-raiz-svg{height:1.2em;width:auto;overflow:visible;flex-shrink:0;margin-top:0.06em;}
+    .sheet-root .preview-page .ex-raiz-val{display:inline-block;border-top:1.5px solid #374151;padding:0.12em 4px 0 2px;font-size:${fz};line-height:1.15;color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
+    .sheet-root .preview-page .ex-raiz-idx-wrap{position:relative;display:inline-flex;align-items:flex-start;line-height:1;}
+    .sheet-root .preview-page .ex-raiz-idx{position:absolute;top:-0.45em;left:0;font-size:0.55em;line-height:1;}
     .sheet-root .preview-page .ex-expressao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;}
     .sheet-root .preview-page .ex-expr-term,.sheet-root .preview-page .ex-expr-op,.sheet-root .preview-page .ex-expr-eq{font-size:${fz};}
   `;
@@ -2320,7 +2321,7 @@ function buildMeasurementDoc(
     `<div id="sg-header">${headerHTML}</div>` +
     (subtitleHTML ? `<div id="sg-subtitle">${subtitleHTML}</div>` : "") +
     `<div style="display:grid;grid-template-columns:repeat(${cfg.cols},1fr);gap:${rowGap}px ${colGap}px;align-items:start;">${gridItems}</div>` +
-    `<div id="sg-footer" style="${S.footer} padding-top:10px;border-top:1px solid #E5E7EB;display:flex;justify-content:center;">` +
+    `<div id="sg-footer" style="${S.footer} padding-top:10px;padding-bottom:${PRINT_FOOTER_SAFE_PAD}px;line-height:1.25;border-top:1px solid #E5E7EB;display:flex;justify-content:center;">` +
     `<span>Axiora Tools</span><span>Reprodução livre para fins pedagógicos</span></div>` +
     `</body></html>`
   );
@@ -2408,7 +2409,7 @@ function buildOnePageHTML(
       : "";
   // Footer em fluxo normal com flex-shrink:0 — position:absolute cria camadas
   // separadas em Safari/iOS que viram páginas em branco no PDF.
-  const footerHTML = `<div style="${S.footer} flex-shrink:0;padding-top:10px;border-top:1px solid #E5E7EB;display:flex;justify-content:center;"><span>Axiora Tools</span></div>`;
+  const footerHTML = `<div style="${S.footer} flex-shrink:0;padding-top:10px;padding-bottom:${PRINT_FOOTER_SAFE_PAD}px;line-height:1.25;border-top:1px solid #E5E7EB;display:flex;justify-content:center;"><span>Axiora Tools</span></div>`;
   const mainId = measurement ? ` id="sg-main"` : "";
   const sectionsId = measurement ? ` id="sg-sections"` : "";
 
@@ -3150,7 +3151,7 @@ function buildAnswerPageHTML(
     const val = ex.answer !== undefined && ex.answer !== null ? String(ex.answer) : "—";
     return `<div style="font-family:${FONT};font-size:13px;color:#1F2937;line-height:1.45;">${num}&nbsp;${val}</div>`;
   });
-  const footerHTML = `<div style="${S.footer} flex-shrink:0;padding-top:10px;border-top:1px solid #E5E7EB;display:flex;justify-content:center;"><span>Axiora Tools</span></div>`;
+  const footerHTML = `<div style="${S.footer} flex-shrink:0;padding-top:10px;padding-bottom:${PRINT_FOOTER_SAFE_PAD}px;line-height:1.25;border-top:1px solid #E5E7EB;display:flex;justify-content:center;"><span>Axiora Tools</span></div>`;
   const mainId = measurement ? ` id="sg-answer-main"` : "";
   const itemsId = measurement ? ` id="sg-answer-items"` : "";
   return (
@@ -4038,6 +4039,17 @@ export function SheetGeneratorTool() {
     setCategoryModalOpen(true);
   }, []);
 
+  const triggerTapHaptic = useCallback(() => {
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate(14);
+    }
+  }, []);
+
+  const openCategoryModalWithHaptic = useCallback(() => {
+    triggerTapHaptic();
+    openCategoryModal();
+  }, [openCategoryModal, triggerTapHaptic]);
+
   const openPreviewWindow = useCallback(() => {
     const hasActiveBlocks = blocks.some((b) => b.active);
     if (hasActiveBlocks && (isPaginating || previewPages.length === 0)) {
@@ -4066,6 +4078,11 @@ export function SheetGeneratorTool() {
     setGuidedStageId(null);
     setAddBlockModalOpen(true);
   }, []);
+
+  const addBlockWithHaptic = useCallback(() => {
+    triggerTapHaptic();
+    addBlock();
+  }, [addBlock, triggerTapHaptic]);
 
   const removeBlock = useCallback(
     (id: number) => {
@@ -4728,13 +4745,17 @@ export function SheetGeneratorTool() {
               <Home className="axiora-fixed-icon" size={15} strokeWidth={2} />
             </button>
 
-            <button type="button" onClick={openCategoryModal} className={desktopPreviewBtnCls}>
+            <button
+              type="button"
+              onClick={openCategoryModalWithHaptic}
+              className={desktopPreviewBtnCls}
+            >
               Adicionar exerc&iacute;cios
             </button>
 
             <button
               type="button"
-              onClick={addBlock}
+              onClick={addBlockWithHaptic}
               className={desktopTopActionBtnCls}
             >
               Modelo pronto
@@ -5066,14 +5087,14 @@ export function SheetGeneratorTool() {
               </button>
               <button
                 type="button"
-                onClick={openCategoryModal}
+                onClick={openCategoryModalWithHaptic}
                 className={`${chunkyPrimaryBtn} !px-2.5 !py-1.5 !text-[10px] whitespace-nowrap`}
               >
                 Adicionar exerc&iacute;cios
               </button>
               <button
                 type="button"
-                onClick={addBlock}
+                onClick={addBlockWithHaptic}
                 className={`${chunkyOutlineBtn} !px-2.5 !py-1.5 !text-[10px] whitespace-nowrap`}
               >
                 Modelo pronto
@@ -5131,7 +5152,7 @@ export function SheetGeneratorTool() {
                 {/* Illustration */}
                 <button
                   type="button"
-                  onClick={openCategoryModal}
+                  onClick={openCategoryModalWithHaptic}
                   aria-label="Adicionar exercícios"
                   className="flex h-14 w-14 cursor-pointer items-center justify-center rounded-2xl transition hover:brightness-105"
                   style={{
