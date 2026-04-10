@@ -1426,9 +1426,10 @@ function buildPrintDocumentFromPages(
           html,body{margin:0;padding:0;background:#fff;width:210mm;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
           .print-page{
             width:210mm;
+            height:calc(297mm - 1px);
             box-sizing:border-box;
             padding:${PAGE_PY}px ${PAGE_PX}px;
-            overflow:visible;
+            overflow:hidden;
             break-inside:avoid;
             page-break-inside:avoid;
           }
@@ -1441,19 +1442,22 @@ function buildPrintDocumentFromPages(
           }
           .print-page .sheet-root .preview-page{
             width:100% !important;
-            height:auto !important;
-            min-height:0 !important;
+            height:calc(297mm - 1px - ${2 * PAGE_PY}px) !important;
+            min-height:calc(297mm - 1px - ${2 * PAGE_PY}px) !important;
             box-sizing:border-box;
             padding:0 !important;
-            overflow:visible !important;
-            display:block !important;
+            overflow:hidden !important;
+            display:flex !important;
+            flex-direction:column !important;
             break-inside:avoid;
             page-break-inside:avoid;
           }
           .print-page .sheet-root .main{
-            display:block !important;
-            overflow:visible !important;
+            display:flex !important;
+            flex-direction:column !important;
+            overflow:hidden !important;
             min-height:0 !important;
+            flex:1 1 auto !important;
           }
         </style>
       </head><body>${pagesHtml}</body></html>`;
