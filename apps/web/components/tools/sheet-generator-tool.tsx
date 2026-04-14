@@ -538,7 +538,13 @@ function nDigits(n: number): number {
 }
 
 function fracHTML(num: number, den: number): string {
-  return `<span class="ex-frac"><span class="ex-frac-num">${num}</span><span class="ex-frac-bar"></span><span class="ex-frac-den">${den}</span></span>`;
+  // Inline styles garantem o layout correto no html2canvas do iOS WebKit,
+  // que às vezes não aplica CSS classes corretamente em elementos off-screen.
+  const FRAC_WRAP = 'display:inline-block;text-align:center;line-height:1;vertical-align:middle;';
+  const FRAC_NUM  = 'display:block;padding:0 4px 1px;text-align:center;min-width:16px;line-height:1.1;font-weight:500;color:#0F172A;';
+  const FRAC_BAR  = 'display:block;width:100%;min-width:16px;height:1.5px;background-color:#374151;margin:0;padding:0;border:0;line-height:0;font-size:0;';
+  const FRAC_DEN  = 'display:block;padding:1px 4px 0;text-align:center;min-width:16px;line-height:1.1;font-weight:500;color:#0F172A;';
+  return `<span class="ex-frac" style="${FRAC_WRAP}"><span class="ex-frac-num" style="${FRAC_NUM}">${num}</span><span class="ex-frac-bar" style="${FRAC_BAR}"></span><span class="ex-frac-den" style="${FRAC_DEN}">${den}</span></span>`;
 }
 
 function genAritmetica(c: BlockConfig): { html: string; answer: string | number } {
@@ -738,7 +744,7 @@ function genEquacoes(c: BlockConfig): { html: string; answer: string | number } 
     const xaMax = Math.max(1, Math.floor(respMax / a));
     sol = a * rnd(1, xaMax);
     rhs = sol / a + b;
-    lhs = `<span class="ex-eq-frac-wrap"><span class="ex-eq-frac-top">x</span><span class="ex-eq-frac-bar"></span><span class="ex-eq-frac-bot">${a}</span></span> <span class="ex-eq-op">+</span> <span class="ex-eq-num">${b}</span>`;
+    lhs = `<span class="ex-eq-frac-wrap" style="display:inline-block;text-align:center;line-height:1;vertical-align:middle;margin:0 2px;"><span class="ex-eq-frac-top" style="display:block;padding:0 2px 1px;text-align:center;min-width:14px;line-height:1;font-style:italic;font-weight:500;color:#0F172A;">x</span><span class="ex-eq-frac-bar" style="display:block;width:100%;min-width:14px;height:1.5px;background-color:#374151;margin:0;padding:0;border:0;line-height:0;font-size:0;"></span><span class="ex-eq-frac-bot" style="display:block;padding:1px 2px 0;text-align:center;line-height:1;font-weight:500;color:#0F172A;">${a}</span></span> <span class="ex-eq-op">+</span> <span class="ex-eq-num">${b}</span>`;
   }
 
   return {
