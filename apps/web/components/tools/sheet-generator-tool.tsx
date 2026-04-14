@@ -759,7 +759,7 @@ function genPotenciacao(c: BlockConfig): { html: string; answer: string | number
     const raizSym = `<span class="ex-raiz-sign">√</span>`;
     const idxHtml =
       n > 2
-        ? `<span class="ex-raiz-idx-wrap"><span class="ex-raiz-idx">${n}</span><span class="ex-raiz-sign">√</span></span>`
+        ? `<span class="ex-raiz-idx">${n}</span><span class="ex-raiz-sign">√</span>`
         : raizSym;
     return {
       answer: base,
@@ -1249,29 +1249,28 @@ const footerHtml = `<div style="margin-top:0;padding-top:6mm;padding-bottom:${PR
     .ex-divisao-quociente{min-height:1.8em;padding:2px 2px 0 6px;}
     /* — Exercícios lineares e expressões — */
     .ex-linear{font-family:${FONT};font-size:${fz};white-space:normal;word-break:break-word;}
-    .ex-frac{display:inline-grid;grid-template-rows:auto auto auto;justify-items:center;align-items:center;line-height:1;vertical-align:middle;}
-    .ex-frac-num{display:block;padding:0 2px;text-align:center;min-width:16px;line-height:1.08;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
-    .ex-frac-bar{display:block;width:100%;min-width:16px;border-top:1.5px solid #374151;margin:2px 0 1px;}
-    .ex-frac-den{display:block;padding:0 2px;text-align:center;min-width:16px;line-height:1.08;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
+    .ex-frac{display:inline-grid;grid-template-rows:1.08em 2px 1.08em;justify-items:center;align-items:center;line-height:1;vertical-align:middle;}
+    .ex-frac-num{display:block;padding:0 2px;text-align:center;min-width:16px;line-height:1.08em;height:1.08em;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
+    .ex-frac-bar{display:block;width:100%;min-width:16px;height:2px;background:#374151;border:0;margin:0;}
+    .ex-frac-den{display:block;padding:0 2px;text-align:center;min-width:16px;line-height:1.08em;height:1.08em;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .ex-frac-op{font-size:${fz};padding:0 2px;align-self:center;color:#0F172A;}
     .ex-frac-result{align-self:center;font-size:${fz};color:#0F172A;}
     .ex-fracao-expr{display:inline-flex;align-items:center;gap:10px;font-family:${FONT};font-size:${fz};}
     .ex-equacao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;}
     .ex-eq-var{font-style:italic;font-size:${fz};color:#1F2937;}
     .ex-eq-op,.ex-eq-equals,.ex-eq-num,.ex-eq-coef{font-size:${fz};color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
-    .ex-eq-frac-wrap{display:inline-grid;grid-template-rows:auto auto auto;justify-items:center;align-items:center;line-height:1;vertical-align:middle;margin:0 2px;}
-    .ex-eq-frac-top{display:block;font-style:italic;font-size:calc(${fz} * 0.85);padding:0 2px;line-height:1.08;min-width:14px;text-align:center;}
-    .ex-eq-frac-bar{display:block;width:100%;min-width:14px;border-top:1.5px solid #374151;margin:2px 0 1px;}
-    .ex-eq-frac-bot{display:block;font-size:calc(${fz} * 0.85);padding:0 2px;line-height:1.08;text-align:center;}
+    .ex-eq-frac-wrap{display:inline-grid;grid-template-rows:0.95em 2px 0.95em;justify-items:center;align-items:center;line-height:1;vertical-align:middle;margin:0 2px;}
+    .ex-eq-frac-top{display:block;font-style:italic;font-size:calc(${fz} * 0.85);padding:0 2px;line-height:0.95em;height:0.95em;min-width:14px;text-align:center;}
+    .ex-eq-frac-bar{display:block;width:100%;min-width:14px;height:2px;background:#374151;border:0;margin:0;}
+    .ex-eq-frac-bot{display:block;font-size:calc(${fz} * 0.85);padding:0 2px;line-height:0.95em;height:0.95em;text-align:center;}
     .ex-pot{font-family:${FONT};font-size:${fz};white-space:nowrap;display:inline;}
     .ex-pot-base{font-size:${fz};color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .ex-pot-exp{font-size:.6em;vertical-align:super;line-height:1;margin-left:1px;}
     .ex-pot-result{font-size:${fz};margin-left:6px;color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .ex-raiz{display:inline-flex;align-items:flex-start;font-family:${FONT};font-size:${fz};gap:0;vertical-align:middle;line-height:1;}
-    .ex-raiz-sign{display:inline-block;font-size:1.24em;line-height:1;margin-right:1px;transform:translateY(0.08em);}
+    .ex-raiz-sign{display:inline-block;font-size:1.2em;line-height:1;margin-right:1px;transform:translateY(0.1em);}
     .ex-raiz-val{display:inline-block;border-top:1.5px solid #374151;padding:0.1em 4px 0 2px;font-size:${fz};line-height:1.18;color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
-    .ex-raiz-idx-wrap{position:relative;display:inline-flex;align-items:flex-start;line-height:1;padding-left:0.38em;}
-    .ex-raiz-idx{position:absolute;top:-0.28em;left:0;font-size:0.52em;line-height:1;font-family:${FONT};}
+    .ex-raiz-idx{display:inline-block;font-size:0.52em;line-height:1;vertical-align:super;margin-right:1px;transform:translateY(-0.2em);font-family:${FONT};}
     .ex-expressao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;}
     .ex-expr-term,.ex-expr-op,.ex-expr-eq{font-size:${fz};}
   `;
@@ -1410,7 +1409,11 @@ function buildPrintDocumentFromPages(
 ): string {
   const sharedPrintCss = buildPrintCss(cfg);
   const printBottomPadPx = PAGE_PY + PRINT_FOOTER_SAFE_PAD;
-  const printableMinHeightPx = A4_H - PAGE_PY - printBottomPadPx;
+  // Browsers compute A4 as 297mm × (96/25.4) ≈ 1122.52 CSS px, but A4_H = 1123.
+  // Without this safety, total print-page height = 1123px overflows by ~0.48px,
+  // causing Chrome to push the footer onto a new blank physical page.
+  const PRINT_HEIGHT_SAFETY_PX = 4;
+  const printableMinHeightPx = A4_H - PAGE_PY - printBottomPadPx - PRINT_HEIGHT_SAFETY_PX;
 
   const pagesHtml = pages
     .map((page, index) => {
@@ -2180,29 +2183,28 @@ function buildDocCSS(cfg: GlobalConfig): string {
     .sheet-root .preview-page .ex-divisao-divisor{white-space:nowrap;padding:0 2px 3px 6px;border-left:1px solid #374151;border-bottom:1px solid #374151;}
     .sheet-root .preview-page .ex-divisao-quociente{min-height:1.8em;padding:2px 2px 0 6px;}
     .sheet-root .preview-page .ex-linear{font-family:${FONT};font-size:${fz};white-space:normal;word-break:break-word;}
-    .sheet-root .preview-page .ex-frac{display:inline-grid;grid-template-rows:auto auto auto;justify-items:center;align-items:center;line-height:1;vertical-align:middle;}
-    .sheet-root .preview-page .ex-frac-num{display:block;padding:0 2px;text-align:center;min-width:16px;line-height:1.08;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
-    .sheet-root .preview-page .ex-frac-bar{display:block;width:100%;min-width:16px;border-top:1.5px solid #374151;margin:2px 0 1px;}
-    .sheet-root .preview-page .ex-frac-den{display:block;padding:0 2px;text-align:center;min-width:16px;line-height:1.08;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
+    .sheet-root .preview-page .ex-frac{display:inline-grid;grid-template-rows:1.08em 2px 1.08em;justify-items:center;align-items:center;line-height:1;vertical-align:middle;}
+    .sheet-root .preview-page .ex-frac-num{display:block;padding:0 2px;text-align:center;min-width:16px;line-height:1.08em;height:1.08em;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
+    .sheet-root .preview-page .ex-frac-bar{display:block;width:100%;min-width:16px;height:2px;background:#374151;border:0;margin:0;}
+    .sheet-root .preview-page .ex-frac-den{display:block;padding:0 2px;text-align:center;min-width:16px;line-height:1.08em;height:1.08em;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .sheet-root .preview-page .ex-frac-op{font-size:${fz};padding:0 2px;align-self:center;color:#0F172A;}
     .sheet-root .preview-page .ex-frac-result{align-self:center;font-size:${fz};color:#0F172A;}
     .sheet-root .preview-page .ex-fracao-expr{display:inline-flex;align-items:center;gap:10px;font-family:${FONT};font-size:${fz};}
     .sheet-root .preview-page .ex-equacao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;}
     .sheet-root .preview-page .ex-eq-var{font-style:italic;font-size:${fz};color:#1F2937;}
     .sheet-root .preview-page .ex-eq-op,.sheet-root .preview-page .ex-eq-equals,.sheet-root .preview-page .ex-eq-num,.sheet-root .preview-page .ex-eq-coef{font-size:${fz};color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
-    .sheet-root .preview-page .ex-eq-frac-wrap{display:inline-grid;grid-template-rows:auto auto auto;justify-items:center;align-items:center;line-height:1;vertical-align:middle;margin:0 2px;}
-    .sheet-root .preview-page .ex-eq-frac-top{display:block;font-style:italic;font-size:calc(${fz} * 0.85);padding:0 2px;line-height:1.08;min-width:14px;text-align:center;}
-    .sheet-root .preview-page .ex-eq-frac-bar{display:block;width:100%;min-width:14px;border-top:1.5px solid #374151;margin:2px 0 1px;}
-    .sheet-root .preview-page .ex-eq-frac-bot{display:block;font-size:calc(${fz} * 0.85);padding:0 2px;line-height:1.08;text-align:center;}
+    .sheet-root .preview-page .ex-eq-frac-wrap{display:inline-grid;grid-template-rows:0.95em 2px 0.95em;justify-items:center;align-items:center;line-height:1;vertical-align:middle;margin:0 2px;}
+    .sheet-root .preview-page .ex-eq-frac-top{display:block;font-style:italic;font-size:calc(${fz} * 0.85);padding:0 2px;line-height:0.95em;height:0.95em;min-width:14px;text-align:center;}
+    .sheet-root .preview-page .ex-eq-frac-bar{display:block;width:100%;min-width:14px;height:2px;background:#374151;border:0;margin:0;}
+    .sheet-root .preview-page .ex-eq-frac-bot{display:block;font-size:calc(${fz} * 0.85);padding:0 2px;line-height:0.95em;height:0.95em;text-align:center;}
     .sheet-root .preview-page .ex-pot{font-family:${FONT};font-size:${fz};white-space:nowrap;display:inline;}
     .sheet-root .preview-page .ex-pot-base{font-size:${fz};color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .sheet-root .preview-page .ex-pot-exp{font-size:.6em;vertical-align:super;line-height:1;margin-left:1px;}
     .sheet-root .preview-page .ex-pot-result{font-size:${fz};margin-left:6px;color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .sheet-root .preview-page .ex-raiz{display:inline-flex;align-items:flex-start;font-family:${FONT};font-size:${fz};gap:0;vertical-align:middle;line-height:1;}
-    .sheet-root .preview-page .ex-raiz-sign{display:inline-block;font-size:1.24em;line-height:1;margin-right:1px;transform:translateY(0.08em);}
+    .sheet-root .preview-page .ex-raiz-sign{display:inline-block;font-size:1.2em;line-height:1;margin-right:1px;transform:translateY(0.1em);}
     .sheet-root .preview-page .ex-raiz-val{display:inline-block;border-top:1.5px solid #374151;padding:0.1em 4px 0 2px;font-size:${fz};line-height:1.18;color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
-    .sheet-root .preview-page .ex-raiz-idx-wrap{position:relative;display:inline-flex;align-items:flex-start;line-height:1;padding-left:0.38em;}
-    .sheet-root .preview-page .ex-raiz-idx{position:absolute;top:-0.28em;left:0;font-size:0.52em;line-height:1;}
+    .sheet-root .preview-page .ex-raiz-idx{display:inline-block;font-size:0.52em;line-height:1;vertical-align:super;margin-right:1px;transform:translateY(-0.2em);}
     .sheet-root .preview-page .ex-expressao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;}
     .sheet-root .preview-page .ex-expr-term,.sheet-root .preview-page .ex-expr-op,.sheet-root .preview-page .ex-expr-eq{font-size:${fz};}
   `;
@@ -2956,7 +2958,10 @@ async function measurePageLayoutAdjustment(
     isFirstPage,
     sectionHeaders,
   );
-  const SAFE_BOTTOM_BUFFER = 10;
+  // Measurement iframe: preview-page inner height = A4_H - 2*PAGE_PY = 1075px.
+  // Print: preview-page min-height = A4_H - PAGE_PY - printBottomPadPx - PRINT_HEIGHT_SAFETY_PX = 1063px.
+  // Discrepancy = 12px. Buffer must be ≥ 12 + 10 = 22 to keep ≥10px safety in real print.
+  const SAFE_BOTTOM_BUFFER = 22;
   if (difference <= 0) {
     return { extraRowGap: 0, extraSectionGap: 0 };
   }
