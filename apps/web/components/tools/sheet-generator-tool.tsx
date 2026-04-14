@@ -1546,9 +1546,13 @@ async function downloadPdfFromPreviewPages(
   ]);
 
   const host = document.createElement("div");
+  // iOS WebKit não computa layout de elementos muito fora da viewport (left:-100000px).
+  // Com opacity:0 + position:fixed na viewport, o layout é computado corretamente
+  // e html2canvas consegue ler getBoundingClientRect() com valores corretos.
   host.style.position = "fixed";
-  host.style.left = "-100000px";
+  host.style.left = "0";
   host.style.top = "0";
+  host.style.opacity = "0";
   host.style.width = `${A4_W}px`;
   host.style.pointerEvents = "none";
   host.style.background = "#ffffff";
