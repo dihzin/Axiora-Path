@@ -1249,7 +1249,7 @@ const footerHtml = `<div style="margin-top:0;padding-top:6mm;padding-bottom:${PR
     .ex-divisao-quociente{min-height:1.8em;padding:2px 2px 0 6px;}
     /* — Exercícios lineares e expressões — */
     .ex-linear{font-family:${FONT};font-size:${fz};white-space:normal;word-break:break-word;}
-    .ex-frac{display:inline-flex;flex-direction:column;align-items:center;line-height:1;vertical-align:middle;}
+    .ex-frac{display:inline-block;text-align:center;line-height:1;vertical-align:middle;}
     .ex-frac-num{display:block;border-bottom:1.5px solid #374151;padding:0 4px 2px;text-align:center;min-width:16px;line-height:1.1;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .ex-frac-bar{display:none;}
     .ex-frac-den{display:block;padding:2px 4px 0;text-align:center;min-width:16px;line-height:1.1;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
@@ -1259,7 +1259,7 @@ const footerHtml = `<div style="margin-top:0;padding-top:6mm;padding-bottom:${PR
     .ex-equacao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;}
     .ex-eq-var{font-style:italic;font-size:${fz};color:#1F2937;}
     .ex-eq-op,.ex-eq-equals,.ex-eq-num,.ex-eq-coef{font-size:${fz};color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
-    .ex-eq-frac-wrap{display:inline-flex;flex-direction:column;align-items:center;line-height:1;vertical-align:middle;margin:0 2px;}
+    .ex-eq-frac-wrap{display:inline-block;text-align:center;line-height:1;vertical-align:middle;margin:0 2px;}
     .ex-eq-frac-top{display:block;font-style:italic;font-size:calc(${fz} * 0.85);border-bottom:1.5px solid #374151;padding:0 2px 1px;line-height:1;min-width:14px;text-align:center;}
     .ex-eq-frac-bar{display:none;}
     .ex-eq-frac-bot{display:block;font-size:calc(${fz} * 0.85);padding:1px 2px 0;line-height:1;text-align:center;}
@@ -2183,7 +2183,7 @@ function buildDocCSS(cfg: GlobalConfig): string {
     .sheet-root .preview-page .ex-divisao-divisor{white-space:nowrap;padding:0 2px 3px 6px;border-left:1px solid #374151;border-bottom:1px solid #374151;}
     .sheet-root .preview-page .ex-divisao-quociente{min-height:1.8em;padding:2px 2px 0 6px;}
     .sheet-root .preview-page .ex-linear{font-family:${FONT};font-size:${fz};white-space:normal;word-break:break-word;}
-    .sheet-root .preview-page .ex-frac{display:inline-flex;flex-direction:column;align-items:center;line-height:1;vertical-align:middle;}
+    .sheet-root .preview-page .ex-frac{display:inline-block;text-align:center;line-height:1;vertical-align:middle;}
     .sheet-root .preview-page .ex-frac-num{display:block;border-bottom:1.5px solid #374151;padding:0 4px 2px;text-align:center;min-width:16px;line-height:1.1;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
     .sheet-root .preview-page .ex-frac-bar{display:none;}
     .sheet-root .preview-page .ex-frac-den{display:block;padding:2px 4px 0;text-align:center;min-width:16px;line-height:1.1;font-size:${fz};font-weight:500;color:#0F172A;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
@@ -2193,7 +2193,7 @@ function buildDocCSS(cfg: GlobalConfig): string {
     .sheet-root .preview-page .ex-equacao{font-family:${FONT};font-size:${fz};display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;}
     .sheet-root .preview-page .ex-eq-var{font-style:italic;font-size:${fz};color:#1F2937;}
     .sheet-root .preview-page .ex-eq-op,.sheet-root .preview-page .ex-eq-equals,.sheet-root .preview-page .ex-eq-num,.sheet-root .preview-page .ex-eq-coef{font-size:${fz};color:#0F172A;font-weight:500;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;}
-    .sheet-root .preview-page .ex-eq-frac-wrap{display:inline-flex;flex-direction:column;align-items:center;line-height:1;vertical-align:middle;margin:0 2px;}
+    .sheet-root .preview-page .ex-eq-frac-wrap{display:inline-block;text-align:center;line-height:1;vertical-align:middle;margin:0 2px;}
     .sheet-root .preview-page .ex-eq-frac-top{display:block;font-style:italic;font-size:calc(${fz} * 0.85);border-bottom:1.5px solid #374151;padding:0 2px 1px;line-height:1;min-width:14px;text-align:center;}
     .sheet-root .preview-page .ex-eq-frac-bar{display:none;}
     .sheet-root .preview-page .ex-eq-frac-bot{display:block;font-size:calc(${fz} * 0.85);padding:1px 2px 0;line-height:1;text-align:center;}
