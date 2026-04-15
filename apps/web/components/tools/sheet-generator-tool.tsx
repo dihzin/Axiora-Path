@@ -1440,10 +1440,16 @@ function buildPrintDocumentFromPages(
                   Root cause: 297mm fills exactly one A4 page AND break-before adds an
                   explicit break → iOS generates one natural break + one forced break = extra
                   blank page between every pair of logical pages.
-             v3 (current) — height:297mm only, no break-before.
+             v3 — height:297mm only, no break-before.
                   Each .print-page div is exactly 297mm, so consecutive divs align naturally
                   to A4 page boundaries on every browser/DPI without explicit breaks.
-                  overflow:hidden prevents any sub-pixel bleed past the 297mm boundary. ── */
+                  overflow:hidden prevents any sub-pixel bleed past the 297mm boundary.
+                  Remaining issue: trailing blank page (iOS generates a page after the last
+                  297mm block) + footer rising (height:100% on .preview-page needs its full
+                  ancestor chain to have explicit heights: .sheet-root was missing height).
+             v4 (current) — last page uses height:auto to prevent trailing blank page;
+                  .sheet-root gets height:100% so the flex chain works correctly and the
+                  footer stays pinned at the bottom via margin-top:auto. ── */
           .print-page{
             width:210mm;
             height:297mm;
@@ -1451,11 +1457,16 @@ function buildPrintDocumentFromPages(
             padding:${PAGE_PY}px ${PAGE_PX}px ${printBottomPadPx}px ${PAGE_PX}px;
             overflow:hidden;
           }
+          .print-page:last-child{
+            height:auto;
+            overflow:visible;
+          }
           .print-page--next{
             /* intentionally empty: height:297mm handles page alignment on all DPIs */
           }
           .print-page .sheet-root{
             width:100% !important;
+            height:100% !important;
           }
           .print-page .sheet-root .preview-page{
             width:100% !important;
