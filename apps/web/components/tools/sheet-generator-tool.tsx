@@ -1459,10 +1459,13 @@ function buildPrintDocumentFromPages(
             width:210mm;
             box-sizing:border-box;
             padding:${PAGE_PY}px ${PAGE_PX}px ${printBottomPadPx}px ${PAGE_PX}px;
+            ${isIOSWebKit ? "break-after:page;page-break-after:always;" : ""}
+          }
+          .print-page:last-child{
+            ${isIOSWebKit ? "break-after:auto;page-break-after:auto;" : ""}
           }
           .print-page--next{
-            break-before:page;
-            page-break-before:always;
+            ${isIOSWebKit ? "" : "break-before:page;page-break-before:always;"}
           }
           .print-page .sheet-root{
             width:100% !important;
@@ -1472,18 +1475,18 @@ function buildPrintDocumentFromPages(
             box-sizing:border-box;
             padding:0 !important;
             ${isIOSWebKit ? "display:block !important;" : "display:flex !important;flex-direction:column !important;"}
-            min-height:calc(297mm - ${PAGE_PY}px - ${printBottomPadPx}px${
+            ${isIOSWebKit ? "min-height:0 !important;" : `min-height:calc(297mm - ${PAGE_PY}px - ${printBottomPadPx}px${
               isIOSWebKit ? ` - ${iosFooterReservePx}px - ${iosHeightSafetyPx}px` : ""
-            }) !important;
+            }) !important;`}
           }
           .print-page .sheet-root .main{
             display:block !important;
             overflow:visible !important;
             min-height:0 !important;
-            ${isIOSWebKit ? `padding-bottom:${iosFooterReservePx}px !important;` : ""}
+            ${isIOSWebKit ? `padding-bottom:${iosFooterReservePx}px !important;break-inside:avoid !important;page-break-inside:avoid !important;` : ""}
           }
           .print-page .sheet-root [data-axiora-print-footer="1"]{
-            ${isIOSWebKit ? "margin-top:0 !important;" : "margin-top:auto !important;"}
+            ${isIOSWebKit ? "margin-top:0 !important;break-inside:avoid !important;page-break-inside:avoid !important;" : "margin-top:auto !important;"}
           }
         </style>
       </head><body>${pagesHtml}</body></html>`;
