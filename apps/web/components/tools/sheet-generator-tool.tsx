@@ -1413,8 +1413,11 @@ function buildPrintDocumentFromPages(
   pages: string[],
   cfg: GlobalConfig,
 ): string {
+  const isIOSWebKit = isIOSWebKitBrowser();
   const sharedPrintCss = buildPrintCss(cfg);
   const printBottomPadPx = PAGE_PY + PRINT_FOOTER_SAFE_PAD;
+  const iosFooterReservePx = 44;
+  const iosHeightSafetyPx = 2;
 
   const pagesHtml = pages
     .map((page, index) => {
@@ -1468,14 +1471,19 @@ function buildPrintDocumentFromPages(
             width:100% !important;
             box-sizing:border-box;
             padding:0 !important;
-            display:flex !important;
-            flex-direction:column !important;
-            min-height:calc(297mm - ${PAGE_PY}px - ${printBottomPadPx}px) !important;
+            ${isIOSWebKit ? "display:block !important;" : "display:flex !important;flex-direction:column !important;"}
+            min-height:calc(297mm - ${PAGE_PY}px - ${printBottomPadPx}px${
+              isIOSWebKit ? ` - ${iosFooterReservePx}px - ${iosHeightSafetyPx}px` : ""
+            }) !important;
           }
           .print-page .sheet-root .main{
             display:block !important;
             overflow:visible !important;
             min-height:0 !important;
+            ${isIOSWebKit ? `padding-bottom:${iosFooterReservePx}px !important;` : ""}
+          }
+          .print-page .sheet-root [data-axiora-print-footer="1"]{
+            ${isIOSWebKit ? "margin-top:0 !important;" : "margin-top:auto !important;"}
           }
         </style>
       </head><body>${pagesHtml}</body></html>`;
@@ -1511,7 +1519,7 @@ function normalizePrintPageHtml(pageHtml: string): string {
   return normalizedMain.replace(
     /<div([^>]*)style="([^"]*border-top:[^"]*)">([\s\S]*?Axiora\s*Tools[\s\S]*?)<\/div>/gi,
     (_match, attrs: string, style: string, body: string) =>
-      `<div${attrs} style="${style};margin-top:auto;padding-bottom:${PRINT_FOOTER_SAFE_PAD}px;line-height:1.25;">${body}</div>`,
+      `<div${attrs} data-axiora-print-footer="1" style="${style};margin-top:auto;padding-bottom:${PRINT_FOOTER_SAFE_PAD}px;line-height:1.25;">${body}</div>`,
   );
 }
 
