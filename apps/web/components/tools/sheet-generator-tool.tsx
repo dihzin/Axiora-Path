@@ -1466,7 +1466,6 @@ function buildPrintDocumentFromPages(
           }
           .print-page .sheet-root{
             width:100% !important;
-            height:100% !important;
           }
           .print-page .sheet-root .preview-page{
             width:100% !important;
