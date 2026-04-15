@@ -1415,11 +1415,6 @@ function buildPrintDocumentFromPages(
 ): string {
   const sharedPrintCss = buildPrintCss(cfg);
   const printBottomPadPx = PAGE_PY + PRINT_FOOTER_SAFE_PAD;
-  // Browsers compute A4 as 297mm × (96/25.4) ≈ 1122.52 CSS px, but A4_H = 1123.
-  // Without this safety, total print-page height = 1123px overflows by ~0.48px,
-  // causing Chrome to push the footer onto a new blank physical page.
-  const PRINT_HEIGHT_SAFETY_PX = 4;
-  const printableMinHeightPx = A4_H - PAGE_PY - printBottomPadPx - PRINT_HEIGHT_SAFETY_PX;
 
   const pagesHtml = pages
     .map((page, index) => {
@@ -1438,12 +1433,16 @@ function buildPrintDocumentFromPages(
           ${sharedPrintCss}
           html,body{margin:0;padding:0;background:#fff;width:210mm;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
           /* ── iOS WebKit fix: use a single break mechanism only.
-             Fixed heights + break-inside:avoid (nested) cause WebKit to generate
+             Fixed heights in px + break-inside:avoid (nested) cause WebKit to generate
              3 physical pages per logical page: content / footer-only / empty.
-             Solution: drop all fixed heights and break-inside:avoid from wrappers;
-             rely solely on break-before:page on .print-page--next. ── */
+             Root cause: iOS Safari uses a different DPI reference for print, so px-based
+             min-height (e.g. 1063px) resolves to more than 297mm, causing overflow pages.
+             Solution: use height:297mm on .print-page (mm is DPI-independent) and
+             height:100% on .preview-page so the footer (margin-top:auto) stays at the
+             bottom without any px-based height calculation. ── */
           .print-page{
             width:210mm;
+            height:297mm;
             box-sizing:border-box;
             padding:${PAGE_PY}px ${PAGE_PX}px ${printBottomPadPx}px ${PAGE_PX}px;
           }
@@ -1460,7 +1459,7 @@ function buildPrintDocumentFromPages(
             padding:0 !important;
             display:flex !important;
             flex-direction:column !important;
-            min-height:${printableMinHeightPx}px !important;
+            height:100% !important;
           }
           .print-page .sheet-root .main{
             display:block !important;
