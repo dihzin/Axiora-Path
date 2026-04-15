@@ -1432,23 +1432,27 @@ function buildPrintDocumentFromPages(
           @page{size:A4 portrait;margin:0;}
           ${sharedPrintCss}
           html,body{margin:0;padding:0;background:#fff;width:210mm;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
-          /* ── iOS WebKit fix: use a single break mechanism only.
-             Fixed heights in px + break-inside:avoid (nested) cause WebKit to generate
-             3 physical pages per logical page: content / footer-only / empty.
-             Root cause: iOS Safari uses a different DPI reference for print, so px-based
-             min-height (e.g. 1063px) resolves to more than 297mm, causing overflow pages.
-             Solution: use height:297mm on .print-page (mm is DPI-independent) and
-             height:100% on .preview-page so the footer (margin-top:auto) stays at the
-             bottom without any px-based height calculation. ── */
+          /* ── iOS WebKit fix: height:297mm defines page boundaries; no break-before needed.
+             History of attempts:
+             v1 — min-height:1063px + break-before:page → 3 physical pages per logical page.
+                  Root cause: iOS Safari uses 72dpi for print, so 1063px ≈ 375mm > A4.
+             v2 — height:297mm + break-before:page → 2 physical pages per logical page.
+                  Root cause: 297mm fills exactly one A4 page AND break-before adds an
+                  explicit break → iOS generates one natural break + one forced break = extra
+                  blank page between every pair of logical pages.
+             v3 (current) — height:297mm only, no break-before.
+                  Each .print-page div is exactly 297mm, so consecutive divs align naturally
+                  to A4 page boundaries on every browser/DPI without explicit breaks.
+                  overflow:hidden prevents any sub-pixel bleed past the 297mm boundary. ── */
           .print-page{
             width:210mm;
             height:297mm;
             box-sizing:border-box;
             padding:${PAGE_PY}px ${PAGE_PX}px ${printBottomPadPx}px ${PAGE_PX}px;
+            overflow:hidden;
           }
           .print-page--next{
-            break-before:page;
-            page-break-before:always;
+            /* intentionally empty: height:297mm handles page alignment on all DPIs */
           }
           .print-page .sheet-root{
             width:100% !important;
