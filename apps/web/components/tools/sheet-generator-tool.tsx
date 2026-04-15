@@ -1432,37 +1432,34 @@ function buildPrintDocumentFromPages(
           @page{size:A4 portrait;margin:0;}
           ${sharedPrintCss}
           html,body{margin:0;padding:0;background:#fff;width:210mm;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
-          /* ── iOS WebKit fix: height:297mm defines page boundaries; no break-before needed.
-             History of attempts:
-             v1 — min-height:1063px + break-before:page → 3 physical pages per logical page.
-                  Root cause: iOS Safari uses 72dpi for print, so 1063px ≈ 375mm > A4.
-             v2 — height:297mm + break-before:page → 2 physical pages per logical page.
-                  Root cause: 297mm fills exactly one A4 page AND break-before adds an
-                  explicit break → iOS generates one natural break + one forced break = extra
-                  blank page between every pair of logical pages.
-             v3 — height:297mm only, no break-before.
-                  Each .print-page div is exactly 297mm, so consecutive divs align naturally
-                  to A4 page boundaries on every browser/DPI without explicit breaks.
-                  overflow:hidden prevents any sub-pixel bleed past the 297mm boundary.
-                  Remaining issue: trailing blank page (iOS generates a page after the last
-                  297mm block) + footer rising (height:100% on .preview-page needs its full
-                  ancestor chain to have explicit heights: .sheet-root was missing height).
-             v4 (current) — last page uses height:auto to prevent trailing blank page;
-                  .sheet-root gets height:100% so the flex chain works correctly and the
-                  footer stays pinned at the bottom via margin-top:auto. ── */
+          /* ── iOS WebKit print fix — history:
+             v1 — min-height:1063px + break-before:page → 3 pages per logical page.
+                  iOS uses 72dpi for print: 1063px ≈ 375mm >> A4.
+             v2 — height:297mm + break-before:page → 2 pages per logical page.
+                  height:297mm ends exactly at page boundary; break-before fires again
+                  on that same boundary → double break → blank page between every pair.
+             v3 — height:297mm, no break-before → blank trailing page.
+                  iOS generates an extra page after the last 297mm block.
+             v4 — height:297mm + :last-child{height:auto} + height:100% on .sheet-root
+                  → footer overflows to new page on full pages. iOS does not honour
+                  overflow:hidden in print; clipped content becomes a new physical page.
+             v4.1 — reverted .sheet-root height → footer rises (no fixed flex height).
+                    Blank page reappears with many pages (4×297mm hits page boundary).
+             v5 (current) — no fixed height on .print-page; break-before:page for page
+                  separation; min-height:calc(297mm - Xpx) on .preview-page.
+                  calc() mixes mm (DPI-independent) and px (scales with DPI), so the
+                  result is the exact available content area at any print DPI. Footer
+                  stays at bottom via flex + margin-top:auto on non-full pages.
+                  break-before only fires after natural content height (never at an
+                  exact 297mm boundary) → no double-break blank pages. ── */
           .print-page{
             width:210mm;
-            height:297mm;
             box-sizing:border-box;
             padding:${PAGE_PY}px ${PAGE_PX}px ${printBottomPadPx}px ${PAGE_PX}px;
-            overflow:hidden;
-          }
-          .print-page:last-child{
-            height:auto;
-            overflow:visible;
           }
           .print-page--next{
-            /* intentionally empty: height:297mm handles page alignment on all DPIs */
+            break-before:page;
+            page-break-before:always;
           }
           .print-page .sheet-root{
             width:100% !important;
@@ -1473,7 +1470,7 @@ function buildPrintDocumentFromPages(
             padding:0 !important;
             display:flex !important;
             flex-direction:column !important;
-            height:100% !important;
+            min-height:calc(297mm - ${PAGE_PY}px - ${printBottomPadPx}px) !important;
           }
           .print-page .sheet-root .main{
             display:block !important;
