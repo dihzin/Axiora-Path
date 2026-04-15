@@ -4275,42 +4275,13 @@ export function SheetGeneratorTool() {
     }
 
     if (isIOSWebKitBrowser()) {
-      const iosWin = window.open("", "_blank", "width=860,height=750");
-      if (!iosWin) {
-        showToast("Permita popups para gerar o PDF");
-        setIsPrinting(false);
-        return;
-      }
-
       try {
-        const iosHtml = buildPrintDocumentFromPages(previewPages, cfg);
-        iosWin.document.open();
-        iosWin.document.write(iosHtml);
-        iosWin.document.close();
+        await downloadPdfFromPreviewPages(previewPages, cfg);
       } catch {
-        iosWin.close();
         showToast("Não foi possível gerar o PDF. Tente novamente.");
         setIsPrinting(false);
         return;
       }
-
-      try {
-        await new Promise<void>((resolve) => {
-          let settled = false;
-          const finish = () => { if (settled) return; settled = true; resolve(); };
-          const waitForLayout = async () => {
-            try {
-              if ("fonts" in iosWin.document && iosWin.document.fonts?.ready) {
-                await iosWin.document.fonts.ready;
-              }
-            } catch {}
-            iosWin.requestAnimationFrame(() => { iosWin.requestAnimationFrame(finish); });
-          };
-          if (iosWin.document.readyState === "complete") { void waitForLayout(); }
-          else { iosWin.addEventListener("load", () => { void waitForLayout(); }, { once: true }); }
-          iosWin.setTimeout(finish, 3000);
-        });
-      } catch {}
 
       try {
         let remaining: number;
@@ -4335,7 +4306,6 @@ export function SheetGeneratorTool() {
           showToast(`Lista gerada · ${remaining} gerações restantes`);
         }
       } catch (err: unknown) {
-        iosWin.close();
         const isPaywallError = err instanceof ApiError && (err as ApiError).status === 402;
         if (isPaywallError) {
           track("generation_blocked", { reason: "paywall_402" });
@@ -4347,8 +4317,6 @@ export function SheetGeneratorTool() {
         return;
       }
 
-      iosWin.focus();
-      iosWin.print();
       setIsPrinting(false);
       return;
     }
