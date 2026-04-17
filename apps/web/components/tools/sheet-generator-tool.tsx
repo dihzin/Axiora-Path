@@ -1637,8 +1637,7 @@ async function downloadPdfFromPreviewPages(
       flat.style.display = "inline-block";
       flat.style.whiteSpace = "nowrap";
       flat.style.fontWeight = "600";
-      const radicalPrefix = idx ? `${idx}√` : "√";
-      flat.textContent = `${radicalPrefix}(${val})`;
+      flat.textContent = idx ? `root(${idx},${val})` : `sqrt(${val})`;
       radical.replaceWith(flat);
     }
 
@@ -1654,6 +1653,25 @@ async function downloadPdfFromPreviewPages(
       flat.style.fontWeight = "600";
       flat.textContent = `${top}/${bot}`;
       eqFrac.replaceWith(flat);
+    }
+
+    const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const replacements: Array<[string, string]> = [
+      ["−", "-"],
+      ["×", "x"],
+      ["÷", "/"],
+      ["√", "sqrt"],
+    ];
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      const original = node.nodeValue || "";
+      let normalized = original;
+      for (const [from, to] of replacements) {
+        normalized = normalized.split(from).join(to);
+      }
+      if (normalized !== original) {
+        node.nodeValue = normalized;
+      }
     }
   };
 
