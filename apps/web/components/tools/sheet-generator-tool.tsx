@@ -1610,6 +1610,12 @@ async function downloadPdfFromPreviewPages(
   document.body.appendChild(host);
 
   try {
+    try {
+      if ("fonts" in document && document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+    } catch {}
+
     await new Promise<void>((resolve) => {
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
     });
@@ -1620,17 +1626,18 @@ async function downloadPdfFromPreviewPages(
     }
 
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+    const renderScale = Math.max(3, Math.ceil(window.devicePixelRatio || 1));
 
     for (let i = 0; i < nodes.length; i += 1) {
       const canvas = await html2canvas(nodes[i], {
-        scale: 2,
+        scale: renderScale,
         useCORS: true,
         backgroundColor: "#ffffff",
         logging: false,
+        imageTimeout: 0,
       });
-      const image = canvas.toDataURL("image/jpeg", 0.96);
       if (i > 0) doc.addPage("a4", "portrait");
-      doc.addImage(image, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+      doc.addImage(canvas, "PNG", 0, 0, 210, 297, undefined, "FAST");
     }
 
     const safeTitle =
