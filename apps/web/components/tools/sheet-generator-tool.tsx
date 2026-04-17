@@ -1611,93 +1611,20 @@ async function downloadPdfFromPreviewPages(
     const doc = root instanceof Document ? root : root.ownerDocument;
     if (!doc) return;
 
-    const createStackedFraction = (num: string, den: string): HTMLSpanElement => {
-      const widthCh = Math.max(2, Math.max(num.length, den.length));
-      const wrap = doc.createElement("span");
-      wrap.style.display = "inline-flex";
-      wrap.style.flexDirection = "column";
-      wrap.style.alignItems = "center";
-      wrap.style.justifyContent = "center";
-      wrap.style.verticalAlign = "middle";
-      wrap.style.lineHeight = "1";
-      wrap.style.margin = "0 1px";
-      wrap.style.minWidth = `${widthCh}ch`;
-
-      const top = doc.createElement("span");
-      top.textContent = num;
-      top.style.display = "block";
-      top.style.textAlign = "center";
-      top.style.fontWeight = "600";
-      top.style.lineHeight = "1.05";
-      top.style.padding = "0 1px 1px";
-
-      const bar = doc.createElement("span");
-      bar.style.display = "block";
-      bar.style.width = "100%";
-      bar.style.height = "1.5px";
-      bar.style.background = "#374151";
-      bar.style.margin = "0";
-      bar.style.padding = "0";
-
-      const bottom = doc.createElement("span");
-      bottom.textContent = den;
-      bottom.style.display = "block";
-      bottom.style.textAlign = "center";
-      bottom.style.fontWeight = "600";
-      bottom.style.lineHeight = "1.05";
-      bottom.style.padding = "1px 1px 0";
-
-      wrap.append(top, bar, bottom);
-      return wrap;
-    };
-
-    const createRadical = (idx: string, val: string): HTMLSpanElement => {
-      const wrap = doc.createElement("span");
-      wrap.style.display = "inline-flex";
-      wrap.style.alignItems = "flex-start";
-      wrap.style.verticalAlign = "middle";
-      wrap.style.whiteSpace = "nowrap";
-      wrap.style.lineHeight = "1";
-
-      if (idx && idx !== "2") {
-        const index = doc.createElement("span");
-        index.textContent = idx;
-        index.style.fontSize = "0.58em";
-        index.style.lineHeight = "1";
-        index.style.verticalAlign = "super";
-        index.style.marginRight = "1px";
-        index.style.paddingTop = "1px";
-        wrap.appendChild(index);
-      }
-
-      const sign = doc.createElement("span");
-      sign.textContent = "√";
-      sign.style.display = "inline-block";
-      sign.style.fontSize = "1.15em";
-      sign.style.lineHeight = "1";
-      sign.style.marginRight = "1px";
-
-      const radicand = doc.createElement("span");
-      radicand.textContent = val;
-      radicand.style.display = "inline-block";
-      radicand.style.borderTop = "1.8px solid #374151";
-      radicand.style.padding = "0 4px 0 2px";
-      radicand.style.lineHeight = "1.12";
-      radicand.style.minWidth = `${Math.max(2, val.length)}ch`;
-      radicand.style.fontWeight = "600";
-
-      wrap.append(sign, radicand);
-      return wrap;
-    };
-
-    // html2canvas on iOS distorts original math layout; rebuild with simplified
-    // DOM primitives (inline-flex + explicit bars) for stable visual output.
+    // html2canvas on iOS may distort stacked-fraction/radical layouts.
+    // Normalize to text math for stable canvas export.
     const fracNodes = Array.from(root.querySelectorAll<HTMLElement>(".ex-frac"));
     for (const frac of fracNodes) {
       const num = (frac.querySelector(".ex-frac-num")?.textContent || "").trim();
       const den = (frac.querySelector(".ex-frac-den")?.textContent || "").trim();
       if (!num || !den) continue;
-      frac.replaceWith(createStackedFraction(num, den));
+      const flat = doc.createElement("span");
+      flat.className = "ex-frac-flat";
+      flat.style.display = "inline-block";
+      flat.style.whiteSpace = "nowrap";
+      flat.style.fontWeight = "600";
+      flat.textContent = `${num}/${den}`;
+      frac.replaceWith(flat);
     }
 
     const rootNodes = Array.from(root.querySelectorAll<HTMLElement>(".ex-raiz"));
@@ -1705,7 +1632,21 @@ async function downloadPdfFromPreviewPages(
       const idx = (radical.querySelector(".ex-raiz-idx")?.textContent || "").trim();
       const val = (radical.querySelector(".ex-raiz-val")?.textContent || "").trim();
       if (!val) continue;
-      radical.replaceWith(createRadical(idx, val));
+      const flat = doc.createElement("span");
+      flat.className = "ex-raiz-flat";
+      flat.style.display = "inline-block";
+      flat.style.whiteSpace = "nowrap";
+      flat.style.fontWeight = "600";
+      if (!idx || idx === "2") {
+        flat.textContent = `√${val}`;
+      } else if (idx === "3") {
+        flat.textContent = `∛${val}`;
+      } else if (idx === "4") {
+        flat.textContent = `∜${val}`;
+      } else {
+        flat.textContent = `${idx}√${val}`;
+      }
+      radical.replaceWith(flat);
     }
 
     const eqFracNodes = Array.from(root.querySelectorAll<HTMLElement>(".ex-eq-frac-wrap"));
@@ -1713,7 +1654,13 @@ async function downloadPdfFromPreviewPages(
       const top = (eqFrac.querySelector(".ex-eq-frac-top")?.textContent || "").trim();
       const bot = (eqFrac.querySelector(".ex-eq-frac-bot")?.textContent || "").trim();
       if (!top || !bot) continue;
-      eqFrac.replaceWith(createStackedFraction(top, bot));
+      const flat = doc.createElement("span");
+      flat.className = "ex-eq-frac-flat";
+      flat.style.display = "inline-block";
+      flat.style.whiteSpace = "nowrap";
+      flat.style.fontWeight = "600";
+      flat.textContent = `${top}/${bot}`;
+      eqFrac.replaceWith(flat);
     }
 
     const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
