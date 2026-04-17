@@ -1610,6 +1610,44 @@ async function downloadPdfFromPreviewPages(
   const simplifyMathForCanvasExport = (root: ParentNode) => {
     const doc = root instanceof Document ? root : root.ownerDocument;
     if (!doc) return;
+    const SUPERSCRIPT_MAP: Record<string, string> = {
+      "0": "⁰",
+      "1": "¹",
+      "2": "²",
+      "3": "³",
+      "4": "⁴",
+      "5": "⁵",
+      "6": "⁶",
+      "7": "⁷",
+      "8": "⁸",
+      "9": "⁹",
+      "-": "⁻",
+      "+": "⁺",
+      "(": "⁽",
+      ")": "⁾",
+      n: "ⁿ",
+      x: "ˣ",
+    };
+    const SUBSCRIPT_MAP: Record<string, string> = {
+      "0": "₀",
+      "1": "₁",
+      "2": "₂",
+      "3": "₃",
+      "4": "₄",
+      "5": "₅",
+      "6": "₆",
+      "7": "₇",
+      "8": "₈",
+      "9": "₉",
+      "-": "₋",
+      "+": "₊",
+      "(": "₍",
+      ")": "₎",
+    };
+    const toSuperscript = (value: string) =>
+      Array.from(value).map((char) => SUPERSCRIPT_MAP[char] ?? char).join("");
+    const toSubscript = (value: string) =>
+      Array.from(value).map((char) => SUBSCRIPT_MAP[char] ?? char).join("");
 
     // html2canvas on iOS may distort stacked-fraction/radical layouts.
     // Normalize to text math for stable canvas export.
@@ -1623,7 +1661,7 @@ async function downloadPdfFromPreviewPages(
       flat.style.display = "inline-block";
       flat.style.whiteSpace = "nowrap";
       flat.style.fontWeight = "600";
-      flat.textContent = `${num}/${den}`;
+      flat.textContent = `${toSuperscript(num)}⁄${toSubscript(den)}`;
       frac.replaceWith(flat);
     }
 
@@ -1637,7 +1675,7 @@ async function downloadPdfFromPreviewPages(
       flat.style.display = "inline-block";
       flat.style.whiteSpace = "nowrap";
       flat.style.fontWeight = "600";
-      flat.textContent = idx ? `root(${idx},${val})` : `sqrt(${val})`;
+      flat.textContent = idx ? `${toSuperscript(idx)}√${val}` : `√${val}`;
       radical.replaceWith(flat);
     }
 
@@ -1651,7 +1689,7 @@ async function downloadPdfFromPreviewPages(
       flat.style.display = "inline-block";
       flat.style.whiteSpace = "nowrap";
       flat.style.fontWeight = "600";
-      flat.textContent = `${top}/${bot}`;
+      flat.textContent = `${toSuperscript(top)}⁄${toSubscript(bot)}`;
       eqFrac.replaceWith(flat);
     }
 
@@ -1660,7 +1698,6 @@ async function downloadPdfFromPreviewPages(
       ["−", "-"],
       ["×", "x"],
       ["÷", "/"],
-      ["√", "sqrt"],
     ];
     while (walker.nextNode()) {
       const node = walker.currentNode as Text;
