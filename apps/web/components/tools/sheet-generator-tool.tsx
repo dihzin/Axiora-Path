@@ -1607,6 +1607,57 @@ async function downloadPdfFromPreviewPages(
     ${printablePages.map((page) => `<div class="export-page">${page}</div>`).join("")}
   `;
 
+  const simplifyMathForCanvasExport = (root: ParentNode) => {
+    const doc = root instanceof Document ? root : root.ownerDocument;
+    if (!doc) return;
+
+    // html2canvas on iOS may distort stacked-fraction/radical layouts.
+    // Normalize to text math for stable canvas export.
+    const fracNodes = Array.from(root.querySelectorAll<HTMLElement>(".ex-frac"));
+    for (const frac of fracNodes) {
+      const num = (frac.querySelector(".ex-frac-num")?.textContent || "").trim();
+      const den = (frac.querySelector(".ex-frac-den")?.textContent || "").trim();
+      if (!num || !den) continue;
+      const flat = doc.createElement("span");
+      flat.className = "ex-frac-flat";
+      flat.style.display = "inline-block";
+      flat.style.whiteSpace = "nowrap";
+      flat.style.fontWeight = "600";
+      flat.textContent = `${num}/${den}`;
+      frac.replaceWith(flat);
+    }
+
+    const rootNodes = Array.from(root.querySelectorAll<HTMLElement>(".ex-raiz"));
+    for (const radical of rootNodes) {
+      const idx = (radical.querySelector(".ex-raiz-idx")?.textContent || "").trim();
+      const val = (radical.querySelector(".ex-raiz-val")?.textContent || "").trim();
+      if (!val) continue;
+      const flat = doc.createElement("span");
+      flat.className = "ex-raiz-flat";
+      flat.style.display = "inline-block";
+      flat.style.whiteSpace = "nowrap";
+      flat.style.fontWeight = "600";
+      const radicalPrefix = idx ? `${idx}√` : "√";
+      flat.textContent = `${radicalPrefix}(${val})`;
+      radical.replaceWith(flat);
+    }
+
+    const eqFracNodes = Array.from(root.querySelectorAll<HTMLElement>(".ex-eq-frac-wrap"));
+    for (const eqFrac of eqFracNodes) {
+      const top = (eqFrac.querySelector(".ex-eq-frac-top")?.textContent || "").trim();
+      const bot = (eqFrac.querySelector(".ex-eq-frac-bot")?.textContent || "").trim();
+      if (!top || !bot) continue;
+      const flat = doc.createElement("span");
+      flat.className = "ex-eq-frac-flat";
+      flat.style.display = "inline-block";
+      flat.style.whiteSpace = "nowrap";
+      flat.style.fontWeight = "600";
+      flat.textContent = `${top}/${bot}`;
+      eqFrac.replaceWith(flat);
+    }
+  };
+
+  simplifyMathForCanvasExport(host);
   document.body.appendChild(host);
 
   try {
