@@ -77,6 +77,13 @@ class AnonToolsService:
 
     # ── Identidade ────────────────────────────────────────────────────────────
 
+    @staticmethod
+    def normalize_email(email: str | None) -> str | None:
+        if not email:
+            return None
+        normalized = str(email).strip().lower()
+        return normalized or None
+
     def get_or_create_identity(
         self,
         db: Session,
@@ -84,6 +91,7 @@ class AnonToolsService:
         anonymous_id: str,
         ip: str | None = None,
         fingerprint: str | None = None,
+        email: str | None = None,
         user_agent: str | None = None,
         ab_variants: dict | None = None,
     ) -> AnonymousIdentity:
@@ -95,11 +103,13 @@ class AnonToolsService:
         do savepoint e retornamos o registro já existente — sem duplicar.
         """
         identity = db.get(AnonymousIdentity, anonymous_id)
+        normalized_email = self.normalize_email(email)
         if identity is None:
             identity = AnonymousIdentity(
                 id=anonymous_id,
                 ip=ip,
                 fingerprint=fingerprint,
+                email=normalized_email,
                 user_agent=user_agent,
                 ab_variants=ab_variants or {},
             )
@@ -120,12 +130,34 @@ class AnonToolsService:
                 identity.ip = ip  # IP pode mudar (mobile/VPN) — sempre atualiza
             if fingerprint:
                 identity.fingerprint = fingerprint  # Sempre atualiza — garante hash atual
+            if normalized_email:
+                identity.email = normalized_email
             if user_agent and not identity.user_agent:
                 identity.user_agent = user_agent  # Idem
             if ab_variants:
                 # Merge sem sobrescrever variantes já atribuídas
                 identity.ab_variants = {**ab_variants, **identity.ab_variants}
         return identity  # type: ignore[return-value]
+
+    def get_ip_free_total(
+        self,
+        db: Session,
+        *,
+        ip: str,
+        tool_slug: str = EXERCISE_TOOL_SLUG,
+    ) -> int:
+        """Soma geraÃ§Ãµes gratuitas usadas por todas as identidades com mesmo IP."""
+        if not ip:
+            return 0
+        result = db.execute(
+            select(func.coalesce(func.sum(AnonymousUsage.free_used), 0))
+            .join(AnonymousIdentity, AnonymousIdentity.id == AnonymousUsage.anon_id)
+            .where(
+                AnonymousIdentity.ip == ip,
+                AnonymousUsage.tool_slug == tool_slug,
+            )
+        )
+        return int(result.scalar() or 0)
 
     def get_ip_ua_free_total(
         self,
@@ -182,6 +214,26 @@ class AnonToolsService:
         )
         return int(result.scalar() or 0)
 
+    def get_email_free_total(
+        self,
+        db: Session,
+        *,
+        email: str,
+        tool_slug: str = EXERCISE_TOOL_SLUG,
+    ) -> int:
+        normalized_email = self.normalize_email(email)
+        if not normalized_email:
+            return 0
+        result = db.execute(
+            select(func.coalesce(func.sum(AnonymousUsage.free_used), 0))
+            .join(AnonymousIdentity, AnonymousIdentity.id == AnonymousUsage.anon_id)
+            .where(
+                AnonymousIdentity.email == normalized_email,
+                AnonymousUsage.tool_slug == tool_slug,
+            )
+        )
+        return int(result.scalar() or 0)
+
     # ── Uso ──────────────────────────────────────────────────────────────────
 
     def _get_or_create_usage(
@@ -222,6 +274,8 @@ class AnonToolsService:
         *,
         anon_id: str,
         fingerprint: str | None = None,
+        ip: str | None = None,
+        email: str | None = None,
         tool_slug: str = EXERCISE_TOOL_SLUG,
     ) -> AnonUsageState:
         """Retorna o estado atual do uso sem modificar nada.
@@ -233,6 +287,25 @@ class AnonToolsService:
         """
         usage = self._get_or_create_usage(db, anon_id=anon_id, tool_slug=tool_slug)
         state = compute_usage_state(int(usage.free_used), int(usage.paid_credits))
+        effective_free_used = state.free_used
+        if fingerprint and state.remaining_free > 0:
+            fp_total_all = self.get_fingerprint_free_total(db, fingerprint=fingerprint, tool_slug=tool_slug)
+            effective_free_used = max(effective_free_used, fp_total_all)
+        if ip and state.remaining_free > 0:
+            ip_total = self.get_ip_free_total(db, ip=ip, tool_slug=tool_slug)
+            effective_free_used = max(effective_free_used, ip_total)
+        normalized_email = self.normalize_email(email)
+        if normalized_email and state.remaining_free > 0:
+            email_total = self.get_email_free_total(db, email=normalized_email, tool_slug=tool_slug)
+            effective_free_used = max(effective_free_used, email_total)
+        if effective_free_used != state.free_used:
+            logger.info(
+                "anon.get_usage_state: cluster-adjusted anon_id=%s local=%d effective=%d",
+                anon_id,
+                state.free_used,
+                effective_free_used,
+            )
+            state = compute_usage_state(effective_free_used, int(usage.paid_credits))
 
         # Cross-check de fingerprint: detecta reuso de cota em outra sessão/aba anônima
         if fingerprint and state.remaining_free > 0:

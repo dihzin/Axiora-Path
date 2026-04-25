@@ -9,9 +9,7 @@ import {
   useState,
 } from "react";
 import {
-  anonymousIdentify,
   getToolsCredits,
-  getUsageStatus,
 } from "@/lib/api/client";
 import { getAccessToken } from "@/lib/api/session";
 import {
@@ -30,6 +28,7 @@ export type ToolsIdentityState = {
   canGenerate: boolean;
   paywallRequired: boolean;
   isAnonUser: boolean;
+  hasAuthenticatedSession: boolean;
   initializing: boolean;
 };
 
@@ -42,14 +41,38 @@ const INITIAL_STATE: ToolsIdentityState = {
   canGenerate: false,
   paywallRequired: false,
   isAnonUser: false,
+  hasAuthenticatedSession: false,
   initializing: true,
 };
 
 type ContextValue = ToolsIdentityState & {
   refresh: () => Promise<void>;
+  applyPaidCredits: (credits: number) => void;
+  establishAuthenticatedSession: (credits: number) => void;
+  resetAuth: () => void;
 };
 
 const ToolsIdentityContext = createContext<ContextValue | null>(null);
+const TOOLS_IDENTITY_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms = TOOLS_IDENTITY_TIMEOUT_MS): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new Error("TOOLS_IDENTITY_TIMEOUT"));
+    }, ms);
+
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
 
 // ── Provider ─────────────────────────────────────────────────────────────────
 
@@ -67,21 +90,18 @@ export function ToolsIdentityProvider({
 
   const load = useCallback(async () => {
     const anonId = getOrCreateAnonId();
+    const fpId = await getOrCreateFingerprintId();
     const accessToken = getAccessToken();
 
-    // Inicia o fingerprint imediatamente em paralelo — não bloqueia o caminho auth.
-    // Para usuários autenticados, o fingerprint corre junto com getToolsCredits().
-    // Para anônimos, já está computando enquanto verificamos o accessToken.
-    const fpPromise = getOrCreateFingerprintId();
-
-    setState((prev) => ({ ...prev, anonymousId: anonId }));
+    // Sync ids into state even before we know auth status
+    setState((prev) => ({ ...prev, anonymousId: anonId, fingerprintId: fpId }));
 
     try {
       if (!accessToken) {
         throw new Error("NO_AUTH_SESSION");
       }
-      // Usuário autenticado: fingerprint e API em paralelo
-      const [result, fpId] = await Promise.all([getToolsCredits(), fpPromise]);
+      // Try authenticated first ? throws if no valid session
+      const result = await withTimeout(getToolsCredits(fpId || undefined));
       const credits = Math.max(0, Number(result.credits) || 0);
       setState({
         anonymousId: anonId,
@@ -92,38 +112,39 @@ export function ToolsIdentityProvider({
         canGenerate: credits > 0,
         paywallRequired: credits <= 0,
         isAnonUser: false,
+        hasAuthenticatedSession: true,
         initializing: false,
       });
     } catch {
-      // Not authenticated — use anonymous identity
-      if (!anonId) {
-        setState((prev) => ({ ...prev, initializing: false }));
-        return;
-      }
-      try {
-        // Para anônimos o fingerprint já foi iniciado — aguarda o resultado
-        const fpId = await fpPromise;
-        setState((prev) => ({ ...prev, fingerprintId: fpId }));
-        const res = await anonymousIdentify({
-          anonymous_id: anonId,
-          fingerprint_id: fpId || undefined,
-          user_agent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
-        });
-        const { identity } = res;
+      const currentAccessToken = getAccessToken();
+      if (currentAccessToken) {
+        // Sess?o autenticada sem resposta de cr?ditos: mant?m usu?rio logado no fluxo tools.
         setState({
           anonymousId: anonId,
           fingerprintId: fpId,
-          freeGenerationsUsed: identity.free_generations_used,
-          freeGenerationsRemaining: identity.free_generations_remaining,
-          paidGenerationsAvailable: identity.paid_generations_available,
-          canGenerate: identity.can_generate,
-          paywallRequired: !identity.can_generate,
-          isAnonUser: true,
+          freeGenerationsUsed: 0,
+          freeGenerationsRemaining: 0,
+          paidGenerationsAvailable: 0,
+          canGenerate: false,
+          paywallRequired: true,
+          isAnonUser: false,
+          hasAuthenticatedSession: true,
           initializing: false,
         });
-      } catch {
-        setState((prev) => ({ ...prev, initializing: false }));
+        return;
       }
+      setState({
+        anonymousId: anonId,
+        fingerprintId: fpId,
+        freeGenerationsUsed: 0,
+        freeGenerationsRemaining: 0,
+        paidGenerationsAvailable: 0,
+        canGenerate: false,
+        paywallRequired: false,
+        isAnonUser: false,
+        hasAuthenticatedSession: false,
+        initializing: false,
+      });
     }
   }, []);
 
@@ -136,44 +157,100 @@ export function ToolsIdentityProvider({
   // refresh — lightweight re-check without full fingerprint recompute
   const refresh = useCallback(async () => {
     const s = stateRef.current;
-    if (!s.isAnonUser) {
+    if (s.hasAuthenticatedSession) {
       // Auth user: re-fetch credits
       try {
-        const result = await getToolsCredits();
-        const credits = Math.max(0, Number(result.credits) || 0);
+        const resolved = await withTimeout(getToolsCredits(s.fingerprintId || undefined));
+        const credits = Math.max(0, Number(resolved.credits) || 0);
         setState((prev) => ({
           ...prev,
           paidGenerationsAvailable: credits,
           canGenerate: credits > 0,
           paywallRequired: credits <= 0,
+          hasAuthenticatedSession: true,
         }));
       } catch {
         /* silent — stale data is acceptable */
       }
-    } else {
-      // Anon user: lightweight usage-status query
-      if (!s.anonymousId) return;
-      try {
-        const res = await getUsageStatus({
-          anonymous_id: s.anonymousId,
-          fingerprint_id: s.fingerprintId || undefined,
-        });
-        setState((prev) => ({
-          ...prev,
-          freeGenerationsUsed: res.free_generations_used,
-          freeGenerationsRemaining: res.free_generations_remaining,
-          paidGenerationsAvailable: res.paid_generations_available,
-          canGenerate: res.can_generate,
-          paywallRequired: res.paywall_required,
-        }));
-      } catch {
-        /* silent */
-      }
     }
   }, []);
 
+  // Auto-sync de créditos para refletir compras/aportes externos sem F5.
+  useEffect(() => {
+    if (state.initializing || !state.hasAuthenticatedSession) return;
+    let cancelled = false;
+
+    const sync = async () => {
+      if (cancelled) return;
+      await refresh();
+    };
+
+    const interval = window.setInterval(() => {
+      void sync();
+    }, 10000);
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void sync();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [refresh, state.hasAuthenticatedSession, state.initializing]);
+
+  const applyPaidCredits = useCallback((credits: number) => {
+    const normalized = Math.max(0, Number(credits) || 0);
+    setState((prev) => ({
+      ...prev,
+      paidGenerationsAvailable: normalized,
+      canGenerate: normalized > 0 || prev.freeGenerationsRemaining > 0,
+      paywallRequired: normalized <= 0 && prev.freeGenerationsRemaining <= 0,
+      initializing: false,
+    }));
+  }, []);
+
+  const establishAuthenticatedSession = useCallback((credits: number) => {
+    const normalized = Math.max(0, Number(credits) || 0);
+    const anonId = getOrCreateAnonId();
+    const fpId = stateRef.current.fingerprintId || "";
+    setState({
+      anonymousId: anonId,
+      fingerprintId: fpId,
+      freeGenerationsUsed: 0,
+      freeGenerationsRemaining: 0,
+      paidGenerationsAvailable: normalized,
+      canGenerate: normalized > 0,
+      paywallRequired: normalized <= 0,
+      isAnonUser: false,
+      hasAuthenticatedSession: true,
+      initializing: false,
+    });
+  }, []);
+
+  const resetAuth = useCallback(() => {
+    const anonId = getOrCreateAnonId();
+    const fpId = stateRef.current.fingerprintId || "";
+    setState({
+      anonymousId: anonId,
+      fingerprintId: fpId,
+      freeGenerationsUsed: 0,
+      freeGenerationsRemaining: 0,
+      paidGenerationsAvailable: 0,
+      canGenerate: false,
+      paywallRequired: false,
+      isAnonUser: false,
+      hasAuthenticatedSession: false,
+      initializing: false,
+    });
+  }, []);
+
   return (
-    <ToolsIdentityContext.Provider value={{ ...state, refresh }}>
+    <ToolsIdentityContext.Provider value={{ ...state, refresh, applyPaidCredits, establishAuthenticatedSession, resetAuth }}>
       {children}
     </ToolsIdentityContext.Provider>
   );

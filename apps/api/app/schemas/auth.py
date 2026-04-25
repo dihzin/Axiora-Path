@@ -33,6 +33,11 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(min_length=10)
 
 
+class ResetPasswordByEmailRequest(BaseModel):
+    email: str
+    new_password: str = Field(min_length=10)
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str | None = None
 

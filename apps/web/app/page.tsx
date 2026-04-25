@@ -156,7 +156,7 @@ export default function HomePage() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#fcd34d]">Axiora Tools</p>
               <h2 className="mt-3 text-2xl font-extrabold sm:text-3xl md:text-4xl">Crie material educacional em segundos.</h2>
               <p className="mx-auto mt-3 max-w-xl text-sm text-white/65">
-                Ferramentas sem login, sem assinatura. Funciona no navegador e gera PDF pronto para imprimir.
+                Ferramentas com acesso identificado, sem assinatura. Gere, acompanhe e compre créditos com segurança.
               </p>
             </div>
 
@@ -277,7 +277,7 @@ export default function HomePage() {
           <section className="mt-24 rounded-3xl border border-[rgba(238,135,72,0.25)] bg-[rgba(238,135,72,0.08)] px-5 py-10 text-center backdrop-blur-sm sm:px-8 sm:py-12">
             <h2 className="text-2xl font-extrabold sm:text-3xl md:text-4xl">Prepare sua primeira lista de matemática em 30 segundos - grátis.</h2>
             <p className="mx-auto mt-4 max-w-xl text-sm text-white/75 md:text-base">
-              Sem cadastro, sem cartão. Exercícios completos com gabarito e PDF prontos para imprimir.
+              Entre com sua conta e gere exercícios completos com gabarito e PDF prontos para imprimir.
             </p>
             <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <Link

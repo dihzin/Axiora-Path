@@ -26,7 +26,7 @@ export function HowItWorks() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#fcd34d]">Como funciona</p>
         <h2 className="mt-3 text-3xl font-extrabold md:text-4xl">Três informações. Trinta segundos. Uma lista pronta.</h2>
         <p className="mx-auto mt-3 max-w-xl text-sm text-white/70 md:text-base">
-          Sem templates engessados. Sem cadastro. Você informa e o material sai pronto.
+          Sem templates engessados. Com acesso identificado. Você informa e o material sai pronto, com créditos sincronizados.
         </p>
       </div>
 

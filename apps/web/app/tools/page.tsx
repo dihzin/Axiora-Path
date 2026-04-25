@@ -113,7 +113,7 @@ export default async function ToolsLandingPage() {
 
             {/* CTA único na nav */}
             <Link
-              href="/tools/gerador-atividades"
+              href="/tools/gerador-atividades/login"
               prefetch
               className="inline-flex items-center gap-1.5 rounded-lg bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-4 py-2 text-xs font-extrabold text-white shadow-[0_4px_0_rgba(158,74,30,0.5),0_8px_16px_rgba(93,48,22,0.22)] transition hover:brightness-110"
             >
@@ -131,7 +131,7 @@ export default async function ToolsLandingPage() {
             {/* Badge */}
             <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(238,135,72,0.35)] bg-[rgba(238,135,72,0.12)] px-4 py-1.5 text-xs font-semibold text-[#fcd34d]">
               <CheckIcon className="h-3.5 w-3.5 text-[#ee8748]" />
-              3 listas grátis &nbsp;·&nbsp; sem cadastro &nbsp;·&nbsp; sem login
+              3 listas grátis &nbsp;·&nbsp; com identificação &nbsp;·&nbsp; compra sincronizada
             </span>
 
             {/* Headline — TEMPO + RESULTADO */}
@@ -163,7 +163,7 @@ export default async function ToolsLandingPage() {
             {/* CTA único */}
             <div className="mt-8">
               <Link
-                href="/tools/gerador-atividades"
+                href="/tools/gerador-atividades/login"
                 prefetch
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-10 py-4 text-base font-extrabold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.30),0_6px_0_rgba(158,74,30,0.45),0_16px_28px_rgba(93,48,22,0.30)] transition-[filter,box-shadow] duration-150 hover:brightness-110 active:shadow-[inset_0_1px_0_rgba(255,219,190,0.30),0_2px_0_rgba(158,74,30,0.45)] active:translate-y-1"
               >
@@ -172,7 +172,7 @@ export default async function ToolsLandingPage() {
                 <ArrowRightIcon className="h-4 w-4" />
               </Link>
               <p className="mt-3 text-xs text-white/40">
-                Sem cadastro. Sem cartão. Resultado em segundos.
+                Entre com sua conta, teste seus créditos e continue em qualquer navegador.
               </p>
             </div>
 
@@ -266,13 +266,13 @@ export default async function ToolsLandingPage() {
           {/* ── 5. CTA INTERMEDIÁRIO ─────────────────────────────────────────── */}
           <div className="mt-10 flex flex-col items-center gap-2 text-center">
             <Link
-              href="/tools/gerador-atividades"
+              href="/tools/gerador-atividades/login"
               className="inline-flex items-center gap-2 rounded-2xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-10 py-4 text-base font-extrabold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.30),0_6px_0_rgba(158,74,30,0.45),0_16px_28px_rgba(93,48,22,0.28)] transition-[filter] duration-150 hover:brightness-110"
             >
               Gerar minha primeira lista grátis
               <ArrowRightIcon className="h-4 w-4" />
             </Link>
-            <p className="text-xs text-white/40">3 listas completas para começar.</p>
+            <p className="text-xs text-white/40">3 créditos iniciais protegidos pela sua identidade.</p>
           </div>
 
           {/* ── Exp 4: Prova social ANTES do preço (variante B) ──────────────── */}
@@ -301,11 +301,11 @@ export default async function ToolsLandingPage() {
               <span className="text-white/55">terminar este parágrafo.</span>
             </h2>
             <p className="relative mx-auto mt-4 max-w-md text-sm text-white/60">
-              3 listas completas com gabarito e PDF — grátis, agora mesmo.
+              3 listas completas com gabarito e PDF para começar, com saldo vinculado à sua conta.
               Se precisar de mais: <strong className="text-white">R$ 29 por 30 listas, sem assinatura.</strong>
             </p>
             <Link
-              href="/tools/gerador-atividades"
+              href="/tools/gerador-atividades/login"
               className="relative mt-8 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] px-10 py-4 text-base font-extrabold text-white shadow-[inset_0_1px_0_rgba(255,219,190,0.30),0_6px_0_rgba(158,74,30,0.45),0_16px_28px_rgba(93,48,22,0.25)] transition-[filter] duration-150 hover:brightness-110 sm:w-auto"
             >
               Começar agora — é grátis
@@ -338,7 +338,7 @@ export default async function ToolsLandingPage() {
                   </span>
                 </div>
                 <p className="mt-3 text-xs leading-relaxed text-white/40">
-                  Exercícios personalizados com gabarito e PDF — sem cadastro, sem assinatura.
+                  Exercícios personalizados com gabarito e PDF — com acesso identificado e sem assinatura.
                 </p>
                 <div className="mt-4 flex items-center gap-2.5">
                   <a href="https://www.instagram.com/axiorapath?igsh=MWhwdXQ2NWhjMmV1MQ==" target="_blank" rel="noopener noreferrer" aria-label="Instagram da Axiora" className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/40 transition hover:border-[rgba(238,135,72,0.24)] hover:bg-[rgba(238,135,72,0.10)] hover:text-[#ffd7b2]">
@@ -355,7 +355,7 @@ export default async function ToolsLandingPage() {
                 <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.18em] text-white/30">Ferramentas</p>
                 <ul className="space-y-2 text-xs">
                   <li>
-                    <Link href="/tools/gerador-atividades" className="text-white/45 transition hover:text-white/75">
+                    <Link href="/tools/gerador-atividades/login" className="text-white/45 transition hover:text-white/75">
                       Gerador de Exercícios
                     </Link>
                   </li>
@@ -417,14 +417,14 @@ export default async function ToolsLandingPage() {
         {/* ── CTA FIXO MOBILE ──────────────────────────────────────────────────── */}
         <div className="sticky bottom-0 z-40 border-t border-[rgba(238,135,72,0.14)] bg-[linear-gradient(180deg,rgba(8,20,31,0.84)_0%,rgba(7,18,29,0.92)_100%)] p-3 backdrop-blur-xl md:hidden">
           <Link
-            href="/tools/gerador-atividades"
+            href="/tools/gerador-atividades/login"
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(180deg,#ee8748_0%,#db6728_100%)] py-3.5 text-sm font-extrabold text-white shadow-[0_4px_0_rgba(158,74,30,0.5),0_8px_20px_rgba(93,48,22,0.30)] transition hover:brightness-110"
           >
             Gerar minha lista grátis agora
             <ArrowRightIcon className="h-4 w-4" />
           </Link>
           <p className="mt-1.5 text-center text-[10px] text-white/35">
-            Sem cadastro &nbsp;·&nbsp; Sem cartão &nbsp;·&nbsp; 3 grátis
+            Com login &nbsp;·&nbsp; Sem assinatura &nbsp;·&nbsp; 3 créditos iniciais
           </p>
         </div>
 

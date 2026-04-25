@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import hashlib
 import json
 import logging
 from typing import Annotated
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -11,9 +13,9 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from redis.asyncio import Redis
 from sqlalchemy import select
 
-from app.api.deps import DBSession, get_current_tenant, get_current_user
+from app.api.deps import DBSession, get_current_tenant, get_current_tools_user, get_current_user
 from app.core.security import decode_token
-from app.models import AnonymousUsage, Tenant, ToolsCheckoutSession, User, UserCredits
+from app.models import AnonymousUsage, Tenant, ToolsCheckoutSession, TrialClaim, User, UserCredits
 from app.schemas.tools import (
     AnonIdentifyRequest,
     AnonIdentifyResponse,
@@ -43,6 +45,7 @@ from app.schemas.tools import (
     ToolsLinkAccountResponse,
     ToolsPricingPackOut,
     ToolsPricingResponse,
+    ToolsSessionResponse,
 )
 from app.services.anon_tools_service import (
     EXERCISE_TOOL_SLUG,
@@ -69,8 +72,8 @@ FREE_GENERATION_LIMIT = 3
 UPGRADE_URL = "/tools/gerador-atividades?upgrade=credits_30"
 _ANON_RATE_LIMIT = 20          # gerações por hora por anonymous_id
 _ANON_RATE_WINDOW = 3600       # janela em segundos (1 hora)
-TEMP_UNLIMITED_GENERATION_CREDITS = 9_999_999
-TEMP_UNLIMITED_GENERATION_MODE = True
+TEMP_UNLIMITED_GENERATION_CREDITS = FREE_GENERATION_LIMIT
+TEMP_UNLIMITED_GENERATION_MODE = False
 
 
 def _temp_unlimited_auth_credits() -> ToolsCreditsResponse:
@@ -166,24 +169,127 @@ def _resolve_optional_user(request: Request, db: DBSession) -> User | None:
     return user
 
 
-def _get_or_create_user_credits(db: DBSession, *, user_id: int) -> UserCredits:
+def _normalize_email(email: str | None) -> str | None:
+    return AnonToolsService.normalize_email(email)
+
+
+def _extract_device_fingerprint(request: Request) -> str | None:
+    token = str(request.headers.get("X-Device-Fingerprint") or "").strip()
+    return token or None
+
+
+def _build_trial_scopes(
+    *,
+    email: str | None = None,
+    fingerprint: str | None = None,
+    ip: str | None = None,
+) -> list[tuple[str, str]]:
+    scopes: list[tuple[str, str]] = []
+    normalized_email = _normalize_email(email)
+    if normalized_email:
+        scopes.append(("email", normalized_email))
+    fingerprint_token = str(fingerprint or "").strip()
+    if fingerprint_token:
+        scopes.append(("fingerprint", fingerprint_token))
+    ip_token = str(ip or "").strip()
+    if ip_token:
+        scopes.append(("ip", ip_token))
+    return scopes
+
+
+def _has_any_trial_claim(db: DBSession, *, scopes: list[tuple[str, str]]) -> bool:
+    for scope_type, scope_value in scopes:
+        row = db.scalar(
+            select(TrialClaim.id).where(
+                TrialClaim.scope_type == scope_type,
+                TrialClaim.scope_value == scope_value,
+            )
+        )
+        if row is not None:
+            return True
+    return False
+
+
+def _record_trial_claims(
+    db: DBSession,
+    *,
+    scopes: list[tuple[str, str]],
+    source_kind: str,
+    source_ref: str,
+) -> None:
+    for scope_type, scope_value in scopes:
+        existing = db.scalar(
+            select(TrialClaim.id).where(
+                TrialClaim.scope_type == scope_type,
+                TrialClaim.scope_value == scope_value,
+            )
+        )
+        if existing is not None:
+            continue
+        db.add(
+            TrialClaim(
+                scope_type=scope_type,
+                scope_value=scope_value,
+                source_kind=source_kind,
+                source_ref=source_ref,
+            )
+        )
+    db.flush()
+
+
+def _get_or_create_user_credits(db: DBSession, *, user_id: int, initial_credits: int = FREE_GENERATION_LIMIT) -> UserCredits:
     row = db.scalar(select(UserCredits).where(UserCredits.user_id == user_id))
     if row is not None:
         return row
-    row = UserCredits(user_id=user_id, credits=0)
+    row = UserCredits(user_id=user_id, credits=max(0, int(initial_credits)))
     db.add(row)
     db.flush()
     return row
 
 
-def _consume_user_credit_or_raise(db: DBSession, *, user_id: int) -> int:
+def _resolve_auth_trial_balance(
+    db: DBSession,
+    *,
+    user: User,
+    request: Request,
+) -> int:
+    scopes = _build_trial_scopes(
+        email=user.email,
+        fingerprint=_extract_device_fingerprint(request),
+        ip=request.client.host if request.client else None,
+    )
+    if _has_any_trial_claim(db, scopes=scopes):
+        return 0
+    return FREE_GENERATION_LIMIT
+
+
+def _consume_user_credit_or_raise(
+    db: DBSession,
+    *,
+    user: User,
+    request: Request,
+) -> int:
     if TEMP_UNLIMITED_GENERATION_MODE:
         return TEMP_UNLIMITED_GENERATION_CREDITS
-    row = _get_or_create_user_credits(db, user_id=user_id)
+    row = db.scalar(select(UserCredits).where(UserCredits.user_id == user.id))
+    created_now = row is None
+    initial_credits = _resolve_auth_trial_balance(db, user=user, request=request) if created_now else 0
+    row = row or _get_or_create_user_credits(db, user_id=user.id, initial_credits=initial_credits)
     if int(row.credits) <= 0:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail={"message": "Sem créditos disponíveis", "credits": 0},
+        )
+    if created_now and initial_credits > 0:
+        _record_trial_claims(
+            db,
+            scopes=_build_trial_scopes(
+                email=user.email,
+                fingerprint=_extract_device_fingerprint(request),
+                ip=request.client.host if request.client else None,
+            ),
+            source_kind="user",
+            source_ref=str(user.id),
         )
     row.credits = int(row.credits) - 1
     db.add(row)
@@ -206,6 +312,48 @@ def _build_paywall_detail(
         "paywall_required": True,
         "upgrade_url": UPGRADE_URL,
     }
+
+
+def _raise_tools_login_required() -> None:
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail={
+            "message": "Faça login para usar o gerador de atividades e sincronizar seus créditos.",
+            "login_required": True,
+        },
+    )
+
+
+def _build_anon_trial_scopes(
+    *,
+    fingerprint: str | None,
+    ip: str | None,
+    email: str | None,
+) -> list[tuple[str, str]]:
+    return _build_trial_scopes(email=email, fingerprint=fingerprint, ip=ip)
+
+
+def _resolve_frontend_origin(request: Request) -> str | None:
+    origin = str(request.headers.get("origin") or "").strip()
+    if origin:
+        return origin.rstrip("/")
+    referer = str(request.headers.get("referer") or "").strip()
+    if referer:
+        parsed = urlparse(referer)
+        if parsed.scheme and parsed.netloc:
+            return f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+    return None
+
+
+def _resolve_checkout_redirect_urls(request: Request) -> tuple[str | None, str | None]:
+    frontend_origin = _resolve_frontend_origin(request)
+    if not frontend_origin:
+        return None, None
+    generator_url = f"{frontend_origin}/tools/gerador-atividades"
+    return (
+        f"{generator_url}?checkout=success&session_id={{CHECKOUT_SESSION_ID}}",
+        f"{generator_url}?checkout=cancel",
+    )
 
 
 def _assert_checkout_status_access(
@@ -255,6 +403,99 @@ def _resolve_checkout_scope_and_credits(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing checkout reconciliation data")
     scope_key, credits = legacy_grant
     return scope_key, int(credits), None
+
+
+def _reconcile_paid_checkout_session(
+    *,
+    db: DBSession,
+    session: ToolsCheckoutSession,
+) -> tuple[bool, int]:
+    if session.status in ("paid", "completed"):
+        if session.user_id is not None:
+            row = db.scalar(select(UserCredits).where(UserCredits.user_id == session.user_id))
+            return True, int(row.credits) if row is not None else 0
+        if session.anon_id is not None:
+            usage = db.scalar(
+                select(AnonymousUsage).where(
+                    AnonymousUsage.anon_id == session.anon_id,
+                    AnonymousUsage.tool_slug == EXERCISE_TOOL_SLUG,
+                )
+            )
+            return True, int(usage.paid_credits) if usage is not None else 0
+        return True, 0
+
+    pack = PRICING_PACKS.get(session.plan_code)
+    if pack is None:
+        return False, 0
+
+    billing = ToolsBillingService()
+    stripe_status = billing.get_checkout_session_status(session.id)
+    if stripe_status.payment_status != "paid":
+        normalized_status = str(stripe_status.payment_status or "").strip().lower()
+        if normalized_status and session.status != normalized_status:
+            session.status = normalized_status
+            db.add(session)
+            db.commit()
+        return False, 0
+
+    if session.user_id is not None:
+        row = _get_or_create_user_credits(db, user_id=int(session.user_id), initial_credits=0)
+        row.credits = int(row.credits) + int(pack.credits)
+        db.add(row)
+        anon_svc = AnonToolsService()
+        anon_svc.complete_checkout_session(
+            db,
+            stripe_session_id=session.id,
+            paid_at=datetime.now(timezone.utc),
+            amount_paid_cents=stripe_status.amount_total_cents,
+            currency=stripe_status.currency,
+            payment_intent_id=stripe_status.payment_intent_id,
+        )
+        db.commit()
+        return True, int(row.credits)
+
+    if session.anon_id is not None:
+        anon_svc = AnonToolsService()
+        total = anon_svc.grant_paid_credits(db, anon_id=session.anon_id, credits=pack.credits, ref_id=session.id)
+        anon_svc.complete_checkout_session(
+            db,
+            stripe_session_id=session.id,
+            paid_at=datetime.now(timezone.utc),
+            amount_paid_cents=stripe_status.amount_total_cents,
+            currency=stripe_status.currency,
+            payment_intent_id=stripe_status.payment_intent_id,
+        )
+        db.commit()
+        return True, total
+
+    return False, 0
+
+
+def _reconcile_latest_user_checkout_if_needed(
+    *,
+    db: DBSession,
+    user_id: int,
+) -> None:
+    pending = db.scalar(
+        select(ToolsCheckoutSession)
+        .where(
+            ToolsCheckoutSession.user_id == user_id,
+            ToolsCheckoutSession.status.in_(("created", "open", "unpaid")),
+        )
+        .order_by(ToolsCheckoutSession.created_at.desc())
+        .limit(1)
+    )
+    if pending is None:
+        return
+    try:
+        _reconcile_paid_checkout_session(db=db, session=pending)
+    except BillingGatewayError:
+        logger.warning(
+            "credits: reconciliation failed for user_id=%s session_id=%s",
+            user_id,
+            pending.id,
+            exc_info=True,
+        )
 
 
 def _validate_checkout_payment_details(
@@ -401,7 +642,7 @@ async def generate_exercises(
 ) -> ToolsGenerateExercisesResponse:
     auth_user = _resolve_optional_user(request, db)
     if auth_user is not None:
-        paid_credits_remaining = _consume_user_credit_or_raise(db, user_id=auth_user.id)
+        paid_credits_remaining = _consume_user_credit_or_raise(db, user=auth_user, request=request)
         generator = ToolsExerciseGeneratorService()
         generated, llm_mode = generator.generate(
             ExerciseGenerationInput(
@@ -504,8 +745,14 @@ async def generate_exercises(
         # Caminho principal — identidade persistente no PostgreSQL
         anon_svc = AnonToolsService()
         ip = request.client.host if request.client else None
-        anon_svc.get_or_create_identity(db, anonymous_id=payload.anonymous_id, ip=ip)
-        state_before = anon_svc.get_usage_state(db, anon_id=payload.anonymous_id)
+        identity_row = anon_svc.get_or_create_identity(db, anonymous_id=payload.anonymous_id, ip=ip)
+        state_before = anon_svc.get_usage_state(
+            db,
+            anon_id=payload.anonymous_id,
+            fingerprint=identity_row.fingerprint,
+            ip=identity_row.ip,
+            email=identity_row.email,
+        )
         if not state_before.can_generate:
             db.rollback()
             raise HTTPException(
@@ -531,6 +778,17 @@ async def generate_exercises(
         free_used = state.free_used
         remaining_free = state.remaining_free
         paid_credits_remaining = state.paid_credits
+        if state_before.remaining_free > 0:
+            _record_trial_claims(
+                db,
+                scopes=_build_anon_trial_scopes(
+                    fingerprint=identity_row.fingerprint,
+                    ip=identity_row.ip,
+                    email=identity_row.email,
+                ),
+                source_kind="anonymous",
+                source_ref=payload.anonymous_id,
+            )
     else:
         # Caminho legado — Redis via session_token ou IP (backward compat)
         scope_key = _generation_scope_key(request, payload.session_token)
@@ -679,6 +937,8 @@ async def create_tools_checkout_v2(
       para compat com o webhook legado)
     - Persiste a sessão com status 'created'
     """
+    _raise_tools_login_required()
+
     plan_code = _PACKAGE_TYPE_MAP.get(payload.package_type)
     if not plan_code:
         raise HTTPException(
@@ -689,29 +949,40 @@ async def create_tools_checkout_v2(
     pack = PRICING_PACKS.get(plan_code)
     if pack is None:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unknown plan")
+    normalized_checkout_email = _normalize_email(payload.customer_email)
+    if not normalized_checkout_email:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="customer_email is required for anonymous checkout",
+        )
 
     # Garante que a identidade existe e atualiza metadados de visita
     anon_svc = AnonToolsService()
     ip = request.client.host if request.client else None
-    anon_svc.get_or_create_identity(
+    identity_row = anon_svc.get_or_create_identity(
         db,
         anonymous_id=payload.anonymous_id,
         ip=ip,
         fingerprint=payload.fingerprint_id,
+        email=normalized_checkout_email,
     )
 
     billing = ToolsBillingService()
+    success_url, cancel_url = _resolve_checkout_redirect_urls(request)
     try:
         checkout = billing.create_checkout_session(
             plan_code=plan_code,
             session_scope_key=f"anon:{payload.anonymous_id}",  # compat com webhook legado
-            customer_email=None,
+            customer_email=normalized_checkout_email,
             extra_metadata={
                 "anonymous_id": payload.anonymous_id,
                 "fingerprint_id": payload.fingerprint_id or "",
+                "customer_email": normalized_checkout_email,
                 "package_type": payload.package_type,
                 "credits_to_add": str(pack.credits),
             },
+            success_url=success_url,
+            cancel_url=cancel_url,
         )
     except BillingConfigError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
@@ -727,6 +998,16 @@ async def create_tools_checkout_v2(
             user_id=None,
             plan_code=plan_code,
             status="created",
+        )
+        _record_trial_claims(
+            db,
+            scopes=_build_anon_trial_scopes(
+                fingerprint=identity_row.fingerprint,
+                ip=identity_row.ip,
+                email=identity_row.email,
+            ),
+            source_kind="anonymous",
+            source_ref=payload.anonymous_id,
         )
         db.commit()
     except Exception:
@@ -764,18 +1045,26 @@ async def get_checkout_status(
 
     # Saldo atual da identidade anônima
     paid_available = 0
-    if session.anon_id:
-        usage = db.scalar(
-            select(AnonymousUsage).where(
-                AnonymousUsage.anon_id == session.anon_id,
-                AnonymousUsage.tool_slug == EXERCISE_TOOL_SLUG,
-            )
-        )
-        if usage:
-            paid_available = int(usage.paid_credits)
+    try:
+        is_paid, paid_available = _reconcile_paid_checkout_session(db=db, session=session)
+    except BillingGatewayError as exc:
+        logger.warning("checkout/status: reconciliation failed session_id=%s", session_id, exc_info=True)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
-    # Normaliza status: 'paid' e 'completed' são equivalentes
-    is_paid = session.status in ("paid", "completed")
+    if not is_paid:
+        if session.user_id is not None:
+            row = db.scalar(select(UserCredits).where(UserCredits.user_id == session.user_id))
+            if row is not None:
+                paid_available = int(row.credits)
+        elif session.anon_id:
+            usage = db.scalar(
+                select(AnonymousUsage).where(
+                    AnonymousUsage.anon_id == session.anon_id,
+                    AnonymousUsage.tool_slug == EXERCISE_TOOL_SLUG,
+                )
+            )
+            if usage:
+                paid_available = int(usage.paid_credits)
     return ToolsCheckoutStatusResponse(
         ok=True,
         payment_status="paid" if is_paid else session.status,
@@ -786,39 +1075,59 @@ async def get_checkout_status(
 
 @router.get("/credits", response_model=ToolsCreditsResponse)
 async def get_tools_credits(
+    request: Request,
     db: DBSession,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_current_tools_user)],
 ) -> ToolsCreditsResponse:
     if TEMP_UNLIMITED_GENERATION_MODE:
         return _temp_unlimited_auth_credits()
-    row = _get_or_create_user_credits(db, user_id=user.id)
-    db.commit()
-    return ToolsCreditsResponse(credits=int(row.credits))
+    _reconcile_latest_user_checkout_if_needed(db=db, user_id=int(user.id))
+    row = db.scalar(select(UserCredits).where(UserCredits.user_id == user.id))
+    if row is not None:
+        db.commit()
+        return ToolsCreditsResponse(credits=int(row.credits))
+    return ToolsCreditsResponse(credits=_resolve_auth_trial_balance(db, user=user, request=request))
+
+
+@router.get("/session", response_model=ToolsSessionResponse)
+async def get_tools_session(
+    user: Annotated[User, Depends(get_current_tools_user)],
+) -> ToolsSessionResponse:
+    return ToolsSessionResponse(
+        user_id=int(user.id),
+        email=user.email,
+        name=user.name,
+    )
 
 
 @router.post("/use-credit", response_model=ToolsCreditsResponse)
 async def use_tools_credit(
+    request: Request,
     db: DBSession,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_current_tools_user)],
 ) -> ToolsCreditsResponse:
     if TEMP_UNLIMITED_GENERATION_MODE:
         return _temp_unlimited_auth_credits()
-    remaining = _consume_user_credit_or_raise(db, user_id=user.id)
+    remaining = _consume_user_credit_or_raise(db, user=user, request=request)
     return ToolsCreditsResponse(credits=remaining)
 
 
 @router.post("/checkout", response_model=ToolsCheckoutSessionResponse)
 async def create_tools_checkout(
     payload: ToolsCheckoutSessionRequest,
+    request: Request,
     db: DBSession,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_current_tools_user)],
 ) -> ToolsCheckoutSessionResponse:
     billing = ToolsBillingService()
+    success_url, cancel_url = _resolve_checkout_redirect_urls(request)
     try:
         checkout = billing.create_checkout_session(
             plan_code=payload.plan_code,
             session_scope_key=f"user:{user.id}",
             customer_email=payload.customer_email or user.email,
+            success_url=success_url,
+            cancel_url=cancel_url,
         )
     except BillingConfigError as exc:
         raise HTTPException(
@@ -903,7 +1212,7 @@ async def handle_tools_stripe_webhook(
     if scope_key.startswith("user:"):
         _, _, user_id_token = scope_key.partition(":")
         if user_id_token.isdigit():
-            row = _get_or_create_user_credits(db, user_id=int(user_id_token))
+            row = _get_or_create_user_credits(db, user_id=int(user_id_token), initial_credits=0)
             row.credits = int(row.credits) + int(credits)
             db.add(row)
             db.commit()
@@ -971,6 +1280,8 @@ async def anon_use_generation(
     Deve ser chamado APÓS a geração local bem-sucedida no frontend.
     Retorna 402 se não houver saldo disponível (paywall).
     """
+    _raise_tools_login_required()
+
     if TEMP_UNLIMITED_GENERATION_MODE:
         return _temp_unlimited_anon_tools_status(anonymous_id=payload.anonymous_id)
 
@@ -990,7 +1301,11 @@ async def anon_use_generation(
     ip = request.client.host if request.client else None
     user_agent = request.headers.get("User-Agent")
     identity_row = anon_svc.get_or_create_identity(
-        db, anonymous_id=payload.anonymous_id, ip=ip, user_agent=user_agent
+        db,
+        anonymous_id=payload.anonymous_id,
+        ip=ip,
+        email=None,
+        user_agent=user_agent,
     )
 
     # get_usage_state aplica cross-check por fingerprint internamente
@@ -998,6 +1313,8 @@ async def anon_use_generation(
         db,
         anon_id=payload.anonymous_id,
         fingerprint=identity_row.fingerprint,
+        ip=identity_row.ip,
+        email=identity_row.email,
         tool_slug=payload.tool_slug,
     )
 
@@ -1026,6 +1343,17 @@ async def anon_use_generation(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail=_build_paywall_blocked(state_before.free_used, state_before.paid_credits),
         )
+    if state_before.remaining_free > 0:
+        _record_trial_claims(
+            db,
+            scopes=_build_anon_trial_scopes(
+                fingerprint=identity_row.fingerprint,
+                ip=identity_row.ip,
+                email=identity_row.email,
+            ),
+            source_kind="anonymous",
+            source_ref=payload.anonymous_id,
+        )
     db.commit()
     return ToolsAnonStatusResponse(
         anonymous_id=payload.anonymous_id,
@@ -1046,13 +1374,21 @@ async def get_anon_tools_status(
 
     Cria a identidade se ainda não existir (primeira visita).
     """
+    _raise_tools_login_required()
+
     if TEMP_UNLIMITED_GENERATION_MODE:
         return _temp_unlimited_anon_tools_status(anonymous_id=anonymous_id)
 
     anon_svc = AnonToolsService()
     ip = request.client.host if request.client else None
-    anon_svc.get_or_create_identity(db, anonymous_id=anonymous_id, ip=ip)
-    state = anon_svc.get_usage_state(db, anon_id=anonymous_id)
+    identity_row = anon_svc.get_or_create_identity(db, anonymous_id=anonymous_id, ip=ip)
+    state = anon_svc.get_usage_state(
+        db,
+        anon_id=anonymous_id,
+        fingerprint=identity_row.fingerprint,
+        ip=identity_row.ip,
+        email=identity_row.email,
+    )
     db.commit()
     return ToolsAnonStatusResponse(
         anonymous_id=anonymous_id,
@@ -1095,6 +1431,8 @@ async def anonymous_identify(
     mesmo anonymous_id (duas abas), o segundo INSERT sofre IntegrityError
     que é absorvido pelo service → retorna a identidade existente sem erro.
     """
+    _raise_tools_login_required()
+
     if TEMP_UNLIMITED_GENERATION_MODE:
         return AnonIdentifyResponse(
             ok=True,
@@ -1110,6 +1448,7 @@ async def anonymous_identify(
         anonymous_id=payload.anonymous_id,
         ip=ip,
         fingerprint=payload.fingerprint_id,
+        email=payload.email,
         user_agent=user_agent,
     )
     # Garante a usage row — cria se ainda não existe.
@@ -1118,14 +1457,9 @@ async def anonymous_identify(
         db,
         anon_id=payload.anonymous_id,
         fingerprint=payload.fingerprint_id,
+        ip=identity_row.ip,
+        email=identity_row.email,
     )
-    # Fallback IP+UA: funciona mesmo antes do fingerprint ser atualizado no banco
-    if state.can_generate and identity_row.ip and identity_row.user_agent:
-        ip_ua_total = anon_svc.get_ip_ua_free_total(
-            db, ip=identity_row.ip, user_agent=identity_row.user_agent
-        )
-        if ip_ua_total >= ANON_FREE_LIMIT:
-            state = compute_usage_state(ANON_FREE_LIMIT, state.paid_credits)
     db.commit()
 
     return AnonIdentifyResponse(
@@ -1140,6 +1474,7 @@ async def get_usage_status(
     db: DBSession,
     anonymous_id: str,
     fingerprint_id: str | None = None,
+    email: str | None = None,
 ) -> AnonUsageStatusResponse:
     """Consulta o status atual de uso de uma identidade anônima.
 
@@ -1148,6 +1483,8 @@ async def get_usage_status(
 
     Retorna paywall_required=True quando free_used >= 3 e paid_credits == 0.
     """
+    _raise_tools_login_required()
+
     if TEMP_UNLIMITED_GENERATION_MODE:
         return _temp_unlimited_anon_usage_status()
 
@@ -1160,8 +1497,15 @@ async def get_usage_status(
         anonymous_id=anonymous_id,
         ip=ip,
         fingerprint=fingerprint_id,
+        email=email,
     )
-    state = anon_svc.get_usage_state(db, anon_id=anonymous_id, fingerprint=fingerprint_id)
+    state = anon_svc.get_usage_state(
+        db,
+        anon_id=anonymous_id,
+        fingerprint=fingerprint_id,
+        ip=ip,
+        email=email,
+    )
     db.commit()
 
     return AnonUsageStatusResponse(
@@ -1280,7 +1624,7 @@ async def generate(
     auth_user = _resolve_optional_user(request, db)
     if auth_user is not None:
         # Consome antes de gerar — garante que o crédito existe
-        paid_remaining = _consume_user_credit_or_raise(db, user_id=auth_user.id)
+        paid_remaining = _consume_user_credit_or_raise(db, user=auth_user, request=request)
         generated, llm_mode = _run_generation(payload)
         logger.info(
             "tools.generate: auth user_id=%s ip=%s hash=%s llm_mode=%s",
@@ -1296,6 +1640,8 @@ async def generate(
         )
 
     # ── 2. Identidade anônima DB ─────────────────────────────────────────────
+    _raise_tools_login_required()
+
     if payload.anonymous_id:
         # Rate limit por anonymous_id (complementa o rate limit por IP)
         redis = getattr(request.app.state, "redis", None)
@@ -1314,6 +1660,7 @@ async def generate(
             db,
             anonymous_id=payload.anonymous_id,
             ip=ip,
+            email=None,
             user_agent=user_agent,
         )
         # get_usage_state já aplica cross-check de fingerprint internamente
@@ -1321,6 +1668,8 @@ async def generate(
             db,
             anon_id=payload.anonymous_id,
             fingerprint=identity_row.fingerprint,
+            ip=identity_row.ip,
+            email=identity_row.email,
         )
 
         if not state_before.can_generate:
@@ -1358,6 +1707,18 @@ async def generate(
         except Exception:
             db.rollback()
             raise
+
+        if state_before.remaining_free > 0:
+            _record_trial_claims(
+                db,
+                scopes=_build_anon_trial_scopes(
+                    fingerprint=identity_row.fingerprint,
+                    ip=identity_row.ip,
+                    email=identity_row.email,
+                ),
+                source_kind="anonymous",
+                source_ref=payload.anonymous_id,
+            )
 
         db.commit()  # Confirma consumo apenas após geração bem-sucedida
         logger.info(

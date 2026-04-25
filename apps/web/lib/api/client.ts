@@ -8,9 +8,9 @@ import {
   setAccessToken,
 } from "@/lib/api/session";
 
-function resolveApiUrl(path = ""): string {
+function resolveApiUrl(path = "", forceAbsolute = false): string {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (typeof window !== "undefined" && (path.startsWith("/api/") || path.startsWith("/auth/"))) {
+  if (!forceAbsolute && typeof window !== "undefined" && (path.startsWith("/api/") || path.startsWith("/auth/"))) {
     return "";
   }
   if (apiUrl) {
@@ -27,6 +27,8 @@ export type MultiplayerSessionStatus = "WAITING" | "IN_PROGRESS" | "FINISHED" | 
 type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
+  headers?: Record<string, string>;
+  absoluteApi?: boolean;
   requireAuth?: boolean;
   includeTenant?: boolean;
   suppressAuthRedirect?: boolean;
@@ -163,7 +165,7 @@ async function refreshAccessToken(suppressRedirect = false): Promise<string | nu
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const apiUrl = resolveApiUrl(path);
+  const apiUrl = resolveApiUrl(path, Boolean(options.absoluteApi));
   const method = options.method ?? "GET";
   if (parentalConsentBlocked && !isConsentExemptPath(path)) {
     throw new ApiError("Blocked by parental consent policy", 403, {
@@ -174,6 +176,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
+  if (options.headers) {
+    Object.assign(headers, options.headers);
+  }
   const csrfToken = getCsrfTokenFromCookie();
 
   if (options.includeTenant !== false) {
@@ -1619,6 +1624,15 @@ export async function changePassword(currentPassword: string, newPassword: strin
   });
 }
 
+export async function resetPasswordByEmail(email: string, newPassword: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>("/auth/reset-password-by-email", {
+    method: "POST",
+    body: { email, new_password: newPassword },
+    requireAuth: false,
+    includeTenant: false,
+  });
+}
+
 export async function listMemberships(): Promise<OrganizationMembership[]> {
   return apiRequest<OrganizationMembership[]>("/auth/memberships", { method: "GET", requireAuth: true, includeTenant: false });
 }
@@ -2417,6 +2431,12 @@ export type ToolsCreditsResponse = {
   credits: number;
 };
 
+export type ToolsSessionResponse = {
+  user_id: number;
+  email: string;
+  name: string;
+};
+
 export type ToolsTemplateRecord = {
   id: string;
   user_id: number;
@@ -2442,18 +2462,32 @@ export async function createToolsTemplate(payload: {
   });
 }
 
-export async function getToolsCredits(): Promise<ToolsCreditsResponse> {
+export async function getToolsCredits(fingerprintId?: string): Promise<ToolsCreditsResponse> {
   return apiRequest<ToolsCreditsResponse>("/api/tools/credits", {
     method: "GET",
+    headers: fingerprintId ? { "X-Device-Fingerprint": fingerprintId } : undefined,
+    absoluteApi: true,
     requireAuth: true,
     includeTenant: false,
     suppressAuthRedirect: true,
   });
 }
 
-export async function useToolsCredit(): Promise<ToolsCreditsResponse> {
+export async function getToolsSession(): Promise<ToolsSessionResponse> {
+  return apiRequest<ToolsSessionResponse>("/api/tools/session", {
+    method: "GET",
+    absoluteApi: true,
+    requireAuth: true,
+    includeTenant: false,
+    suppressAuthRedirect: true,
+  });
+}
+
+export async function useToolsCredit(fingerprintId?: string): Promise<ToolsCreditsResponse> {
   return apiRequest<ToolsCreditsResponse>("/api/tools/use-credit", {
     method: "POST",
+    headers: fingerprintId ? { "X-Device-Fingerprint": fingerprintId } : undefined,
+    absoluteApi: true,
     requireAuth: true,
     includeTenant: false,
     suppressAuthRedirect: true,
@@ -2463,10 +2497,13 @@ export async function useToolsCredit(): Promise<ToolsCreditsResponse> {
 export async function createToolsCheckout(payload?: {
   plan_code?: "credits_30";
   customer_email?: string;
+  fingerprint_id?: string;
 }): Promise<ToolsCheckoutSessionResponse> {
   return apiRequest<ToolsCheckoutSessionResponse>("/api/tools/checkout", {
     method: "POST",
     body: payload ?? { plan_code: "credits_30" },
+    headers: payload?.fingerprint_id ? { "X-Device-Fingerprint": payload.fingerprint_id } : undefined,
+    absoluteApi: true,
     requireAuth: true,
     includeTenant: false,
     suppressAuthRedirect: true,
@@ -2556,11 +2593,13 @@ export type ToolsCheckoutStatusResponse = {
 export async function createToolsCheckoutV2(payload: {
   anonymous_id: string;
   fingerprint_id?: string;
+  customer_email: string;
   package_type?: "pack_30";
 }): Promise<ToolsCheckoutSessionResponse> {
   return apiRequest<ToolsCheckoutSessionResponse>("/api/tools/checkout/create", {
     method: "POST",
     body: { package_type: "pack_30", ...payload },
+    absoluteApi: true,
     requireAuth: false,
     includeTenant: false,
   });
@@ -2577,7 +2616,7 @@ export async function getToolsCheckoutStatus(sessionId: string, anonymousId?: st
   }
   return apiRequest<ToolsCheckoutStatusResponse>(
     `/api/tools/checkout/status?${query.toString()}`,
-    { method: "GET", requireAuth: false, includeTenant: false },
+    { method: "GET", absoluteApi: true, requireAuth: false, includeTenant: false },
   );
 }
 
@@ -2616,6 +2655,7 @@ export async function useAnonCredit(anonymousId: string): Promise<ToolsAnonStatu
   return apiRequest<ToolsAnonStatusResponse>("/api/tools/anon-use", {
     method: "POST",
     body: { anonymous_id: anonymousId, tool_slug: "exercise-generator" },
+    absoluteApi: true,
     requireAuth: false,
     includeTenant: false,
   });
@@ -2653,11 +2693,13 @@ export type AnonUsageStatusResponse = {
 export async function anonymousIdentify(payload: {
   anonymous_id: string;
   fingerprint_id?: string;
+  email?: string;
   user_agent?: string;
 }): Promise<AnonIdentifyResponse> {
   return apiRequest<AnonIdentifyResponse>("/api/tools/anonymous/identify", {
     method: "POST",
     body: payload,
+    absoluteApi: true,
     requireAuth: false,
     includeTenant: false,
   });
@@ -2671,11 +2713,14 @@ export async function anonymousIdentify(payload: {
 export async function getUsageStatus(params: {
   anonymous_id: string;
   fingerprint_id?: string;
+  email?: string;
 }): Promise<AnonUsageStatusResponse> {
   const qs = new URLSearchParams({ anonymous_id: params.anonymous_id });
   if (params.fingerprint_id) qs.set("fingerprint_id", params.fingerprint_id);
+  if (params.email) qs.set("email", params.email);
   return apiRequest<AnonUsageStatusResponse>(`/api/tools/usage-status?${qs.toString()}`, {
     method: "GET",
+    absoluteApi: true,
     requireAuth: false,
     includeTenant: false,
   });

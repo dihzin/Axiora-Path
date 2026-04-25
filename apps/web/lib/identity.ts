@@ -71,7 +71,7 @@ function getCanvasFingerprint(): string {
     ctx.fillText("Axiora Tools fp v2", 4, 22);
     ctx.fillStyle = "rgba(15,23,42,0.6)";
     ctx.font = "11px monospace";
-    ctx.fillText(navigator.vendor ?? "x", 4, 42);
+    ctx.fillText(`${screen.width}x${screen.height}`, 4, 42);
     // Últimos 80 chars: região mais sensível a diferenças de renderização
     return canvas.toDataURL("image/png").slice(-80);
   } catch {
@@ -105,9 +105,8 @@ async function computeFingerprint(): Promise<string> {
   const canvasFp = getCanvasFingerprint();
   const webglFp = getWebGLFingerprint();
 
-  // Tier 2: sinais de navegador — estáveis mas podem diferir em extensões de privacidade
-  const browserSignals = [
-    navigator.userAgent,
+  // Tier 2: sinais mais próximos do dispositivo/rede local do que do navegador.
+  const deviceSignals = [
     navigator.language,
     navigator.languages?.join(",") ?? "",
     `${screen.width}x${screen.height}x${screen.colorDepth}x${screen.pixelDepth}`,
@@ -115,11 +114,10 @@ async function computeFingerprint(): Promise<string> {
     String(navigator.hardwareConcurrency ?? ""),
     String((navigator as unknown as Record<string, unknown>).deviceMemory ?? ""),
     navigator.platform ?? "",
-    navigator.vendor ?? "",
     String(navigator.maxTouchPoints ?? 0),
   ].join("|");
 
-  const raw = [canvasFp, webglFp, browserSignals].join("§");
+  const raw = [canvasFp, webglFp, deviceSignals].join("§");
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
   return Array.from(new Uint8Array(buf))
     .map((b) => b.toString(16).padStart(2, "0"))

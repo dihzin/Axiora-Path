@@ -2728,11 +2728,13 @@ class AnonymousIdentity(Base):
     __table_args__ = (
         Index("ix_anon_identities_ip", "ip"),
         Index("ix_anon_identities_fingerprint", "fingerprint"),
+        Index("ix_anon_identities_email", "email"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)  # UUID v4
     fingerprint: Mapped[str | None] = mapped_column(Text, nullable=True)
     ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
     ab_variants: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
     first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
@@ -2812,6 +2814,23 @@ class CreditLedger(Base):
     amount: Mapped[int] = mapped_column(Integer, nullable=False)  # positivo = crédito, negativo = débito
     reason: Mapped[str] = mapped_column(String(60), nullable=False)  # 'stripe_purchase' | 'generation' | 'refund'
     ref_id: Mapped[str | None] = mapped_column(Text, nullable=True)  # stripe session id ou generation event id
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class TrialClaim(Base):
+    """Marca sinais que jÃ¡ participaram de algum trial gratuito."""
+
+    __tablename__ = "trial_claims"
+    __table_args__ = (
+        UniqueConstraint("scope_type", "scope_value", name="uq_trial_claim_scope"),
+        Index("ix_trial_claims_scope_type", "scope_type"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    scope_type: Mapped[str] = mapped_column(String(30), nullable=False)  # 'email' | 'fingerprint' | 'ip'
+    scope_value: Mapped[str] = mapped_column(Text, nullable=False)
+    source_kind: Mapped[str] = mapped_column(String(20), nullable=False)  # 'anonymous' | 'user'
+    source_ref: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import decode_token
 from app.db.session import SessionLocal
-from app.models import Membership, Tenant, User
+from app.models import Membership, MembershipRole, Tenant, TenantType, User
 from app.services.events import EventService
 
 auth_scheme = HTTPBearer(auto_error=False)
@@ -139,6 +139,69 @@ def get_current_user(
 
     request.state.user_id = user.id
     request.state.auth_role = payload.get("role")
+    return user
+
+
+def get_current_tools_user(
+    db: DBSession,
+    request: Request,
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(auth_scheme)],
+) -> User:
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing authorization token",
+        )
+
+    try:
+        payload = decode_token(credentials.credentials)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        ) from exc
+
+    if payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid access token",
+        )
+
+    sub = payload.get("sub")
+    if not isinstance(sub, str) or not sub.isdigit():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token subject",
+        )
+
+    user = db.get(User, int(sub))
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
+
+    family_membership = db.execute(
+        select(Membership, Tenant)
+        .join(Tenant, Tenant.id == Membership.tenant_id)
+        .where(
+            Membership.user_id == user.id,
+            Membership.role.in_((MembershipRole.PARENT, MembershipRole.GUARDIAN)),
+            Tenant.type == TenantType.FAMILY,
+            Tenant.deleted_at.is_(None),
+        )
+        .order_by(Tenant.id.asc())
+    ).first()
+    if family_membership is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not have tools access",
+        )
+
+    membership, tenant = family_membership
+    request.state.user_id = user.id
+    request.state.auth_role = membership.role.value
+    request.state.tenant_id = tenant.id
     return user
 
 

@@ -3,13 +3,12 @@
 import { useState, useCallback, useMemo, useRef, useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { Calculator, Divide, Home, Scale, Zap, Sigma, type LucideIcon } from "lucide-react";
+import { Calculator, Divide, Scale, Zap, Sigma, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   ApiError,
   createToolsCheckout,
-  createToolsCheckoutV2,
-  useAnonCredit as consumeAnonCredit,
+  getToolsCheckoutStatus,
   useToolsCredit as consumeToolsCredit,
 } from "@/lib/api/client";
 import { useToolsIdentity } from "@/context/tools-identity-context";
@@ -3749,8 +3748,6 @@ export function SheetGeneratorTool() {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   // ── Identidade global (context) ───────────────────────────────────────────
   const identity = useToolsIdentity();
-  const anonId = identity.anonymousId;
-  const isAnonUser = identity.isAnonUser;
   const creditsLoading = identity.initializing;
   // credits: soma de gerações grátis + créditos pagos; null enquanto inicializa
   const credits = identity.initializing
@@ -3759,6 +3756,7 @@ export function SheetGeneratorTool() {
 
   const [creditsFxTick, setCreditsFxTick] = useState(0);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [paywallEmail, setPaywallEmail] = useState("");
   const [isPrinting, setIsPrinting] = useState(false);
 
   // ── Preview: auto-fit + zoom (Canva-like) ─────────────────────────────────
@@ -3834,18 +3832,6 @@ export function SheetGeneratorTool() {
     }, TITLE_SUBTITLE_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [lightCfg.title, lightCfg.subtitle]);
-
-
-  // Post-checkout: detecta retorno do Stripe e atualiza créditos
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (!params.has("upgrade")) return;
-    const timer = window.setTimeout(() => {
-      void identity.refresh();
-    }, 1500);
-    return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const generatedExercises = useMemo<ExerciseItem[]>(() => {
     if (!blocks.some((b) => b.active)) return [];
@@ -4054,6 +4040,67 @@ export function SheetGeneratorTool() {
   const showToast = useCallback((msg: string) => {
     toast(msg);
   }, []);
+
+  // Post-checkout: detecta retorno do Stripe e atualiza créditos
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const checkoutState = params.get("checkout");
+    const sessionId = params.get("session_id");
+    if (!checkoutState && !params.has("upgrade")) return;
+
+    let cancelled = false;
+    const clearQuery = () => {
+      window.history.replaceState({}, "", "/tools/gerador-atividades");
+    };
+
+    if (checkoutState === "cancel") {
+      showToast("Compra cancelada. Você pode continuar do ponto em que parou.");
+      clearQuery();
+      return;
+    }
+
+    if (checkoutState === "success" && sessionId) {
+      const pollCheckout = async () => {
+        const maxAttempts = 20;
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+          try {
+            const result = await getToolsCheckoutStatus(sessionId);
+            if (cancelled) return;
+            if (result.payment_status === "paid" || result.payment_status === "completed") {
+              identity.applyPaidCredits(result.paid_generations_available);
+              await identity.refresh();
+              showToast(
+                result.paid_generations_available > 0
+                  ? `${result.paid_generations_available} gerações disponíveis para continuar.`
+                  : "Pagamento confirmado. Seus créditos já foram liberados.",
+              );
+              clearQuery();
+              return;
+            }
+          } catch {
+            // Continua tentando: a sessão pode demorar alguns segundos para ficar consistente.
+          }
+          await new Promise<void>((resolve) => window.setTimeout(resolve, 1500));
+        }
+        if (!cancelled) {
+          void identity.refresh();
+          showToast("Pagamento em processamento. Os créditos serão atualizados automaticamente.");
+          clearQuery();
+        }
+      };
+
+      void pollCheckout();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const timer = window.setTimeout(() => {
+      void identity.refresh();
+      clearQuery();
+    }, 1500);
+    return () => window.clearTimeout(timer);
+  }, [identity, showToast]);
 
   const showMobileAddToast = useCallback(
     (msg: string) => {
@@ -4310,17 +4357,15 @@ export function SheetGeneratorTool() {
 
   // handleBuyCredits é passado ao PaywallModal — lança em caso de erro
   // para que o modal exiba a mensagem inline sem fechar.
-  const handleBuyCredits = useCallback(async () => {
+  const handleBuyCredits = useCallback(async (email: string) => {
     track("checkout_started");
-    const checkout = isAnonUser
-      ? await createToolsCheckoutV2({
-          anonymous_id: anonId,
-          fingerprint_id: identity.fingerprintId || undefined,
-          package_type: "pack_30",
-        })
-      : await createToolsCheckout({ plan_code: "credits_30" });
+    const checkout = await createToolsCheckout({
+      plan_code: "credits_30",
+      customer_email: email,
+      fingerprint_id: identity.fingerprintId || undefined,
+    });
     window.location.assign(checkout.checkout_url);
-  }, [isAnonUser, anonId, identity.fingerprintId]);
+  }, [identity.fingerprintId]);
 
   const handlePrint = useCallback(async () => {
     if (isPrinting) return;
@@ -4474,17 +4519,12 @@ export function SheetGeneratorTool() {
 
     try {
       let remaining: number;
-      if (isAnonUser) {
-        const result = await consumeAnonCredit(anonId);
-        remaining = result.remaining_free_generations + result.paid_credits_remaining;
-      } else {
-        const result = await consumeToolsCredit();
-        remaining = Math.max(0, Number(result.credits) || 0);
-      }
+      const result = await consumeToolsCredit(identity.fingerprintId || undefined);
+      remaining = Math.max(0, Number(result.credits) || 0);
       void identity.refresh();
       setCreditsFxTick((v) => v + 1);
       track("generation_success", {
-        consumption_type: isAnonUser ? "free" : "paid",
+        consumption_type: "authenticated",
         remaining_after: remaining,
       });
       if (remaining === 0) {
@@ -4643,17 +4683,12 @@ export function SheetGeneratorTool() {
 
     try {
       let remaining: number;
-      if (isAnonUser) {
-        const result = await consumeAnonCredit(anonId);
-        remaining = result.remaining_free_generations + result.paid_credits_remaining;
-      } else {
-        const result = await consumeToolsCredit();
-        remaining = Math.max(0, Number(result.credits) || 0);
-      }
+      const result = await consumeToolsCredit(identity.fingerprintId || undefined);
+      remaining = Math.max(0, Number(result.credits) || 0);
       void identity.refresh();
       setCreditsFxTick((v) => v + 1);
       track("generation_success", {
-        consumption_type: isAnonUser ? "free" : "paid",
+        consumption_type: "authenticated",
         remaining_after: remaining,
       });
       if (remaining === 0) {
@@ -4683,8 +4718,6 @@ export function SheetGeneratorTool() {
   }, [
     isPrinting,
     credits,
-    isAnonUser,
-    anonId,
     identity,
     previewPages,
     generatedExercises,
@@ -4860,15 +4893,6 @@ export function SheetGeneratorTool() {
           </div>
 
           <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
-            <button
-              type="button"
-              aria-label="Voltar para home"
-              onClick={() => router.push("/tools")}
-              className={`${desktopTopActionBtnCls} !flex !w-8 !items-center !justify-center !px-0 text-[#ee8748]`}
-            >
-              <Home className="axiora-fixed-icon" size={15} strokeWidth={2} />
-            </button>
-
             <button
               type="button"
               onClick={openCategoryModalWithHaptic}
@@ -5201,14 +5225,6 @@ export function SheetGeneratorTool() {
                   </span>
                 )}
               </div>
-              <button
-                type="button"
-                aria-label="Voltar para home"
-                onClick={() => router.push("/tools")}
-                className={`${chunkyOutlineBtn} !flex !h-[34px] !w-[34px] !items-center !justify-center !px-0 !py-0 text-[#ee8748]`}
-              >
-                <Home className="axiora-fixed-icon" size={15} strokeWidth={2} />
-              </button>
               <button
                 type="button"
                 onClick={openCategoryModalWithHaptic}
@@ -6208,6 +6224,9 @@ export function SheetGeneratorTool() {
         open={paywallOpen}
         onClose={() => setPaywallOpen(false)}
         onBuy={handleBuyCredits}
+        requireEmail={false}
+        email={paywallEmail}
+        onEmailChange={setPaywallEmail}
       />
 
       {categoryModalOpen &&

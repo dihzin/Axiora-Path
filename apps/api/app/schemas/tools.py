@@ -121,6 +121,7 @@ class AnonIdentityOut(BaseModel):
 class AnonIdentifyRequest(BaseModel):
     anonymous_id: str = Field(min_length=36, max_length=36)
     fingerprint_id: str | None = Field(default=None, max_length=255)
+    email: str | None = Field(default=None, max_length=255)
     user_agent: str | None = Field(default=None, max_length=512)
 
 
@@ -179,6 +180,12 @@ class ToolsCreditsResponse(BaseModel):
     credits: int
 
 
+class ToolsSessionResponse(BaseModel):
+    user_id: int
+    email: str
+    name: str
+
+
 class ToolsPricingPackOut(BaseModel):
     code: str
     credits: int
@@ -201,6 +208,7 @@ class ToolsCheckoutCreateRequest(BaseModel):
 
     anonymous_id: str = Field(min_length=36, max_length=36)
     fingerprint_id: str | None = Field(default=None, max_length=255)
+    customer_email: str | None = Field(default=None, max_length=255)
     package_type: str = Field(default="pack_30", min_length=3, max_length=60)
 
 

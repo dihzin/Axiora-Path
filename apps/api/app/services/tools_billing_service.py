@@ -60,6 +60,15 @@ class PaymentInfo:
     payment_intent_id: str | None
 
 
+@dataclass(frozen=True)
+class CheckoutSessionStatus:
+    id: str
+    payment_status: str
+    amount_total_cents: int | None
+    currency: str | None
+    payment_intent_id: str | None
+
+
 class ToolsBillingService:
     def __init__(self) -> None:
         self.secret_key = (settings.stripe_secret_key or "").strip()
@@ -83,6 +92,8 @@ class ToolsBillingService:
         session_scope_key: str,
         customer_email: str | None,
         extra_metadata: dict[str, str] | None = None,
+        success_url: str | None = None,
+        cancel_url: str | None = None,
     ) -> CheckoutSessionResult:
         """Cria uma Checkout Session no Stripe.
 
@@ -93,11 +104,15 @@ class ToolsBillingService:
         self.ensure_checkout_config()
         if plan_code != "credits_30":
             raise BillingConfigError("Unsupported plan code")
+        resolved_success_url = (success_url or self.success_url).strip()
+        resolved_cancel_url = (cancel_url or self.cancel_url).strip()
+        if not resolved_success_url or not resolved_cancel_url:
+            raise BillingConfigError("Checkout URLs are not configured")
 
         form_fields: list[tuple[str, str]] = [
             ("mode", "payment"),
-            ("success_url", self.success_url),
-            ("cancel_url", self.cancel_url),
+            ("success_url", resolved_success_url),
+            ("cancel_url", resolved_cancel_url),
             ("line_items[0][price]", self.price_credits_30),
             ("line_items[0][quantity]", "1"),
             ("allow_promotion_codes", "true"),
@@ -143,6 +158,45 @@ class ToolsBillingService:
         if not isinstance(session_id, str) or not isinstance(session_url, str):
             raise BillingGatewayError("Checkout response missing id/url")
         return CheckoutSessionResult(id=session_id, url=session_url)
+
+    def get_checkout_session_status(self, session_id: str) -> CheckoutSessionStatus:
+        self.ensure_checkout_config()
+        request = Request(
+            f"{CHECKOUT_URL}/{session_id}",
+            headers={"Authorization": f"Bearer {self.secret_key}"},
+            method="GET",
+        )
+        try:
+            with urlopen(request, timeout=20.0) as response:
+                raw = response.read().decode("utf-8", errors="replace")
+        except HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            raise BillingGatewayError(self._format_gateway_error(exc.code, body)) from exc
+        except (URLError, TimeoutError) as exc:
+            raise BillingGatewayError("Failed to fetch checkout session: network error") from exc
+
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise BillingGatewayError("Invalid checkout status response") from exc
+        if not isinstance(parsed, dict):
+            raise BillingGatewayError("Invalid checkout status response")
+
+        resolved_id = parsed.get("id")
+        payment_status = parsed.get("payment_status")
+        amount_total = parsed.get("amount_total")
+        currency = parsed.get("currency")
+        payment_intent = parsed.get("payment_intent")
+        if not isinstance(resolved_id, str) or not isinstance(payment_status, str):
+            raise BillingGatewayError("Checkout status response missing required fields")
+
+        return CheckoutSessionStatus(
+            id=resolved_id,
+            payment_status=payment_status.strip().lower(),
+            amount_total_cents=int(amount_total) if isinstance(amount_total, (int, float)) else None,
+            currency=str(currency).upper() if isinstance(currency, str) else None,
+            payment_intent_id=str(payment_intent) if isinstance(payment_intent, str) else None,
+        )
 
     @staticmethod
     def _format_gateway_error(status_code: int, body: str) -> str:

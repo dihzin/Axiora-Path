@@ -1,8 +1,10 @@
 import Link from "next/link";
 
 import { ClientSheetGeneratorTool } from "../_components/client-sheet-generator-tool";
+import { GeradorAtividadesAuthGuard } from "../_components/gerador-atividades-auth-guard";
+import { ToolsHeaderLogoTrigger } from "../_components/tools-header-logo-trigger";
+import { ToolsLogoutButton } from "../_components/tools-logout-button";
 import { ToolsCheckoutRedirect } from "../_components/tools-checkout-redirect";
-import { AxioraHeaderLogo } from "@/components/brand/axiora-header-logo";
 import { MarketingBackground } from "@/components/marketing-background";
 
 type ToolsDetailPageProps = {
@@ -40,12 +42,10 @@ export default async function ToolsDetailPage({ params, searchParams }: ToolsDet
       <nav className="sticky top-0 z-30 border-b border-[rgba(238,135,72,0.14)] bg-[linear-gradient(180deg,rgba(8,20,31,0.72)_0%,rgba(9,24,36,0.62)_100%)] shadow-[0_10px_30px_rgba(4,12,20,0.16)] backdrop-blur-xl">
         <div className="mx-auto flex h-[65px] w-full items-center justify-between gap-3 px-5">
           <div className="flex items-center gap-0">
-            <Link href="/tools" className="flex shrink-0 items-center">
-              <AxioraHeaderLogo className="w-[168px] sm:w-[196px]" priority />
-            </Link>
+            <ToolsHeaderLogoTrigger refreshCurrentPage={isExerciseGenerator} />
             <span className="-ml-10 text-sm font-semibold text-white/60 sm:-ml-12">{title}</span>
           </div>
-          <div />
+          <div>{isExerciseGenerator ? <ToolsLogoutButton /> : null}</div>
         </div>
       </nav>
 
@@ -59,7 +59,9 @@ export default async function ToolsDetailPage({ params, searchParams }: ToolsDet
         {isExerciseGenerator ? (
           <>
             {shouldAutoCheckout ? <ToolsCheckoutRedirect planCode="credits_30" /> : null}
-            <ClientSheetGeneratorTool />
+            <GeradorAtividadesAuthGuard>
+              <ClientSheetGeneratorTool />
+            </GeradorAtividadesAuthGuard>
           </>
         ) : (
           <>

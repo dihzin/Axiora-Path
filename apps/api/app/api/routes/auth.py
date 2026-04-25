@@ -41,6 +41,7 @@ from app.schemas.auth import (
     PrimaryLoginMembershipOut,
     PrimaryLoginResponse,
     RefreshRequest,
+    ResetPasswordByEmailRequest,
     SelectTenantRequest,
     SelectTenantResponse,
     SignupRequest,
@@ -515,6 +516,27 @@ def change_password(
 ) -> MessageResponse:
     if not verify_password(payload.current_password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Current password is invalid")
+
+    password_error = validate_password_strength(payload.new_password)
+    if password_error is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=password_error)
+
+    user.password_hash = hash_password(payload.new_password)
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    db.commit()
+    return MessageResponse(message="Password updated successfully")
+
+
+@router.post("/reset-password-by-email", response_model=MessageResponse)
+def reset_password_by_email(
+    payload: ResetPasswordByEmailRequest,
+    db: DBSession,
+) -> MessageResponse:
+    normalized_email = payload.email.strip().lower()
+    user = db.scalar(select(User).where(User.email == normalized_email))
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     password_error = validate_password_strength(payload.new_password)
     if password_error is not None:

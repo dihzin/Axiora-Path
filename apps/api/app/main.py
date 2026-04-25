@@ -106,6 +106,7 @@ app.add_middleware(
         "X-Tenant-Slug",
         "X-CSRF-Token",
         "X-Request-Id",
+        "X-Device-Fingerprint",
     ],
 )
 app.include_router(ai_router)

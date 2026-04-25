@@ -54,6 +54,7 @@ export default function SignupPage() {
   const router = useRouter();
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
   const googleCredentialHandlerRef = useRef<(credential?: string) => Promise<void>>(async () => {});
+  const [nextPath, setNextPath] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -66,6 +67,14 @@ export default function SignupPage() {
   useEffect(() => {
     if (GOOGLE_CLIENT_ID && window.google) {
       setGoogleScriptReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const nextFromQuery = params.get("next");
+    if (nextFromQuery && nextFromQuery.startsWith("/")) {
+      setNextPath(nextFromQuery);
     }
   }, []);
 
@@ -106,7 +115,7 @@ export default function SignupPage() {
       return;
     }
 
-    router.push("/select-child");
+    router.push(nextPath ?? "/select-child");
   };
 
   const onSubmit = async (event: FormEvent) => {

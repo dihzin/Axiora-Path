@@ -1,16 +1,18 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
+import { ApiError, getApiErrorMessage } from "@/lib/api/client";
 import { track } from "@/lib/tools/analytics";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  /** Deve navegar para o checkout (window.location.assign) ou lançar em caso de erro. */
-  onBuy: () => Promise<void>;
+  onBuy: (email: string) => Promise<void>;
+  requireEmail?: boolean;
+  email?: string;
+  onEmailChange?: (value: string) => void;
 };
-
-// ─── Ícones ─────────────────────────────────────────────────────────────────
 
 function CheckIcon() {
   return (
@@ -47,14 +49,36 @@ function StarIcon() {
   );
 }
 
-// ─── Modal ──────────────────────────────────────────────────────────────────
-
-export function PaywallModal({ open, onClose, onBuy }: Props) {
+export function PaywallModal({
+  open,
+  onClose,
+  onBuy,
+  requireEmail = false,
+  email = "",
+  onEmailChange,
+}: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [portalReady, setPortalReady] = useState(false);
+  const [compactLayout, setCompactLayout] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // Focus trap + Escape
+  const normalizedEmail = email.trim();
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateLayout = () => {
+      setCompactLayout(window.innerHeight < 860);
+    };
+    updateLayout();
+    window.addEventListener("resize", updateLayout);
+    return () => window.removeEventListener("resize", updateLayout);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     dialogRef.current?.focus();
@@ -65,7 +89,6 @@ export function PaywallModal({ open, onClose, onBuy }: Props) {
     return () => document.removeEventListener("keydown", handleKey);
   }, [open, busy, onClose]);
 
-  // Reset erro ao abrir + dispara paywall_view
   useEffect(() => {
     if (open) {
       setError("");
@@ -74,25 +97,39 @@ export function PaywallModal({ open, onClose, onBuy }: Props) {
   }, [open]);
 
   const handleBuy = async () => {
+    if (requireEmail) {
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(normalizedEmail)) {
+        setError("Informe um e-mail valido para continuar com a compra.");
+        return;
+      }
+    }
+
     setBusy(true);
     setError("");
     track("paywall_click_buy");
     try {
-      await onBuy();
-    } catch {
-      setError("Não foi possível iniciar o checkout. Tente novamente.");
+      await onBuy(normalizedEmail);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(getApiErrorMessage(err, "Nao foi possivel iniciar o checkout. Tente novamente."));
+      } else {
+        setError("Nao foi possivel iniciar o checkout. Tente novamente.");
+      }
     } finally {
       setBusy(false);
     }
   };
 
-  if (!open) return null;
+  if (!open || !portalReady) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[220] flex items-end justify-center p-4 sm:items-center"
+      className="fixed inset-0 z-[1200] flex items-center justify-center p-4 sm:p-6"
       style={{ backdropFilter: "blur(12px)", background: "rgba(4,10,18,0.75)" }}
-      onClick={() => { if (!busy) onClose(); }}
+      onClick={() => {
+        if (!busy) onClose();
+      }}
       aria-label="Fechar"
     >
       <div
@@ -101,15 +138,15 @@ export function PaywallModal({ open, onClose, onBuy }: Props) {
         aria-modal="true"
         aria-labelledby="paywall-title"
         tabIndex={-1}
-        className="relative mx-auto w-full max-w-[390px] overflow-hidden rounded-2xl focus:outline-none mt-10 sm:mt-0"
+        className="relative mx-auto my-auto w-full overflow-hidden rounded-2xl focus:outline-none"
         style={{
+          maxWidth: compactLayout ? "360px" : "390px",
           background: "linear-gradient(160deg, rgba(18,28,42,0.98) 0%, rgba(10,18,30,0.99) 100%)",
           border: "1px solid rgba(255,255,255,0.10)",
           boxShadow: "0 40px 100px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Glow de fundo */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 z-0"
@@ -118,29 +155,25 @@ export function PaywallModal({ open, onClose, onBuy }: Props) {
           }}
         />
 
-        {/* Barra gradiente superior */}
         <div
           className="relative z-10 h-[2px] w-full"
           style={{ background: "linear-gradient(90deg, transparent 0%, #fde68a 30%, #ee8748 65%, #db6728 100%)" }}
           aria-hidden="true"
         />
 
-        {/* Botão fechar — fora do card, acima à direita */}
         <button
           onClick={onClose}
           disabled={busy}
           aria-label="Fechar"
-          className="absolute -top-9 right-0 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/60 backdrop-blur-sm transition hover:border-white/35 hover:bg-white/20 hover:text-white disabled:opacity-40"
+          className="absolute right-3 top-3 z-20 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-white/10 text-white/60 backdrop-blur-sm transition hover:border-white/35 hover:bg-white/20 hover:text-white disabled:opacity-40"
         >
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
             <path d="M18 6L6 18M6 6l12 12" />
           </svg>
         </button>
 
-        <div className="relative z-10 px-6 pb-6 pt-5">
-
-          {/* Badge social proof */}
-          <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-[rgba(251,191,36,0.25)] bg-[rgba(251,191,36,0.08)] px-3 py-1">
+        <div className={`relative z-10 ${compactLayout ? "px-5 pb-5 pt-4" : "px-6 pb-6 pt-5"}`}>
+          <div className={`inline-flex items-center gap-1.5 rounded-full border border-[rgba(251,191,36,0.25)] bg-[rgba(251,191,36,0.08)] px-3 py-1 ${compactLayout ? "mb-3" : "mb-4"}`}>
             <StarIcon />
             <StarIcon />
             <StarIcon />
@@ -151,10 +184,9 @@ export function PaywallModal({ open, onClose, onBuy }: Props) {
             </span>
           </div>
 
-          {/* Headline */}
           <h2
             id="paywall-title"
-            className="text-[20px] font-extrabold leading-snug text-white"
+            className={`${compactLayout ? "text-[18px]" : "text-[20px]"} font-extrabold leading-snug text-white`}
           >
             Você já usou suas{" "}
             <span
@@ -164,26 +196,24 @@ export function PaywallModal({ open, onClose, onBuy }: Props) {
               3 gerações grátis
             </span>
           </h2>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-white/50">
+          <p className={`${compactLayout ? "mt-1 text-[12px]" : "mt-1.5 text-[13px]"} leading-relaxed text-white/50`}>
             Continue criando atividades de matemática em segundos, com PDF pronto para imprimir.
           </p>
 
-          {/* Bloco de preço */}
           <div
-            className="mt-5 overflow-hidden rounded-xl"
+            className={`${compactLayout ? "mt-4" : "mt-5"} overflow-hidden rounded-xl`}
             style={{
               background: "linear-gradient(135deg, rgba(238,135,72,0.12) 0%, rgba(253,230,138,0.06) 100%)",
               border: "1px solid rgba(238,135,72,0.22)",
               boxShadow: "inset 0 1px 0 rgba(255,219,190,0.08)",
             }}
           >
-            <div className="px-4 pb-4 pt-4">
-              {/* Preço */}
+            <div className={compactLayout ? "px-4 pb-3 pt-3" : "px-4 pb-4 pt-4"}>
               <div className="flex flex-col items-center gap-1 text-center">
                 <div className="flex items-start gap-1">
                   <span className="mt-2 text-[15px] font-bold text-white/60">R$</span>
                   <span
-                    className="text-[52px] font-black leading-none tracking-tighter"
+                    className={`${compactLayout ? "text-[44px]" : "text-[52px]"} font-black leading-none tracking-tighter`}
                     style={{
                       background: "linear-gradient(160deg, #fff 0%, rgba(255,255,255,0.75) 100%)",
                       WebkitBackgroundClip: "text",
@@ -193,12 +223,13 @@ export function PaywallModal({ open, onClose, onBuy }: Props) {
                     29
                   </span>
                 </div>
-                <span className="text-[13px] font-semibold text-white/60">por 30 gerações</span>
+                <span className={`${compactLayout ? "text-[12px]" : "text-[13px]"} font-semibold text-white/60`}>
+                  por 30 gerações
+                </span>
               </div>
 
-              {/* Tags */}
-              <div className="mt-3 flex flex-wrap justify-center gap-1.5">
-                {["Sem assinatura", "Use no seu ritmo", "Nunca expiram"].map((tag) => (
+              <div className={`${compactLayout ? "mt-2.5" : "mt-3"} flex flex-wrap justify-center gap-1.5`}>
+                {["Sem assinatura", "Use no seu ritmo"].map((tag) => (
                   <span
                     key={tag}
                     className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold text-white/60"
@@ -211,24 +242,22 @@ export function PaywallModal({ open, onClose, onBuy }: Props) {
             </div>
           </div>
 
-          {/* Gatilhos de confiança */}
-          <ul className="mt-4 space-y-2.5">
+          <ul className={`${compactLayout ? "mt-3 space-y-2" : "mt-4 space-y-2.5"}`}>
             {[
               "Economize horas toda semana na preparação de aulas",
               "Gabarito automático em todas as listas",
               "PDF pronto para imprimir ou compartilhar",
             ].map((item) => (
-              <li key={item} className="flex items-center gap-2.5 text-[12px] font-medium text-white/75">
+              <li key={item} className={`flex items-center gap-2.5 ${compactLayout ? "text-[11px]" : "text-[12px]"} font-medium text-white/75`}>
                 <CheckIcon />
                 {item}
               </li>
             ))}
           </ul>
 
-          {/* Erro inline */}
           {error && (
             <div
-              className="mt-4 flex items-start gap-2 rounded-lg px-3 py-2.5"
+              className={`${compactLayout ? "mt-3" : "mt-4"} flex items-start gap-2 rounded-lg px-3 py-2.5`}
               style={{ background: "rgba(220,38,38,0.10)", border: "1px solid rgba(220,38,38,0.25)" }}
             >
               <svg className="mt-px h-3.5 w-3.5 shrink-0 text-[#f87171]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -238,18 +267,40 @@ export function PaywallModal({ open, onClose, onBuy }: Props) {
             </div>
           )}
 
-          {/* CTAs */}
-          <div className="mt-5 space-y-2.5">
+          {requireEmail && (
+            <div className={compactLayout ? "mt-3" : "mt-4"}>
+              <label htmlFor="paywall-email" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-white/45">
+                E-mail para liberar sua compra
+              </label>
+              <input
+                id="paywall-email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => {
+                  setError("");
+                  onEmailChange?.(event.target.value);
+                }}
+                placeholder="voce@exemplo.com"
+                className={`w-full rounded-xl border border-white/12 bg-white/[0.06] px-3 ${compactLayout ? "py-2.5 text-[13px]" : "py-3 text-[14px]"} font-medium text-white outline-none transition placeholder:text-white/25 focus:border-[#ee8748] focus:bg-white/[0.08] focus:ring-2 focus:ring-[#ee8748]/20`}
+              />
+              <p className={`${compactLayout ? "mt-1.5 text-[10px]" : "mt-2 text-[11px]"} leading-relaxed text-white/40`}>
+                Usamos esse e-mail para vincular a compra e reduzir tentativas de reutilizar o teste grátis.
+              </p>
+            </div>
+          )}
+
+          <div className={`${compactLayout ? "mt-4 space-y-2" : "mt-5 space-y-2.5"}`}>
             <button
               onClick={() => void handleBuy()}
               disabled={busy}
-              className="relative w-full cursor-pointer overflow-hidden rounded-xl px-4 py-3.5 text-[14px] font-extrabold tracking-[0.01em] text-white transition disabled:cursor-not-allowed disabled:opacity-70 hover:brightness-110 active:translate-y-[1px]"
+              className={`relative w-full cursor-pointer overflow-hidden rounded-xl px-4 ${compactLayout ? "py-3 text-[13px]" : "py-3.5 text-[14px]"} font-extrabold tracking-[0.01em] text-white transition disabled:cursor-not-allowed disabled:opacity-70 hover:brightness-110 active:translate-y-[1px]`}
               style={{
                 background: "linear-gradient(180deg, #ee8748 0%, #db6728 100%)",
                 boxShadow: "inset 0 1px 0 rgba(255,219,190,0.25), 0 4px 0 rgba(158,74,30,0.55), 0 12px 28px rgba(93,48,22,0.35)",
               }}
             >
-              {/* Shimmer */}
               <span
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 -translate-x-full animate-[shimmer_2.4s_ease-in-out_infinite]"
@@ -270,16 +321,17 @@ export function PaywallModal({ open, onClose, onBuy }: Props) {
             <button
               onClick={onClose}
               disabled={busy}
-              className="w-full cursor-pointer rounded-xl px-4 py-2.5 text-[12px] font-semibold text-white/30 transition hover:text-white/55 disabled:opacity-40"
+              className={`w-full cursor-pointer rounded-xl px-4 ${compactLayout ? "py-2 text-[11px]" : "py-2.5 text-[12px]"} font-semibold text-white/30 transition hover:text-white/55 disabled:opacity-40`}
             >
               Voltar
             </button>
           </div>
 
-          {/* Segurança */}
-          <div className="mt-4 flex items-center justify-center gap-1.5 text-white/25">
+          <div className={`${compactLayout ? "mt-3" : "mt-4"} flex items-center justify-center gap-1.5 text-white/25`}>
             <LockIcon />
-            <span className="text-[10px]">Pagamento via Stripe · 100% seguro · Sem dados armazenados</span>
+            <span className={compactLayout ? "text-[9px]" : "text-[10px]"}>
+              Pagamento via Stripe · 100% seguro · Sem dados armazenados
+            </span>
           </div>
         </div>
       </div>
@@ -290,6 +342,7 @@ export function PaywallModal({ open, onClose, onBuy }: Props) {
           60%, 100% { transform: translateX(200%); }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body,
   );
 }
