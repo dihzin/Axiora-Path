@@ -4412,18 +4412,12 @@ export function SheetGeneratorTool() {
       }
 
       try {
-        let remaining: number;
-        if (isAnonUser) {
-          const result = await consumeAnonCredit(anonId);
-          remaining = result.remaining_free_generations + result.paid_credits_remaining;
-        } else {
-          const result = await consumeToolsCredit();
-          remaining = Math.max(0, Number(result.credits) || 0);
-        }
+        const result = await consumeToolsCredit(identity.fingerprintId || undefined);
+        const remaining = Math.max(0, Number(result.credits) || 0);
         void identity.refresh();
         setCreditsFxTick((v) => v + 1);
         track("generation_success", {
-          consumption_type: isAnonUser ? "free" : "paid",
+          consumption_type: "authenticated",
           remaining_after: remaining,
         });
         if (remaining === 0) {
@@ -4518,9 +4512,8 @@ export function SheetGeneratorTool() {
     } catch {}
 
     try {
-      let remaining: number;
       const result = await consumeToolsCredit(identity.fingerprintId || undefined);
-      remaining = Math.max(0, Number(result.credits) || 0);
+      const remaining = Math.max(0, Number(result.credits) || 0);
       void identity.refresh();
       setCreditsFxTick((v) => v + 1);
       track("generation_success", {
@@ -4682,9 +4675,8 @@ export function SheetGeneratorTool() {
     } catch {}
 
     try {
-      let remaining: number;
       const result = await consumeToolsCredit(identity.fingerprintId || undefined);
-      remaining = Math.max(0, Number(result.credits) || 0);
+      const remaining = Math.max(0, Number(result.credits) || 0);
       void identity.refresh();
       setCreditsFxTick((v) => v + 1);
       track("generation_success", {
