@@ -7,7 +7,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToolsIdentity } from "@/context/tools-identity-context";
-import { ApiError, getApiErrorMessage, loginPrimary } from "@/lib/api/client";
+import { ApiError, loginPrimary } from "@/lib/api/client";
 import { clearTenantSlug, clearTokens } from "@/lib/api/session";
 import { finishPrimaryLogin } from "./_components/finish-primary-login";
 import { ToolsAuthShell } from "./_components/tools-auth-shell";
@@ -15,6 +15,44 @@ import { ToolsAuthShell } from "./_components/tools-auth-shell";
 const GENERATOR_PATH = "/tools/gerador-atividades";
 const SIGNUP_PATH = "/tools/gerador-atividades/login/cadastro";
 const RESET_PASSWORD_PATH = "/tools/gerador-atividades/login/redefinicao-senha";
+
+function mapToolsLoginError(err: unknown): string {
+  if (err instanceof ApiError) {
+    const payload = err.payload as { message?: unknown; detail?: unknown } | null;
+    const rawMessage = `${typeof payload?.message === "string" ? payload.message : ""} ${typeof payload?.detail === "string" ? payload.detail : ""}`.toLowerCase();
+
+    if (err.status === 401 || rawMessage.includes("invalid credentials")) {
+      return "E-mail ou senha invalidos.";
+    }
+
+    if (
+      err.status === 404 ||
+      rawMessage.includes("not found") ||
+      rawMessage.includes("nao cadastrado") ||
+      rawMessage.includes("nao encontrado")
+    ) {
+      return "Usuario nao cadastrado.";
+    }
+
+    if (rawMessage.includes("network") || err.status === 0) {
+      return "Nao foi possivel conectar ao servidor. Tente novamente.";
+    }
+
+    if (rawMessage.includes("too many requests") || err.status === 429) {
+      return "Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.";
+    }
+
+    if (err.status >= 500) {
+      return "Erro temporario no servidor. Tente novamente em instantes.";
+    }
+  }
+
+  if (err instanceof Error && err.message === "TOOLS_ACCESS_DENIED") {
+    return "Usuario nao tem acesso ao Gerador de Atividades.";
+  }
+
+  return "Nao foi possivel autenticar. Verifique e-mail e senha.";
+}
 
 export default function GeradorAtividadesLoginPage() {
   const router = useRouter();
@@ -33,7 +71,6 @@ export default function GeradorAtividadesLoginPage() {
   }, [hasAuthenticatedSession, initializing, router]);
 
   useEffect(() => {
-    // Evita preenchimento automático no carregamento/F5.
     setEmail("");
     setPassword("");
   }, []);
@@ -63,30 +100,7 @@ export default function GeradorAtividadesLoginPage() {
     } catch (err) {
       clearTokens();
       clearTenantSlug();
-      if (err instanceof Error && err.message === "TOOLS_ACCESS_DENIED") {
-        setError("Usuário não tem acesso ao Gerador de Atividades");
-        return;
-      }
-      if (err instanceof ApiError) {
-        const payload = err.payload as { message?: string; detail?: string } | null;
-        const rawMessage = `${payload?.message ?? ""} ${payload?.detail ?? ""}`.toLowerCase();
-        if (err.status === 401 || rawMessage.includes("invalid credentials")) {
-          setError("E-mail ou senha inválidos");
-          return;
-        }
-        if (
-          err.status === 404 ||
-          rawMessage.includes("not found") ||
-          rawMessage.includes("nao cadastrado") ||
-          rawMessage.includes("não cadastrado") ||
-          rawMessage.includes("usuario nao encontrado") ||
-          rawMessage.includes("usuário não encontrado")
-        ) {
-          setError("Usuário não cadastrado");
-          return;
-        }
-      }
-      setError(getApiErrorMessage(err, "Não foi possível autenticar. Verifique e-mail e senha."));
+      setError(mapToolsLoginError(err));
     }
     setLoading(false);
   };
@@ -159,7 +173,7 @@ export default function GeradorAtividadesLoginPage() {
         </div>
 
         <p className="text-xs text-white/55">
-          Ainda não tem acesso? Crie sua conta para liberar seu ambiente e gerar suas atividades.
+          Ainda nao tem acesso? Crie sua conta para liberar seu ambiente e gerar suas atividades.
         </p>
         <p className="text-xs text-white/60">
           Esqueceu a senha? Clique{" "}

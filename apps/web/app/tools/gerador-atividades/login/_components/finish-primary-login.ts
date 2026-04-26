@@ -12,7 +12,7 @@ export async function finishPrimaryLogin({ loginResponse }: FinishPrimaryLoginPa
   }
 
   setAccessToken(loginResponse.access_token);
-  setUserDisplayName(loginResponse.user.name);
+  setUserDisplayName(loginResponse.user.email);
   document.cookie = "ax_tools_auth=1; Path=/tools; Max-Age=604800; SameSite=Lax";
   const creditsResponse = await getToolsCredits().catch(() => ({ credits: 0 }));
   return Math.max(0, Number(creditsResponse.credits) || 0);

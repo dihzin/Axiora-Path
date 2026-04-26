@@ -6,19 +6,23 @@ import { LogOut } from "lucide-react";
 import { getToolsSession, logout } from "@/lib/api/client";
 import { clearTenantSlug, clearTokens, clearUserDisplayName, getUserDisplayName, setUserDisplayName } from "@/lib/api/session";
 
+function isEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 export function ToolsLogoutButton() {
   const [userLabel, setUserLabel] = useState("");
 
   useEffect(() => {
-    const savedName = getUserDisplayName() ?? "";
-    if (savedName) {
-      setUserLabel(savedName);
+    const savedValue = getUserDisplayName() ?? "";
+    if (savedValue && isEmail(savedValue)) {
+      setUserLabel(savedValue);
     }
 
     void getToolsSession()
       .then((session) => {
         setUserLabel(session.email);
-        setUserDisplayName(session.name);
+        setUserDisplayName(session.email);
       })
       .catch(() => undefined);
   }, []);
