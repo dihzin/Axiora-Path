@@ -27,7 +27,7 @@ from app.core.security import (
     validate_password_strength,
     verify_password,
 )
-from app.models import ChildProfile, Membership, MembershipRole, Tenant, TenantType, User
+from app.models import ChildProfile, Membership, MembershipRole, Tenant, TenantType, User, UserCredits
 from app.schemas.auth import (
     AuthTokens,
     ChangePasswordRequest,
@@ -50,6 +50,7 @@ from app.schemas.auth import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 _GOOGLE_TOKENINFO_URL = "https://oauth2.googleapis.com/tokeninfo"
+TOOLS_SIGNUP_INITIAL_CREDITS = 3
 
 
 def _cookie_samesite() -> str:
@@ -237,6 +238,7 @@ def _find_or_create_google_user(db: DBSession, token_info: dict[str, object]) ->
             role=MembershipRole.PARENT,
         )
     )
+    db.add(UserCredits(user_id=user.id, credits=TOOLS_SIGNUP_INITIAL_CREDITS))
     db.commit()
     return user
 
@@ -280,6 +282,7 @@ def signup(payload: SignupRequest, db: DBSession, response: Response) -> AuthTok
         role=MembershipRole.PARENT,
     )
     db.add(membership)
+    db.add(UserCredits(user_id=user.id, credits=TOOLS_SIGNUP_INITIAL_CREDITS))
     db.commit()
 
     access_token = create_access_token(

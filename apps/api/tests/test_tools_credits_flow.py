@@ -54,14 +54,12 @@ def test_use_credit_decrements_and_blocks_when_zero(monkeypatch: pytest.MonkeyPa
     user = User(id=9, email="credits@axiora.local", name="Credits", password_hash="hashed")
     row = SimpleNamespace(user_id=user.id, credits=1)
     monkeypatch.setattr(tools, "_get_or_create_user_credits", lambda *_args, **_kwargs: row)
-    monkeypatch.setattr(tools, "_resolve_auth_trial_balance", lambda *_args, **_kwargs: 0)
 
-    request = _FakeRequest(headers={"X-Device-Fingerprint": "fp-credits"})
-    first = asyncio.run(tools.use_tools_credit(request, db, user))  # type: ignore[arg-type]
+    first = asyncio.run(tools.use_tools_credit(db, user))  # type: ignore[arg-type]
     assert first.credits == 0
 
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(tools.use_tools_credit(request, db, user))  # type: ignore[arg-type]
+        asyncio.run(tools.use_tools_credit(db, user))  # type: ignore[arg-type]
     assert exc.value.status_code == 402
 
 
@@ -101,14 +99,10 @@ def test_generate_exercises_uses_one_credit_for_authenticated_user(monkeypatch: 
     assert row.credits == 1
 
 
-def test_get_tools_credits_returns_zero_when_trial_scope_already_claimed(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_tools_credits_returns_zero_when_user_has_no_credit_row() -> None:
     db = _FakeDB()
     user = User(id=21, email="repeat@axiora.local", name="Repeat", password_hash="hashed")
-    request = _FakeRequest(headers={"X-Device-Fingerprint": "fp-repeat"})
-
-    monkeypatch.setattr(tools, "_has_any_trial_claim", lambda *_args, **_kwargs: True)
-
-    response = asyncio.run(tools.get_tools_credits(request, db, user))  # type: ignore[arg-type]
+    response = asyncio.run(tools.get_tools_credits(db, user))  # type: ignore[arg-type]
 
     assert response.credits == 0
 

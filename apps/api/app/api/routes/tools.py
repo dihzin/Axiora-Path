@@ -173,11 +173,6 @@ def _normalize_email(email: str | None) -> str | None:
     return AnonToolsService.normalize_email(email)
 
 
-def _extract_device_fingerprint(request: Request) -> str | None:
-    token = str(request.headers.get("X-Device-Fingerprint") or "").strip()
-    return token or None
-
-
 def _build_trial_scopes(
     *,
     email: str | None = None,
@@ -195,19 +190,6 @@ def _build_trial_scopes(
     if ip_token:
         scopes.append(("ip", ip_token))
     return scopes
-
-
-def _has_any_trial_claim(db: DBSession, *, scopes: list[tuple[str, str]]) -> bool:
-    for scope_type, scope_value in scopes:
-        row = db.scalar(
-            select(TrialClaim.id).where(
-                TrialClaim.scope_type == scope_type,
-                TrialClaim.scope_value == scope_value,
-            )
-        )
-        if row is not None:
-            return True
-    return False
 
 
 def _record_trial_claims(
@@ -237,7 +219,7 @@ def _record_trial_claims(
     db.flush()
 
 
-def _get_or_create_user_credits(db: DBSession, *, user_id: int, initial_credits: int = FREE_GENERATION_LIMIT) -> UserCredits:
+def _get_or_create_user_credits(db: DBSession, *, user_id: int, initial_credits: int = 0) -> UserCredits:
     row = db.scalar(select(UserCredits).where(UserCredits.user_id == user_id))
     if row is not None:
         return row
@@ -247,55 +229,24 @@ def _get_or_create_user_credits(db: DBSession, *, user_id: int, initial_credits:
     return row
 
 
-def _resolve_auth_trial_balance(
-    db: DBSession,
-    *,
-    user: User,
-    request: Request,
-) -> int:
-    scopes = _build_trial_scopes(
-        email=user.email,
-        fingerprint=_extract_device_fingerprint(request),
-        ip=request.client.host if request.client else None,
-    )
-    if _has_any_trial_claim(db, scopes=scopes):
-        return 0
-    return FREE_GENERATION_LIMIT
-
-
 def _consume_user_credit_or_raise(
     db: DBSession,
     *,
     user: User,
-    request: Request,
 ) -> int:
     if TEMP_UNLIMITED_GENERATION_MODE:
         return TEMP_UNLIMITED_GENERATION_CREDITS
     row = db.scalar(select(UserCredits).where(UserCredits.user_id == user.id))
-    created_now = row is None
-    initial_credits = _resolve_auth_trial_balance(db, user=user, request=request) if created_now else 0
-    row = row or _get_or_create_user_credits(db, user_id=user.id, initial_credits=initial_credits)
+    row = row or _get_or_create_user_credits(db, user_id=user.id, initial_credits=0)
     if int(row.credits) <= 0:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail={"message": "Sem créditos disponíveis", "credits": 0},
         )
-    if created_now and initial_credits > 0:
-        _record_trial_claims(
-            db,
-            scopes=_build_trial_scopes(
-                email=user.email,
-                fingerprint=_extract_device_fingerprint(request),
-                ip=request.client.host if request.client else None,
-            ),
-            source_kind="user",
-            source_ref=str(user.id),
-        )
     row.credits = int(row.credits) - 1
     db.add(row)
     db.commit()
     return int(row.credits)
-
 
 def _build_paywall_detail(
     *,
@@ -642,7 +593,7 @@ async def generate_exercises(
 ) -> ToolsGenerateExercisesResponse:
     auth_user = _resolve_optional_user(request, db)
     if auth_user is not None:
-        paid_credits_remaining = _consume_user_credit_or_raise(db, user=auth_user, request=request)
+        paid_credits_remaining = _consume_user_credit_or_raise(db, user=auth_user)
         generator = ToolsExerciseGeneratorService()
         generated, llm_mode = generator.generate(
             ExerciseGenerationInput(
@@ -1075,7 +1026,6 @@ async def get_checkout_status(
 
 @router.get("/credits", response_model=ToolsCreditsResponse)
 async def get_tools_credits(
-    request: Request,
     db: DBSession,
     user: Annotated[User, Depends(get_current_tools_user)],
 ) -> ToolsCreditsResponse:
@@ -1086,7 +1036,7 @@ async def get_tools_credits(
     if row is not None:
         db.commit()
         return ToolsCreditsResponse(credits=int(row.credits))
-    return ToolsCreditsResponse(credits=_resolve_auth_trial_balance(db, user=user, request=request))
+    return ToolsCreditsResponse(credits=0)
 
 
 @router.get("/session", response_model=ToolsSessionResponse)
@@ -1102,13 +1052,12 @@ async def get_tools_session(
 
 @router.post("/use-credit", response_model=ToolsCreditsResponse)
 async def use_tools_credit(
-    request: Request,
     db: DBSession,
     user: Annotated[User, Depends(get_current_tools_user)],
 ) -> ToolsCreditsResponse:
     if TEMP_UNLIMITED_GENERATION_MODE:
         return _temp_unlimited_auth_credits()
-    remaining = _consume_user_credit_or_raise(db, user=user, request=request)
+    remaining = _consume_user_credit_or_raise(db, user=user)
     return ToolsCreditsResponse(credits=remaining)
 
 
@@ -1624,7 +1573,7 @@ async def generate(
     auth_user = _resolve_optional_user(request, db)
     if auth_user is not None:
         # Consome antes de gerar — garante que o crédito existe
-        paid_remaining = _consume_user_credit_or_raise(db, user=auth_user, request=request)
+        paid_remaining = _consume_user_credit_or_raise(db, user=auth_user)
         generated, llm_mode = _run_generation(payload)
         logger.info(
             "tools.generate: auth user_id=%s ip=%s hash=%s llm_mode=%s",
@@ -1767,3 +1716,5 @@ async def generate(
         paid_generations_available=paid_remaining,
         preview_data=preview,
     )
+
+

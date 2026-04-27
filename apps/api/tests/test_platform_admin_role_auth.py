@@ -28,6 +28,7 @@ from app.models import (
     Tenant,
     TenantType,
     User,
+    UserCredits,
     _validate_membership_role_for_tenant,
     _validate_student_profile_school_tenant,
     _validate_student_family_link_tenants,
@@ -121,11 +122,15 @@ def test_signup_accepts_family_payload_without_tenant_slug(monkeypatch: pytest.M
     )
 
     tenant = next(item for item in db._added if isinstance(item, Tenant))
+    user = next(item for item in db._added if isinstance(item, User))
     membership = next(item for item in db._added if isinstance(item, Membership))
+    credits = next(item for item in db._added if isinstance(item, UserCredits))
     claims = auth.decode_token(result.access_token)
 
     assert tenant.slug == "familia-silva"
     assert membership.tenant_id == tenant.id
+    assert credits.user_id == user.id
+    assert credits.credits == 3
     assert claims["tenant_id"] == tenant.id
 
 
@@ -1481,6 +1486,7 @@ def test_google_login_creates_family_account_for_first_access(monkeypatch: pytes
     user = next(item for item in db._added if isinstance(item, User))
     tenant = next(item for item in db._added if isinstance(item, Tenant))
     membership = next(item for item in db._added if isinstance(item, Membership))
+    credits = next(item for item in db._added if isinstance(item, UserCredits))
 
     assert user.email == "new-parent@local.com"
     assert user.password_hash != "google-token-value"
@@ -1489,6 +1495,8 @@ def test_google_login_creates_family_account_for_first_access(monkeypatch: pytes
     assert membership.user_id == user.id
     assert membership.tenant_id == tenant.id
     assert membership.role == MembershipRole.PARENT
+    assert credits.user_id == user.id
+    assert credits.credits == 3
     assert result.user.email == "new-parent@local.com"
     assert [item.tenant_slug for item in result.memberships] == [tenant.slug]
 
