@@ -99,12 +99,12 @@ def test_generate_exercises_uses_one_credit_for_authenticated_user(monkeypatch: 
     assert row.credits == 1
 
 
-def test_get_tools_credits_returns_zero_when_user_has_no_credit_row() -> None:
+def test_get_tools_credits_initializes_three_credits_when_user_has_no_credit_row() -> None:
     db = _FakeDB()
     user = User(id=21, email="repeat@axiora.local", name="Repeat", password_hash="hashed")
     response = asyncio.run(tools.get_tools_credits(db, user))  # type: ignore[arg-type]
 
-    assert response.credits == 0
+    assert response.credits == 3
 
 
 def test_webhook_checkout_completed_adds_credits_to_user(monkeypatch: pytest.MonkeyPatch) -> None:

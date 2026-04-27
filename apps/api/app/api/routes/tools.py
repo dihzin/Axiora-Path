@@ -69,6 +69,7 @@ from app.services.tools_service import ToolsService, ToolsSessionNotFoundError, 
 
 router = APIRouter(prefix="/api/tools", tags=["tools"])
 FREE_GENERATION_LIMIT = 3
+AUTH_SIGNUP_INITIAL_CREDITS = 3
 UPGRADE_URL = "/tools/gerador-atividades?upgrade=credits_30"
 _ANON_RATE_LIMIT = 20          # gerações por hora por anonymous_id
 _ANON_RATE_WINDOW = 3600       # janela em segundos (1 hora)
@@ -237,7 +238,7 @@ def _consume_user_credit_or_raise(
     if TEMP_UNLIMITED_GENERATION_MODE:
         return TEMP_UNLIMITED_GENERATION_CREDITS
     row = db.scalar(select(UserCredits).where(UserCredits.user_id == user.id))
-    row = row or _get_or_create_user_credits(db, user_id=user.id, initial_credits=0)
+    row = row or _get_or_create_user_credits(db, user_id=user.id, initial_credits=AUTH_SIGNUP_INITIAL_CREDITS)
     if int(row.credits) <= 0:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
@@ -1033,10 +1034,14 @@ async def get_tools_credits(
         return _temp_unlimited_auth_credits()
     _reconcile_latest_user_checkout_if_needed(db=db, user_id=int(user.id))
     row = db.scalar(select(UserCredits).where(UserCredits.user_id == user.id))
-    if row is not None:
-        db.commit()
-        return ToolsCreditsResponse(credits=int(row.credits))
-    return ToolsCreditsResponse(credits=0)
+    if row is None:
+        row = _get_or_create_user_credits(
+            db,
+            user_id=int(user.id),
+            initial_credits=AUTH_SIGNUP_INITIAL_CREDITS,
+        )
+    db.commit()
+    return ToolsCreditsResponse(credits=int(row.credits))
 
 
 @router.get("/session", response_model=ToolsSessionResponse)
